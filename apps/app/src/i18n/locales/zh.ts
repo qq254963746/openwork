@@ -710,6 +710,10 @@ export default {
   "plugins.suggested_heading": "建议的插件",
   "plugins.title": "OpenCode插件",
   "providers.api_key_label": "API密钥",
+  "providers.api_base_url_hint":
+    "覆盖 OpenAI 兼容 API 的默认端点（通常以 `/v1` 结尾）。留空则使用提供商内置地址。",
+  "providers.api_base_url_label": "API 基础 URL",
+  "providers.api_connect_intro": "粘贴 API 密钥。可按需覆盖 OpenAI 兼容接口的 API 基础 URL。",
   "providers.api_key_required": "API密钥为必填项",
   "providers.auth_failed": "认证失败",
   "providers.connect_failed": "连接提供商失败",

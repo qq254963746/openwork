@@ -10,6 +10,48 @@ export const providerPriorityRank = (id: string) => {
   return index === -1 ? PINNED_PROVIDER_ORDER.length : index;
 };
 
+/**
+ * When OpenCode does not surface `options.baseURL`, we still prefill the Connect
+ * Providers field with the usual public endpoint for well-known providers.
+ * Keep in sync with provider packages / docs where possible.
+ */
+const WELL_KNOWN_PROVIDER_API_BASE: Readonly<Record<string, string>> = {
+  openai: "https://api.openai.com/v1",
+  anthropic: "https://api.anthropic.com/v1",
+  openrouter: "https://openrouter.ai/api/v1",
+  groq: "https://api.groq.com/openai/v1",
+  deepseek: "https://api.deepseek.com/v1",
+  mistral: "https://api.mistral.ai/v1",
+  together: "https://api.together.xyz/v1",
+  xai: "https://api.x.ai/v1",
+  cerebras: "https://api.cerebras.ai/v1",
+  cohere: "https://api.cohere.com/v1",
+  fireworks: "https://api.fireworks.ai/inference/v1",
+  nebius: "https://api.studio.nebius.ai/v1",
+  "openai-compatible": "https://api.openai.com/v1",
+  google: "https://generativelanguage.googleapis.com/v1beta/openai",
+  gemini: "https://generativelanguage.googleapis.com/v1beta/openai",
+};
+
+/**
+ * Value to prefill in the API base URL field: project `options.baseURL` if
+ * present, otherwise a catalog default for common provider ids.
+ */
+export function resolveProviderInitialApiBaseUrl(
+  providerId: string,
+  options?: Record<string, unknown>,
+): string {
+  if (options && typeof options === "object") {
+    const o = options as Record<string, unknown>;
+    const fromOptions = o.baseURL ?? o.baseUrl;
+    if (typeof fromOptions === "string" && fromOptions.trim()) {
+      return fromOptions.trim();
+    }
+  }
+  const key = providerId.trim().toLowerCase();
+  return WELL_KNOWN_PROVIDER_API_BASE[key] ?? "";
+}
+
 export const compareProviders = (
   a: { id: string; name?: string },
   b: { id: string; name?: string },

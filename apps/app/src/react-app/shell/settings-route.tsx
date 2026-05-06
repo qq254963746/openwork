@@ -636,8 +636,9 @@ export function SettingsRoute() {
             action: "updated",
           });
         },
+        reloadWorkspaceEngine: () => reloadCoordinator.reloadWorkspaceEngine(),
       }),
-    [openworkServerStore, reloadCoordinator.markReloadRequired],
+    [openworkServerStore, reloadCoordinator],
   );
   const extensionsStore = useMemo(
     () =>

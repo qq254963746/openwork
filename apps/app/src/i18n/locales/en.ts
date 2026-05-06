@@ -761,6 +761,11 @@ export default {
   "plugins.suggested_heading": "Suggested plugins",
   "plugins.title": "OpenCode plugins",
   "providers.api_key_label": "API key",
+  "providers.api_base_url_hint":
+    "Overrides the default endpoint for OpenAI-compatible APIs (usually ends with `/v1`). Leave blank to use the provider default.",
+  "providers.api_base_url_label": "API base URL",
+  "providers.api_connect_intro":
+    "Paste your API key. Optionally override the API base URL for OpenAI-compatible endpoints.",
   "providers.api_key_required": "API key is required",
   "providers.auth_failed": "Authentication failed",
   "providers.connect_failed": "Failed to connect provider",

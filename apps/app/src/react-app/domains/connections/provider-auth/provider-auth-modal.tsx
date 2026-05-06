@@ -17,6 +17,7 @@ import {
 import { openDesktopUrl } from "../../../../app/lib/desktop";
 import { isDesktopRuntime } from "../../../../app/utils";
 import { compareProviders } from "../../../../app/utils/providers";
+import { t } from "../../../../i18n";
 import { Button } from "../../../design-system/button";
 import { ProviderIcon } from "../../../design-system/provider-icon";
 import { TextInput } from "../../../design-system/text-input";
@@ -58,7 +59,7 @@ export type ProviderAuthModalProps = {
   connectedProviderIds: string[];
   authMethods: Record<string, ProviderAuthMethod[]>;
   onSelect: (providerId: string, methodIndex?: number) => Promise<ProviderOAuthStartResult>;
-  onSubmitApiKey: (providerId: string, apiKey: string) => Promise<string | void>;
+  onSubmitApiKey: (providerId: string, apiKey: string, baseUrl: string) => Promise<string | void>;
   onSubmitOAuth: (
     providerId: string,
     methodIndex: number,
@@ -77,6 +78,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   >("list");
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState("");
+  const [baseUrlInput, setBaseUrlInput] = useState("");
   const [oauthCodeInput, setOauthCodeInput] = useState("");
   const [oauthSession, setOauthSession] = useState<ProviderOAuthSession | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -218,6 +220,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     setView("list");
     setSelectedProviderId(null);
     setApiKeyInput("");
+    setBaseUrlInput("");
     setOauthCodeInput("");
     setOauthSession(null);
     setSearchQuery("");
@@ -459,15 +462,22 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     }
   };
 
-  const handleMethodSelect = async (method: ProviderAuthMethod) => {
-    if (!selectedEntry || actionDisabled) return;
+  const handleMethodSelect = async (
+    method: ProviderAuthMethod,
+    entryOverride?: ProviderAuthEntry,
+  ) => {
+    const entry = entryOverride ?? selectedEntry;
+    if (!entry || actionDisabled) return;
     setLocalError(null);
 
     if (method.type === "oauth") {
-      await startOauth(selectedEntry, method.methodIndex);
+      await startOauth(entry, method.methodIndex);
       return;
     }
 
+    const providerMeta = props.providers.find((item) => item.id === entry.id);
+    setBaseUrlInput(providerMeta?.initialApiBaseUrl ?? "");
+    setApiKeyInput("");
     setView("api");
   };
 
@@ -477,7 +487,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     setSelectedProviderId(entry.id);
 
     if (entry.methods.length === 1) {
-      void handleMethodSelect(entry.methods[0]);
+      void handleMethodSelect(entry.methods[0], entry);
       return;
     }
 
@@ -500,7 +510,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
 
     setLocalError(null);
     try {
-      await props.onSubmitApiKey(selectedEntry.id, trimmed);
+      await props.onSubmitApiKey(selectedEntry.id, trimmed, baseUrlInput);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to save API key";
       setLocalError(message);
@@ -537,6 +547,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     if (resolvedView === "api" && (selectedEntry?.methods.length ?? 0) > 1) {
       setView("method");
       setApiKeyInput("");
+      setBaseUrlInput("");
       setLocalError(null);
       return;
     }
@@ -747,7 +758,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                             ? "border-indigo-5/40 bg-indigo-3/20 hover:bg-indigo-4/30 shadow-sm"
                             : "border-gray-5/50 bg-gray-2 hover:bg-gray-3/50 shadow-sm"
                         }`}
-                        onClick={() => void handleMethodSelect(method)}
+                        onClick={() => void handleMethodSelect(method, selectedEntry)}
                         disabled={actionDisabled}
                       >
                         <div className="text-sm font-medium text-gray-12">{methodLabel(method)}</div>
@@ -763,12 +774,26 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <div className="text-sm font-medium text-gray-12">{selectedEntry.name}</div>
-                      <div className="text-xs text-gray-10 mt-1">Paste your API key to connect.</div>
+                      <div className="text-xs text-gray-10 mt-1">{t("providers.api_connect_intro")}</div>
                     </div>
                     <Button variant="ghost" onClick={handleBack} disabled={actionDisabled}>
                       Back
                     </Button>
                   </div>
+                  <TextInput
+                    label={t("providers.api_base_url_label")}
+                    placeholder="https://api.example.com/v1"
+                    value={baseUrlInput}
+                    onChange={(event) => {
+                      setBaseUrlInput(event.currentTarget.value);
+                      if (localError) setLocalError(null);
+                    }}
+                    autoComplete="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    disabled={actionDisabled}
+                  />
+                  <div className="text-[11px] text-gray-9 -mt-2">{t("providers.api_base_url_hint")}</div>
                   <TextInput
                     label="API key"
                     type="password"

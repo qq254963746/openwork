@@ -24,6 +24,7 @@ import {
   compareProviders,
   filterProviderList,
   mapConfigProvidersToList,
+  resolveProviderInitialApiBaseUrl,
 } from "../../../../app/utils/providers";
 import type { OpenworkServerStore } from "../openwork-server-store";
 import {
@@ -31,6 +32,51 @@ import {
   withWorkspaceCloudImports,
   type CloudImportedProvider,
 } from "../../../../app/cloud/import-state";
+
+const DEFAULT_PROJECT_CONFIG_HEADER =
+  '{\n  "$schema": "https://opencode.ai/config.json"\n}\n';
+
+function mergeProviderOptionsBaseUrl(
+  raw: string,
+  providerId: string,
+  baseUrl: string | undefined,
+): string {
+  let updated = raw.trim() ? raw : DEFAULT_PROJECT_CONFIG_HEADER;
+  const path = ["provider", providerId, "options", "baseURL"];
+  const value = baseUrl?.trim() ? baseUrl.trim() : undefined;
+  const edits = modify(updated, path, value, {
+    formattingOptions: { insertSpaces: true, tabSize: 2 },
+  });
+  updated = applyEdits(updated, edits);
+  return updated.endsWith("\n") ? updated : `${updated}\n`;
+}
+
+function mergeProviderBaseUrlInConfig(
+  config: Record<string, unknown>,
+  providerId: string,
+  baseUrl: string | undefined,
+): Record<string, unknown> {
+  const next = { ...config };
+  const trimmed = baseUrl?.trim() ?? "";
+  const providers = {
+    ...((next.provider as Record<string, unknown> | undefined) ?? {}),
+  };
+  const entry = {
+    ...((providers[providerId] as Record<string, unknown> | undefined) ?? {}),
+  };
+  const options = {
+    ...((entry.options as Record<string, unknown> | undefined) ?? {}),
+  };
+  if (trimmed) {
+    options.baseURL = trimmed;
+  } else {
+    delete options.baseURL;
+  }
+  entry.options = options;
+  providers[providerId] = entry;
+  next.provider = providers;
+  return next;
+}
 
 type ProviderReturnFocusTarget = "none" | "composer";
 
@@ -47,6 +93,10 @@ export type ProviderAuthProvider = {
   id: string;
   name: string;
   env: string[];
+  /** Mirror of OpenCode provider options (e.g. `baseURL` overrides). */
+  options?: Record<string, unknown>;
+  /** Prefill for the API base URL field (configured URL or known default). */
+  initialApiBaseUrl: string;
 };
 
 export type ProviderOAuthStartResult = {
@@ -80,6 +130,8 @@ type CreateProviderAuthStoreOptions = {
   setProviderConnectedIds: (value: string[]) => void;
   setDisabledProviders: (value: string[]) => void;
   markOpencodeConfigReloadRequired: () => void;
+  /** After a successful API key save, apply workspace engine reload (same as “Reload now” on config changes). */
+  reloadWorkspaceEngine?: () => Promise<void>;
   focusPromptSoon?: () => void;
 };
 
@@ -126,10 +178,16 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     for (const provider of options.providers()) {
       const id = provider.id?.trim();
       if (!id) continue;
+      const opts =
+        provider.options && typeof provider.options === "object"
+          ? (provider.options as Record<string, unknown>)
+          : undefined;
       merged.set(id, {
         id,
         name: provider.name?.trim() || id,
         env: Array.isArray(provider.env) ? provider.env : [],
+        options: opts,
+        initialApiBaseUrl: resolveProviderInitialApiBaseUrl(id, opts),
       });
     }
 
@@ -774,7 +832,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     }
   }
 
-  async function submitProviderApiKey(providerId: string, apiKey: string) {
+  async function submitProviderApiKey(providerId: string, apiKey: string, baseUrl = "") {
     setStateField("providerAuthError", null);
     const c = options.client();
     if (!c) {
@@ -788,7 +846,23 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
 
     try {
       await c.auth.set({ providerID: providerId, auth: { type: "api", key: trimmed } });
+
+      const trimmedBase = baseUrl.trim();
+      const persisted = await updateProjectConfigFile(
+        (raw) => mergeProviderOptionsBaseUrl(raw, providerId, trimmedBase ? trimmedBase : undefined),
+        (config) => mergeProviderBaseUrlInConfig(config, providerId, trimmedBase ? trimmedBase : undefined),
+      );
+      if (persisted) {
+        options.markOpencodeConfigReloadRequired();
+      }
+
       await refreshProviders({ dispose: true });
+      closeProviderAuthModal();
+      try {
+        await options.reloadWorkspaceEngine?.();
+      } catch {
+        // Errors are surfaced through the workspace reload toast / system state.
+      }
       return `${t("status.connected")} ${providerId}`;
     } catch (error) {
       const message = describeProviderError(error, t("providers.save_api_key_failed"));
