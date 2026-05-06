@@ -175,6 +175,17 @@ export type OpenworkWorkspaceFileWriteResult = {
   revision?: string;
 };
 
+export type OpenworkWorkspaceDirEntry = {
+  name: string;
+  kind: "file" | "directory";
+};
+
+export type OpenworkWorkspaceDirectoryList = {
+  path: string;
+  entries: OpenworkWorkspaceDirEntry[];
+  truncated?: boolean;
+};
+
 export type OpenworkCommandItem = {
   name: string;
   description?: string;
@@ -1196,6 +1207,13 @@ export function createOpenworkServerClient(options: { baseUrl: string; token?: s
       requestJson<OpenworkWorkspaceFileContent>(
         baseUrl,
         `/workspace/${encodeURIComponent(workspaceId)}/files/content?path=${encodeURIComponent(path)}`,
+        { token, hostToken },
+      ),
+
+    listWorkspaceDirectory: (workspaceId: string, path?: string) =>
+      requestJson<OpenworkWorkspaceDirectoryList>(
+        baseUrl,
+        `/workspace/${encodeURIComponent(workspaceId)}/files/list${path?.trim() ? `?path=${encodeURIComponent(path.trim())}` : ""}`,
         { token, hostToken },
       ),
 

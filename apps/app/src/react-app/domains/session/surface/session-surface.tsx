@@ -30,6 +30,7 @@ import { DevProfiler } from "../../../shell/dev-profiler";
 import { OwDotTicker } from "../../../shell/dot-ticker";
 import { useReactRenderWatchdog } from "../../../shell/react-render-watchdog";
 import type { ReactComposerNotice } from "./composer/notice";
+import { SessionWorkspacePanel } from "./session-workspace-panel";
 import { SessionDebugPanel } from "./debug-panel";
 import { deriveRenderedSessionMessages, resolveRenderedSessionSnapshot } from "./session-render-state";
 import { SessionTranscript } from "./message-list";
@@ -819,6 +820,8 @@ export function SessionSurface(props: SessionSurfaceProps) {
   return (
     <DevProfiler id="SessionSurface">
     <div className="flex h-full min-h-0 flex-col">
+      <div className="flex min-h-0 flex-1 flex-row">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {model.transitionState === "switching" && showDelayedLoading ? (
         <div className="flex justify-center px-6 pt-4">
           <div className="rounded-full border border-dls-border bg-dls-hover/80 px-3 py-1 text-xs text-dls-secondary">
@@ -987,6 +990,17 @@ export function SessionSurface(props: SessionSurfaceProps) {
           onUploadInboxFiles={props.onUploadInboxFiles ?? handleUploadInboxFiles}
         />
         </DevProfiler>
+      </div>
+      </div>
+      <SessionWorkspacePanel
+        client={props.client}
+        workspaceId={props.workspaceId}
+        workspaceRoot={props.workspaceRoot}
+        attachments={attachments}
+        mentions={mentions}
+        pasteParts={pasteParts}
+        messages={renderedMessages}
+      />
       </div>
       {/* Error display moved inline into the session conversation area */}
       {props.developerMode ? <SessionDebugPanel model={model} snapshot={snapshot} /> : null}

@@ -2238,6 +2238,60 @@ function createRoutes(
     return jsonResponse({ items, cursor: events.cursor });
   });
 
+  addRoute(routes, "GET", "/workspace/:id/files/list", "client", async (ctx) => {
+    const workspace = await resolveWorkspace(config, ctx.params.id);
+    const requested = (ctx.url.searchParams.get("path") ?? "").trim();
+    const rootResolved = resolve(workspace.path);
+
+    let dirAbs: string;
+    if (!requested) {
+      dirAbs = rootResolved;
+    } else {
+      const relativePath = normalizeWorkspaceRelativePath(requested, { allowSubdirs: true });
+      dirAbs = resolve(rootResolved, relativePath.split("/").join(sep));
+      const prefix = rootResolved + sep;
+      if (dirAbs !== rootResolved && !dirAbs.startsWith(prefix)) {
+        throw new ApiError(400, "invalid_path", "Path escapes workspace root");
+      }
+    }
+
+    if (!(await exists(dirAbs))) {
+      throw new ApiError(404, "dir_not_found", "Directory not found");
+    }
+    const dirStat = await stat(dirAbs);
+    if (!dirStat.isDirectory()) {
+      throw new ApiError(400, "not_a_directory", "Path is not a directory");
+    }
+
+    const SKIP_DIR_NAMES = new Set(["node_modules", ".git"]);
+    const rawEntries = await readdir(dirAbs, { withFileTypes: true });
+    const entries: Array<{ name: string; kind: "file" | "directory" }> = [];
+    for (const ent of rawEntries) {
+      if (SKIP_DIR_NAMES.has(ent.name)) continue;
+      if (ent.isDirectory()) {
+        entries.push({ name: ent.name, kind: "directory" });
+      } else if (ent.isFile()) {
+        entries.push({ name: ent.name, kind: "file" });
+      }
+    }
+
+    entries.sort((a, b) => {
+      if (a.kind !== b.kind) return a.kind === "directory" ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    const maxEntries = 400;
+    const limited = entries.slice(0, maxEntries);
+    const relativePrefix =
+      dirAbs === rootResolved ? "" : relative(rootResolved, dirAbs).replace(/\\/g, "/");
+
+    return jsonResponse({
+      path: relativePrefix,
+      entries: limited,
+      truncated: entries.length > maxEntries,
+    });
+  });
+
   addRoute(routes, "GET", "/workspace/:id/files/content", "client", async (ctx) => {
     const workspace = await resolveWorkspace(config, ctx.params.id);
     const requested = (ctx.url.searchParams.get("path") ?? "").trim();
