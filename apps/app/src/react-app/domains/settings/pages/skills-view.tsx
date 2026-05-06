@@ -38,12 +38,7 @@ import {
   DEFAULT_OPENWORK_PUBLISHER_BASE_URL,
   publishOpenworkBundleJson,
 } from "../../../../app/lib/publisher";
-import type {
-  DenOrgSkillCard,
-  HubSkillCard,
-  HubSkillRepo,
-  SkillCard,
-} from "../../../../app/types";
+import type { HubSkillCard, HubSkillRepo, SkillCard } from "../../../../app/types";
 import {
   inputClass,
   modalHeaderButtonClass,
@@ -87,31 +82,20 @@ const OPENWORK_DEFAULT_SKILL_NAMES = new Set([
   "plugin-creator",
 ]);
 
-export type ImportedCloudSkillRecord = {
-  installedName: string;
-  updatedAt?: string | null;
-};
-
 export type SkillsExtensionsStore = {
   skills: () => SkillCard[];
   skillsStatus: () => string | null;
   hubSkills: () => HubSkillCard[];
   hubSkillsStatus: () => string | null;
-  cloudOrgSkills: () => DenOrgSkillCard[];
-  cloudOrgSkillsStatus: () => string | null;
-  importedCloudSkills: () => Record<string, ImportedCloudSkillRecord>;
   hubRepo: () => HubSkillRepo | null;
   hubRepos: () => HubSkillRepo[];
   ensureHubSkillsFresh: () => void | Promise<void>;
-  ensureCloudOrgSkillsFresh: () => void | Promise<void>;
   refreshSkills: (options?: { force?: boolean }) => void | Promise<void>;
   refreshHubSkills: (options?: { force?: boolean }) => void | Promise<void>;
-  refreshCloudOrgSkills: (options?: { force?: boolean }) => void | Promise<void>;
   setHubRepo: (repo: HubSkillRepo) => void | Promise<void>;
   addHubRepo: (repo: HubSkillRepo) => void | Promise<void>;
   removeHubRepo: (repo: HubSkillRepo) => void | Promise<void>;
   installSkillCreator: () => Promise<InstallResult>;
-  installCloudOrgSkill: (skill: DenOrgSkillCard) => Promise<InstallResult>;
   installHubSkill: (name: string) => Promise<InstallResult>;
   importLocalSkill: () => void | Promise<void>;
   revealSkillsFolder: () => void | Promise<void>;
@@ -478,7 +462,6 @@ export function SkillsView(props: SkillsViewProps) {
           detail: { orgId },
         }),
       );
-      void extensions.refreshCloudOrgSkills({ force: true });
     } catch (error) {
       setShareTeamError(maskError(error));
     } finally {

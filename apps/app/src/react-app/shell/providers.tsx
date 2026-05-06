@@ -4,7 +4,6 @@ import { useEffect, type ReactNode } from "react";
 import { isWebDeployment } from "../../app/lib/openwork-deployment";
 import { hydrateOpenworkServerSettingsFromEnv } from "../../app/lib/openwork-server";
 import { isDesktopRuntime } from "../../app/utils";
-import { DenAuthProvider } from "../domains/cloud/den-auth-provider";
 import { DesktopConfigProvider } from "../domains/cloud/desktop-config-provider";
 import { RestrictionNoticeProvider } from "../domains/cloud/restriction-notice-provider";
 import { StatusToastsProvider } from "../domains/shell-feedback/status-toasts";
@@ -63,17 +62,15 @@ export function AppProviders({ children }: AppProvidersProps) {
     <BootStateProvider>
       <ServerProvider defaultUrl={defaultUrl}>
         <DesktopRuntimeBoot />
-        <DenAuthProvider>
-          <DesktopConfigProvider>
-            <RestrictionNoticeProvider>
-              <LocalProvider>
-                <StatusToastsProvider>
-                  <ReloadCoordinatorProvider>{children}</ReloadCoordinatorProvider>
-                </StatusToastsProvider>
-              </LocalProvider>
-            </RestrictionNoticeProvider>
-          </DesktopConfigProvider>
-        </DenAuthProvider>
+        <DesktopConfigProvider>
+          <RestrictionNoticeProvider>
+            <LocalProvider>
+              <StatusToastsProvider>
+                <ReloadCoordinatorProvider>{children}</ReloadCoordinatorProvider>
+              </StatusToastsProvider>
+            </LocalProvider>
+          </RestrictionNoticeProvider>
+        </DesktopConfigProvider>
         <MigrationPrompt />
       </ServerProvider>
     </BootStateProvider>
