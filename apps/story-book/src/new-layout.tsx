@@ -1606,7 +1606,6 @@ export default function NewLayoutApp() {
             developerMode
             settingsOpen={showingSettings()}
             showSettingsButton={true}
-            onSendFeedback={() => undefined}
             onOpenSettings={() => {
               setSettingsTab("general");
               setShowingSettings((prev) => !prev);

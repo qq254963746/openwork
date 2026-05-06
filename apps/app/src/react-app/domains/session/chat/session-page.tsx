@@ -107,7 +107,6 @@ export type SessionPageProps = {
   providerConnectedIds: string[];
   providers?: ProviderListItem[];
   mcpConnectedCount: number;
-  onSendFeedback: () => void;
   onOpenSettings: () => void;
   sidebar: SessionPageSidebarProps;
   surface?: SessionPageSurfaceProps | null;
@@ -547,7 +546,6 @@ export function SessionPage(props: SessionPageProps) {
             openworkServerStatus={props.openworkServerStatus}
             developerMode={props.developerMode}
             settingsOpen={props.statusBar?.settingsOpen ?? false}
-            onSendFeedback={props.onSendFeedback}
             onOpenSettings={props.onOpenSettings}
             providerConnectedIds={props.providerConnectedIds}
             mcpConnectedCount={props.mcpConnectedCount}

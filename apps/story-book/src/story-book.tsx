@@ -1057,7 +1057,6 @@ export default function StoryBookApp() {
             developerMode
             settingsOpen={showingSettings()}
             showSettingsButton={false}
-            onSendFeedback={() => undefined}
             onOpenSettings={() => {
               if (showingSettings()) {
                 setRightRailNav("skills");

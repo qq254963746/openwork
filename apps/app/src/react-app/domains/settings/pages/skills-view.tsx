@@ -8,7 +8,6 @@ import {
 } from "react";
 import {
   ArrowLeft,
-  Cloud,
   Copy,
   Edit2,
   FolderOpen,
@@ -32,7 +31,6 @@ import { saveInstalledSkillToOpenWorkOrg } from "../../../../app/bundles/skill-o
 import {
   buildDenAuthUrl,
   createDenClient,
-  DEFAULT_DEN_BASE_URL,
   readDenSettings,
   type DenOrgSkillHubSummary,
 } from "../../../../app/lib/den";
@@ -71,9 +69,8 @@ import {
 import { WorkspaceOptionCard } from "../../../domains/workspace/option-card";
 
 type InstallResult = { ok: boolean; message: string };
-type SkillsFilter = "all" | "installed" | "cloud" | "hub";
+type SkillsFilter = "all" | "installed" | "hub";
 type ShareSkillSubView = "chooser" | "public" | "team";
-type CloudSkillInstallState = "available" | "installed" | "update" | "missing_local";
 type ToastTone = "info" | "success" | "warning" | "error";
 
 const pageTitleClass = "text-[28px] font-semibold tracking-[-0.5px] text-dls-text";
@@ -173,8 +170,6 @@ export function SkillsView(props: SkillsViewProps) {
 
   const [installingSkillCreator, setInstallingSkillCreator] = useState(false);
   const [installingHubSkill, setInstallingHubSkill] = useState<string | null>(null);
-  const [installingCloudSkillId, setInstallingCloudSkillId] = useState<string | null>(null);
-  const [denUiTick, setDenUiTick] = useState(0);
 
   const showToast = useCallback(
     (title: string, tone: ToastTone = "info") => {
@@ -191,11 +186,8 @@ export function SkillsView(props: SkillsViewProps) {
 
   useEffect(() => {
     void extensions.ensureHubSkillsFresh();
-    void extensions.ensureCloudOrgSkillsFresh();
     const onDenSession = () => {
-      setDenUiTick((value) => value + 1);
       setCloudSessionNonce((value) => value + 1);
-      void extensions.refreshCloudOrgSkills({ force: true });
     };
     window.addEventListener("openwork-den-session-updated", onDenSession);
     return () => window.removeEventListener("openwork-den-session-updated", onDenSession);
@@ -281,13 +273,10 @@ export function SkillsView(props: SkillsViewProps) {
 
   const skills = extensions.skills();
   const hubSkills = extensions.hubSkills();
-  const cloudOrgSkills = extensions.cloudOrgSkills();
-  const importedCloudSkills = extensions.importedCloudSkills();
   const hubRepo = extensions.hubRepo();
   const hubRepos = extensions.hubRepos();
   const skillsStatus = extensions.skillsStatus();
   const hubSkillsStatus = extensions.hubSkillsStatus();
-  const cloudOrgSkillsStatus = extensions.cloudOrgSkillsStatus();
 
   const skillCreatorInstalled = useMemo(
     () => skills.some((skill) => skill.name === "skill-creator"),
@@ -320,56 +309,6 @@ export function SkillsView(props: SkillsViewProps) {
     });
   }, [hubSkills, installedNames, searchQuery]);
 
-  const filteredCloudOrgSkills = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return cloudOrgSkills;
-    return cloudOrgSkills.filter((skill) => {
-      const description = skill.description ?? "";
-      const hub = skill.hubName ?? "";
-      return (
-        skill.title.toLowerCase().includes(query) ||
-        description.toLowerCase().includes(query) ||
-        hub.toLowerCase().includes(query)
-      );
-    });
-  }, [cloudOrgSkills, searchQuery]);
-
-  const cloudSkillInstallState = useCallback(
-    (skill: DenOrgSkillCard): CloudSkillInstallState => {
-      const imported = importedCloudSkills[skill.id];
-      if (!imported) return "available";
-      if (!installedNames.has(imported.installedName)) return "missing_local";
-
-      const remoteUpdatedAt = skill.updatedAt ? Date.parse(skill.updatedAt) : Number.NaN;
-      const importedUpdatedAt = imported.updatedAt ? Date.parse(imported.updatedAt) : Number.NaN;
-      if (
-        Number.isFinite(remoteUpdatedAt) &&
-        (!Number.isFinite(importedUpdatedAt) || remoteUpdatedAt > importedUpdatedAt)
-      ) {
-        return "update";
-      }
-      return "installed";
-    },
-    [importedCloudSkills, installedNames],
-  );
-
-  const cloudOrgLabel = useMemo(() => {
-    denUiTick;
-    const name = readDenSettings().activeOrgName?.trim();
-    return name || t("skills.cloud_org_fallback");
-  }, [denUiTick]);
-
-  const cloudSessionReady = useMemo(() => {
-    denUiTick;
-    const settings = readDenSettings();
-    return Boolean(settings.authToken?.trim() && settings.activeOrgId?.trim());
-  }, [denUiTick]);
-
-  const cloudNeedsSignIn = useMemo(() => {
-    denUiTick;
-    return !readDenSettings().authToken?.trim();
-  }, [denUiTick]);
-
   const sharePermissionOptions = useMemo<SelectMenuOption[]>(
     () => [
       { value: "private", label: t("skills.share_team_permission_private") },
@@ -401,7 +340,6 @@ export function SkillsView(props: SkillsViewProps) {
   );
 
   const showInstalledSection = activeFilter === "all" || activeFilter === "installed";
-  const showCloudSection = activeFilter === "all" || activeFilter === "cloud";
   const showHubSection = activeFilter === "all" || activeFilter === "hub";
   const canCreateInChat = !props.busy && (props.canInstallSkillCreator || props.canUseDesktopTools);
 
@@ -451,7 +389,6 @@ export function SkillsView(props: SkillsViewProps) {
     if (props.busy) return;
     void extensions.refreshSkills({ force: true });
     void extensions.refreshHubSkills({ force: true });
-    void extensions.refreshCloudOrgSkills({ force: true });
   }, [extensions, props.busy]);
 
   const installSkillCreator = useCallback(async () => {
@@ -471,27 +408,6 @@ export function SkillsView(props: SkillsViewProps) {
       setInstallingSkillCreator(false);
     }
   }, [extensions, installingSkillCreator, maskError, props.accessHint, props.busy, props.canInstallSkillCreator, showToast]);
-
-  const installFromCloud = useCallback(
-    async (skill: DenOrgSkillCard) => {
-      if (props.busy || installingCloudSkillId) return;
-      const state = cloudSkillInstallState(skill);
-      if (state === "installed") return;
-      setInstallingCloudSkillId(skill.id);
-      showToast(
-        t(state === "update" ? "skills.cloud_updating" : "skills.cloud_installing", undefined, { title: skill.title }),
-      );
-      try {
-        const result = await extensions.installCloudOrgSkill(skill);
-        showToast(result.message, result.ok ? "success" : "error");
-      } catch (error) {
-        showToast(maskError(error), "error");
-      } finally {
-        setInstallingCloudSkillId(null);
-      }
-    },
-    [cloudSkillInstallState, extensions, installingCloudSkillId, maskError, props.busy, showToast],
-  );
 
   const installFromHub = useCallback(
     async (skill: HubSkillCard) => {
@@ -517,11 +433,6 @@ export function SkillsView(props: SkillsViewProps) {
     }
     await Promise.resolve(props.createSessionAndOpen("/skill-creator"));
   }, [installSkillCreator, props, skillCreatorInstalled]);
-
-  const openCloudSignIn = useCallback(() => {
-    const base = readDenSettings().baseUrl?.trim() || DEFAULT_DEN_BASE_URL;
-    props.onOpenLink(buildDenAuthUrl(base, "sign-in"));
-  }, [props]);
 
   const openShareLink = useCallback(
     (skill: SkillCard) => {
@@ -765,7 +676,7 @@ export function SkillsView(props: SkillsViewProps) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {(["all", "installed", "cloud", "hub"] as SkillsFilter[]).map((filter) => (
+            {(["all", "installed", "hub"] as SkillsFilter[]).map((filter) => (
               <button
                 key={filter}
                 type="button"
@@ -776,9 +687,7 @@ export function SkillsView(props: SkillsViewProps) {
                   ? t("skills.filter_all")
                   : filter === "installed"
                     ? t("skills.filter_installed")
-                    : filter === "cloud"
-                      ? t("skills.filter_cloud")
-                      : t("skills.filter_hub")}
+                    : t("skills.filter_hub")}
               </button>
             ))}
             <button type="button" onClick={refreshCatalogs} disabled={props.busy} className={pillSecondaryClass}>
@@ -902,119 +811,6 @@ export function SkillsView(props: SkillsViewProps) {
                 ))}
               </div>
             </div>
-          )}
-        </div>
-      ) : null}
-
-      {showCloudSection ? (
-        <div className="space-y-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="mb-0.5 text-[12px] text-dls-secondary">{cloudOrgLabel}</p>
-              <h3 className={sectionTitleClass}>{t("skills.cloud_section_title")}</h3>
-              <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-dls-secondary">
-                {t("skills.cloud_section_subtitle")}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void extensions.refreshCloudOrgSkills({ force: true })}
-                disabled={props.busy}
-                className={pillSecondaryClass}
-              >
-                <RefreshCw size={14} />
-                {t("skills.cloud_refresh")}
-              </button>
-            </div>
-          </div>
-
-          {!cloudSessionReady ? (
-            <div className="rounded-[20px] border border-dashed border-dls-border bg-dls-surface px-5 py-6 text-[14px] text-dls-secondary">
-              {cloudNeedsSignIn ? (
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p>{t("skills.cloud_sign_in_hint")}</p>
-                  <button type="button" className={pillPrimaryClass} onClick={openCloudSignIn}>
-                    {t("skills.cloud_sign_in")}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p>{t("skills.cloud_choose_org_hint")}</p>
-                  <p className="text-[13px]">{t("skills.cloud_choose_org_detail")}</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <>
-              {cloudOrgSkillsStatus ? (
-                <div className="whitespace-pre-wrap break-words rounded-[20px] border border-dls-border bg-dls-hover px-5 py-4 text-[13px] text-dls-secondary">
-                  {cloudOrgSkillsStatus}
-                </div>
-              ) : null}
-
-              {filteredCloudOrgSkills.length === 0 ? (
-                <div className="rounded-[20px] border border-dashed border-dls-border bg-dls-surface px-5 py-8 text-[14px] text-dls-secondary">
-                  {cloudOrgSkills.length === 0 ? t("skills.cloud_org_empty") : t("skills.cloud_no_search_matches")}
-                </div>
-              ) : (
-                <div className="rounded-[24px] bg-dls-hover p-4">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {filteredCloudOrgSkills.map((skill) => {
-                      const state = cloudSkillInstallState(skill);
-                      const installedName = importedCloudSkills[skill.id]?.installedName ?? null;
-                      return (
-                        <div key={skill.id} className={`${panelCardClass} flex flex-col gap-4 text-left`}>
-                          <div className="flex min-w-0 gap-4">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-dls-border bg-dls-hover">
-                              <Cloud size={20} className="text-dls-secondary" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h4 className="truncate text-[14px] font-semibold text-dls-text">{skill.title}</h4>
-                              {skill.description ? (
-                                <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-dls-secondary">{skill.description}</p>
-                              ) : null}
-                              <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-dls-secondary">
-                                {skill.hubName ? <span className={tagClass}>{t("skills.cloud_hub_label", undefined, { name: skill.hubName })}</span> : null}
-                                {skill.shared === "org" ? <span className={tagClass}>{t("skills.cloud_shared_org")}</span> : null}
-                                {skill.shared === "public" ? <span className={tagClass}>{t("skills.cloud_shared_public")}</span> : null}
-                                {skill.shared === null && !skill.hubName ? <span className={tagClass}>{t("skills.cloud_shared_private")}</span> : null}
-                                {installedName ? <span className={tagClass}>{t("skills.cloud_installed_as", undefined, { name: installedName })}</span> : null}
-                                {state === "installed" ? <span className={tagClass}>{t("skills.cloud_status_installed")}</span> : null}
-                                {state === "update" ? <span className={tagClass}>{t("skills.cloud_status_update")}</span> : null}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-3 border-t border-dls-border pt-4">
-                            <span className={tagClass}>{t("skills.cloud_footer_label")}</span>
-                            <button
-                              type="button"
-                              className={installingCloudSkillId === skill.id || state === "installed" ? pillSecondaryClass : pillPrimaryClass}
-                              onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                void installFromCloud(skill);
-                              }}
-                              disabled={props.busy || installingCloudSkillId === skill.id || state === "installed"}
-                            >
-                              {installingCloudSkillId === skill.id ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                              {installingCloudSkillId === skill.id
-                                ? t("skills.cloud_installing_short")
-                                : state === "update"
-                                  ? t("skills.cloud_update_skill")
-                                  : state === "installed"
-                                    ? t("skills.cloud_status_installed")
-                                    : t("skills.install")}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </>
           )}
         </div>
       ) : null}

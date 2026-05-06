@@ -51,7 +51,6 @@ import type {
   ProviderListItem,
   WorkspaceSessionGroup,
 } from "../../app/types";
-import { buildFeedbackUrl } from "../../app/lib/feedback";
 import {
   getWorkspaceTaskLoadErrorDisplay,
   isDesktopRuntime,
@@ -1947,13 +1946,6 @@ export function SessionRoute() {
       providerConnectedIds={providerConnectedIds}
       providers={providers}
       mcpConnectedCount={0}
-      onSendFeedback={() => {
-        platform.openLink(
-          buildFeedbackUrl({
-            entrypoint: "status-bar",
-          }),
-        );
-      }}
       onOpenSettings={() => handleOpenSettings("/settings/general")}
       sidebar={{
         workspaceSessionGroups,

@@ -1,43 +1,27 @@
 import en from "./locales/en";
-import ja from "./locales/ja";
 import zh from "./locales/zh";
-import vi from "./locales/vi";
-import ptBR from "./locales/pt-BR";
-import th from "./locales/th";
-import fr from "./locales/fr";
-import ca from "./locales/ca";
-import es from "./locales/es";
-import ru from "./locales/ru";
 import { LANGUAGE_PREF_KEY } from "../app/constants";
 
 /**
  * Supported languages
  */
-export type Language = "en" | "ja" | "zh" | "vi" | "pt-BR" | "th" | "fr" | "ca" | "es" | "ru";
+export type Language = "en" | "zh";
 export type Locale = Language;
 
 /**
  * All supported languages - single source of truth
  */
-export const LANGUAGES: Language[] = ["en", "ja", "zh", "vi", "pt-BR", "th", "fr", "ca", "es", "ru"];
+export const LANGUAGES: Language[] = ["en", "zh"];
 
 /**
  * Language options for UI - single source of truth
  */
 export const LANGUAGE_OPTIONS = [
   { value: "en" as Language, label: "English", nativeName: "English" },
-  { value: "ja" as Language, label: "Japanese", nativeName: "日本語" },
   { value: "zh" as Language, label: "Chinese (Simplified)", nativeName: "简体中文" },
-  { value: "vi" as Language, label: "Vietnamese", nativeName: "Tiếng Việt" },
-  { value: "pt-BR" as Language, label: "Portuguese (BR)", nativeName: "Português (BR)" },
-  { value: "th" as Language, label: "Thai", nativeName: "ไทย" },
-  { value: "fr" as Language, label: "French", nativeName: "Français" },
-  { value: "ca" as Language, label: "Catalan", nativeName: "Català" },
-  { value: "es" as Language, label: "Spanish", nativeName: "Español" },
-  { value: "ru" as Language, label: "Russian", nativeName: "Русский" },
 ] as const;
 
-const PLURAL_SUFFIX_EMPTY_LANGUAGES = new Set<Language>(["ja", "zh", "th"]);
+const PLURAL_SUFFIX_EMPTY_LANGUAGES = new Set<Language>(["zh"]);
 
 /**
  * Current translation strings use an English-style plural suffix placeholder.
@@ -57,15 +41,7 @@ export const pluralSuffix = (locale: Language, count: number): string => {
  */
 const TRANSLATIONS: Record<Language, Record<string, string>> = {
   en,
-  ja,
   zh,
-  vi,
-  "pt-BR": ptBR,
-  th,
-  fr,
-  ca,
-  es,
-  ru,
 };
 
 /**
@@ -98,7 +74,7 @@ export const setLocale = (newLocale: Language) => {
   localeValue = newLocale;
 
   if (typeof document !== "undefined") {
-    document.documentElement.setAttribute("lang", newLocale);
+    document.documentElement.setAttribute("lang", newLocale === "zh" ? "zh-CN" : newLocale);
   }
 
   // Persist to localStorage
@@ -124,7 +100,7 @@ const pluralRulesCache = new Map<Language, Intl.PluralRules>();
 const pluralRule = (loc: Language, count: number): Intl.LDMLPluralRule => {
   let rules = pluralRulesCache.get(loc);
   if (!rules) {
-    rules = new Intl.PluralRules(loc);
+    rules = new Intl.PluralRules(loc === "zh" ? "zh-CN" : loc);
     pluralRulesCache.set(loc, rules);
   }
   return rules.select(count);
@@ -163,11 +139,14 @@ export const t = (
   legacyParams?: Record<string, string | number>,
 ): string => {
   const params = legacyParams ?? (typeof paramsOrLocale === "string" ? undefined : paramsOrLocale);
-  const loc: Language = typeof paramsOrLocale === "string"
-    ? paramsOrLocale
-    : isLanguage(params?.lng)
-      ? params.lng
-      : locale();
+  const loc: Language =
+    typeof paramsOrLocale === "string"
+      ? isLanguage(paramsOrLocale)
+        ? paramsOrLocale
+        : locale()
+      : isLanguage(params?.lng)
+        ? params.lng
+        : locale();
 
   const lookupKey =
     typeof params?.count === "number" ? resolvePluralKey(loc, key, params.count) : key;
@@ -196,10 +175,13 @@ export const initLocale = (): Language => {
 
   try {
     const stored = window.localStorage.getItem(LANGUAGE_PREF_KEY);
+    if (stored !== null && !isLanguage(stored)) {
+      window.localStorage.removeItem(LANGUAGE_PREF_KEY);
+    }
     if (isLanguage(stored)) {
       localeValue = stored;
       if (typeof document !== "undefined") {
-        document.documentElement.setAttribute("lang", stored);
+        document.documentElement.setAttribute("lang", stored === "zh" ? "zh-CN" : stored);
       }
       return stored;
     }

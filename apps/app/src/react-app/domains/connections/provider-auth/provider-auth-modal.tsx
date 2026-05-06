@@ -59,7 +59,7 @@ export type ProviderAuthModalProps = {
   authMethods: Record<string, ProviderAuthMethod[]>;
   onSelect: (providerId: string, methodIndex?: number) => Promise<ProviderOAuthStartResult>;
   onSubmitApiKey: (providerId: string, apiKey: string) => Promise<string | void>;
-  onConnectCloudProvider: (cloudProviderId: string) => Promise<string | void>;
+  onConnectCloudProvider?: (cloudProviderId: string) => Promise<string | void>;
   onSubmitOAuth: (
     providerId: string,
     methodIndex: number,
@@ -150,6 +150,9 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
       .map((id): ProviderAuthEntry => {
         const provider = providers.find((item) => item.id === id);
         const entryMethods = (methods[id] ?? []).filter((method) => {
+          if (method.type === "cloud" && !props.onConnectCloudProvider) {
+            return false;
+          }
           if (isAnthropicProvider(id, provider?.name) && isClaudeProMaxMethod(method)) {
             return false;
           }
@@ -168,7 +171,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
       })
       .filter((entry) => entry.methods.length > 0)
       .sort(compareProviders);
-  }, [isRemoteWorker, props.authMethods, props.connectedProviderIds, props.providers]);
+  }, [isRemoteWorker, props.authMethods, props.connectedProviderIds, props.onConnectCloudProvider, props.providers]);
 
   const selectedEntry = useMemo(
     () => entries.find((entry) => entry.id === selectedProviderId) ?? null,
@@ -473,6 +476,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     }
 
     if (method.type === "cloud") {
+      if (!props.onConnectCloudProvider) return;
       setSelectedCloudMethod(method);
       setView("cloud");
       return;
@@ -518,7 +522,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   };
 
   const handleCloudSubmit = async () => {
-    if (!selectedCloudMethod?.cloudProviderId || actionDisabled) return;
+    if (!props.onConnectCloudProvider || !selectedCloudMethod?.cloudProviderId || actionDisabled) return;
 
     setLocalError(null);
     try {

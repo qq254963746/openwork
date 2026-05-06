@@ -171,15 +171,14 @@ export type OnboardingStep = "welcome" | "local" | "server" | "connecting";
 
 export type SettingsTab =
   | "general"
-  | "den"
   | "skills"
   | "extensions"
   | "environment"
   | "advanced"
   | "appearance"
-  | "updates"
   | "recovery"
-  | "debug";
+  | "debug"
+  | "messaging";
 
 export type WorkspacePreset = "starter" | "automation" | "minimal";
 

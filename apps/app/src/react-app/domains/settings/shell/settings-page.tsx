@@ -2,11 +2,9 @@
 import type * as React from "react";
 import {
   Bug,
-  Cloud,
   Cog,
   Paintbrush,
   Puzzle,
-  RefreshCcw,
   ShieldCheck,
   Sparkles,
   Terminal,
@@ -33,17 +31,10 @@ import {
   SettingsPanelDescription,
   SettingsPanelHeading,
   SettingsPanelTitle,
-  SettingsPanelToolbar,
-  SettingsPanelToolbarActions,
-  SettingsPanelToolbarButton,
-  SettingsPanelToolbarMessage,
-  SettingsPanelToolbarStatus,
 } from "./panel";
 
 export function getSettingsTabIcon(tab: SettingsTab) {
   switch (tab) {
-    case "den":
-      return Cloud;
     case "skills":
       return Sparkles;
     case "extensions":
@@ -54,8 +45,6 @@ export function getSettingsTabIcon(tab: SettingsTab) {
       return Wrench;
     case "appearance":
       return Paintbrush;
-    case "updates":
-      return RefreshCcw;
     case "recovery":
       return ShieldCheck;
     case "debug":
@@ -67,8 +56,6 @@ export function getSettingsTabIcon(tab: SettingsTab) {
 
 export function getSettingsTabLabel(tab: SettingsTab) {
   switch (tab) {
-    case "den":
-      return t("settings.tab_cloud");
     case "skills":
       return t("settings.tab_skills");
     case "extensions":
@@ -79,8 +66,6 @@ export function getSettingsTabLabel(tab: SettingsTab) {
       return t("settings.tab_advanced");
     case "appearance":
       return t("settings.tab_appearance");
-    case "updates":
-      return t("settings.tab_updates");
     case "recovery":
       return t("settings.tab_recovery");
     case "debug":
@@ -92,8 +77,6 @@ export function getSettingsTabLabel(tab: SettingsTab) {
 
 export function getSettingsTabDescription(tab: SettingsTab) {
   switch (tab) {
-    case "den":
-      return t("settings.tab_description_den");
     case "skills":
       return t("settings.tab_description_skills");
     case "extensions":
@@ -104,8 +87,6 @@ export function getSettingsTabDescription(tab: SettingsTab) {
       return t("settings.tab_description_advanced");
     case "appearance":
       return t("settings.tab_description_appearance");
-    case "updates":
-      return t("settings.tab_description_updates");
     case "recovery":
       return t("settings.tab_description_recovery");
     case "debug":
@@ -120,7 +101,7 @@ export function getWorkspaceSettingsTabs(): SettingsTab[] {
 }
 
 export function getGlobalSettingsTabs(developerMode: boolean): SettingsTab[] {
-  const tabs: SettingsTab[] = ["den", "appearance", "environment", "updates", "recovery"];
+  const tabs: SettingsTab[] = ["appearance", "environment", "recovery"];
   if (developerMode) tabs.push("debug");
   return tabs;
 }
@@ -129,15 +110,6 @@ type SettingsPageProps = {
   activeTab: SettingsTab;
   onSelectTab: (tab: SettingsTab) => void;
   developerMode: boolean;
-  showUpdateToolbar?: boolean;
-  updateToolbarTone?: string;
-  updateToolbarTitle?: string;
-  updateToolbarSpinning?: boolean;
-  updateToolbarLabel?: string;
-  updateToolbarActionLabel?: string | null;
-  updateToolbarDisabled?: boolean;
-  updateRestartBlockedMessage?: string | null;
-  onUpdateToolbarAction?: () => void;
   children: React.ReactNode;
 };
 
@@ -204,32 +176,6 @@ export function SettingsPage(props: SettingsPageProps) {
               <SettingsPanelTitle>{getSettingsTabLabel(props.activeTab)}</SettingsPanelTitle>
               <SettingsPanelDescription>{getSettingsTabDescription(props.activeTab)}</SettingsPanelDescription>
             </SettingsPanelHeading>
-
-            {props.showUpdateToolbar && props.activeTab === "general" ? (
-              <SettingsPanelToolbar>
-                <SettingsPanelToolbarActions>
-                  <SettingsPanelToolbarStatus
-                    tone={props.updateToolbarTone}
-                    title={props.updateToolbarTitle}
-                    spinning={props.updateToolbarSpinning}
-                  >
-                    {props.updateToolbarLabel}
-                  </SettingsPanelToolbarStatus>
-                  {props.updateToolbarActionLabel ? (
-                    <SettingsPanelToolbarButton
-                      onClick={props.onUpdateToolbarAction}
-                      disabled={props.updateToolbarDisabled}
-                      title={props.updateRestartBlockedMessage ?? ""}
-                    >
-                      {props.updateToolbarActionLabel}
-                    </SettingsPanelToolbarButton>
-                  ) : null}
-                </SettingsPanelToolbarActions>
-                {props.updateRestartBlockedMessage ? (
-                  <SettingsPanelToolbarMessage>{props.updateRestartBlockedMessage}</SettingsPanelToolbarMessage>
-                ) : null}
-              </SettingsPanelToolbar>
-            ) : null}
           </SettingsPanel>
 
           {props.children}

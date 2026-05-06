@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, MessageCircle, Settings } from "lucide-react";
+import { BookOpen, Settings } from "lucide-react";
 
 import { t } from "../../../../i18n";
 import { usePlatform } from "../../../kernel/platform";
@@ -16,7 +16,6 @@ export type StatusBarProps = {
   openworkServerStatus: OpenworkServerStatus;
   developerMode: boolean;
   settingsOpen: boolean;
-  onSendFeedback: () => void;
   onOpenSettings: () => void;
   providerConnectedIds: string[];
   mcpConnectedCount: number;
@@ -105,7 +104,6 @@ function deriveStatusCopy(props: StatusBarProps): StatusCopy {
 export function StatusBar(props: StatusBarProps) {
   const platform = usePlatform();
   const docsButtonRef = useRef<HTMLButtonElement>(null);
-  const feedbackButtonRef = useRef<HTMLButtonElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const [initializing, setInitializing] = useState(
     () => Date.now() - STATUS_BAR_BOOT_STARTED_AT < STATUS_BAR_INITIALIZING_MS,
@@ -131,16 +129,6 @@ export function StatusBar(props: StatusBarProps) {
     execute: () => platform.openLink(DOCS_URL),
   }), [platform]);
   useControlAction(docsControlAction);
-
-  const feedbackControlAction = useMemo<OpenworkControlAction>(() => ({
-    id: "status.feedback.open",
-    label: "Send feedback",
-    description: "Open the OpenWork feedback surface from the status bar.",
-    sideEffect: "external",
-    targetRef: feedbackButtonRef,
-    execute: props.onSendFeedback,
-  }), [props.onSendFeedback]);
-  useControlAction(feedbackControlAction);
 
   const settingsControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "status.settings.open",
@@ -186,19 +174,6 @@ export function StatusBar(props: StatusBarProps) {
           >
             <BookOpen className="h-4 w-4" />
             <span className="text-[11px] font-medium">{t("status.docs")}</span>
-          </button>
-          <button
-            ref={feedbackButtonRef}
-            type="button"
-            className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
-            onClick={props.onSendFeedback}
-            title={t("status.send_feedback")}
-            aria-label={t("status.send_feedback")}
-          >
-            <MessageCircle className="h-4 w-4" />
-            <span className="text-[11px] font-medium">
-              {t("status.feedback")}
-            </span>
           </button>
           {props.showSettingsButton !== false ? (
             <button
