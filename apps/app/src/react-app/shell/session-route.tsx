@@ -63,7 +63,7 @@ import { useLocal } from "../kernel/local-provider";
 import { usePlatform } from "../kernel/platform";
 import { SessionPage } from "../domains/session/chat/session-page";
 import { isDesktopProviderBlocked } from "../../app/cloud/desktop-app-restrictions";
-import { useCheckDesktopRestriction } from "../domains/cloud/desktop-config-provider";
+import { useCheckDesktopRestriction } from "../domains/cloud/desktop-restriction-hooks";
 import { useRestrictionNotice } from "../domains/cloud/restriction-notice-provider";
 import { ReactSessionRuntime } from "../domains/session/sync/runtime-sync";
 import { buildOpenworkEnvSystemContext } from "../domains/session/sync/env-context";

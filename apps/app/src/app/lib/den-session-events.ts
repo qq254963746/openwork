@@ -1,13 +1,27 @@
-import type { DenSettings, DenUser } from "./den";
-
 export const denSessionUpdatedEvent = "openwork-den-session-updated";
 export const denSettingsChangedEvent = "openwork-den-settings-changed";
+
+/** Persisted hosted-app connection targets + optional session/org ids (localStorage). */
+export type HostedAppConnectionSettings = {
+  baseUrl: string;
+  apiBaseUrl?: string;
+  authToken?: string | null;
+  activeOrgId?: string | null;
+  activeOrgSlug?: string | null;
+  activeOrgName?: string | null;
+};
+
+export type HostedAppUser = {
+  id: string;
+  email: string;
+  name: string | null;
+};
 
 export type DenSessionUpdatedDetail = {
   status?: "success" | "error";
   baseUrl?: string | null;
   token?: string | null;
-  user?: DenUser | null;
+  user?: HostedAppUser | null;
   email?: string | null;
   message?: string | null;
 };
@@ -25,7 +39,7 @@ export function dispatchDenSessionUpdated(detail: DenSessionUpdatedDetail) {
 }
 
 export type DenSettingsChangedDetail = {
-  settings: DenSettings;
+  settings: HostedAppConnectionSettings;
 };
 
 export function dispatchDenSettingsChanged(detail: DenSettingsChangedDetail) {

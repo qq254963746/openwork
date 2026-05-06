@@ -71,7 +71,7 @@ import {
   revealDesktopItemInDir,
 } from "../../app/lib/desktop";
 import { isDesktopProviderBlocked } from "../../app/cloud/desktop-app-restrictions";
-import { useCheckDesktopRestriction } from "../domains/cloud/desktop-config-provider";
+import { useCheckDesktopRestriction } from "../domains/cloud/desktop-restriction-hooks";
 import { isDesktopRuntime, normalizeDirectoryPath, safeStringify } from "../../app/utils";
 import { CreateRemoteWorkspaceModal } from "../domains/workspace/create-remote-workspace-modal";
 import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-modal";

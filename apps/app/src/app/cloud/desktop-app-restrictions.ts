@@ -1,5 +1,7 @@
-import type { DesktopAppRestrictions } from "@openwork/types/den/desktop-app-restrictions";
-import type { DenDesktopConfig } from "../lib/den";
+import type {
+  DesktopAppRestrictions,
+  DesktopConfig,
+} from "@openwork/types/den/desktop-app-restrictions";
 import type { ModelRef } from "../types";
 
 export type DesktopAppRestrictionKey = keyof DesktopAppRestrictions;
@@ -11,7 +13,7 @@ export type DesktopAppRestrictionChecker = (input: {
 export const DESKTOP_RESTRICTION_OPENCODE_PROVIDER_ID = "opencode";
 
 export function checkDesktopAppRestriction(input: {
-  config: DenDesktopConfig | null | undefined;
+  config: DesktopConfig | null | undefined;
   restriction: DesktopAppRestrictionKey;
 }) {
   return input.config?.[input.restriction] === true;

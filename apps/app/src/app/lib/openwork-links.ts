@@ -1,4 +1,4 @@
-import { DEFAULT_DEN_BASE_URL, normalizeDenBaseUrl } from "./den";
+import { DEFAULT_OPENWORK_APP_URL, normalizeOpenworkAppUrl } from "./openwork-app-urls";
 import { normalizeOpenworkServerUrl } from "./openwork-server";
 import { normalizeBundleImportIntent, parseBundleDeepLink } from "../bundles/sources";
 import type { BundleRequest } from "../bundles/types";
@@ -126,7 +126,8 @@ export function parseDenAuthDeepLink(rawUrl: string): DenAuthDeepLink | null {
   }
 
   const grant = url.searchParams.get("grant")?.trim() ?? "";
-  const denBaseUrl = normalizeDenBaseUrl(url.searchParams.get("denBaseUrl")?.trim() ?? "") ?? DEFAULT_DEN_BASE_URL;
+  const denBaseUrl =
+    normalizeOpenworkAppUrl(url.searchParams.get("denBaseUrl")?.trim() ?? "") ?? DEFAULT_OPENWORK_APP_URL;
   if (!grant) {
     return null;
   }
