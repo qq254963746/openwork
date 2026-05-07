@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Loader2,
   MoreHorizontal,
+  PanelLeftClose,
   Plus,
   RefreshCw,
   RotateCcw,
@@ -53,6 +54,8 @@ type Props = {
   onEditWorkspaceConnection: (workspaceId: string) => void;
   onForgetWorkspace: (workspaceId: string) => void;
   onOpenCreateWorkspace: () => void;
+  /** Session shell only: collapse the entire workspace sidebar (icon in top strip). */
+  onCollapseWorkspaceSidebar?: () => void;
 };
 
 const MAX_SESSIONS_PREVIEW = 6;
@@ -538,14 +541,37 @@ export function WorkspaceSessionList(props: Props) {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-      <div
-        aria-hidden
-        className="h-[50px] shrink-0 select-none"
-        {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
-        style={
-          electronMacDrag ? ({ WebkitAppRegion: "drag" } satisfies CSSProperties) : undefined
-        }
-      />
+      <div className="flex h-[50px] shrink-0 items-stretch gap-1">
+        <div
+          aria-hidden
+          className="min-w-0 flex-1 select-none"
+          {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
+          style={
+            electronMacDrag ? ({ WebkitAppRegion: "drag" } as CSSProperties) : undefined
+          }
+        />
+        {props.onCollapseWorkspaceSidebar ? (
+          <div
+            className="flex shrink-0 items-center pr-1.5"
+            {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
+            style={
+              isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
+                ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
+                : undefined
+            }
+          >
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-10 transition-colors hover:bg-gray-3/70 hover:text-gray-12"
+              onClick={props.onCollapseWorkspaceSidebar}
+              title={t("session.sidebar_collapse")}
+              aria-label={t("session.sidebar_collapse")}
+            >
+              <PanelLeftClose className="h-[18px] w-[18px]" strokeWidth={1.75} />
+            </button>
+          </div>
+        ) : null}
+      </div>
       <div className="shrink-0 border-b border-dls-border/80 px-3.5 pb-3 pt-2.5">
         <div className="flex items-center gap-2.5">
           <img

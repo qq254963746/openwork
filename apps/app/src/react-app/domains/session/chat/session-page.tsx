@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Loader2, Minimize2, PanelRightIcon, Zap } from "lucide-react";
+import { Check, Loader2, Minimize2, PanelLeftOpen, PanelRightIcon, Zap } from "lucide-react";
 
 import { t } from "../../../../i18n";
 import { buildOpenworkWorkspaceBaseUrl, type OpenworkServerClient, type OpenworkServerStatus } from "../../../../app/lib/openwork-server";
@@ -33,7 +33,7 @@ import {
 } from "../../../shell/workspace-shell-layout";
 import { OwDotTicker } from "../../../shell/dot-ticker";
 import { useReactRenderWatchdog } from "../../../shell/react-render-watchdog";
-import { isElectronRuntime, isTauriRuntime } from "../../../../app/utils";
+import { isElectronRuntime, isMacPlatform, isTauriRuntime } from "../../../../app/utils";
 
 type StatusBarOverrides = Pick<
   StatusBarProps,
@@ -166,11 +166,15 @@ export function SessionPage(props: SessionPageProps) {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [todoExpanded, setTodoExpanded] = useState(true);
   const [workspaceSidePanelOpen, setWorkspaceSidePanelOpen] = useState(false);
+  const [leftWorkspaceSidebarCollapsed, setLeftWorkspaceSidebarCollapsed] = useState(false);
   const [showDelayedSessionLoadingState, setShowDelayedSessionLoadingState] = useState(false);
 
   const toggleWorkspaceSidePanel = useCallback(() => {
     setWorkspaceSidePanelOpen((current) => !current);
   }, []);
+
+  const macDesktopChrome =
+    isMacPlatform() && (isTauriRuntime() || isElectronRuntime());
 
   const selectedSessionTitle = useMemo(
     () => sessionTitleForId(props.sidebar.workspaceSessionGroups, props.selectedSessionId),
@@ -274,7 +278,9 @@ export function SessionPage(props: SessionPageProps) {
     <div className="flex h-full min-h-0 flex-col bg-[radial-gradient(circle_at_top,rgba(74,111,255,0.12),transparent_42%),var(--app-bg,#0b1020)] text-dls-text">
       <div className="flex min-h-0 flex-1 gap-0">
         <aside
-          className="relative hidden min-h-0 shrink-0 overflow-hidden border-0 border-r border-dls-border bg-dls-sidebar lg:flex lg:flex-col"
+          className={`relative min-h-0 shrink-0 overflow-hidden border-0 border-r border-dls-border bg-dls-sidebar ${
+            leftWorkspaceSidebarCollapsed ? "hidden" : "hidden lg:flex lg:flex-col"
+          }`}
           style={{ width: leftSidebarWidth }}
         >
           <div className="flex min-h-0 flex-1">
@@ -303,19 +309,26 @@ export function SessionPage(props: SessionPageProps) {
               onEditWorkspaceConnection={props.sidebar.onEditWorkspaceConnection}
               onForgetWorkspace={props.sidebar.onForgetWorkspace}
               onOpenCreateWorkspace={props.sidebar.onOpenCreateWorkspace}
+              onCollapseWorkspaceSidebar={() => setLeftWorkspaceSidebarCollapsed(true)}
             />
           </div>
-          <div
-            className="absolute right-0 top-0 hidden h-full w-2 translate-x-1/2 cursor-col-resize rounded-full bg-transparent transition-colors hover:bg-gray-6/40 lg:block"
-            onPointerDown={startLeftSidebarResize}
-            title={t("session.resize_workspace_column")}
-            aria-label={t("session.resize_workspace_column")}
-          />
+          {!leftWorkspaceSidebarCollapsed ? (
+            <div
+              className="absolute right-0 top-0 hidden h-full w-2 translate-x-1/2 cursor-col-resize rounded-full bg-transparent transition-colors hover:bg-gray-6/40 lg:block"
+              onPointerDown={startLeftSidebarResize}
+              title={t("session.resize_workspace_column")}
+              aria-label={t("session.resize_workspace_column")}
+            />
+          ) : null}
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-dls-surface">
           <header
-            className="z-10 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-dls-border bg-dls-surface pl-4 md:pl-6 pr-1.5 md:pr-2"
+            className={`z-10 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-dls-border bg-dls-surface pr-1.5 md:pr-2 ${
+              leftWorkspaceSidebarCollapsed && macDesktopChrome
+                ? "pl-4 md:pl-6 lg:pl-[76px]"
+                : "pl-4 md:pl-6"
+            }`}
             {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
             style={
               isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
@@ -324,6 +337,27 @@ export function SessionPage(props: SessionPageProps) {
             }
           >
             <div className="flex min-w-0 flex-1 items-center gap-3">
+              {leftWorkspaceSidebarCollapsed ? (
+                <div
+                  className="hidden shrink-0 lg:flex"
+                  {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
+                  style={
+                    isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
+                      ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
+                      : undefined
+                  }
+                >
+                  <button
+                    type="button"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                    onClick={() => setLeftWorkspaceSidebarCollapsed(false)}
+                    title={t("session.sidebar_expand")}
+                    aria-label={t("session.sidebar_expand")}
+                  >
+                    <PanelLeftOpen className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                  </button>
+                </div>
+              ) : null}
               <h1 className="truncate text-[15px] font-semibold text-dls-text">
                 {showWorkspaceSetupEmptyState
                   ? t("session.create_or_connect_workspace")

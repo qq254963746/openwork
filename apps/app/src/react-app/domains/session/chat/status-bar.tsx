@@ -64,9 +64,9 @@ function deriveStatusCopy(props: StatusBarProps): StatusCopy {
     if (mcp > 0) {
       detailBits.push(t("status.mcp_connected", undefined, { count: mcp }));
     }
-    if (!detailBits.length) {
-      detailBits.push(t("status.ready_for_tasks"));
-    }
+    // if (!detailBits.length) {
+    //   detailBits.push(t("status.ready_for_tasks"));
+    // }
     if (props.developerMode) {
       detailBits.push(t("status.developer_mode"));
     }
