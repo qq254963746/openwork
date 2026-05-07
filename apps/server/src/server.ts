@@ -769,9 +769,22 @@ export function normalizeWorkspaceRelativePath(input: string, options: { allowSu
 
 export function isSupportedWorkspaceTextFilePath(relativePath: string): boolean {
   const lowered = relativePath.toLowerCase();
-  return [".md", ".mdx", ".markdown", ".json", ".jsonc", ".ts", ".js", ".mjs", ".cjs", ".txt"].some((ext) =>
-    lowered.endsWith(ext),
-  );
+  return [
+    ".md",
+    ".mdx",
+    ".markdown",
+    ".json",
+    ".jsonc",
+    ".ts",
+    ".js",
+    ".mjs",
+    ".cjs",
+    ".txt",
+    ".svg",
+    ".html",
+    ".htm",
+    ".htmlx",
+  ].some((ext) => lowered.endsWith(ext));
 }
 
 function resolveSafeChildPath(root: string, child: string): string {

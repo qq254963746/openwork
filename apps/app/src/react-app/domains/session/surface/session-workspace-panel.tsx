@@ -17,7 +17,6 @@ import { openDesktopPath } from "../../../../app/lib/desktop";
 import type { OpenworkServerClient } from "../../../../app/lib/openwork-server";
 import type { ComposerAttachment } from "../../../../app/types";
 import { isDesktopRuntime, isMacPlatform, isWindowsPlatform } from "../../../../app/utils";
-import { usePlatform } from "../../../kernel/platform";
 import { MarkdownBlock } from "./markdown";
 
 const WORKSPACE_PANEL_WIDTH_KEY = "openwork.session.workspacePanelWidth.v1";
@@ -58,13 +57,115 @@ function joinRelativePath(dir: string, name: string): string {
 /** Matches OpenWork server `GET .../files/content` supported extensions. */
 function isWorkspacePreviewablePath(path: string): boolean {
   const lowered = path.toLowerCase();
-  return [".md", ".mdx", ".markdown", ".json", ".jsonc", ".ts", ".js", ".mjs", ".cjs", ".txt"].some((ext) =>
-    lowered.endsWith(ext),
-  );
+  return [
+    ".md",
+    ".mdx",
+    ".markdown",
+    ".json",
+    ".jsonc",
+    ".ts",
+    ".js",
+    ".mjs",
+    ".cjs",
+    ".txt",
+    ".svg",
+    ".html",
+    ".htm",
+    ".htmlx",
+  ].some((ext) => lowered.endsWith(ext));
 }
 
-function isSvgFileName(name: string): boolean {
-  return name.trim().toLowerCase().endsWith(".svg");
+/** SVG / HTML family: fullscreen iframe preview in the workspace panel. */
+function isWebPreviewDocumentPath(relativePosix: string): boolean {
+  const lowered = relativePosix.trim().toLowerCase();
+  return [".svg", ".html", ".htm", ".htmlx"].some((ext) => lowered.endsWith(ext));
+}
+
+/**
+ * Injected into iframe srcDoc: matches app scrollbars (index.css + ScrollbarOnScrollReveal),
+ * slightly narrower (6px) thumbs, hidden until scroll then fade like the shell.
+ */
+const WEB_PREVIEW_SCROLLBAR_HEAD_INJECTION = `<meta charset="utf-8" />
+<style>
+  :root {
+    --ow-scrollbar-thumb: rgba(140, 148, 158, 0.42);
+    --ow-scrollbar-thumb-hover: rgba(120, 128, 138, 0.58);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ow-scrollbar-thumb: rgba(170, 178, 188, 0.38);
+      --ow-scrollbar-thumb-hover: rgba(190, 198, 208, 0.52);
+    }
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  *.ow-scrollbar-scrolling {
+    scrollbar-color: var(--ow-scrollbar-thumb) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 100px;
+  }
+  *.ow-scrollbar-scrolling::-webkit-scrollbar-thumb {
+    background-color: var(--ow-scrollbar-thumb);
+  }
+  *.ow-scrollbar-scrolling::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ow-scrollbar-thumb-hover);
+  }
+</style>
+<script>
+(function () {
+  var HIDE_MS = 900;
+  var CLASS = "ow-scrollbar-scrolling";
+  var timers = new WeakMap();
+  function pulse(el) {
+    if (!el || !el.classList) return;
+    el.classList.add(CLASS);
+    var p = timers.get(el);
+    if (p !== undefined) clearTimeout(p);
+    var id = setTimeout(function () {
+      el.classList.remove(CLASS);
+      timers.delete(el);
+    }, HIDE_MS);
+    timers.set(el, id);
+  }
+  function onScroll(e) {
+    var t = e.target;
+    if (t === document || t === document.documentElement) {
+      pulse(document.documentElement);
+      return;
+    }
+    if (t && t.classList) pulse(t);
+  }
+  document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+})();
+</script>`;
+
+function buildWebPreviewSrcDoc(raw: string): string {
+  const inject = WEB_PREVIEW_SCROLLBAR_HEAD_INJECTION;
+  const t = raw.trim();
+  if (!t) {
+    return `<!DOCTYPE html><html><head>${inject}</head><body></body></html>`;
+  }
+  if (/^<\?xml/i.test(t) || /^<svg/i.test(t)) {
+    return `<!DOCTYPE html><html><head>${inject}</head><body style="margin:0;min-height:100vh;overflow:auto">${t}</body></html>`;
+  }
+  if (/<head[\s>]/i.test(t)) {
+    return t.replace(/<head([^>]*)>/i, `<head$1>${inject}`);
+  }
+  if (/<html[\s>]/i.test(t)) {
+    return t.replace(/<html([^>]*)>/i, `<html$1><head>${inject}</head>`);
+  }
+  return `<!DOCTYPE html><html><head>${inject}</head><body style="margin:0;min-height:100vh;overflow:auto">${t}</body></html>`;
 }
 
 /** Join workspace root (host path) with POSIX relative segments from the file tree. */
@@ -76,16 +177,6 @@ function absoluteWorkspaceFilePath(workspaceRoot: string, relativePosix: string)
   const isWin = /^[a-zA-Z]:/.test(rootClean) || rootClean.startsWith("\\\\");
   const sep = isWin ? "\\" : "/";
   return [rootClean, ...segments].join(sep);
-}
-
-/** Build a file:// URL for shell.openExternal (no node:url — browser bundle friendly). */
-function hrefFromAbsoluteFsPath(absPath: string): string {
-  const posix = absPath.replace(/\\/g, "/");
-  if (/^[a-zA-Z]:/.test(posix)) {
-    return `file:///${encodeURI(posix)}`;
-  }
-  const withSlash = posix.startsWith("/") ? posix : `/${posix}`;
-  return `file://${encodeURI(withSlash)}`;
 }
 
 function collectSessionToolNames(messages: UIMessage[]): string[] {
@@ -121,7 +212,6 @@ export type SessionWorkspacePanelProps = {
 };
 
 export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
-  const platform = usePlatform();
   const [dirPath, setDirPath] = useState("");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [panelWidth, setPanelWidth] = useState(readStoredWorkspacePanelWidth);
@@ -216,7 +306,14 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
     [selectedFile],
   );
 
-  const pollMarkdownWhileSessionBusy = Boolean(markdownPreviewOpen && props.liveWorkspacePreview);
+  const webPreviewOpen = useMemo(
+    () => Boolean(selectedFile && isWebPreviewDocumentPath(selectedFile)),
+    [selectedFile],
+  );
+
+  const pollRichPreviewWhileSessionBusy = Boolean(
+    props.liveWorkspacePreview && selectedFile && (markdownPreviewOpen || webPreviewOpen),
+  );
   const pollWhileSessionBusy = Boolean(props.liveWorkspacePreview);
 
   const listQuery = useQuery({
@@ -233,8 +330,8 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
     enabled:
       Boolean(props.workspaceId && selectedFile) &&
       Boolean(selectedFile && isWorkspacePreviewablePath(selectedFile)),
-    staleTime: pollMarkdownWhileSessionBusy ? 0 : 30_000,
-    refetchInterval: pollMarkdownWhileSessionBusy ? 800 : false,
+    staleTime: pollRichPreviewWhileSessionBusy ? 0 : 30_000,
+    refetchInterval: pollRichPreviewWhileSessionBusy ? 800 : false,
   });
 
   const refreshWorkspaceFiles = () => {
@@ -275,17 +372,6 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
     setSelectedFile(null);
   };
 
-  const openSvgInDefaultBrowser = (relativePosix: string) => {
-    if (!isDesktopRuntime()) return;
-    const abs = absoluteWorkspaceFilePath(props.workspaceRoot, relativePosix);
-    if (!abs) return;
-    try {
-      platform.openLink(hrefFromAbsoluteFsPath(abs));
-    } catch {
-      // ignore malformed paths
-    }
-  };
-
   const handleEntryClick = (name: string, kind: "file" | "directory") => {
     const rel = joinRelativePath(dirPath, name);
     if (kind === "directory") {
@@ -297,6 +383,10 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       setSelectedFile(rel);
       return;
     }
+    if (isWebPreviewDocumentPath(rel)) {
+      setSelectedFile(rel);
+      return;
+    }
     const root = props.workspaceRoot.trim();
     if (isDesktopRuntime() && root) {
       const abs = absoluteWorkspaceFilePath(root, rel);
@@ -305,15 +395,10 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
         return;
       }
     }
-    if (isSvgFileName(name)) {
-      openSvgInDefaultBrowser(rel);
-      setSelectedFile(rel);
-      return;
-    }
     setSelectedFile(rel);
   };
 
-  const markdownFileTitle = selectedFile
+  const selectedFileTitle = selectedFile
     ? selectedFile.split("/").filter(Boolean).pop() ?? selectedFile
     : "";
 
@@ -333,7 +418,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar/60">
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-border bg-dls-surface/95 px-3 py-2.5">
             <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
-              {markdownFileTitle}
+              {selectedFileTitle}
             </span>
             <button
               type="button"
@@ -354,6 +439,40 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
               <div className="text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
             ) : (
               <MarkdownBlock text={previewQuery.data?.content ?? ""} />
+            )}
+          </div>
+        </div>
+      ) : webPreviewOpen ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar/60">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-border bg-dls-surface/95 px-3 py-2.5">
+            <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
+              {selectedFileTitle}
+            </span>
+            <button
+              type="button"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+              onClick={() => setSelectedFile(null)}
+              aria-label={t("session.workspace_panel_close_preview")}
+              title={t("session.workspace_panel_close_preview")}
+            >
+              <X size={18} strokeWidth={1.75} />
+            </button>
+          </div>
+          <div className="relative min-h-0 flex-1 bg-dls-surface">
+            {previewQuery.isLoading ? (
+              <div className="flex min-h-[200px] items-center justify-center py-12">
+                <Loader2 className="animate-spin text-dls-secondary" size={22} />
+              </div>
+            ) : previewQuery.isError ? (
+              <div className="p-4 text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
+            ) : (
+              <iframe
+                key={`${selectedFile}-${String(previewQuery.dataUpdatedAt ?? 0)}`}
+                title={selectedFileTitle}
+                className="absolute inset-0 h-full w-full border-0 bg-dls-surface"
+                srcDoc={buildWebPreviewSrcDoc(previewQuery.data?.content ?? "")}
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
+              />
             )}
           </div>
         </div>
@@ -522,21 +641,13 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
           ) : null}
         </div>
 
-        {selectedFile && !markdownPreviewOpen ? (
+        {selectedFile && !markdownPreviewOpen && !webPreviewOpen ? (
           <div className="flex max-h-[42%] min-h-[120px] shrink-0 flex-col border-t border-dls-border bg-dls-surface/90">
             <div className="shrink-0 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wide text-dls-secondary">
-              {selectedFile.toLowerCase().endsWith(".svg")
-                ? t("session.workspace_panel_svg_preview_title")
-                : t("session.workspace_panel_preview")}
+              {t("session.workspace_panel_preview")}
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
-              {selectedFile.toLowerCase().endsWith(".svg") ? (
-                <div className="text-[11px] leading-relaxed text-dls-secondary">
-                  {isDesktopRuntime() && props.workspaceRoot.trim()
-                    ? t("session.workspace_panel_svg_opened_browser")
-                    : t("session.workspace_panel_svg_web_unavailable")}
-                </div>
-              ) : !isWorkspacePreviewablePath(selectedFile) ? (
+              {!isWorkspacePreviewablePath(selectedFile) ? (
                 <div className="text-[11px] text-dls-secondary">{t("session.workspace_panel_preview_unsupported")}</div>
               ) : previewQuery.isLoading ? (
                 <div className="flex justify-center py-4">
