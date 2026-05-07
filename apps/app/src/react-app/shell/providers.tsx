@@ -14,6 +14,7 @@ import { startDebugLogger, stopDebugLogger } from "./debug-logger";
 import { MigrationPrompt } from "./migration-prompt";
 import { resolveOpenworkConnection } from "./openwork-connection";
 import { ReloadCoordinatorProvider } from "./reload-coordinator";
+import { LocaleSubscriptionProvider } from "./locale-subscription-provider";
 import { ScrollbarOnScrollReveal } from "./scrollbar-on-scroll-reveal";
 
 function resolveDefaultServerUrl(): string {
@@ -66,8 +67,10 @@ export function AppProviders({ children }: AppProvidersProps) {
           <LocalProvider>
             <StatusToastsProvider>
               <ReloadCoordinatorProvider>
-                <ScrollbarOnScrollReveal />
-                {children}
+                <LocaleSubscriptionProvider>
+                  <ScrollbarOnScrollReveal />
+                  {children}
+                </LocaleSubscriptionProvider>
               </ReloadCoordinatorProvider>
             </StatusToastsProvider>
           </LocalProvider>

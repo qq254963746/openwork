@@ -1,7 +1,9 @@
 /** @jsxImportSource react */
 
+import { useSyncExternalStore } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import { getLocaleSnapshot, subscribeLocale } from "../../i18n";
 import { useDesktopFontZoomBehavior } from "./font-zoom";
 import { LoadingOverlay } from "./loading-overlay";
 import { DevProfiler, DevProfilerOverlay } from "./dev-profiler";
@@ -13,6 +15,7 @@ import { WelcomeRoute } from "./welcome-route";
 
 export function AppRoot() {
   useDesktopFontZoomBehavior();
+  useSyncExternalStore(subscribeLocale, getLocaleSnapshot, getLocaleSnapshot);
 
   return (
     <>

@@ -54,6 +54,29 @@ export const isLanguage = (value: unknown): value is Language => {
 
 let localeValue: Language = "en";
 
+const localeListeners = new Set<() => void>();
+
+/**
+ * Subscribe to locale changes (e.g. so React can re-render after {@link setLocale}).
+ * Returns an unsubscribe function.
+ */
+export const subscribeLocale = (listener: () => void): (() => void) => {
+  localeListeners.add(listener);
+  return () => {
+    localeListeners.delete(listener);
+  };
+};
+
+function notifyLocaleListeners(): void {
+  for (const listener of localeListeners) {
+    try {
+      listener();
+    } catch (error) {
+      console.warn("[i18n] locale listener failed:", error);
+    }
+  }
+}
+
 /**
  * Get current locale
  */
@@ -61,6 +84,9 @@ export const currentLocale = (): Language => locale();
 function locale(): Language {
   return localeValue;
 }
+
+/** Snapshot for `useSyncExternalStore` — must match {@link currentLocale}. */
+export const getLocaleSnapshot = (): Language => localeValue;
 
 /**
  * Set locale and persist to localStorage
@@ -70,6 +96,8 @@ export const setLocale = (newLocale: Language) => {
     console.warn(`Invalid locale: ${newLocale}, falling back to "en"`);
     newLocale = "en";
   }
+
+  if (localeValue === newLocale) return;
 
   localeValue = newLocale;
 
@@ -85,6 +113,8 @@ export const setLocale = (newLocale: Language) => {
       console.warn("Failed to persist language preference:", e);
     }
   }
+
+  notifyLocaleListeners();
 };
 
 /**
