@@ -1,13 +1,11 @@
 /** @jsxImportSource react */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 
 import { t } from "../../../../i18n";
-import { usePlatform } from "../../../kernel/platform";
 import { useControlAction, type OpenworkControlAction } from "../../../shell/control/control-provider";
 import type { OpenworkServerStatus } from "../../../../app/lib/openwork-server";
 
-const DOCS_URL = "https://openworklabs.com/docs";
 const STATUS_BAR_BOOT_STARTED_AT = Date.now();
 const STATUS_BAR_INITIALIZING_MS = 15_000;
 
@@ -26,6 +24,8 @@ export type StatusBarProps = {
   statusPulse?: boolean;
   showSettingsButton?: boolean;
   initializing?: boolean;
+  /** Narrow sidebar footer vs full-width main column strip */
+  variant?: "main" | "sidebar";
 };
 
 type StatusCopy = {
@@ -102,8 +102,7 @@ function deriveStatusCopy(props: StatusBarProps): StatusCopy {
 }
 
 export function StatusBar(props: StatusBarProps) {
-  const platform = usePlatform();
-  const docsButtonRef = useRef<HTMLButtonElement>(null);
+  const variant = props.variant ?? "main";
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const [initializing, setInitializing] = useState(
     () => Date.now() - STATUS_BAR_BOOT_STARTED_AT < STATUS_BAR_INITIALIZING_MS,
@@ -120,15 +119,6 @@ export function StatusBar(props: StatusBarProps) {
   }, [initializing]);
 
   const statusCopy = deriveStatusCopy({ ...props, initializing });
-  const docsControlAction = useMemo<OpenworkControlAction>(() => ({
-    id: "status.docs.open",
-    label: "Open OpenWork docs",
-    description: "Open the documentation from the status bar.",
-    sideEffect: "external",
-    targetRef: docsButtonRef,
-    execute: () => platform.openLink(DOCS_URL),
-  }), [platform]);
-  useControlAction(docsControlAction);
 
   const settingsControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "status.settings.open",
@@ -142,8 +132,20 @@ export function StatusBar(props: StatusBarProps) {
   useControlAction(settingsControlAction);
 
   return (
-    <div className="border-t border-dls-border bg-dls-surface">
-      <div className="flex h-12 items-center justify-between gap-3 px-4 md:px-6 text-[12px] text-dls-secondary">
+    <div
+      className={
+        variant === "sidebar"
+          ? "border-t border-dls-border/80 bg-dls-sidebar"
+          : "border-t border-dls-border bg-dls-surface"
+      }
+    >
+      <div
+        className={`flex items-center justify-between text-[12px] text-dls-secondary ${
+          variant === "sidebar"
+            ? "min-h-11 gap-2 px-2 py-2"
+            : "h-12 gap-3 px-4 md:px-6"
+        }`}
+      >
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
             {statusCopy.pulse ? (
@@ -164,17 +166,6 @@ export function StatusBar(props: StatusBarProps) {
         </div>
 
         <div className="flex items-center gap-1.5">
-          <button
-            ref={docsButtonRef}
-            type="button"
-            className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
-            onClick={() => platform.openLink(DOCS_URL)}
-            title={t("status.open_docs")}
-            aria-label={t("status.open_docs")}
-          >
-            <BookOpen className="h-4 w-4" />
-            <span className="text-[11px] font-medium">{t("status.docs")}</span>
-          </button>
           {props.showSettingsButton !== false ? (
             <button
               ref={settingsButtonRef}

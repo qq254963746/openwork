@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
@@ -56,6 +56,8 @@ type Props = {
   onOpenCreateWorkspace: () => void;
   /** Session shell only: collapse the entire workspace sidebar (icon in top strip). */
   onCollapseWorkspaceSidebar?: () => void;
+  /** Rendered below “Add workspace” (e.g. connection status + settings). */
+  sessionStatusFooter?: ReactNode;
 };
 
 const MAX_SESSIONS_PREVIEW = 6;
@@ -441,7 +443,7 @@ export function WorkspaceSessionList(props: Props) {
         <div
           role="button"
           tabIndex={0}
-          className={`group flex min-h-9 w-full items-center justify-between rounded-xl px-3 py-1.5 text-left text-[13px] transition-colors ${
+          className={`group flex min-h-9 w-full items-center justify-between rounded-xl px-3 py-1.5 text-left text-[13px] font-normal transition-colors ${
             isSelected
               ? "bg-gray-3 text-gray-12"
               : "text-gray-10 hover:bg-gray-1/70 hover:text-gray-11"
@@ -475,33 +477,33 @@ export function WorkspaceSessionList(props: Props) {
               <span className="h-[1px] w-3 shrink-0 rounded-full bg-dls-border" />
             ) : null}
 
-            {isSessionActive ? <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-9" /> : null}
-            <span
-              className={`block min-w-0 truncate ${
-                isSelected ? "font-medium text-gray-12" : "font-normal text-current"
-              }`}
-              title={displayTitle}
-            >
+            <span className="flex h-1.5 w-1.5 shrink-0 items-center justify-center" aria-hidden>
+              {isSessionActive ? <span className="h-1.5 w-1.5 rounded-full bg-amber-9" /> : null}
+            </span>
+            <span className="block min-w-0 flex-1 truncate text-current" title={displayTitle}>
               {displayTitle}
             </span>
           </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-1">
-            {canManageSession ? (
-              <button
-                type="button"
-                className="flex h-7 w-7 items-center justify-center rounded-md text-gray-9 transition-colors hover:bg-gray-3/80 hover:text-gray-11"
-                aria-label={t("workspace_list.session_actions")}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  setSessionMenuOpen((current) => !current);
-                }}
-              >
-                <MoreHorizontal size={14} />
-              </button>
-            ) : null}
-          </div>
+          {/* Fixed slot when session menus exist: avoids horizontal jump when selection moves. */}
+          {props.showSessionActions ? (
+            <div className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center">
+              {canManageSession ? (
+                <button
+                  type="button"
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-gray-9 transition-colors hover:bg-gray-3/80 hover:text-gray-11"
+                  aria-label={t("workspace_list.session_actions")}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setSessionMenuOpen((current) => !current);
+                  }}
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {canManageSession && sessionMenuOpen ? (
@@ -937,7 +939,7 @@ export function WorkspaceSessionList(props: Props) {
         </div>
       </div>
 
-      <div className="relative mt-auto border-t border-dls-border/80 bg-dls-sidebar px-3 pt-3 pb-4">
+      <div className="relative mt-auto shrink-0 space-y-3 border-t border-dls-border/80 bg-dls-sidebar px-3 pt-3 pb-3">
         <button
           type="button"
           className="w-full flex items-center justify-center gap-2 rounded-[18px] border border-dls-border bg-dls-surface px-3.5 py-2.5 text-[12px] font-medium text-gray-11 shadow-[var(--dls-card-shadow)] transition-colors hover:bg-gray-2"
@@ -946,6 +948,7 @@ export function WorkspaceSessionList(props: Props) {
           <Plus size={14} />
           {t("workspace_list.add_workspace")}
         </button>
+        {props.sessionStatusFooter ?? null}
       </div>
     </div>
   );

@@ -274,6 +274,53 @@ export function SessionPage(props: SessionPageProps) {
       ? t("session.todo_progress_label", undefined, { completed: completedTodos, total: todos.length })
       : t("session.todo_label", undefined, { count: todos.length });
 
+  const [layoutLg, setLayoutLg] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : false,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const fn = () => setLayoutLg(mq.matches);
+    fn();
+    mq.addEventListener("change", fn);
+    return () => mq.removeEventListener("change", fn);
+  }, []);
+
+  const statusBarInSidebar = layoutLg && !leftWorkspaceSidebarCollapsed;
+
+  const statusBarSharedProps = useMemo(
+    () => ({
+      clientConnected: props.clientConnected,
+      openworkServerStatus: props.openworkServerStatus,
+      developerMode: props.developerMode,
+      settingsOpen: props.statusBar?.settingsOpen ?? false,
+      onOpenSettings: props.onOpenSettings,
+      providerConnectedIds: props.providerConnectedIds,
+      mcpConnectedCount: props.mcpConnectedCount,
+      statusLabel: props.statusBar?.statusLabel,
+      statusDetail: props.statusBar?.statusDetail,
+      statusDotClass: props.statusBar?.statusDotClass,
+      statusPingClass: props.statusBar?.statusPingClass,
+      statusPulse: props.statusBar?.statusPulse,
+      showSettingsButton: props.statusBar?.showSettingsButton,
+    }),
+    [
+      props.clientConnected,
+      props.developerMode,
+      props.mcpConnectedCount,
+      props.onOpenSettings,
+      props.openworkServerStatus,
+      props.providerConnectedIds,
+      props.statusBar?.settingsOpen,
+      props.statusBar?.showSettingsButton,
+      props.statusBar?.statusDetail,
+      props.statusBar?.statusDotClass,
+      props.statusBar?.statusLabel,
+      props.statusBar?.statusPingClass,
+      props.statusBar?.statusPulse,
+    ],
+  );
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-[radial-gradient(circle_at_top,rgba(74,111,255,0.12),transparent_42%),var(--app-bg,#0b1020)] text-dls-text">
       <div className="flex min-h-0 flex-1 gap-0">
@@ -310,6 +357,11 @@ export function SessionPage(props: SessionPageProps) {
               onForgetWorkspace={props.sidebar.onForgetWorkspace}
               onOpenCreateWorkspace={props.sidebar.onOpenCreateWorkspace}
               onCollapseWorkspaceSidebar={() => setLeftWorkspaceSidebarCollapsed(true)}
+              sessionStatusFooter={
+                statusBarInSidebar ? (
+                  <StatusBar {...statusBarSharedProps} variant="sidebar" />
+                ) : undefined
+              }
             />
           </div>
           {!leftWorkspaceSidebarCollapsed ? (
@@ -549,21 +601,7 @@ export function SessionPage(props: SessionPageProps) {
             </div>
           ) : null}
 
-          <StatusBar
-            clientConnected={props.clientConnected}
-            openworkServerStatus={props.openworkServerStatus}
-            developerMode={props.developerMode}
-            settingsOpen={props.statusBar?.settingsOpen ?? false}
-            onOpenSettings={props.onOpenSettings}
-            providerConnectedIds={props.providerConnectedIds}
-            mcpConnectedCount={props.mcpConnectedCount}
-            statusLabel={props.statusBar?.statusLabel}
-            statusDetail={props.statusBar?.statusDetail}
-            statusDotClass={props.statusBar?.statusDotClass}
-            statusPingClass={props.statusBar?.statusPingClass}
-            statusPulse={props.statusBar?.statusPulse}
-            showSettingsButton={props.statusBar?.showSettingsButton}
-          />
+          {!statusBarInSidebar ? <StatusBar {...statusBarSharedProps} variant="main" /> : null}
         </main>
       </div>
 
