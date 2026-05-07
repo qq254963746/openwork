@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import type { UIMessage } from "ai";
 import {
   ChevronRight,
@@ -8,6 +9,7 @@ import {
   FolderOpen,
   Loader2,
   RefreshCw,
+  X,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { t } from "../../../../i18n";
@@ -16,6 +18,30 @@ import type { OpenworkServerClient } from "../../../../app/lib/openwork-server";
 import type { ComposerAttachment } from "../../../../app/types";
 import { isDesktopRuntime, isMacPlatform, isWindowsPlatform } from "../../../../app/utils";
 import { usePlatform } from "../../../kernel/platform";
+import { MarkdownBlock } from "./markdown";
+
+const WORKSPACE_PANEL_WIDTH_KEY = "openwork.session.workspacePanelWidth.v1";
+const DEFAULT_WORKSPACE_PANEL_WIDTH = 300;
+const MIN_WORKSPACE_PANEL_WIDTH = 240;
+const MAX_WORKSPACE_PANEL_WIDTH = 720;
+
+function readStoredWorkspacePanelWidth(): number {
+  if (typeof window === "undefined") return DEFAULT_WORKSPACE_PANEL_WIDTH;
+  try {
+    const raw = window.localStorage.getItem(WORKSPACE_PANEL_WIDTH_KEY);
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return DEFAULT_WORKSPACE_PANEL_WIDTH;
+    return Math.min(MAX_WORKSPACE_PANEL_WIDTH, Math.max(MIN_WORKSPACE_PANEL_WIDTH, n));
+  } catch {
+    return DEFAULT_WORKSPACE_PANEL_WIDTH;
+  }
+}
+
+/** Workspace-relative paths only (.md / .mdx / .markdown). */
+function isMarkdownDocumentPath(relativePosix: string): boolean {
+  const lowered = relativePosix.trim().toLowerCase();
+  return [".md", ".mdx", ".markdown"].some((ext) => lowered.endsWith(ext));
+}
 
 function workspaceFolderLabel(root: string): string {
   const trimmed = root.trim().replace(/[/\\]+$/, "");
@@ -96,6 +122,82 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
   const platform = usePlatform();
   const [dirPath, setDirPath] = useState("");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [panelWidth, setPanelWidth] = useState(readStoredWorkspacePanelWidth);
+  const panelWidthRef = useRef(panelWidth);
+  const dragCleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    panelWidthRef.current = panelWidth;
+  }, [panelWidth]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(WORKSPACE_PANEL_WIDTH_KEY, String(panelWidthRef.current));
+    } catch {
+      // ignore
+    }
+  }, [panelWidth]);
+
+  const stopPanelResize = useCallback(() => {
+    dragCleanupRef.current?.();
+    dragCleanupRef.current = null;
+    if (typeof document === "undefined") return;
+    document.body.style.removeProperty("cursor");
+    document.body.style.removeProperty("user-select");
+  }, []);
+
+  const startPanelResize = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0 || typeof window === "undefined") return;
+      event.preventDefault();
+      const grip = event.currentTarget;
+      stopPanelResize();
+      const pointerId = event.pointerId;
+      try {
+        grip.setPointerCapture(pointerId);
+      } catch {
+        // setPointerCapture unsupported or element detached
+      }
+      const initialX = event.clientX;
+      const initialW = panelWidthRef.current;
+
+      const handleMove = (moveEvent: PointerEvent) => {
+        // Left edge of the panel: moving the grip left (smaller clientX) widens the panel.
+        const delta = moveEvent.clientX - initialX;
+        const next = Math.min(
+          MAX_WORKSPACE_PANEL_WIDTH,
+          Math.max(MIN_WORKSPACE_PANEL_WIDTH, initialW - delta),
+        );
+        panelWidthRef.current = next;
+        setPanelWidth(next);
+      };
+
+      const handleStop = (stopEvent: PointerEvent) => {
+        try {
+          if (grip.hasPointerCapture(stopEvent.pointerId)) {
+            grip.releasePointerCapture(stopEvent.pointerId);
+          }
+        } catch {
+          // ignore
+        }
+        stopPanelResize();
+      };
+
+      window.addEventListener("pointermove", handleMove);
+      window.addEventListener("pointerup", handleStop);
+      window.addEventListener("pointercancel", handleStop);
+      dragCleanupRef.current = () => {
+        window.removeEventListener("pointermove", handleMove);
+        window.removeEventListener("pointerup", handleStop);
+        window.removeEventListener("pointercancel", handleStop);
+      };
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [stopPanelResize],
+  );
+
+  useEffect(() => () => stopPanelResize(), [stopPanelResize]);
 
   const folderTitle = useMemo(() => workspaceFolderLabel(props.workspaceRoot), [props.workspaceRoot]);
 
@@ -170,6 +272,18 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       setSelectedFile(null);
       return;
     }
+    if (isMarkdownDocumentPath(rel)) {
+      setSelectedFile(rel);
+      return;
+    }
+    const root = props.workspaceRoot.trim();
+    if (isDesktopRuntime() && root) {
+      const abs = absoluteWorkspaceFilePath(root, rel);
+      if (abs) {
+        void openDesktopPath(abs).catch(() => undefined);
+        return;
+      }
+    }
     if (isSvgFileName(name)) {
       openSvgInDefaultBrowser(rel);
       setSelectedFile(rel);
@@ -178,9 +292,54 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
     setSelectedFile(rel);
   };
 
+  const markdownPreviewOpen = Boolean(selectedFile && isMarkdownDocumentPath(selectedFile));
+  const markdownFileTitle = selectedFile
+    ? selectedFile.split("/").filter(Boolean).pop() ?? selectedFile
+    : "";
+
   return (
-    <aside className="flex min-h-0 h-full w-[min(100%,300px)] shrink-0 flex-col border-l border-dls-border bg-dls-sidebar/60">
-      <div className="shrink-0 border-b border-dls-border px-3 py-2.5">
+    <aside
+      className="relative flex min-h-0 h-full shrink-0 flex-col border-l border-dls-border bg-dls-sidebar/60"
+      style={{ width: panelWidth, minWidth: MIN_WORKSPACE_PANEL_WIDTH, maxWidth: MAX_WORKSPACE_PANEL_WIDTH }}
+    >
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={t("session.resize_workspace_column")}
+        className="absolute left-0 top-0 z-40 h-full w-1 -translate-x-1/2 cursor-col-resize rounded-full bg-transparent transition-colors hover:bg-gray-6/40 touch-none"
+        onPointerDown={startPanelResize}
+      />
+      {markdownPreviewOpen ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar/60">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-border bg-dls-surface/95 px-3 py-2.5">
+            <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
+              {markdownFileTitle}
+            </span>
+            <button
+              type="button"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+              onClick={() => setSelectedFile(null)}
+              aria-label={t("session.workspace_panel_close_preview")}
+              title={t("session.workspace_panel_close_preview")}
+            >
+              <X size={18} strokeWidth={1.75} />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto bg-dls-surface px-4 py-4">
+            {previewQuery.isLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="animate-spin text-dls-secondary" size={22} />
+              </div>
+            ) : previewQuery.isError ? (
+              <div className="text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
+            ) : (
+              <MarkdownBlock text={previewQuery.data?.content ?? ""} />
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="shrink-0 border-b border-dls-border px-3 py-2.5">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-dls-secondary">
           {t("session.workspace_panel_context")}
         </div>
@@ -343,7 +502,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
           ) : null}
         </div>
 
-        {selectedFile ? (
+        {selectedFile && !markdownPreviewOpen ? (
           <div className="flex max-h-[42%] min-h-[120px] shrink-0 flex-col border-t border-dls-border bg-dls-surface/90">
             <div className="shrink-0 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wide text-dls-secondary">
               {selectedFile.toLowerCase().endsWith(".svg")
@@ -374,6 +533,8 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
           </div>
         ) : null}
       </div>
+        </>
+      )}
     </aside>
   );
 }

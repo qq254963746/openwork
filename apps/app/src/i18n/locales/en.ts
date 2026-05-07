@@ -920,6 +920,7 @@ export default {
   "session.workspace_panel_svg_web_unavailable":
     "Opening an SVG in the system browser requires the desktop app and a local workspace folder on disk.",
   "session.workspace_panel_truncated": "Listing truncated for performance.",
+  "session.workspace_panel_close_preview": "Close preview",
   "settings.audit_actor_host": "host",
   "settings.audit_actor_remote": "remote",
   "settings.api_keys_info": "API keys are stored locally by OpenCode. Environment-backed providers must be changed in the worker environment and then reloaded.",

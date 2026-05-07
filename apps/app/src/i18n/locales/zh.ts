@@ -857,6 +857,7 @@ export default {
   "session.workspace_panel_svg_preview_title": "SVG",
   "session.workspace_panel_svg_web_unavailable": "在系统浏览器中打开 SVG 需要使用桌面版，且工作区为本机磁盘上的文件夹。",
   "session.workspace_panel_truncated": "为性能已截断列表。",
+  "session.workspace_panel_close_preview": "关闭预览",
   "settings.api_keys_info": "API密钥由OpenCode存储在本地。环境变量提供商需在工作区环境中修改后重新加载。",
   "settings.appearance_hint": "匹配系统或强制浅色/深色模式。",
   "settings.appearance_title": "外观",
