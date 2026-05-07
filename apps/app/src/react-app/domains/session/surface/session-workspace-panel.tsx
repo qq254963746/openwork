@@ -334,6 +334,12 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
     refetchInterval: pollRichPreviewWhileSessionBusy ? 800 : false,
   });
 
+  /** Only rebuild iframe document when raw file bytes change — avoids remount/flash on identical poll results. */
+  const webPreviewSrcDoc = useMemo(
+    () => buildWebPreviewSrcDoc(previewQuery.data?.content ?? ""),
+    [previewQuery.data?.content],
+  );
+
   const refreshWorkspaceFiles = () => {
     void listQuery.refetch();
     if (selectedFile && isWorkspacePreviewablePath(selectedFile)) {
@@ -467,10 +473,10 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
               <div className="p-4 text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
             ) : (
               <iframe
-                key={`${selectedFile}-${String(previewQuery.dataUpdatedAt ?? 0)}`}
+                key={`${props.workspaceId}:${selectedFile ?? ""}`}
                 title={selectedFileTitle}
                 className="absolute inset-0 h-full w-full border-0 bg-dls-surface"
-                srcDoc={buildWebPreviewSrcDoc(previewQuery.data?.content ?? "")}
+                srcDoc={webPreviewSrcDoc}
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
               />
             )}
