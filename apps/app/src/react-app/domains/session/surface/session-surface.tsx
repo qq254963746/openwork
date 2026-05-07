@@ -958,7 +958,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
         ) : null}
       </div>
 
-      <div ref={composerShellRef} className="shrink-0 border-t border-dls-border/70 px-0 pb-3 pt-3">
+      <div ref={composerShellRef} className="shrink-0 border-t border-dls-border/70 px-0 pb-1 pt-3">
         <DevProfiler id="SessionComposer">
         <ReactSessionComposer
           draft={draft}
