@@ -579,16 +579,16 @@ export function WorkspaceSessionList(props: Props) {
         ) : null}
       </div>
       <div className="shrink-0 border-b border-dls-border/80 px-3.5 pb-3 pt-2.5">
-        <div className="flex items-center gap-2.5">
+        <div className="flex min-w-0 items-center gap-2">
           <img
             src={OPENWORK_MARK_SRC}
             alt=""
-            className="h-7 w-auto max-w-[32px] shrink-0 object-contain"
-            width={32}
-            height={28}
+            className="h-6 w-auto max-w-[26px] shrink-0 object-contain sm:h-7 sm:max-w-[28px]"
+            width={28}
+            height={24}
             decoding="async"
           />
-          <span className="truncate text-[15px] font-semibold tracking-tight text-gray-12">
+          <span className="ow-sidebar-brand-mark shrink-0 text-[12px] leading-none sm:text-[13px]">
             {t("workspace_list.sidebar_brand")}
           </span>
         </div>

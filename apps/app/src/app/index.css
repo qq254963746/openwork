@@ -179,6 +179,42 @@ body {
   border-radius: 1.5rem;
 }
 
+/* Left sidebar product wordmark — Unbounded display + vertical stretch + vivid shimmer */
+.ow-sidebar-brand-mark {
+  font-family: "Unbounded", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  font-synthesis: none;
+  letter-spacing: 0.062em;
+  line-height: 1;
+  text-transform: uppercase;
+  -webkit-font-smoothing: antialiased;
+  display: inline-block;
+  transform: scaleY(1.14);
+  transform-origin: left center;
+  background: linear-gradient(
+    96deg,
+    var(--gray-12) 4%,
+    color-mix(in oklab, var(--gray-12) 12%, var(--dls-accent) 88%) 42%,
+    color-mix(in oklab, var(--gray-12) 22%, var(--dls-accent) 78%) 50%,
+    var(--gray-12) 96%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+@media (prefers-contrast: more) {
+  .ow-sidebar-brand-mark {
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    color: var(--gray-12);
+    -webkit-text-fill-color: currentColor;
+    transform: none;
+  }
+}
+
 .ow-button-primary {
   display: inline-flex;
   min-height: 48px;
