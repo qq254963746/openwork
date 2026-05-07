@@ -58,9 +58,6 @@ import {
 import { t } from "../../i18n";
 import { useLocal } from "../kernel/local-provider";
 import { SessionPage } from "../domains/session/chat/session-page";
-import { isDesktopProviderBlocked } from "../../app/cloud/desktop-app-restrictions";
-import { useCheckDesktopRestriction } from "../domains/cloud/desktop-restriction-hooks";
-import { useRestrictionNotice } from "../domains/cloud/restriction-notice-provider";
 import { ReactSessionRuntime } from "../domains/session/sync/runtime-sync";
 import { buildOpenworkEnvSystemContext } from "../domains/session/sync/env-context";
 import {
@@ -339,8 +336,6 @@ export function SessionRoute() {
   const local = useLocal();
   const reloadCoordinator = useReloadCoordinator();
   const { showToast } = useStatusToasts();
-  const checkDesktopRestriction = useCheckDesktopRestriction();
-  const restrictionNotice = useRestrictionNotice();
   const params = useParams<{ workspaceId?: string; sessionId?: string }>();
   const routeWorkspaceId = params.workspaceId?.trim() || "";
   const selectedSessionId = params.sessionId?.trim() || null;
@@ -1277,32 +1272,6 @@ export function SessionRoute() {
     };
   }, [modelPickerOpen, opencodeClient, selectedWorkspaceRoot]);
 
-  // Apply org-level restrictions (dev #1505) on top of the raw model list
-  // so the picker never surfaces blocked options:
-  //   - `blockZenModel` hides the built-in OpenCode provider entries
-  //   - `disallowNonCloudModels` hides providers that aren't currently
-  //     connected via cloud (a provider with models[] filled counts as
-  //     connected in this list — see the loader above)
-  const allowedModelOptions = useMemo(() => {
-    const restrictToCloud = checkDesktopRestriction({
-      restriction: "disallowNonCloudModels",
-    });
-    return modelOptions.filter((option) => {
-      if (
-        isDesktopProviderBlocked({
-          providerId: option.providerID,
-          checkRestriction: checkDesktopRestriction,
-        })
-      ) {
-        return false;
-      }
-      if (restrictToCloud && !option.isConnected) {
-        return false;
-      }
-      return true;
-    });
-  }, [checkDesktopRestriction, modelOptions]);
-
   const listSlashCommands = useCallback(async (): Promise<SlashCommandOption[]> => {
     // engineReloadVersion is included so the callback identity changes after
     // an engine reload, which invalidates the composer's command list cache
@@ -1460,24 +1429,9 @@ export function SessionRoute() {
   ]);
 
   const handleOpenCreateWorkspace = useCallback(() => {
-    // Respect the org-level `blockMultipleWorkspaces` restriction (dev
-    // #1505). If the checker returns true, the admin has disabled
-    // adding further workspaces; surface a friendly notice instead of
-    // opening the modal.
-    if (
-      workspaces.length > 0 &&
-      checkDesktopRestriction({ restriction: "blockMultipleWorkspaces" })
-    ) {
-      restrictionNotice.show({
-        title: "Additional workspaces are restricted",
-        message:
-          "Your organization administrator has restricted access to adding additional workspaces.",
-      });
-      return;
-    }
     setCreateWorkspaceRemoteError(null);
     setCreateWorkspaceOpen(true);
-  }, [checkDesktopRestriction, restrictionNotice, workspaces.length]);
+  }, []);
 
   const handleOpenRenameWorkspace = useCallback((workspaceId: string) => {
     const workspace = workspaces.find((item) => item.id === workspaceId);
@@ -2079,8 +2033,8 @@ export function SessionRoute() {
     />
     <ModelPickerModal
       open={modelPickerOpen}
-      options={allowedModelOptions}
-      filteredOptions={allowedModelOptions.filter((opt) => {
+      options={modelOptions}
+      filteredOptions={modelOptions.filter((opt) => {
         const q = modelPickerQuery.trim().toLowerCase();
         if (!q) return true;
         return (

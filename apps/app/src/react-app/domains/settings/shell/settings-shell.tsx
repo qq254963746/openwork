@@ -35,7 +35,7 @@ export function SettingsShell(props: SettingsShellProps) {
     <div className="flex h-[100dvh] min-h-screen w-full flex-col overflow-hidden bg-[var(--dls-app-bg)] text-gray-12">
       <div className="flex min-h-0 flex-1 gap-0">
         <aside
-          className="relative hidden shrink-0 flex-col overflow-hidden border-0 border-r border-dls-border bg-dls-sidebar p-2.5 lg:flex"
+          className="relative hidden min-h-0 shrink-0 flex-col overflow-hidden border-0 border-r border-dls-border bg-dls-sidebar lg:flex lg:flex-col"
           style={props.sidebarWidth ? { width: `${props.sidebarWidth}px`, minWidth: `${props.sidebarWidth}px` } : undefined}
         >
           {props.sidebarTopSlot ? <div className="shrink-0">{props.sidebarTopSlot}</div> : null}

@@ -69,8 +69,6 @@ import {
   type WorkspaceInfo,
   revealDesktopItemInDir,
 } from "../../app/lib/desktop";
-import { isDesktopProviderBlocked } from "../../app/cloud/desktop-app-restrictions";
-import { useCheckDesktopRestriction } from "../domains/cloud/desktop-restriction-hooks";
 import { isDesktopRuntime, normalizeDirectoryPath, safeStringify } from "../../app/utils";
 import { CreateRemoteWorkspaceModal } from "../domains/workspace/create-remote-workspace-modal";
 import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-modal";
@@ -363,7 +361,6 @@ export function SettingsRoute() {
   const routeWorkspaceId = params.workspaceId?.trim() || "";
   const local = useLocal();
   const platform = usePlatform();
-  const checkDesktopRestriction = useCheckDesktopRestriction();
   const reloadCoordinator = useReloadCoordinator();
   const route = parseSettingsPath(location.pathname);
   const navigationWorkspaceId = readNavigationWorkspaceId(location.state);
@@ -1647,16 +1644,7 @@ export function SettingsRoute() {
         error={providerAuthSnapshot.providerAuthError}
         preferredProviderId={providerAuthSnapshot.providerAuthPreferredProviderId}
         workerType={providerAuthSnapshot.providerAuthWorkerType}
-        // Hide any provider the org blocks at the desktop layer so users
-        // can't connect a forbidden one (dev #1505). Same helper covers
-        // opencode-provider gating via the `blockZenModel` restriction.
-        providers={providerAuthSnapshot.providerAuthProviders.filter(
-          (provider) =>
-            !isDesktopProviderBlocked({
-              providerId: provider.id,
-              checkRestriction: checkDesktopRestriction,
-            }),
-        )}
+        providers={providerAuthSnapshot.providerAuthProviders}
         connectedProviderIds={providerConnectedIds}
         authMethods={providerAuthSnapshot.providerAuthMethods}
         onSelect={providerAuthStore.startProviderAuth}
