@@ -65,6 +65,9 @@
   --sidebar-accent-foreground: var(--slate-12);
   --sidebar-border: var(--slate-6);
   --sidebar-ring: var(--slate-8);
+  /* Scrollbars: hidden until scroll; thumb is light gray (see .ow-scrollbar-scrolling). */
+  --ow-scrollbar-thumb: rgba(140, 148, 158, 0.42);
+  --ow-scrollbar-thumb-hover: rgba(120, 128, 138, 0.58);
 }
 
 [data-theme="dark"] {
@@ -101,6 +104,38 @@ body {
 
 html {
   font-size: var(--openwork-font-size, 16px);
+}
+
+/* Scrollbars: default invisible thumb; `.ow-scrollbar-scrolling` added during scroll (shell). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+*.ow-scrollbar-scrolling {
+  scrollbar-color: var(--ow-scrollbar-thumb) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 100px;
+}
+
+*.ow-scrollbar-scrolling::-webkit-scrollbar-thumb {
+  background-color: var(--ow-scrollbar-thumb);
+}
+
+*.ow-scrollbar-scrolling::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ow-scrollbar-thumb-hover);
 }
 
 body {
@@ -371,6 +406,8 @@ select:disabled {
 
 .dark,
 [data-theme="dark"] {
+  --ow-scrollbar-thumb: rgba(170, 178, 188, 0.38);
+  --ow-scrollbar-thumb-hover: rgba(190, 198, 208, 0.52);
   --background: var(--slate-1);
   --foreground: var(--slate-12);
   --card: var(--slate-2);

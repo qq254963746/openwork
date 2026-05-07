@@ -14,6 +14,7 @@ import { startDebugLogger, stopDebugLogger } from "./debug-logger";
 import { MigrationPrompt } from "./migration-prompt";
 import { resolveOpenworkConnection } from "./openwork-connection";
 import { ReloadCoordinatorProvider } from "./reload-coordinator";
+import { ScrollbarOnScrollReveal } from "./scrollbar-on-scroll-reveal";
 
 function resolveDefaultServerUrl(): string {
   if (isDesktopRuntime()) return "http://127.0.0.1:4096";
@@ -64,7 +65,10 @@ export function AppProviders({ children }: AppProvidersProps) {
         <RestrictionNoticeProvider>
           <LocalProvider>
             <StatusToastsProvider>
-              <ReloadCoordinatorProvider>{children}</ReloadCoordinatorProvider>
+              <ReloadCoordinatorProvider>
+                <ScrollbarOnScrollReveal />
+                {children}
+              </ReloadCoordinatorProvider>
             </StatusToastsProvider>
           </LocalProvider>
         </RestrictionNoticeProvider>
