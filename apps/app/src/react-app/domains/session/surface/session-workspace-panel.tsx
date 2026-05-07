@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { UIMessage } from "ai";
 import {
@@ -17,7 +18,13 @@ import { openDesktopPath, workspaceAddAuthorizedRoot } from "../../../../app/lib
 import type { OpenworkServerClient } from "../../../../app/lib/openwork-server";
 import { OpenworkServerError } from "../../../../app/lib/openwork-server";
 import type { ComposerAttachment } from "../../../../app/types";
-import { isDesktopRuntime, isMacPlatform, isWindowsPlatform } from "../../../../app/utils";
+import {
+  isDesktopRuntime,
+  isElectronRuntime,
+  isMacPlatform,
+  isTauriRuntime,
+  isWindowsPlatform,
+} from "../../../../app/utils";
 import { MarkdownBlock } from "./markdown";
 import { WorkspaceCodePreview } from "./workspace-code-preview";
 
@@ -726,12 +733,28 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 border-b border-dls-border px-3 py-2">
+        <div
+          className="shrink-0 border-b border-dls-border px-3 py-2"
+          {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
+          style={
+            isElectronRuntime() && isMacPlatform()
+              ? ({ WebkitAppRegion: "drag" } as CSSProperties)
+              : undefined
+          }
+        >
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 text-[11px] font-semibold uppercase tracking-wide text-dls-secondary">
               {t("session.workspace_panel_files")}
             </div>
-            <div className="flex shrink-0 items-center gap-0.5">
+            <div
+              className="flex shrink-0 items-center gap-0.5"
+              {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
+              style={
+                isElectronRuntime() && isMacPlatform()
+                  ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
+                  : undefined
+              }
+            >
               <button
                 type="button"
                 className="inline-flex items-center justify-center rounded-md p-1 text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text disabled:pointer-events-none disabled:opacity-40"
@@ -754,7 +777,15 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
               </button>
             </div>
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-0.5 text-[11px] text-dls-secondary">
+          <div
+            className="mt-1 flex flex-wrap items-center gap-0.5 text-[11px] text-dls-secondary"
+            {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
+            style={
+              isElectronRuntime() && isMacPlatform()
+                ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
+                : undefined
+            }
+          >
             <button
               type="button"
               className="truncate rounded px-1 py-0.5 hover:bg-dls-hover hover:text-dls-text"
