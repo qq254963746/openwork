@@ -401,6 +401,23 @@ export function SessionSurface(props: SessionSurfaceProps) {
     () => deriveRenderedSessionMessages({ transcriptState, snapshot, includeLiveOnlyMessages: chatStreaming }),
     [chatStreaming, snapshot, transcriptState],
   );
+
+  const workspacePanelRefreshPrevStreamingRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (!props.workspaceSidePanelOpen) {
+      workspacePanelRefreshPrevStreamingRef.current = chatStreaming;
+      return;
+    }
+    const prev = workspacePanelRefreshPrevStreamingRef.current;
+    if (prev !== null && prev !== chatStreaming) {
+      const qc = getReactQueryClient();
+      void snapshotQuery.refetch();
+      void qc.invalidateQueries({ queryKey: ["workspaceDirList", props.workspaceId] });
+      void qc.invalidateQueries({ queryKey: ["workspaceFilePreview", props.workspaceId] });
+    }
+    workspacePanelRefreshPrevStreamingRef.current = chatStreaming;
+  }, [chatStreaming, props.workspaceId, props.workspaceSidePanelOpen, snapshotQuery]);
+
   const pendingSessionLoad = !snapshot && snapshotQuery.isLoading && renderedMessages.length === 0;
   const assistantOutputAfterAwaitStart = useMemo(() => {
     if (awaitingAssistantBaseline === null) return false;
