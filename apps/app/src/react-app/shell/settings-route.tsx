@@ -40,6 +40,7 @@ import { McpView } from "../domains/settings/pages/mcp-view";
 import { RecoveryView } from "../domains/settings/pages/recovery-view";
 import { MessagingView } from "../domains/settings/pages/messaging-view";
 import { SkillsView } from "../domains/settings/pages/skills-view";
+import { UsageView } from "../domains/settings/pages/usage-view";
 import { useDebugViewModel } from "../domains/settings/state/debug-view-model";
 import { useMessagingViewProps } from "../domains/settings/state/messaging-view-state";
 import { useBootState } from "./boot-state";
@@ -279,6 +280,7 @@ function parseSettingsPath(pathname: string): {
     case "recovery":
     case "debug":
     case "messaging":
+    case "usage":
       return { tab: head, redirectPath: null };
     case "extensions":
       if (tail === "mcp") return { tab: "extensions", redirectPath: null, extensionsSection: "mcp" };
@@ -1582,6 +1584,14 @@ export function SettingsRoute() {
         );
       case "messaging":
         return <MessagingView {...messagingViewProps} />;
+      case "usage":
+        return (
+          <UsageView
+            openworkServerClient={openworkClient}
+            selectedWorkspaceId={selectedWorkspaceId}
+            workspaceSessionGroups={workspaceSessionGroups}
+          />
+        );
       case "debug":
         return <DebugView {...debugViewProps} />;
       default:

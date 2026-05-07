@@ -2,6 +2,7 @@
 import type * as React from "react";
 import type { CSSProperties } from "react";
 import {
+  BarChart3,
   Bug,
   Cog,
   Paintbrush,
@@ -50,6 +51,8 @@ export function getSettingsTabIcon(tab: SettingsTab) {
       return ShieldCheck;
     case "debug":
       return Bug;
+    case "usage":
+      return BarChart3;
     default:
       return Cog;
   }
@@ -71,6 +74,8 @@ export function getSettingsTabLabel(tab: SettingsTab) {
       return t("settings.tab_recovery");
     case "debug":
       return t("settings.tab_debug");
+    case "usage":
+      return t("settings.tab_usage");
     default:
       return t("settings.tab_general");
   }
@@ -92,13 +97,15 @@ export function getSettingsTabDescription(tab: SettingsTab) {
       return t("settings.tab_description_recovery");
     case "debug":
       return t("settings.tab_description_debug");
+    case "usage":
+      return t("settings.tab_description_usage");
     default:
       return t("settings.tab_description_general");
   }
 }
 
 export function getWorkspaceSettingsTabs(): SettingsTab[] {
-  return ["general", "skills", "extensions", "advanced"];
+  return ["general", "skills", "extensions", "usage", "advanced"];
 }
 
 export function getGlobalSettingsTabs(developerMode: boolean): SettingsTab[] {

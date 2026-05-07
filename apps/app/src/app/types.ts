@@ -178,7 +178,8 @@ export type SettingsTab =
   | "appearance"
   | "recovery"
   | "debug"
-  | "messaging";
+  | "messaging"
+  | "usage";
 
 export type WorkspacePreset = "starter" | "automation" | "minimal";
 
