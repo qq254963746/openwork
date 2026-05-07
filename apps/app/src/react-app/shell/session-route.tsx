@@ -372,7 +372,7 @@ export function SessionRoute() {
   const sessionsByWorkspaceIdRef = useRef<Record<string, any[]>>({});
   const startupRetryTimerRef = useRef<number | null>(null);
   const [retryingWorkspaceIds, setRetryingWorkspaceIds] = useState<string[]>([]);
-  const launchActivatedWorkspaceIdsRef = useRef(new Set<string>());
+  const launchEngineReloadOncePerWorkspaceRef = useRef(new Set<string>());
   const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
   const [createWorkspaceBusy, setCreateWorkspaceBusy] = useState(false);
   const [createWorkspaceError, setCreateWorkspaceError] = useState<string | null>(null);
@@ -617,13 +617,10 @@ export function SessionRoute() {
       );
       setLegacySelectedWorkspaceId(nextWorkspaceId);
       writeActiveWorkspaceId(nextWorkspaceId || null);
-      // Mark the chosen workspace as active on the server so that the
-      // OpenCode engine bound to it re-reads opencode.jsonc and applies
-      // permissions. Fire-and-forget; the route is idempotent and any
-      // transport failure is non-fatal. See issue #870.
-      if (nextWorkspaceId && !launchActivatedWorkspaceIdsRef.current.has(nextWorkspaceId)) {
-        launchActivatedWorkspaceIdsRef.current.add(nextWorkspaceId);
-        void openworkClient.activateWorkspace(nextWorkspaceId).catch(() => undefined);
+      // OpenCode reload for permissions/config (#870); avoid /workspaces/:id/activate (reorders list).
+      if (nextWorkspaceId && !launchEngineReloadOncePerWorkspaceRef.current.has(nextWorkspaceId)) {
+        launchEngineReloadOncePerWorkspaceRef.current.add(nextWorkspaceId);
+        void openworkClient.reloadEngine(nextWorkspaceId).catch(() => undefined);
       }
       recordInspectorEvent("route.refresh.complete", {
         workspaces: nextWorkspaces.length,
