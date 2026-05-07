@@ -820,6 +820,20 @@ export function createOpenworkServerClient(options: { baseUrl: string; token?: s
         `/workspaces/${encodeURIComponent(workspaceId)}/activate`,
         { token, hostToken, method: "POST", timeoutMs: timeouts.activateWorkspace },
       ),
+    reorderWorkspaces: (workspaceIds: string[]) =>
+      requestJson<{
+        ok: boolean;
+        persisted: boolean;
+        activeId: string | null;
+        items: OpenworkWorkspaceInfo[];
+        workspaces?: OpenworkWorkspaceInfo[];
+      }>(baseUrl, "/workspaces/reorder", {
+        token,
+        hostToken,
+        method: "POST",
+        body: { workspaceIds },
+        timeoutMs: timeouts.activateWorkspace,
+      }),
     deleteWorkspace: (workspaceId: string) =>
       requestJson<{ ok: boolean; deleted: boolean; persisted: boolean; activeId: string | null; items: OpenworkWorkspaceInfo[]; workspaces?: WorkspaceInfo[] }>(
         baseUrl,

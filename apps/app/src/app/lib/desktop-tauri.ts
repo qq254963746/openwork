@@ -199,6 +199,10 @@ export async function workspaceSetSelected(workspaceId: string): Promise<Workspa
   return invoke<WorkspaceList>("workspace_set_selected", { workspaceId });
 }
 
+export async function workspaceReorder(workspaceIds: string[]): Promise<WorkspaceList> {
+  return invoke<WorkspaceList>("workspace_reorder", { workspaceIds });
+}
+
 export async function workspaceSetRuntimeActive(workspaceId: string | null): Promise<WorkspaceList> {
   return invoke<WorkspaceList>("workspace_set_runtime_active", { workspaceId: workspaceId ?? "" });
 }

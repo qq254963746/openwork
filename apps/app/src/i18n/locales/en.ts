@@ -1482,4 +1482,5 @@ export default {
   "workspace_list.unavailable": "Unavailable",
   "workspace_list.workspace_fallback": "Workspace",
   "workspace_list.workspace_options": "Workspace options",
+  "workspace_list.drag_reorder": "Drag to reorder workspaces",
 } as const;

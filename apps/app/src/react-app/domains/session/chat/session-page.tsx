@@ -55,7 +55,6 @@ export type SessionPageSidebarProps = {
   newTaskDisabled: boolean;
   sidebarHydratedFromCache: boolean;
   startupPhase: BootPhase;
-  onSelectWorkspace: (workspaceId: string) => Promise<boolean> | boolean | void;
   onOpenSession: (workspaceId: string, sessionId: string) => void;
   onPrefetchSession?: (workspaceId: string, sessionId: string) => void;
   onCreateTaskInWorkspace: (workspaceId: string) => void;
@@ -68,6 +67,7 @@ export type SessionPageSidebarProps = {
   onOpenCreateWorkspace: () => void;
   /** Lazy-load tasks when a workspace group is expanded without selecting it. */
   onWorkspaceSectionOpened?: (workspaceId: string) => void;
+  onReorderWorkspaces?: (workspaceIds: string[]) => void | Promise<void>;
 };
 
 export type SessionPageSurfaceProps = Omit<
@@ -165,6 +165,8 @@ export function SessionPage(props: SessionPageProps) {
   const [todoExpanded, setTodoExpanded] = useState(true);
   const [workspaceSidePanelOpen, setWorkspaceSidePanelOpen] = useState(false);
   const [leftWorkspaceSidebarCollapsed, setLeftWorkspaceSidebarCollapsed] = useState(false);
+  /** Narrow viewports hide the inline sidebar by layout; this opens it as a drawer. */
+  const [narrowWorkspaceSidebarOpen, setNarrowWorkspaceSidebarOpen] = useState(false);
   const [showDelayedSessionLoadingState, setShowDelayedSessionLoadingState] = useState(false);
 
   const toggleWorkspaceSidePanel = useCallback(() => {
@@ -284,6 +286,32 @@ export function SessionPage(props: SessionPageProps) {
     return () => mq.removeEventListener("change", fn);
   }, []);
 
+  useEffect(() => {
+    if (layoutLg) setNarrowWorkspaceSidebarOpen(false);
+  }, [layoutLg]);
+
+  const expandWorkspaceSidebar = useCallback(() => {
+    if (layoutLg) {
+      setLeftWorkspaceSidebarCollapsed(false);
+    } else {
+      setNarrowWorkspaceSidebarOpen(true);
+    }
+  }, [layoutLg]);
+
+  const collapseWorkspaceSidebar = useCallback(() => {
+    if (layoutLg) {
+      setLeftWorkspaceSidebarCollapsed(true);
+    } else {
+      setNarrowWorkspaceSidebarOpen(false);
+    }
+  }, [layoutLg]);
+
+  const leftWorkspaceSidebarVisible =
+    (layoutLg && !leftWorkspaceSidebarCollapsed) || (!layoutLg && narrowWorkspaceSidebarOpen);
+
+  const macHeaderTrafficInset =
+    macDesktopChrome && (!layoutLg || leftWorkspaceSidebarCollapsed);
+
   const statusBarInSidebar = layoutLg && !leftWorkspaceSidebarCollapsed;
 
   const statusBarSharedProps = useMemo(
@@ -322,11 +350,29 @@ export function SessionPage(props: SessionPageProps) {
   return (
     <div className="flex h-full min-h-0 flex-col bg-[radial-gradient(circle_at_top,rgba(74,111,255,0.12),transparent_42%),var(--app-bg,#0b1020)] text-dls-text">
       <div className="flex min-h-0 flex-1 gap-0">
+        {!layoutLg && narrowWorkspaceSidebarOpen ? (
+          <button
+            type="button"
+            className="fixed inset-0 z-[90] cursor-default border-0 bg-black/40 p-0"
+            aria-label={t("common.close")}
+            onClick={() => setNarrowWorkspaceSidebarOpen(false)}
+          />
+        ) : null}
         <aside
-          className={`relative min-h-0 shrink-0 overflow-hidden border-0 border-r border-dls-border bg-dls-sidebar ${
-            leftWorkspaceSidebarCollapsed ? "hidden" : "hidden lg:flex lg:flex-col"
+          className={`min-h-0 shrink-0 overflow-hidden border-0 border-r border-dls-border bg-dls-sidebar ${
+            !leftWorkspaceSidebarVisible
+              ? "hidden"
+              : layoutLg
+                ? "relative flex flex-col"
+                : "fixed inset-y-0 left-0 z-[100] flex max-h-[100dvh] flex-col shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_24px_48px_rgba(0,0,0,0.35)]"
           }`}
-          style={{ width: leftSidebarWidth }}
+          style={
+            leftWorkspaceSidebarVisible
+              ? layoutLg
+                ? { width: leftSidebarWidth }
+                : { width: `min(${leftSidebarWidth}px, 85vw)` }
+              : undefined
+          }
         >
           <div className="flex min-h-0 flex-1">
             <WorkspaceSessionList
@@ -340,7 +386,6 @@ export function SessionPage(props: SessionPageProps) {
               connectingWorkspaceId={props.sidebar.connectingWorkspaceId}
               workspaceConnectionStateById={props.sidebar.workspaceConnectionStateById}
               newTaskDisabled={props.sidebar.newTaskDisabled}
-              onSelectWorkspace={props.sidebar.onSelectWorkspace}
               onOpenSession={props.sidebar.onOpenSession}
               onPrefetchSession={props.sidebar.onPrefetchSession}
               onCreateTaskInWorkspace={props.sidebar.onCreateTaskInWorkspace}
@@ -354,7 +399,8 @@ export function SessionPage(props: SessionPageProps) {
               onForgetWorkspace={props.sidebar.onForgetWorkspace}
               onOpenCreateWorkspace={props.sidebar.onOpenCreateWorkspace}
               onWorkspaceSectionOpened={props.sidebar.onWorkspaceSectionOpened}
-              onCollapseWorkspaceSidebar={() => setLeftWorkspaceSidebarCollapsed(true)}
+              onReorderWorkspaces={props.sidebar.onReorderWorkspaces}
+              onCollapseWorkspaceSidebar={collapseWorkspaceSidebar}
               sessionStatusFooter={
                 statusBarInSidebar ? (
                   <StatusBar {...statusBarSharedProps} variant="sidebar" />
@@ -362,9 +408,9 @@ export function SessionPage(props: SessionPageProps) {
               }
             />
           </div>
-          {!leftWorkspaceSidebarCollapsed ? (
+          {layoutLg && leftWorkspaceSidebarVisible ? (
             <div
-              className="absolute right-0 top-0 hidden h-full w-2 translate-x-1/2 cursor-col-resize rounded-full bg-transparent transition-colors hover:bg-gray-6/40 lg:block"
+              className="absolute right-0 top-0 h-full w-2 translate-x-1/2 cursor-col-resize rounded-full bg-transparent transition-colors hover:bg-gray-6/40"
               onPointerDown={startLeftSidebarResize}
               title={t("session.resize_workspace_column")}
               aria-label={t("session.resize_workspace_column")}
@@ -375,21 +421,19 @@ export function SessionPage(props: SessionPageProps) {
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-dls-surface">
           <header
             className={`z-10 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-dls-border bg-dls-surface pr-1.5 md:pr-2 ${
-              leftWorkspaceSidebarCollapsed && macDesktopChrome
-                ? "pl-4 md:pl-6 lg:pl-[76px]"
-                : "pl-4 md:pl-6"
+              macHeaderTrafficInset ? "pl-[76px]" : "pl-4 md:pl-6"
             }`}
             {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
             style={
               isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
-                ? ({ WebkitAppRegion: "drag" } satisfies CSSProperties)
+                ? ({ WebkitAppRegion: "drag" } as CSSProperties)
                 : undefined
             }
           >
             <div className="flex min-w-0 flex-1 items-center gap-3">
-              {leftWorkspaceSidebarCollapsed ? (
+              {!leftWorkspaceSidebarVisible ? (
                 <div
-                  className="hidden shrink-0 lg:flex"
+                  className="flex shrink-0"
                   {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
                   style={
                     isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
@@ -400,7 +444,7 @@ export function SessionPage(props: SessionPageProps) {
                   <button
                     type="button"
                     className="inline-flex h-9 w-9 items-center justify-center rounded-md text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
-                    onClick={() => setLeftWorkspaceSidebarCollapsed(false)}
+                    onClick={expandWorkspaceSidebar}
                     title={t("session.sidebar_expand")}
                     aria-label={t("session.sidebar_expand")}
                   >
@@ -432,7 +476,7 @@ export function SessionPage(props: SessionPageProps) {
               {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
               style={
                 isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
-                  ? ({ WebkitAppRegion: "no-drag" } satisfies CSSProperties)
+                  ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
                   : undefined
               }
             >

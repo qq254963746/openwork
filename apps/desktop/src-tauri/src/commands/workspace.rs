@@ -134,6 +134,59 @@ pub fn workspace_forget(
 }
 
 #[tauri::command]
+pub fn workspace_reorder(
+    app: tauri::AppHandle,
+    workspace_ids: Vec<String>,
+    watch_state: State<WorkspaceWatchState>,
+) -> Result<WorkspaceList, String> {
+    println!("[workspace] reorder request");
+    let mut state = load_workspace_state_fast(&app)?;
+    let requested: Vec<String> = workspace_ids
+        .into_iter()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    let known: std::collections::HashSet<String> =
+        state.workspaces.iter().map(|w| w.id.clone()).collect();
+
+    if requested.len() != known.len() {
+        return Err(
+            "workspaceIds must list every workspace exactly once (same length as known workspaces)"
+                .to_string(),
+        );
+    }
+
+    let mut seen = std::collections::HashSet::new();
+    for id in &requested {
+        if !known.contains(id) || seen.contains(id) {
+            return Err("Invalid or duplicate workspace id in reorder list".to_string());
+        }
+        seen.insert(id.clone());
+    }
+
+    let mut by_id: std::collections::HashMap<String, WorkspaceInfo> = std::mem::take(&mut state.workspaces)
+        .into_iter()
+        .map(|w| (w.id.clone(), w))
+        .collect();
+
+    state.workspaces = Vec::with_capacity(requested.len());
+    for id in requested {
+        let entry = by_id
+            .remove(&id)
+            .ok_or_else(|| format!("Missing workspace {id} during reorder"))?;
+        state.workspaces.push(entry);
+    }
+
+    save_workspace_state(&app, &state)?;
+    println!("[workspace] reorder complete");
+
+    let _ = watch_state;
+
+    Ok(build_workspace_list(state))
+}
+
+#[tauri::command]
 pub fn workspace_set_selected(
     app: tauri::AppHandle,
     workspace_id: String,

@@ -27,6 +27,7 @@ import {
   workspaceCreate,
   workspaceCreateRemote,
   workspaceForget,
+  workspaceReorder,
   workspaceSetRuntimeActive,
   workspaceSetSelected,
   workspaceUpdateDisplayName,
@@ -1572,6 +1573,25 @@ export function SessionRoute() {
     [refreshRouteState],
   );
 
+  const handleReorderWorkspaces = useCallback(
+    async (orderedIds: string[]) => {
+      if (orderedIds.length < 2) return;
+      try {
+        if (isDesktopRuntime()) {
+          await workspaceReorder(orderedIds);
+        }
+        if (client) {
+          await client.reorderWorkspaces(orderedIds);
+        }
+        await refreshRouteState();
+      } catch (error) {
+        const message = describeRouteError(error);
+        showToast({ title: message, tone: "error" });
+      }
+    },
+    [client, refreshRouteState, showToast],
+  );
+
   const handleCreateTaskInWorkspace = useCallback(async (workspaceId: string) => {
     const workspace = workspaces.find((item) => item.id === workspaceId);
     if (
@@ -1854,47 +1874,7 @@ export function SessionRoute() {
         newTaskDisabled: !canCreateTask,
         sidebarHydratedFromCache: Object.values(sessionsByWorkspaceId).some((list) => list.length > 0),
         startupPhase: effectiveLoading ? "nativeInit" : "ready",
-        onSelectWorkspace: async (workspaceId) => {
-          if (workspaceId === selectedWorkspaceId) return true;
-          setLegacySelectedWorkspaceId(workspaceId);
-          writeActiveWorkspaceId(workspaceId || null);
-          const workspace = workspaces.find((item) => item.id === workspaceId);
-          if (client && workspace && !sessionsByWorkspaceId[workspaceId]?.length) {
-            setRetryingWorkspaceIds((current) => Array.from(new Set([...current, workspaceId])));
-            void loadWorkspaceSessionsInBackground(client, [workspace]);
-          }
-          // Fire Tauri updates but don't await them — they're bookkeeping and
-          // awaiting 2 IPC roundtrips on every click used to stall rapid
-          // workspace switches behind a queue.
-          if (isDesktopRuntime()) {
-            void workspaceSetSelected(workspaceId).catch(() => undefined);
-            void workspaceSetRuntimeActive(workspaceId).catch(() => undefined);
-          }
-          // Tell the OpenWork server this workspace is now active so it can
-          // emit a config reload event that the OpenCode engine picks up.
-          // Without this, the permissions from opencode.jsonc are never
-          // applied on the workspace the user is already on at launch. See
-          // issue #870.
-          if (workspaceId && client) {
-            void client
-              .activateWorkspace(workspaceId)
-              .catch(() => undefined);
-          }
-          // If we remember what the user last opened here and that session
-          // still exists in our local list, navigate. Otherwise stay put.
-          const remembered = readLastSessionFor(workspaceId);
-          if (remembered && remembered !== selectedSessionId) {
-            const known = sessionsByWorkspaceId[workspaceId];
-            if (known?.some((session: any) => session?.id === remembered)) {
-              navigateToWorkspaceSession(workspaceId, remembered);
-            } else {
-              navigateToWorkspaceSession(workspaceId);
-            }
-          } else {
-            navigateToWorkspaceSession(workspaceId);
-          }
-          return true;
-        },
+        onReorderWorkspaces: isDesktopRuntime() || client ? handleReorderWorkspaces : undefined,
         onOpenSession: (workspaceId, sessionId) => {
           setLegacySelectedWorkspaceId(workspaceId);
           writeActiveWorkspaceId(workspaceId || null);

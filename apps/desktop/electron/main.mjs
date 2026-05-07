@@ -910,6 +910,31 @@ async function handleDesktopInvoke(event, command, ...args) {
         state.watchedId = typeof args[0] === "string" && args[0].trim() ? args[0] : null;
         return state;
       });
+    case "workspaceReorder": {
+      const raw = args[0];
+      const workspaceIds = Array.isArray(raw) ? raw : [];
+      const ids = workspaceIds.map((id) => String(id ?? "").trim()).filter(Boolean);
+      return mutateWorkspaceState((state) => {
+        const known = new Set(state.workspaces.map((entry) => entry.id));
+        if (ids.length !== known.size || ids.length !== state.workspaces.length) {
+          throw new Error("workspaceIds must list every workspace exactly once");
+        }
+        const seen = new Set();
+        for (const id of ids) {
+          if (!known.has(id) || seen.has(id)) {
+            throw new Error("Invalid or duplicate workspace id in reorder list");
+          }
+          seen.add(id);
+        }
+        const byId = new Map(state.workspaces.map((entry) => [entry.id, entry]));
+        const next = ids.map((id) => byId.get(id)).filter(Boolean);
+        if (next.length !== ids.length) {
+          throw new Error("Missing workspace during reorder");
+        }
+        state.workspaces = next;
+        return state;
+      });
+    }
     case "workspaceCreate": {
       const input = args[0] ?? {};
       const rawFolderPath = String(input.folderPath ?? "").trim();

@@ -63,6 +63,7 @@ import {
   workspaceCreate,
   workspaceCreateRemote,
   workspaceForget,
+  workspaceReorder,
   workspaceSetRuntimeActive,
   workspaceSetSelected,
   workspaceUpdateDisplayName,
@@ -896,6 +897,29 @@ export function SettingsRoute() {
     }
   }, [markBootRouteReady, navigationSessionId, navigationWorkspaceId, routeWorkspaceId]);
 
+  const handleReorderWorkspaces = useCallback(
+    async (orderedIds: string[]) => {
+      if (orderedIds.length < 2) return;
+      try {
+        if (isDesktopRuntime()) {
+          await workspaceReorder(orderedIds);
+        }
+        if (openworkClient) {
+          await openworkClient.reorderWorkspaces(orderedIds);
+        }
+        await refreshRouteState();
+      } catch (error) {
+        const message = describeRouteError(error);
+        console.error("[settings-route] reorder workspaces failed", error);
+        recordInspectorEvent("route.workspace_reorder.error", {
+          route: "settings",
+          message,
+        });
+      }
+    },
+    [openworkClient, refreshRouteState],
+  );
+
   useEffect(() => {
     workspacesRef.current = workspaces;
   }, [workspaces]);
@@ -1610,15 +1634,7 @@ export function SettingsRoute() {
           connectingWorkspaceId: null,
           workspaceConnectionStateById,
           newTaskDisabled: !opencodeClient,
-          onSelectWorkspace: async (workspaceId) => {
-            setLegacySelectedWorkspaceId(workspaceId);
-            writeActiveWorkspaceId(workspaceId || null);
-            if (isDesktopRuntime()) {
-              void workspaceSetSelected(workspaceId).catch(() => undefined);
-              void workspaceSetRuntimeActive(workspaceId).catch(() => undefined);
-            }
-            return true;
-          },
+          onReorderWorkspaces: isDesktopRuntime() || openworkClient ? handleReorderWorkspaces : undefined,
           onOpenSession: (workspaceId, sessionId) => navigate(workspaceSessionRoute(workspaceId, sessionId)),
           onCreateTaskInWorkspace: (workspaceId) => navigate(workspaceSessionRoute(workspaceId)),
           onOpenRenameWorkspace: handleOpenRenameWorkspace,

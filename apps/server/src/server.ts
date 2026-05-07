@@ -1566,6 +1566,47 @@ function createRoutes(
     return jsonResponse({ activeId: workspace.id, workspace: serializeWorkspace(workspace), persisted: false });
   });
 
+  addRoute(routes, "POST", "/workspaces/reorder", "host", async (ctx) => {
+    ensureWritable(config);
+    const body = await readJsonBody(ctx.request);
+    const rawIds = (body as { workspaceIds?: unknown }).workspaceIds;
+    if (!Array.isArray(rawIds)) {
+      throw new ApiError(400, "invalid_payload", "workspaceIds must be an array");
+    }
+    const requested = rawIds
+      .map((id) => (typeof id === "string" ? id.trim() : ""))
+      .filter((id) => id.length > 0);
+    const known = new Set(config.workspaces.map((entry) => entry.id));
+    if (requested.length !== known.size) {
+      throw new ApiError(
+        400,
+        "invalid_payload",
+        "workspaceIds must list every workspace exactly once",
+      );
+    }
+    const seen = new Set<string>();
+    for (const id of requested) {
+      if (!known.has(id) || seen.has(id)) {
+        throw new ApiError(400, "invalid_payload", "Invalid or duplicate workspace id in reorder list");
+      }
+      seen.add(id);
+    }
+    const byId = new Map(config.workspaces.map((entry) => [entry.id, entry]));
+    config.workspaces = requested.map((id) => byId.get(id)!);
+
+    const persisted = await persistServerWorkspaceState(config);
+    onWorkspacesChanged();
+
+    const active = config.workspaces[0] ?? null;
+    return jsonResponse({
+      ok: true,
+      persisted,
+      activeId: active?.id ?? null,
+      items: config.workspaces.map(serializeWorkspace),
+      workspaces: config.workspaces.map(serializeWorkspace),
+    });
+  });
+
   addRoute(routes, "DELETE", "/workspaces/:id", "host", async (ctx) => {
     ensureWritable(config);
 

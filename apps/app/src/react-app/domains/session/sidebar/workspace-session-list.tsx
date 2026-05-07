@@ -40,7 +40,6 @@ type Props = {
   connectingWorkspaceId: string | null;
   workspaceConnectionStateById: Record<string, WorkspaceConnectionState>;
   newTaskDisabled: boolean;
-  onSelectWorkspace: (workspaceId: string) => Promise<boolean> | boolean | void;
   onOpenSession: (workspaceId: string, sessionId: string) => void;
   onPrefetchSession?: (workspaceId: string, sessionId: string) => void;
   onCreateTaskInWorkspace: (workspaceId: string) => void;
@@ -63,9 +62,19 @@ type Props = {
    * that were not the active one at boot.
    */
   onWorkspaceSectionOpened?: (workspaceId: string) => void;
+  /** Persist workspace order (desktop + OpenWork server when connected). */
+  onReorderWorkspaces?: (workspaceIds: string[]) => void | Promise<void>;
 };
 
 const MAX_SESSIONS_PREVIEW = 6;
+
+function reorderWorkspaceIds(ids: string[], fromIndex: number, toIndex: number): string[] {
+  if (fromIndex === toIndex) return ids;
+  const next = [...ids];
+  const [removed] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, removed);
+  return next;
+}
 
 type SessionListItem = WorkspaceSessionGroup["sessions"][number];
 type FlattenedSessionRow = { session: SessionListItem; depth: number };
@@ -281,6 +290,9 @@ export function WorkspaceSessionList(props: Props) {
   const [expandedSessionIds, setExpandedSessionIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [dropTargetWorkspaceIndex, setDropTargetWorkspaceIndex] = useState<number | null>(null);
+  /** After HTML5 drag ends, the browser fires a click — skip expand toggle for that row. */
+  const suppressWorkspaceExpandClickIndexRef = useRef<number | null>(null);
   const workspaceMenuRef = useRef<HTMLDivElement | null>(null);
   const sessionMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -607,7 +619,9 @@ export function WorkspaceSessionList(props: Props) {
       </div>
       <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pr-1">
         <div className="space-y-2 pb-3">
-          {props.workspaceSessionGroups.map((group) => {
+          {props.workspaceSessionGroups.map((group, workspaceIndex) => {
+            const canReorder =
+              Boolean(props.onReorderWorkspaces) && props.workspaceSessionGroups.length > 1;
             const tree = buildSessionTreeState(group.sessions, props.sessionStatusById);
             const forcedExpandedSessionIds = new Set(
               props.selectedSessionId
@@ -662,30 +676,92 @@ export function WorkspaceSessionList(props: Props) {
             );
 
             return (
-              <div key={workspace.id} className="space-y-2">
+              <div
+                key={workspace.id}
+                className={`space-y-2 rounded-xl ${
+                  dropTargetWorkspaceIndex === workspaceIndex ? "ring-1 ring-inset ring-gray-8/45" : ""
+                }`}
+                onDragOver={(event) => {
+                  if (!props.onReorderWorkspaces || props.workspaceSessionGroups.length < 2) return;
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                  setDropTargetWorkspaceIndex(workspaceIndex);
+                }}
+                onDragLeave={(event) => {
+                  if (!props.onReorderWorkspaces) return;
+                  const related = event.relatedTarget as Node | null;
+                  if (related && event.currentTarget.contains(related)) return;
+                  setDropTargetWorkspaceIndex(null);
+                }}
+                onDrop={(event) => {
+                  if (!props.onReorderWorkspaces) return;
+                  event.preventDefault();
+                  const raw = event.dataTransfer.getData("application/x-openwork-workspace-index");
+                  const fromIndex = Number.parseInt(raw, 10);
+                  setDropTargetWorkspaceIndex(null);
+                  if (!Number.isFinite(fromIndex)) return;
+                  const ids = props.workspaceSessionGroups.map((g) => g.workspace.id);
+                  if (
+                    fromIndex === workspaceIndex ||
+                    fromIndex < 0 ||
+                    fromIndex >= ids.length ||
+                    workspaceIndex < 0 ||
+                    workspaceIndex >= ids.length
+                  ) {
+                    return;
+                  }
+                  const next = reorderWorkspaceIds(ids, fromIndex, workspaceIndex);
+                  void Promise.resolve(props.onReorderWorkspaces(next));
+                }}
+              >
                 <div className="relative group">
                   <div
                     role="button"
                     tabIndex={0}
-                    className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-left text-[13px] transition-colors ${
+                    aria-expanded={expandedWorkspaceIds.has(workspace.id)}
+                    className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-left text-[13px] transition-colors ${
                       props.selectedWorkspaceId === workspace.id
                         ? "bg-gray-2/70 text-gray-12"
                         : "text-gray-10 hover:bg-gray-1/70 hover:text-gray-12"
                     } ${isConnecting ? "opacity-75" : ""}`}
-                    onClick={() => {
-                      expandWorkspace(workspace.id);
-                      void Promise.resolve(props.onSelectWorkspace(workspace.id));
+                    onClick={(event) => {
+                      const target = event.target as HTMLElement | null;
+                      if (target?.closest("button")) return;
+                      if (suppressWorkspaceExpandClickIndexRef.current === workspaceIndex) {
+                        suppressWorkspaceExpandClickIndexRef.current = null;
+                        return;
+                      }
+                      toggleWorkspaceExpanded(workspace.id);
                     }}
                     onKeyDown={(event) => {
                       if (event.key !== "Enter" && event.key !== " ") return;
                       if (event.nativeEvent.isComposing || event.keyCode === 229) return;
                       event.preventDefault();
-                      expandWorkspace(workspace.id);
-                      void Promise.resolve(props.onSelectWorkspace(workspace.id));
+                      toggleWorkspaceExpanded(workspace.id);
                     }}
                   >
-                    <div className="flex min-w-0 items-center gap-3.5">
-                      <div className="flex h-5 w-5 shrink-0 items-center justify-center text-[#3e3e3e]">
+                    <div className="flex min-w-0 flex-1 items-center gap-3.5 py-0.5 text-left">
+                      <div
+                        draggable={canReorder}
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center text-[#3e3e3e] ${
+                          canReorder ? "cursor-grab active:cursor-grabbing" : ""
+                        }`}
+                        title={canReorder ? t("workspace_list.drag_reorder") : undefined}
+                        aria-label={canReorder ? t("workspace_list.drag_reorder") : undefined}
+                        onDragStart={(event) => {
+                          if (!canReorder) return;
+                          event.stopPropagation();
+                          event.dataTransfer.effectAllowed = "move";
+                          event.dataTransfer.setData(
+                            "application/x-openwork-workspace-index",
+                            String(workspaceIndex),
+                          );
+                        }}
+                        onDragEnd={() => {
+                          suppressWorkspaceExpandClickIndexRef.current = workspaceIndex;
+                          setDropTargetWorkspaceIndex(null);
+                        }}
+                      >
                         <WorkspaceSidebarGlyph className="h-[17px] w-[17px]" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -737,26 +813,6 @@ export function WorkspaceSessionList(props: Props) {
                           <MoreHorizontal size={14} />
                         </button>
                       </div>
-
-                      <button
-                        type="button"
-                        className="rounded-md p-1 text-gray-9 hover:bg-gray-3/80 hover:text-gray-11"
-                        aria-label={
-                          expandedWorkspaceIds.has(workspace.id)
-                            ? t("sidebar.collapse")
-                            : t("sidebar.expand")
-                        }
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          toggleWorkspaceExpanded(workspace.id);
-                        }}
-                      >
-                        {expandedWorkspaceIds.has(workspace.id) ? (
-                          <ChevronDown size={14} />
-                        ) : (
-                          <ChevronRight size={14} />
-                        )}
-                      </button>
                     </div>
                   </div>
 

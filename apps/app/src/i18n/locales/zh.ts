@@ -1362,4 +1362,5 @@ export default {
   "workspace_list.unavailable": "不可用",
   "workspace_list.workspace_fallback": "工作区",
   "workspace_list.workspace_options": "工作区选项",
+  "workspace_list.drag_reorder": "拖动排序",
 } as const;
