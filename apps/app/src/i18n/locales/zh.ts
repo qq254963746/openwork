@@ -1359,6 +1359,7 @@ export default {
   "workspace.rename_title": "编辑工作区名称",
   "workspace.sandbox_badge": "沙箱",
   "workspace.selected": "已选择",
+  "workspace_list.sidebar_brand": "OpenWork",
   "workspace_list.add_workspace": "添加工作区",
   "workspace_list.connecting": "正在连接…",
   "workspace_list.delete_session": "删除会话",

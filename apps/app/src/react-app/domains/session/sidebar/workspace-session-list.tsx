@@ -1,4 +1,5 @@
 /** @jsxImportSource react */
+import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
@@ -20,7 +21,9 @@ import type {
 } from "../../../../app/types";
 import {
   getWorkspaceTaskLoadErrorDisplay,
+  isElectronRuntime,
   isSandboxWorkspace,
+  isTauriRuntime,
   isWindowsPlatform,
 } from "../../../../app/utils";
 import { t } from "../../../../i18n";
@@ -164,6 +167,8 @@ const workspaceKindLabel = (workspace: WorkspaceInfo) =>
     : t("workspace.local_badge");
 
 const WORKSPACE_SWATCHES = ["#2563eb", "#5a67d8", "#f97316", "#10b981"];
+
+const OPENWORK_MARK_SRC = `${import.meta.env.BASE_URL}openwork-mark.svg`;
 
 const workspaceSwatchColor = (seed: string) => {
   const value = seed.trim() || "workspace";
@@ -528,8 +533,34 @@ export function WorkspaceSessionList(props: Props) {
     );
   };
 
+  const electronMacDrag =
+    isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
+
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+      <div
+        aria-hidden
+        className="h-[50px] shrink-0 select-none"
+        {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
+        style={
+          electronMacDrag ? ({ WebkitAppRegion: "drag" } satisfies CSSProperties) : undefined
+        }
+      />
+      <div className="shrink-0 border-b border-dls-border/80 px-3.5 pb-3 pt-2.5">
+        <div className="flex items-center gap-2.5">
+          <img
+            src={OPENWORK_MARK_SRC}
+            alt=""
+            className="h-7 w-auto max-w-[32px] shrink-0 object-contain"
+            width={32}
+            height={28}
+            decoding="async"
+          />
+          <span className="truncate text-[15px] font-semibold tracking-tight text-gray-12">
+            {t("workspace_list.sidebar_brand")}
+          </span>
+        </div>
+      </div>
       <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pr-1">
         <div className="space-y-2 pb-3">
           {props.workspaceSessionGroups.map((group) => {

@@ -1,8 +1,10 @@
 /** @jsxImportSource react */
+import type { CSSProperties } from "react";
 import type * as React from "react";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { isElectronRuntime, isTauriRuntime } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import { SettingsPage, getSettingsTabLabel } from "./settings-page";
 import { WorkspaceSessionList } from "../../session/sidebar/workspace-session-list";
@@ -30,10 +32,10 @@ export function SettingsShell(props: SettingsShellProps) {
   const title = getSettingsTabLabel(props.activeTab);
 
   return (
-    <div className="h-[100dvh] min-h-screen w-full overflow-hidden bg-[var(--dls-app-bg)] p-3 text-gray-12 md:p-4">
-      <div className="flex h-full w-full gap-3 md:gap-4">
+    <div className="flex h-[100dvh] min-h-screen w-full flex-col overflow-hidden bg-[var(--dls-app-bg)] text-gray-12">
+      <div className="flex min-h-0 flex-1 gap-0">
         <aside
-          className="relative hidden shrink-0 flex-col overflow-hidden rounded-[24px] border border-dls-border bg-dls-sidebar p-2.5 lg:flex"
+          className="relative hidden shrink-0 flex-col overflow-hidden border-0 border-r border-dls-border bg-dls-sidebar p-2.5 lg:flex"
           style={props.sidebarWidth ? { width: `${props.sidebarWidth}px`, minWidth: `${props.sidebarWidth}px` } : undefined}
         >
           {props.sidebarTopSlot ? <div className="shrink-0">{props.sidebarTopSlot}</div> : null}
@@ -42,7 +44,7 @@ export function SettingsShell(props: SettingsShellProps) {
           </div>
           {props.onSidebarResizeStart ? (
             <div
-              className="absolute right-0 top-3 hidden h-[calc(100%-24px)] w-2 translate-x-1/2 cursor-col-resize rounded-full bg-transparent transition-colors hover:bg-gray-6/40 md:block"
+              className="absolute right-0 top-0 hidden h-full w-2 translate-x-1/2 cursor-col-resize rounded-full bg-transparent transition-colors hover:bg-gray-6/40 md:block"
               onPointerDown={props.onSidebarResizeStart}
               title={t("session.resize_workspace_column")}
               aria-label={t("session.resize_workspace_column")}
@@ -50,8 +52,16 @@ export function SettingsShell(props: SettingsShellProps) {
           ) : null}
         </aside>
 
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-dls-border bg-dls-surface">
-          <header className="shrink-0 flex h-12 items-center justify-between border-b border-dls-border bg-dls-surface px-4 md:px-6">
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-dls-surface">
+          <header
+            className="shrink-0 flex h-12 items-center justify-between border-b border-dls-border bg-dls-surface px-4 md:px-6"
+            {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
+            style={
+              isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
+                ? ({ WebkitAppRegion: "drag" } satisfies CSSProperties)
+                : undefined
+            }
+          >
             <div className="flex min-w-0 items-center gap-3">
               {props.headerLeadingSlot}
               <h1 className="truncate text-[15px] font-semibold text-dls-text">{title}</h1>
@@ -69,7 +79,14 @@ export function SettingsShell(props: SettingsShellProps) {
                 </span>
               ) : null}
             </div>
-            <div className="flex items-center text-gray-10">
+            <div
+              className="flex items-center text-gray-10"
+              style={
+                isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
+                  ? ({ WebkitAppRegion: "no-drag" } satisfies CSSProperties)
+                  : undefined
+              }
+            >
               <Button
                 variant="ghost"
                 type="button"

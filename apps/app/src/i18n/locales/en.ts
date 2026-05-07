@@ -1478,6 +1478,7 @@ export default {
   "workspace.rename_title": "Edit workspace name",
   "workspace.sandbox_badge": "Sandbox",
   "workspace.selected": "Selected",
+  "workspace_list.sidebar_brand": "OpenWork",
   "workspace_list.add_workspace": "Add workspace",
   "workspace_list.connecting": "Connecting...",
   "workspace_list.delete_session": "Delete session",

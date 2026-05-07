@@ -1577,6 +1577,12 @@ async function createMainWindow() {
     height: 820,
     title: APP_NAME,
     show: false,
+    ...(process.platform === "darwin"
+      ? {
+          titleBarStyle: "hiddenInset",
+          trafficLightPosition: { x: 14, y: 20 },
+        }
+      : {}),
     ...(APP_ICON_IMAGE && !APP_ICON_IMAGE.isEmpty() ? { icon: APP_ICON_IMAGE } : {}),
     webPreferences: {
       preload: preloadPath,

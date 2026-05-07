@@ -15,7 +15,13 @@
         "title": "OpenWork",
         "width": 1180,
         "height": 820,
-        "resizable": true
+        "resizable": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": {
+          "x": 14,
+          "y": 20
+        }
       }
     ],
     "security": {

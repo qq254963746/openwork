@@ -1,4 +1,5 @@
 /** @jsxImportSource react */
+import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Globe, Loader2, Minimize2, Redo2, Undo2, Zap } from "lucide-react";
 
@@ -32,7 +33,7 @@ import {
 } from "../../../shell/workspace-shell-layout";
 import { OwDotTicker } from "../../../shell/dot-ticker";
 import { useReactRenderWatchdog } from "../../../shell/react-render-watchdog";
-import { isElectronRuntime } from "../../../../app/utils";
+import { isElectronRuntime, isTauriRuntime } from "../../../../app/utils";
 import { BrowserPanel } from "../browser/browser-panel";
 
 type StatusBarOverrides = Pick<
@@ -281,9 +282,9 @@ export function SessionPage(props: SessionPageProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[radial-gradient(circle_at_top,rgba(74,111,255,0.12),transparent_42%),var(--app-bg,#0b1020)] text-dls-text">
-      <div className="flex min-h-0 flex-1 gap-4 p-3 md:p-4">
+      <div className="flex min-h-0 flex-1 gap-0">
         <aside
-          className="relative hidden min-h-0 shrink-0 overflow-hidden rounded-[24px] border border-dls-border bg-dls-sidebar shadow-[var(--dls-shell-shadow)] lg:flex lg:flex-col"
+          className="relative hidden min-h-0 shrink-0 overflow-hidden border-0 border-r border-dls-border bg-dls-sidebar lg:flex lg:flex-col"
           style={{ width: leftSidebarWidth }}
         >
           <div className="flex min-h-0 flex-1">
@@ -315,15 +316,25 @@ export function SessionPage(props: SessionPageProps) {
             />
           </div>
           <div
-            className="absolute right-0 top-3 hidden h-[calc(100%-24px)] w-2 translate-x-1/2 cursor-col-resize rounded-full bg-transparent transition-colors hover:bg-gray-6/40 lg:block"
+            className="absolute right-0 top-0 hidden h-full w-2 translate-x-1/2 cursor-col-resize rounded-full bg-transparent transition-colors hover:bg-gray-6/40 lg:block"
             onPointerDown={startLeftSidebarResize}
             title={t("session.resize_workspace_column")}
             aria-label={t("session.resize_workspace_column")}
           />
         </aside>
 
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-dls-border bg-dls-surface shadow-[var(--dls-shell-shadow)]">
-          <header className="z-10 flex h-12 shrink-0 items-center justify-between border-b border-dls-border bg-dls-surface px-4 md:px-6">
+        <main
+          className={`flex min-w-0 flex-1 flex-col overflow-hidden bg-dls-surface ${browserPanelOpen ? "border-0 border-r border-dls-border" : ""}`}
+        >
+          <header
+            className="z-10 flex h-12 shrink-0 items-center justify-between border-b border-dls-border bg-dls-surface px-4 md:px-6"
+            {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
+            style={
+              isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
+                ? ({ WebkitAppRegion: "drag" } satisfies CSSProperties)
+                : undefined
+            }
+          >
             <div className="flex min-w-0 items-center gap-3">
               <h1 className="truncate text-[15px] font-semibold text-dls-text">
                 {showWorkspaceSetupEmptyState
@@ -345,7 +356,14 @@ export function SessionPage(props: SessionPageProps) {
               ) : null}
             </div>
 
-            <div className="flex items-center gap-1.5 text-gray-10">
+            <div
+              className="flex items-center gap-1.5 text-gray-10"
+              style={
+                isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
+                  ? ({ WebkitAppRegion: "no-drag" } satisfies CSSProperties)
+                  : undefined
+              }
+            >
               {isElectronRuntime() ? (
                 <button
                   type="button"
@@ -561,7 +579,7 @@ export function SessionPage(props: SessionPageProps) {
         {/* Embedded browser panel */}
         {browserPanelOpen ? (
           <aside
-            className="hidden min-h-0 shrink-0 overflow-hidden rounded-[24px] border border-dls-border bg-dls-surface shadow-[var(--dls-shell-shadow)] lg:flex lg:flex-col"
+            className="hidden min-h-0 shrink-0 overflow-hidden border-0 bg-dls-surface lg:flex lg:flex-col"
             style={{ width: 520 }}
           >
             <BrowserPanel onClose={toggleBrowserPanel} />
