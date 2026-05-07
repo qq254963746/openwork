@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Globe, Loader2, Minimize2, Redo2, Undo2, Zap } from "lucide-react";
+import { Check, Loader2, Minimize2, PanelRightIcon, Zap } from "lucide-react";
 
 import { t } from "../../../../i18n";
 import { buildOpenworkWorkspaceBaseUrl, type OpenworkServerClient, type OpenworkServerStatus } from "../../../../app/lib/openwork-server";
@@ -34,7 +34,6 @@ import {
 import { OwDotTicker } from "../../../shell/dot-ticker";
 import { useReactRenderWatchdog } from "../../../shell/react-render-watchdog";
 import { isElectronRuntime, isTauriRuntime } from "../../../../app/utils";
-import { BrowserPanel } from "../browser/browser-panel";
 
 type StatusBarOverrides = Pick<
   StatusBarProps,
@@ -46,14 +45,6 @@ type StatusBarOverrides = Pick<
   | "showSettingsButton"
   | "settingsOpen"
 >;
-
-export type SessionPageHistoryControls = {
-  canUndo: boolean;
-  canRedo: boolean;
-  busyAction: "undo" | "redo" | null;
-  onUndo: () => void | Promise<void>;
-  onRedo: () => void | Promise<void>;
-};
 
 export type SessionPageSidebarProps = {
   workspaceSessionGroups: WorkspaceSessionGroup[];
@@ -82,7 +73,7 @@ export type SessionPageSidebarProps = {
 
 export type SessionPageSurfaceProps = Omit<
   SessionSurfaceProps,
-  "client" | "workspaceId" | "sessionId" | "opencodeBaseUrl" | "openworkToken"
+  "client" | "workspaceId" | "sessionId" | "opencodeBaseUrl" | "openworkToken" | "workspaceSidePanelOpen"
 >;
 
 export type SessionPageProps = {
@@ -111,7 +102,6 @@ export type SessionPageProps = {
   onOpenSettings: () => void;
   sidebar: SessionPageSidebarProps;
   surface?: SessionPageSurfaceProps | null;
-  history?: SessionPageHistoryControls | null;
   todos: TodoItem[];
   sessionLoadingById: (sessionId: string | null) => boolean;
   shareWorkspaceModal?: ShareWorkspaceModalProps | null;
@@ -175,11 +165,11 @@ export function SessionPage(props: SessionPageProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [todoExpanded, setTodoExpanded] = useState(true);
-  const [browserPanelOpen, setBrowserPanelOpen] = useState(false);
+  const [workspaceSidePanelOpen, setWorkspaceSidePanelOpen] = useState(false);
   const [showDelayedSessionLoadingState, setShowDelayedSessionLoadingState] = useState(false);
 
-  const toggleBrowserPanel = useCallback(() => {
-    setBrowserPanelOpen((prev) => !prev);
+  const toggleWorkspaceSidePanel = useCallback(() => {
+    setWorkspaceSidePanelOpen((current) => !current);
   }, []);
 
   const selectedSessionTitle = useMemo(
@@ -323,11 +313,9 @@ export function SessionPage(props: SessionPageProps) {
           />
         </aside>
 
-        <main
-          className={`flex min-w-0 flex-1 flex-col overflow-hidden bg-dls-surface ${browserPanelOpen ? "border-0 border-r border-dls-border" : ""}`}
-        >
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-dls-surface">
           <header
-            className="z-10 flex h-12 shrink-0 items-center justify-between border-b border-dls-border bg-dls-surface px-4 md:px-6"
+            className="z-10 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-dls-border bg-dls-surface pl-4 md:pl-6 pr-1.5 md:pr-2"
             {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
             style={
               isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
@@ -335,7 +323,7 @@ export function SessionPage(props: SessionPageProps) {
                 : undefined
             }
           >
-            <div className="flex min-w-0 items-center gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <h1 className="truncate text-[15px] font-semibold text-dls-text">
                 {showWorkspaceSetupEmptyState
                   ? t("session.create_or_connect_workspace")
@@ -355,66 +343,33 @@ export function SessionPage(props: SessionPageProps) {
                 </span>
               ) : null}
             </div>
-
             <div
-              className="flex items-center gap-1.5 text-gray-10"
+              className="flex shrink-0 items-center"
+              {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
               style={
                 isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
                   ? ({ WebkitAppRegion: "no-drag" } satisfies CSSProperties)
                   : undefined
               }
             >
-              {isElectronRuntime() ? (
-                <button
-                  type="button"
-                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium transition-colors ${
-                    browserPanelOpen
-                      ? "bg-dls-accent/10 text-dls-accent"
-                      : "text-gray-10 hover:bg-gray-2/70 hover:text-dls-text"
-                  }`}
-                  onClick={toggleBrowserPanel}
-                  title="Toggle browser panel"
-                  aria-label="Toggle browser panel"
-                  aria-pressed={browserPanelOpen}
-                >
-                  <Globe size={16} />
-                  <span className="hidden lg:inline">Browser</span>
-                </button>
-              ) : null}
-              {props.history ? (
-                <>
-                  <button
-                    type="button"
-                    className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium text-gray-10 transition-colors hover:bg-gray-2/70 hover:text-dls-text disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => void props.history?.onUndo()}
-                    disabled={!props.history.canUndo || props.history.busyAction !== null}
-                    title={t("session.undo_title")}
-                    aria-label={t("session.undo_label")}
-                  >
-                    {props.history.busyAction === "undo" ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Undo2 size={16} />
-                    )}
-                    <span className="hidden lg:inline">{t("session.revert_label")}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium text-gray-10 transition-colors hover:bg-gray-2/70 hover:text-dls-text disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => void props.history?.onRedo()}
-                    disabled={!props.history.canRedo || props.history.busyAction !== null}
-                    title={t("session.redo_title")}
-                    aria-label={t("session.redo_aria_label")}
-                  >
-                    {props.history.busyAction === "redo" ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Redo2 size={16} />
-                    )}
-                    <span className="hidden lg:inline">{t("session.redo_label")}</span>
-                  </button>
-                </>
-              ) : null}
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                onClick={toggleWorkspaceSidePanel}
+                title={
+                  workspaceSidePanelOpen
+                    ? t("session.workspace_panel_toggle_hide")
+                    : t("session.workspace_panel_toggle_show")
+                }
+                aria-label={
+                  workspaceSidePanelOpen
+                    ? t("session.workspace_panel_toggle_hide")
+                    : t("session.workspace_panel_toggle_show")
+                }
+                aria-pressed={workspaceSidePanelOpen}
+              >
+                <PanelRightIcon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+              </button>
             </div>
           </header>
 
@@ -470,6 +425,7 @@ export function SessionPage(props: SessionPageProps) {
                   sessionId={props.selectedSessionId!}
                   opencodeBaseUrl={reactSessionBaseUrl}
                   openworkToken={reactSessionToken}
+                  workspaceSidePanelOpen={workspaceSidePanelOpen}
                   {...props.surface!}
                 />
               ) : null}
@@ -575,16 +531,6 @@ export function SessionPage(props: SessionPageProps) {
             showSettingsButton={props.statusBar?.showSettingsButton}
           />
         </main>
-
-        {/* Embedded browser panel */}
-        {browserPanelOpen ? (
-          <aside
-            className="hidden min-h-0 shrink-0 overflow-hidden border-0 bg-dls-surface lg:flex lg:flex-col"
-            style={{ width: 520 }}
-          >
-            <BrowserPanel onClose={toggleBrowserPanel} />
-          </aside>
-        ) : null}
       </div>
 
       {props.providerAuthModal ? <ProviderAuthModal {...props.providerAuthModal} /> : null}

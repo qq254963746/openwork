@@ -2045,13 +2045,6 @@ export function SessionRoute() {
         onOpenCreateWorkspace: handleOpenCreateWorkspace,
       }}
       surface={surfaceProps}
-      history={{
-        canUndo: false,
-        canRedo: false,
-        busyAction: null,
-        onUndo: () => {},
-        onRedo: () => {},
-      }}
       todos={[] satisfies TodoItem[]}
       sessionLoadingById={(sessionId) => effectiveLoading && Boolean(sessionId && sessionId === selectedSessionId)}
       shareWorkspaceModal={

@@ -1,12 +1,20 @@
 /** @jsxImportSource react */
 import { useMemo, useState } from "react";
 import type { UIMessage } from "ai";
-import { ChevronRight, File as FileIcon, Folder, Loader2 } from "lucide-react";
+import {
+  ChevronRight,
+  File as FileIcon,
+  Folder,
+  FolderOpen,
+  Loader2,
+  RefreshCw,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { t } from "../../../../i18n";
+import { openDesktopPath } from "../../../../app/lib/desktop";
 import type { OpenworkServerClient } from "../../../../app/lib/openwork-server";
 import type { ComposerAttachment } from "../../../../app/types";
-import { isDesktopRuntime } from "../../../../app/utils";
+import { isDesktopRuntime, isMacPlatform, isWindowsPlatform } from "../../../../app/utils";
 import { usePlatform } from "../../../kernel/platform";
 
 function workspaceFolderLabel(root: string): string {
@@ -107,6 +115,30 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
     staleTime: 30_000,
   });
 
+  const refreshWorkspaceFiles = () => {
+    void listQuery.refetch();
+    if (selectedFile && isWorkspacePreviewablePath(selectedFile)) {
+      void previewQuery.refetch();
+    }
+  };
+
+  const openCurrentFolderOnDesktop = () => {
+    const root = props.workspaceRoot.trim();
+    if (!root || !isDesktopRuntime()) return;
+    const abs = absoluteWorkspaceFilePath(root, dirPath);
+    if (!abs) return;
+    void openDesktopPath(abs).catch(() => undefined);
+  };
+
+  const canOpenCurrentFolderOnDesktop =
+    isDesktopRuntime() && Boolean(props.workspaceRoot.trim()) && Boolean(props.workspaceId);
+
+  const openFolderTitle = isWindowsPlatform()
+    ? t("session.workspace_panel_open_current_folder_explorer")
+    : isMacPlatform()
+      ? t("session.workspace_panel_open_current_folder_finder")
+      : t("session.workspace_panel_open_current_folder_generic");
+
   const toolsUsed = useMemo(() => collectSessionToolNames(props.messages), [props.messages]);
 
   const breadcrumbSegments = dirPath ? dirPath.split("/").filter(Boolean) : [];
@@ -147,7 +179,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
   };
 
   return (
-    <aside className="hidden min-h-0 w-[min(100%,300px)] shrink-0 flex-col border-l border-dls-border bg-dls-sidebar/60 xl:flex">
+    <aside className="flex min-h-0 h-full w-[min(100%,300px)] shrink-0 flex-col border-l border-dls-border bg-dls-sidebar/60">
       <div className="shrink-0 border-b border-dls-border px-3 py-2.5">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-dls-secondary">
           {t("session.workspace_panel_context")}
@@ -220,8 +252,32 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
 
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="shrink-0 border-b border-dls-border px-3 py-2">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-dls-secondary">
-            {t("session.workspace_panel_files")}
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 text-[11px] font-semibold uppercase tracking-wide text-dls-secondary">
+              {t("session.workspace_panel_files")}
+            </div>
+            <div className="flex shrink-0 items-center gap-0.5">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-md p-1 text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text disabled:pointer-events-none disabled:opacity-40"
+                onClick={openCurrentFolderOnDesktop}
+                disabled={!canOpenCurrentFolderOnDesktop}
+                title={openFolderTitle}
+                aria-label={openFolderTitle}
+              >
+                <FolderOpen size={14} />
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-md p-1 text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text disabled:pointer-events-none disabled:opacity-40"
+                onClick={refreshWorkspaceFiles}
+                disabled={!props.workspaceId || listQuery.isFetching}
+                title={t("session.workspace_panel_refresh")}
+                aria-label={t("session.workspace_panel_refresh")}
+              >
+                <RefreshCw size={14} className={listQuery.isFetching ? "animate-spin" : undefined} />
+              </button>
+            </div>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-0.5 text-[11px] text-dls-secondary">
             <button

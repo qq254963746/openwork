@@ -85,6 +85,8 @@ export type SessionSurfaceProps = {
   onChangeModel?: (model: { providerID: string; modelID: string }) => void;
   onUploadInboxFiles?: ((files: File[], options?: { notify?: boolean }) => void | Promise<unknown>) | null;
   onOpenSettingsSection?: ((section: "commands" | "skills" | "mcps" | "plugins") => void) | undefined;
+  /** Right column (workspace files / context): visibility is controlled only via SessionPage toggle, not breakpoints. */
+  workspaceSidePanelOpen: boolean;
 };
 
 function messageToReadableText(message: UIMessage) {
@@ -992,15 +994,17 @@ export function SessionSurface(props: SessionSurfaceProps) {
         </DevProfiler>
       </div>
       </div>
-      <SessionWorkspacePanel
-        client={props.client}
-        workspaceId={props.workspaceId}
-        workspaceRoot={props.workspaceRoot}
-        attachments={attachments}
-        mentions={mentions}
-        pasteParts={pasteParts}
-        messages={renderedMessages}
-      />
+      {props.workspaceSidePanelOpen ? (
+        <SessionWorkspacePanel
+          client={props.client}
+          workspaceId={props.workspaceId}
+          workspaceRoot={props.workspaceRoot}
+          attachments={attachments}
+          mentions={mentions}
+          pasteParts={pasteParts}
+          messages={renderedMessages}
+        />
+      ) : null}
       </div>
       {/* Error display moved inline into the session conversation area */}
       {props.developerMode ? <SessionDebugPanel model={model} snapshot={snapshot} /> : null}
