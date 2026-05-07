@@ -288,8 +288,30 @@ const parseChecksum = (content, assetName) => {
 };
 
 let didBuildOpenworkServer = false;
+let existingOpenworkServerVersion = null;
+if (existsSync(openworkServerPath) && !isStubBinary(openworkServerPath)) {
+  existingOpenworkServerVersion = readBinaryVersion(openworkServerPath);
+}
+
+const desiredOpenworkServerVersion = (() => {
+  try {
+    const raw = readFileSync(resolve(openworkServerDir, "package.json"), "utf8");
+    return String(JSON.parse(raw).version ?? "").trim() || null;
+  } catch {
+    return null;
+  }
+})();
+
+const shouldRebuildOpenworkServerForVersion = Boolean(
+  desiredOpenworkServerVersion &&
+    existingOpenworkServerVersion &&
+    existingOpenworkServerVersion !== desiredOpenworkServerVersion,
+);
 const shouldBuildOpenworkServer =
-  forceBuild || !existsSync(openworkServerBuildPath) || isStubBinary(openworkServerBuildPath);
+  forceBuild ||
+  shouldRebuildOpenworkServerForVersion ||
+  !existsSync(openworkServerBuildPath) ||
+  isStubBinary(openworkServerBuildPath);
 
 if (shouldBuildOpenworkServer) {
   mkdirSync(sidecarDir, { recursive: true });
@@ -567,14 +589,7 @@ adHocSignDarwinSidecars([
   orchestratorTargetPath,
 ]);
 
-const openworkServerVersion = (() => {
-  try {
-    const raw = readFileSync(resolve(openworkServerDir, "package.json"), "utf8");
-    return String(JSON.parse(raw).version ?? "").trim();
-  } catch {
-    return null;
-  }
-})();
+const openworkServerVersion = desiredOpenworkServerVersion;
 
 const orchestratorVersion = (() => {
   try {

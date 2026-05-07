@@ -13,8 +13,9 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { t } from "../../../../i18n";
-import { openDesktopPath } from "../../../../app/lib/desktop";
+import { openDesktopPath, workspaceAddAuthorizedRoot } from "../../../../app/lib/desktop";
 import type { OpenworkServerClient } from "../../../../app/lib/openwork-server";
+import { OpenworkServerError } from "../../../../app/lib/openwork-server";
 import type { ComposerAttachment } from "../../../../app/types";
 import { isDesktopRuntime, isMacPlatform, isWindowsPlatform } from "../../../../app/utils";
 import { MarkdownBlock } from "./markdown";
@@ -385,10 +386,76 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
   );
   const pollWhileSessionBusy = Boolean(props.liveWorkspacePreview);
 
+  const workspaceRoot = props.workspaceRoot.trim();
+  const attemptedWorkspaceAuthorizeRef = useRef(false);
+  const lastWorkspaceListErrorRef = useRef<string>("");
+  const showWorkspaceListErrorDetails =
+    typeof import.meta !== "undefined" &&
+    Boolean((import.meta as unknown as { env?: { DEV?: boolean } }).env?.DEV);
+
   const listQuery = useQuery({
     queryKey: ["workspaceDirList", props.workspaceId, dirPath],
-    queryFn: () => props.client.listWorkspaceDirectory(props.workspaceId, dirPath || undefined),
-    enabled: Boolean(props.workspaceId),
+    queryFn: async () => {
+      try {
+        return await props.client.listWorkspaceDirectory(props.workspaceId, dirPath || undefined);
+      } catch (error) {
+        const looksUnauthorized =
+          error instanceof OpenworkServerError
+            ? error.status === 403 && (error.code === "workspace_unauthorized" || error.code === "forbidden")
+            : (() => {
+                const message = error instanceof Error ? error.message : String(error ?? "");
+                return (
+                  message.includes("workspace_unauthorized") ||
+                  message.includes("Workspace is not authorized") ||
+                  message.includes('"workspace_unauthorized"') ||
+                  message.includes("403")
+                );
+              })();
+
+        if (error instanceof OpenworkServerError) {
+          // Always keep a terse summary visible (safe for prod); detailed messages remain dev-only.
+          let location = "";
+          const url = (error.details &&
+          typeof error.details === "object" &&
+          "url" in error.details &&
+          typeof (error.details as { url?: unknown }).url === "string"
+            ? (error.details as { url: string }).url
+            : "") as string;
+          if (url) {
+            try {
+              const parsed = new URL(url);
+              const port = parsed.port ? `:${parsed.port}` : "";
+              location = `${parsed.hostname}${port}${parsed.pathname}`;
+            } catch {
+              // ignore
+            }
+          }
+          lastWorkspaceListErrorRef.current = `${error.status} ${error.code}${location ? ` ${location}` : ""}`;
+          if (showWorkspaceListErrorDetails) {
+            lastWorkspaceListErrorRef.current = `${error.status} ${error.code}: ${error.message}`;
+          }
+        } else if (error instanceof Error) {
+          lastWorkspaceListErrorRef.current = error.message;
+        } else {
+          lastWorkspaceListErrorRef.current = String(error ?? "");
+        }
+
+        if (
+          looksUnauthorized &&
+          isDesktopRuntime() &&
+          workspaceRoot &&
+          !attemptedWorkspaceAuthorizeRef.current
+        ) {
+          attemptedWorkspaceAuthorizeRef.current = true;
+          await workspaceAddAuthorizedRoot({ workspacePath: workspaceRoot, folderPath: workspaceRoot }).catch(
+            () => undefined,
+          );
+          return await props.client.listWorkspaceDirectory(props.workspaceId, dirPath || undefined);
+        }
+        throw error;
+      }
+    },
+    enabled: Boolean(props.workspaceId && workspaceRoot),
     staleTime: pollWhileSessionBusy ? 0 : 15_000,
     refetchInterval: pollWhileSessionBusy ? 800 : false,
   });
@@ -417,15 +484,14 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
   };
 
   const openCurrentFolderOnDesktop = () => {
-    const root = props.workspaceRoot.trim();
-    if (!root || !isDesktopRuntime()) return;
-    const abs = absoluteWorkspaceFilePath(root, dirPath);
+    if (!workspaceRoot || !isDesktopRuntime()) return;
+    const abs = absoluteWorkspaceFilePath(workspaceRoot, dirPath);
     if (!abs) return;
     void openDesktopPath(abs).catch(() => undefined);
   };
 
   const canOpenCurrentFolderOnDesktop =
-    isDesktopRuntime() && Boolean(props.workspaceRoot.trim()) && Boolean(props.workspaceId);
+    isDesktopRuntime() && Boolean(workspaceRoot) && Boolean(props.workspaceId);
 
   const openFolderTitle = isWindowsPlatform()
     ? t("session.workspace_panel_open_current_folder_explorer")
@@ -720,7 +786,12 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
               <Loader2 className="animate-spin text-dls-secondary" size={18} />
             </div>
           ) : listQuery.isError ? (
-            <div className="px-1 text-[11px] text-red-11">{t("session.workspace_panel_list_error")}</div>
+            <div className="space-y-1 px-1 text-[11px] text-red-11">
+              <div>{t("session.workspace_panel_list_error")}</div>
+              {lastWorkspaceListErrorRef.current ? (
+                <div className="font-mono text-[10px] text-red-11/80">{lastWorkspaceListErrorRef.current}</div>
+              ) : null}
+            </div>
           ) : listQuery.data && listQuery.data.entries.length === 0 ? (
             <div className="px-1 text-[11px] text-dls-secondary">{t("session.workspace_panel_empty_dir")}</div>
           ) : (

@@ -326,7 +326,21 @@ export function normalizeOpenworkServerUrl(input: string) {
   const trimmed = input.trim();
   if (!trimmed) return null;
   const withProtocol = /^https?:\/\//.test(trimmed) ? trimmed : `http://${trimmed}`;
-  return withProtocol.replace(/\/+$/, "");
+  const normalized = withProtocol.replace(/\/+$/, "");
+  // Desktop runtime may hand us a workspace-scoped OpenCode mount URL
+  // (`.../w/<id>/opencode`). OpenWork server APIs live at `.../w/<id>`.
+  try {
+    const url = new URL(normalized);
+    const segments = url.pathname.replace(/\/+$/, "").split("/").filter(Boolean);
+    const last = segments[segments.length - 1] ?? "";
+    if (last === "opencode") {
+      url.pathname = `/${segments.slice(0, -1).join("/")}`;
+      return url.toString().replace(/\/+$/, "");
+    }
+  } catch {
+    // ignore — fall through to regex strip
+  }
+  return normalized.replace(/\/opencode$/, "");
 }
 
 export function isLoopbackOpenworkServerUrl(input: string) {
@@ -585,6 +599,12 @@ export class OpenworkServerError extends Error {
   }
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object") return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
 function buildHeaders(
   token?: string,
   hostToken?: string,
@@ -701,7 +721,12 @@ async function requestJson<T>(
   if (!response.ok) {
     const code = typeof json?.code === "string" ? json.code : "request_failed";
     const message = typeof json?.message === "string" ? json.message : response.statusText;
-    throw new OpenworkServerError(response.status, code, message, json?.details);
+    const details = isPlainObject(json?.details)
+      ? { ...json.details, url }
+      : json?.details !== undefined
+        ? { details: json.details, url }
+        : { url };
+    throw new OpenworkServerError(response.status, code, message, details);
   }
 
   return json as T;

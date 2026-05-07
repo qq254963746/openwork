@@ -1,3 +1,22 @@
+
+source "$HOME/.cargo/env"
+
+pnpm install
+pnpm release:review
+pnpm bump:patch   # 或 bump:minor / bump:major
+pnpm release:review
+
+pnpm -C apps/desktop prepare:sidecar
+
+查看版本是否对
+apps/desktop/src-tauri/sidecars/openwork-server --version
+
+pnpm --filter @openwork/desktop exec tauri build \
+  --target aarch64-apple-darwin \
+  --bundles dmg,app \
+  --config '{"bundle":{"createUpdaterArtifacts":false}}'
+
+
 # Release checklist
 
 OpenWork releases should be deterministic, easy to reproduce, and fully verifiable with CLI tooling.

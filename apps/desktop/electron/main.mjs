@@ -1667,8 +1667,8 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") {
-      app.quit();
-    }
+    // Match the Tauri shell: closing the main window exits the app so dev
+    // supervisors can tear down the Vite server they started.
+    app.quit();
   });
 }

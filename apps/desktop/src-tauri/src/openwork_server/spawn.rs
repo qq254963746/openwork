@@ -210,7 +210,19 @@ pub fn spawn_openwork_server(
 ) -> Result<(Receiver<CommandEvent>, CommandChild), String> {
     let command = match app.shell().sidecar("openwork-server") {
         Ok(command) => command,
-        Err(_) => app.shell().command("openwork-server"),
+        Err(err) => {
+            // In production builds we must use the bundled sidecar to ensure
+            // API compatibility with the renderer. Falling back to a user-installed
+            // `openwork-server` binary can silently downgrade features (e.g.
+            // missing workspace file APIs) and manifest as 404s in the UI.
+            if cfg!(debug_assertions) {
+                app.shell().command("openwork-server")
+            } else {
+                return Err(format!(
+                    "OpenWork server sidecar is missing or failed to load: {err}"
+                ));
+            }
+        }
     };
 
     let args = build_openwork_args(

@@ -477,6 +477,57 @@ export function createClient(baseUrl: string, directory?: string, auth?: Opencod
     });
   };
 
+  const workspaceFileOverrides = client as any as {
+    listWorkspaceDirectory: (
+      workspaceId: string,
+      path?: string,
+      options?: { throwOnError?: boolean },
+    ) => Promise<FieldsResult<unknown>>;
+    readWorkspaceFile: (
+      workspaceId: string,
+      path: string,
+      options?: { throwOnError?: boolean },
+    ) => Promise<FieldsResult<unknown>>;
+  };
+
+  const listWorkspaceDirectoryOriginal = workspaceFileOverrides.listWorkspaceDirectory?.bind(client);
+  if (typeof listWorkspaceDirectoryOriginal === "function") {
+    workspaceFileOverrides.listWorkspaceDirectory = (
+      workspaceId: string,
+      path?: string,
+      options?: { throwOnError?: boolean },
+    ) => {
+      if (!openworkMount || !openworkSessionClient || workspaceId !== openworkMount.workspaceId) {
+        return listWorkspaceDirectoryOriginal(workspaceId, path, options);
+      }
+      const url = `${openworkMount.baseUrl}/workspace/${encodeURIComponent(openworkMount.workspaceId)}/files/list${path?.trim() ? `?path=${encodeURIComponent(path.trim())}` : ""}`;
+      return wrapOpenworkRead(
+        url,
+        () => openworkSessionClient.listWorkspaceDirectory(openworkMount.workspaceId, path),
+        options,
+      );
+    };
+  }
+
+  const readWorkspaceFileOriginal = workspaceFileOverrides.readWorkspaceFile?.bind(client);
+  if (typeof readWorkspaceFileOriginal === "function") {
+    workspaceFileOverrides.readWorkspaceFile = (
+      workspaceId: string,
+      path: string,
+      options?: { throwOnError?: boolean },
+    ) => {
+      if (!openworkMount || !openworkSessionClient || workspaceId !== openworkMount.workspaceId) {
+        return readWorkspaceFileOriginal(workspaceId, path, options);
+      }
+      const url = `${openworkMount.baseUrl}/workspace/${encodeURIComponent(openworkMount.workspaceId)}/files/content?path=${encodeURIComponent(path)}`;
+      return wrapOpenworkRead(
+        url,
+        () => openworkSessionClient.readWorkspaceFile(openworkMount.workspaceId, path),
+        options,
+      );
+    };
+  }
+
   return client;
 }
 
