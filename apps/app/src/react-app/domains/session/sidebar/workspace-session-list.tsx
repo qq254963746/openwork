@@ -169,19 +169,24 @@ const workspaceKindLabel = (workspace: WorkspaceInfo) =>
       : t("workspace.remote_badge")
     : t("workspace.local_badge");
 
-const WORKSPACE_SWATCHES = ["#2563eb", "#5a67d8", "#f97316", "#10b981"];
-
 const OPENWORK_MARK_SRC = `${import.meta.env.BASE_URL}openwork-mark.svg`;
 
-const workspaceSwatchColor = (seed: string) => {
-  const value = seed.trim() || "workspace";
-  let hash = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash << 5) - hash + value.charCodeAt(index);
-    hash |= 0;
-  }
-  return WORKSPACE_SWATCHES[Math.abs(hash) % WORKSPACE_SWATCHES.length];
-};
+/** Workspace row glyph (grid / tiling mark). */
+function WorkspaceSidebarGlyph(props: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 1024 1024"
+      xmlns="http://www.w3.org/2000/svg"
+      className={props.className}
+      aria-hidden
+    >
+      <path
+        fill="currentColor"
+        d="M380.043636 118.923636H173.149091a82.618182 82.618182 0 0 0-82.618182 82.850909v206.894546a82.618182 82.618182 0 0 0 82.618182 82.618182h206.894545a82.618182 82.618182 0 0 0 82.850909-82.618182V201.774545a82.850909 82.850909 0 0 0-82.850909-82.850909zm13.032728 289.745455a13.032727 13.032727 0 0 1-13.032728 12.8H173.149091a12.8 12.8 0 0 1-12.8-12.8V201.774545a13.032727 13.032727 0 0 1 12.8-13.032727h206.894545a13.032727 13.032727 0 0 1 13.032728 13.032727zM910.894545 250.414545l-137.30909-137.30909a77.730909 77.730909 0 0 0-109.614546 0l-137.076364 137.30909a77.498182 77.498182 0 0 0 0 109.614546l137.076364 137.076364a77.265455 77.265455 0 0 0 109.614546 0l137.30909-137.076364a77.498182 77.498182 0 0 0 0-109.614546zM861.090909 310.690909l-137.309091 137.076364a6.749091 6.749091 0 0 1-5.352727 2.327272 7.68 7.68 0 0 1-5.585455-2.327272l-137.076363-137.076364a7.68 7.68 0 0 1 0-10.938182L713.309091 162.909091a8.378182 8.378182 0 0 1 5.585454-2.094546 7.447273 7.447273 0 0 1 5.352728 2.094546l137.309091 137.309091a7.68 7.68 0 0 1-.465455 10.472727zM822.225455 561.105455h-206.894546a82.618182 82.618182 0 0 0-82.618182 82.850909v206.894545a82.618182 82.618182 0 0 0 82.618182 82.618182h206.894546a82.618182 82.618182 0 0 0 82.850909-82.618182v-206.894545a82.850909 82.850909 0 0 0-82.850909-82.850909zm13.032727 289.745454a13.032727 13.032727 0 0 1-13.032727 12.8h-206.894546a12.8 12.8 0 0 1-12.8-12.8v-206.894545a13.032727 13.032727 0 0 1 12.8-13.032728h206.894546a13.032727 13.032727 0 0 1 13.032727 13.032728zM380.043636 561.105455H173.149091a82.618182 82.618182 0 0 0-82.618182 82.850909v206.894545a82.618182 82.618182 0 0 0 82.618182 82.618182h206.894545a82.618182 82.618182 0 0 0 82.850909-82.618182v-206.894545a82.850909 82.850909 0 0 0-82.850909-82.850909zm13.032728 289.745454a13.032727 13.032727 0 0 1-13.032728 12.8H173.149091a12.8 12.8 0 0 1-12.8-12.8v-206.894545a13.032727 13.032727 0 0 1 12.8-13.032728h206.894545a13.032727 13.032727 0 0 1 13.032728 13.032728z"
+      />
+    </svg>
+  );
+}
 
 function RemoteConnectionIssueCard(props: {
   message: string;
@@ -667,12 +672,9 @@ export function WorkspaceSessionList(props: Props) {
                     }}
                   >
                     <div className="flex min-w-0 items-center gap-3.5">
-                      <div
-                        className="flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-full"
-                        style={{
-                          backgroundColor: workspaceSwatchColor(workspace.id || workspaceLabel(workspace)),
-                        }}
-                      />
+                      <div className="flex h-5 w-5 shrink-0 items-center justify-center text-[#3e3e3e]">
+                        <WorkspaceSidebarGlyph className="h-[17px] w-[17px]" />
+                      </div>
                       <div className="min-w-0 flex-1">
                         <div className="min-w-0 truncate text-[14px] font-normal text-dls-text">
                           {workspaceLabel(workspace)}
