@@ -116,6 +116,8 @@ export type SessionWorkspacePanelProps = {
   mentions: Record<string, "agent" | "file">;
   pasteParts: Array<{ id: string; label: string; text: string; lines: number }>;
   messages: UIMessage[];
+  /** When true (e.g. assistant streaming / session busy), poll file list, markdown preview, and keep context in sync. */
+  liveWorkspacePreview?: boolean;
 };
 
 export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
@@ -199,13 +201,30 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
 
   useEffect(() => () => stopPanelResize(), [stopPanelResize]);
 
+  /** While the session is busy, re-render periodically so prompt-context props stay fresh even if parents memoize aggressively. */
+  const [, setContextSyncTick] = useState(0);
+  useEffect(() => {
+    if (!props.liveWorkspacePreview) return;
+    const id = window.setInterval(() => setContextSyncTick((n) => n + 1), 800);
+    return () => clearInterval(id);
+  }, [props.liveWorkspacePreview]);
+
   const folderTitle = useMemo(() => workspaceFolderLabel(props.workspaceRoot), [props.workspaceRoot]);
+
+  const markdownPreviewOpen = useMemo(
+    () => Boolean(selectedFile && isMarkdownDocumentPath(selectedFile)),
+    [selectedFile],
+  );
+
+  const pollMarkdownWhileSessionBusy = Boolean(markdownPreviewOpen && props.liveWorkspacePreview);
+  const pollWhileSessionBusy = Boolean(props.liveWorkspacePreview);
 
   const listQuery = useQuery({
     queryKey: ["workspaceDirList", props.workspaceId, dirPath],
     queryFn: () => props.client.listWorkspaceDirectory(props.workspaceId, dirPath || undefined),
     enabled: Boolean(props.workspaceId),
-    staleTime: 15_000,
+    staleTime: pollWhileSessionBusy ? 0 : 15_000,
+    refetchInterval: pollWhileSessionBusy ? 800 : false,
   });
 
   const previewQuery = useQuery({
@@ -214,7 +233,8 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
     enabled:
       Boolean(props.workspaceId && selectedFile) &&
       Boolean(selectedFile && isWorkspacePreviewablePath(selectedFile)),
-    staleTime: 30_000,
+    staleTime: pollMarkdownWhileSessionBusy ? 0 : 30_000,
+    refetchInterval: pollMarkdownWhileSessionBusy ? 800 : false,
   });
 
   const refreshWorkspaceFiles = () => {
@@ -241,7 +261,8 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       ? t("session.workspace_panel_open_current_folder_finder")
       : t("session.workspace_panel_open_current_folder_generic");
 
-  const toolsUsed = useMemo(() => collectSessionToolNames(props.messages), [props.messages]);
+  // Recompute every render so streaming transcripts that mutate message objects in place still refresh tool chips.
+  const toolsUsed = collectSessionToolNames(props.messages);
 
   const breadcrumbSegments = dirPath ? dirPath.split("/").filter(Boolean) : [];
 
@@ -292,7 +313,6 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
     setSelectedFile(rel);
   };
 
-  const markdownPreviewOpen = Boolean(selectedFile && isMarkdownDocumentPath(selectedFile));
   const markdownFileTitle = selectedFile
     ? selectedFile.split("/").filter(Boolean).pop() ?? selectedFile
     : "";

@@ -1020,6 +1020,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
           mentions={mentions}
           pasteParts={pasteParts}
           messages={renderedMessages}
+          liveWorkspacePreview={chatStreaming}
         />
       ) : null}
       </div>
