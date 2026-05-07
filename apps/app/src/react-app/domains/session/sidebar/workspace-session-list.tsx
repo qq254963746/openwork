@@ -57,6 +57,12 @@ type Props = {
   onCollapseWorkspaceSidebar?: () => void;
   /** Rendered below “Add workspace” (e.g. connection status + settings). */
   sessionStatusFooter?: ReactNode;
+  /**
+   * Called when a workspace section becomes expanded (including auto-expand for
+   * the selected workspace). Used to lazy-load session lists for workspaces
+   * that were not the active one at boot.
+   */
+  onWorkspaceSectionOpened?: (workspaceId: string) => void;
 };
 
 const MAX_SESSIONS_PREVIEW = 6;
@@ -285,17 +291,22 @@ export function WorkspaceSessionList(props: Props) {
   const expandWorkspace = (workspaceId: string) => {
     const id = workspaceId.trim();
     if (!id) return;
+    const alreadyExpanded = expandedWorkspaceIds.has(id);
     setExpandedWorkspaceIds((previous) => {
       if (previous.has(id)) return previous;
       const next = new Set(previous);
       next.add(id);
       return next;
     });
+    // Sync so parent can mark the workspace as loading before paint — avoids a
+    // one-frame flash of “no tasks” while sessions are being fetched.
+    if (!alreadyExpanded) props.onWorkspaceSectionOpened?.(id);
   };
 
   const toggleWorkspaceExpanded = (workspaceId: string) => {
     const id = workspaceId.trim();
     if (!id) return;
+    const wasExpanded = expandedWorkspaceIds.has(id);
     setExpandedWorkspaceIds((previous) => {
       const next = new Set(previous);
       if (next.has(id)) {
@@ -305,6 +316,7 @@ export function WorkspaceSessionList(props: Props) {
       }
       return next;
     });
+    if (!wasExpanded) props.onWorkspaceSectionOpened?.(id);
   };
 
   useEffect(() => {
@@ -864,8 +876,9 @@ export function WorkspaceSessionList(props: Props) {
                           ))}
                         </div>
                       ) : group.status === "loading" && group.sessions.length === 0 ? (
-                        <div className="w-full rounded-[15px] px-3 py-2.5 text-left text-[11px] text-gray-10">
-                          {t("workspace.loading_tasks")}
+                        <div className="flex w-full items-center gap-2 rounded-[15px] px-3 py-2.5 text-left text-[11px] text-gray-10">
+                          <Loader2 size={14} className="shrink-0 animate-spin text-gray-9" aria-hidden />
+                          <span>{t("workspace.loading_tasks")}</span>
                         </div>
                       ) : group.sessions.length > 0 ? (
                         <>

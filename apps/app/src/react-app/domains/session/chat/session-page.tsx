@@ -66,6 +66,8 @@ export type SessionPageSidebarProps = {
   onEditWorkspaceConnection: (workspaceId: string) => void;
   onForgetWorkspace: (workspaceId: string) => void;
   onOpenCreateWorkspace: () => void;
+  /** Lazy-load tasks when a workspace group is expanded without selecting it. */
+  onWorkspaceSectionOpened?: (workspaceId: string) => void;
 };
 
 export type SessionPageSurfaceProps = Omit<
@@ -351,6 +353,7 @@ export function SessionPage(props: SessionPageProps) {
               onEditWorkspaceConnection={props.sidebar.onEditWorkspaceConnection}
               onForgetWorkspace={props.sidebar.onForgetWorkspace}
               onOpenCreateWorkspace={props.sidebar.onOpenCreateWorkspace}
+              onWorkspaceSectionOpened={props.sidebar.onWorkspaceSectionOpened}
               onCollapseWorkspaceSidebar={() => setLeftWorkspaceSidebarCollapsed(true)}
               sessionStatusFooter={
                 statusBarInSidebar ? (

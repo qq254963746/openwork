@@ -511,6 +511,19 @@ export function SessionRoute() {
     [],
   );
 
+  const ensureWorkspaceSessionsLoaded = useCallback(
+    (workspaceId: string) => {
+      const id = workspaceId.trim();
+      if (!id || !client) return;
+      const workspace = workspaces.find((item) => item.id === id);
+      if (!workspace) return;
+      if ((sessionsByWorkspaceIdRef.current[id] ?? []).length > 0) return;
+      setRetryingWorkspaceIds((current) => Array.from(new Set([...current, id])));
+      void loadWorkspaceSessionsInBackground(client, [workspace]);
+    },
+    [client, loadWorkspaceSessionsInBackground, workspaces],
+  );
+
   const refreshRouteState = useCallback(async () => {
     // Dedupe: if a refresh is already running, skip this call. Fast workspace
     // switches used to fire 5-6 overlapping refreshRouteState() calls which
@@ -1971,6 +1984,7 @@ export function SessionRoute() {
         onEditWorkspaceConnection: remoteWorkspaceConnectionEditor.open,
         onForgetWorkspace: (id) => void handleForgetWorkspace(id),
         onOpenCreateWorkspace: handleOpenCreateWorkspace,
+        onWorkspaceSectionOpened: ensureWorkspaceSessionsLoaded,
       }}
       surface={surfaceProps}
       todos={[] satisfies TodoItem[]}
