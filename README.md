@@ -14,11 +14,6 @@
 
 OpenWork is designed around the idea that you can easily ship your agentic workflows for your team as a repeatable, productized process.
 
-> [!TIP]
-> **Looking for an [Enterprise Plan](https://openworklabs.com/enterprise)?** [Speak with our Sales Team today](https://calendar.app.google/86QpCENvhfEzDFLu5)
->
-> Get enhanced capabilities including feature prioritization, SSO, SLA support, LTS versions, and more.
-
 ## Alternate UIs
 - **OpenWork Orchestrator (CLI host)**: run OpenCode + OpenWork server without the desktop UI.
   - install: `npm install -g openwork-orchestrator`
@@ -31,7 +26,6 @@ Download the desktop app from [openworklabs.com/download](https://openworklabs.c
 
 - macOS and Linux downloads are available directly.
 - Windows access is currently handled through the paid support plan on [openworklabs.com/pricing#windows-support](https://openworklabs.com/pricing#windows-support).
-- Hosted OpenWork Cloud workers are launched from the web app after checkout, then connected from the desktop app via `Add a worker` -> `Connect remote`.
 
 ## Why
 
