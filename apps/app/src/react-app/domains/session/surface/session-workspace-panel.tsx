@@ -28,6 +28,13 @@ import {
 import { MarkdownBlock } from "./markdown";
 import { WorkspaceCodePreview } from "./workspace-code-preview";
 
+/** Inline styles so drag chrome avoids text I‑beam / selection in Tauri & Electron WebViews. */
+const WORKSPACE_PANEL_HEADER_DRAG_STYLE: CSSProperties = {
+  cursor: "default",
+  userSelect: "none",
+  WebkitUserSelect: "none",
+};
+
 const WORKSPACE_PANEL_WIDTH_KEY = "openwork.session.workspacePanelWidth.v1";
 const DEFAULT_WORKSPACE_PANEL_WIDTH = 300;
 const MIN_WORKSPACE_PANEL_WIDTH = 240;
@@ -734,16 +741,21 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
 
       <div className="flex min-h-0 flex-1 flex-col">
         <div
-          className="shrink-0 border-b border-dls-border px-3 py-2"
+          className="shrink-0 select-none border-b border-dls-border px-3 py-2"
           {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
-          style={
-            isElectronRuntime() && isMacPlatform()
+          style={{
+            ...WORKSPACE_PANEL_HEADER_DRAG_STYLE,
+            ...(isElectronRuntime() && isMacPlatform()
               ? ({ WebkitAppRegion: "drag" } as CSSProperties)
-              : undefined
-          }
+              : {}),
+          }}
         >
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0 text-[11px] font-semibold uppercase tracking-wide text-dls-secondary">
+          <div
+            className={`flex items-center justify-between gap-2 ${isDesktopRuntime() ? "cursor-default" : ""}`}
+          >
+            <div
+              className={`inline-flex w-fit max-w-full shrink-0 text-[11px] font-semibold uppercase tracking-wide text-dls-secondary ${isDesktopRuntime() ? "cursor-default" : ""}`}
+            >
               {t("session.workspace_panel_files")}
             </div>
             <div
@@ -778,17 +790,20 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
             </div>
           </div>
           <div
-            className="mt-1 flex flex-wrap items-center gap-0.5 text-[11px] text-dls-secondary"
-            {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
-            style={
-              isElectronRuntime() && isMacPlatform()
-                ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
-                : undefined
-            }
+            className={`mt-1 flex min-w-0 flex-wrap items-center gap-x-0.5 gap-y-0.5 text-[11px] text-dls-secondary ${isDesktopRuntime() ? "cursor-default" : ""}`}
           >
             <button
               type="button"
-              className="truncate rounded px-1 py-0.5 hover:bg-dls-hover hover:text-dls-text"
+              className="inline-flex max-w-full min-w-0 shrink cursor-pointer select-none truncate rounded px-1 py-0.5 hover:bg-dls-hover hover:text-dls-text"
+              {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
+              style={{
+                ...(isElectronRuntime() && isMacPlatform()
+                  ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
+                  : {}),
+                cursor: "pointer",
+                userSelect: "none",
+                WebkitUserSelect: "none",
+              }}
               onClick={() => {
                 setDirPath("");
                 setSelectedFile(null);
@@ -797,11 +812,23 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
               {folderTitle}
             </button>
             {breadcrumbSegments.map((segment, index) => (
-              <span key={`${segment}-${index}`} className="flex min-w-0 items-center gap-0.5">
-                <ChevronRight size={12} className="shrink-0 opacity-60" />
+              <span
+                key={`${segment}-${index}`}
+                className="inline-flex max-w-full min-w-0 shrink-0 items-center gap-0.5"
+              >
+                <ChevronRight size={12} className="pointer-events-none shrink-0 opacity-60" />
                 <button
                   type="button"
-                  className="truncate rounded px-1 py-0.5 hover:bg-dls-hover hover:text-dls-text"
+                  className="inline-flex max-w-full min-w-0 shrink cursor-pointer select-none truncate rounded px-1 py-0.5 hover:bg-dls-hover hover:text-dls-text"
+                  {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
+                  style={{
+                    ...(isElectronRuntime() && isMacPlatform()
+                      ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
+                      : {}),
+                    cursor: "pointer",
+                    userSelect: "none",
+                    WebkitUserSelect: "none",
+                  }}
                   onClick={() => navigateToSegment(index)}
                 >
                   {segment}

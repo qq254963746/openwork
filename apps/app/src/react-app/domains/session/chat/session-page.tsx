@@ -31,7 +31,19 @@ import {
 } from "../../../shell/workspace-shell-layout";
 import { OwDotTicker } from "../../../shell/dot-ticker";
 import { useReactRenderWatchdog } from "../../../shell/react-render-watchdog";
-import { isElectronRuntime, isMacPlatform, isTauriRuntime } from "../../../../app/utils";
+import { isDesktopRuntime, isElectronRuntime, isMacPlatform, isTauriRuntime } from "../../../../app/utils";
+
+/** Title bar WebViews often show I‑beam over headings unless this is explicit. */
+const SESSION_MAIN_HEADER_DRAG_CHROME_STYLE: CSSProperties = {
+  cursor: "default",
+  userSelect: "none",
+  WebkitUserSelect: "none",
+};
+
+/** Full-window-drag hits fail on nested title text in WKWebView (incl. release); use an underlay + pointer-events pass-through. */
+function sessionMainHeaderUsesDragPassThrough(): boolean {
+  return isTauriRuntime() || (isElectronRuntime() && isMacPlatform());
+}
 
 type StatusBarOverrides = Pick<
   StatusBarProps,
@@ -312,6 +324,8 @@ export function SessionPage(props: SessionPageProps) {
   const macHeaderTrafficInset =
     macDesktopChrome && (!layoutLg || leftWorkspaceSidebarCollapsed);
 
+  const mainHeaderDragPassThrough = sessionMainHeaderUsesDragPassThrough();
+
   const statusBarInSidebar = layoutLg && !leftWorkspaceSidebarCollapsed;
 
   const statusBarSharedProps = useMemo(
@@ -420,30 +434,56 @@ export function SessionPage(props: SessionPageProps) {
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-dls-surface">
           <header
-            className={`z-10 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-dls-border bg-dls-surface pr-1.5 md:pr-2 ${
+            className={`relative z-10 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-dls-border bg-dls-surface pr-1.5 md:pr-2 ${
               macHeaderTrafficInset ? "pl-[76px]" : "pl-4 md:pl-6"
-            }`}
-            {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
+            } ${isDesktopRuntime() ? "select-none" : ""}`}
+            {...(!mainHeaderDragPassThrough && isTauriRuntime()
+              ? ({ "data-tauri-drag-region": true } as const)
+              : {})}
             style={
-              isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
-                ? ({ WebkitAppRegion: "drag" } as CSSProperties)
+              !mainHeaderDragPassThrough
+                ? ({
+                    ...(isDesktopRuntime() ? SESSION_MAIN_HEADER_DRAG_CHROME_STYLE : {}),
+                    ...(isElectronRuntime() && isMacPlatform()
+                      ? ({ WebkitAppRegion: "drag" } as CSSProperties)
+                      : {}),
+                  } satisfies CSSProperties)
                 : undefined
             }
           >
-            <div className="flex min-w-0 flex-1 items-center gap-3">
+            {mainHeaderDragPassThrough ? (
+              <div
+                aria-hidden
+                className="absolute inset-0 z-0"
+                {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
+                style={{
+                  ...SESSION_MAIN_HEADER_DRAG_CHROME_STYLE,
+                  ...(isElectronRuntime() && isMacPlatform()
+                    ? ({ WebkitAppRegion: "drag" } as CSSProperties)
+                    : {}),
+                }}
+              />
+            ) : null}
+            <div
+              className={`relative z-[1] flex min-w-0 flex-1 items-center gap-3 ${
+                mainHeaderDragPassThrough ? "pointer-events-none" : ""
+              } ${isDesktopRuntime() && !mainHeaderDragPassThrough ? "cursor-default" : ""}`}
+            >
               {!leftWorkspaceSidebarVisible ? (
                 <div
-                  className="flex shrink-0"
-                  {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
+                  className={`flex shrink-0 ${mainHeaderDragPassThrough ? "pointer-events-auto" : ""}`}
+                  {...(!mainHeaderDragPassThrough && isTauriRuntime()
+                    ? ({ "data-tauri-drag-region": "false" } as const)
+                    : {})}
                   style={
-                    isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
+                    !mainHeaderDragPassThrough && isElectronRuntime() && isMacPlatform()
                       ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
                       : undefined
                   }
                 >
                   <button
                     type="button"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-md text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
                     onClick={expandWorkspaceSidebar}
                     title={t("session.sidebar_expand")}
                     aria-label={t("session.sidebar_expand")}
@@ -452,52 +492,68 @@ export function SessionPage(props: SessionPageProps) {
                   </button>
                 </div>
               ) : null}
-              <h1 className="truncate text-[15px] font-semibold text-dls-text">
-                {showWorkspaceSetupEmptyState
-                  ? t("session.create_or_connect_workspace")
-                  : selectedSessionTitle || t("session.default_title")}
-              </h1>
-              <span className="hidden truncate text-[13px] text-dls-secondary lg:inline">
-                {workspaceName}
-              </span>
-              {props.developerMode ? (
-                <span className="hidden text-[12px] text-dls-secondary lg:inline">
-                  {props.headerStatus}
+              <div className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1">
+                <h1
+                  className={`max-w-full min-w-0 truncate text-[15px] font-semibold text-dls-text ${isDesktopRuntime() ? "cursor-default" : ""}`}
+                >
+                  {showWorkspaceSetupEmptyState
+                    ? t("session.create_or_connect_workspace")
+                    : selectedSessionTitle || t("session.default_title")}
+                </h1>
+                <span
+                  className={`hidden max-w-full min-w-0 truncate text-[13px] text-dls-secondary lg:inline ${isDesktopRuntime() ? "cursor-default" : ""}`}
+                >
+                  {workspaceName}
                 </span>
-              ) : null}
-              {props.busyHint ? (
-                <span className="hidden text-[12px] text-dls-secondary lg:inline">
-                  {props.busyHint}
-                </span>
-              ) : null}
+                {props.developerMode ? (
+                  <span
+                    className={`hidden max-w-full min-w-0 truncate text-[12px] text-dls-secondary lg:inline ${isDesktopRuntime() ? "cursor-default" : ""}`}
+                  >
+                    {props.headerStatus}
+                  </span>
+                ) : null}
+                {props.busyHint ? (
+                  <span
+                    className={`hidden max-w-full min-w-0 truncate text-[12px] text-dls-secondary lg:inline ${isDesktopRuntime() ? "cursor-default" : ""}`}
+                  >
+                    {props.busyHint}
+                  </span>
+                ) : null}
+              </div>
             </div>
             <div
-              className="flex shrink-0 items-center"
-              {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
+              className={`relative z-[1] flex shrink-0 items-center ${
+                mainHeaderDragPassThrough ? "pointer-events-none" : ""
+              }`}
+              {...(!mainHeaderDragPassThrough && isTauriRuntime()
+                ? ({ "data-tauri-drag-region": "false" } as const)
+                : {})}
               style={
-                isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
+                !mainHeaderDragPassThrough && isElectronRuntime() && isMacPlatform()
                   ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
                   : undefined
               }
             >
-              <button
-                type="button"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
-                onClick={toggleWorkspaceSidePanel}
-                title={
-                  workspaceSidePanelOpen
-                    ? t("session.workspace_panel_toggle_hide")
-                    : t("session.workspace_panel_toggle_show")
-                }
-                aria-label={
-                  workspaceSidePanelOpen
-                    ? t("session.workspace_panel_toggle_hide")
-                    : t("session.workspace_panel_toggle_show")
-                }
-                aria-pressed={workspaceSidePanelOpen}
-              >
-                <PanelRightIcon className="h-[18px] w-[18px]" strokeWidth={1.75} />
-              </button>
+              <div className={mainHeaderDragPassThrough ? "pointer-events-auto" : undefined}>
+                <button
+                  type="button"
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                  onClick={toggleWorkspaceSidePanel}
+                  title={
+                    workspaceSidePanelOpen
+                      ? t("session.workspace_panel_toggle_hide")
+                      : t("session.workspace_panel_toggle_show")
+                  }
+                  aria-label={
+                    workspaceSidePanelOpen
+                      ? t("session.workspace_panel_toggle_hide")
+                      : t("session.workspace_panel_toggle_show")
+                  }
+                  aria-pressed={workspaceSidePanelOpen}
+                >
+                  <PanelRightIcon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                </button>
+              </div>
             </div>
           </header>
 
