@@ -18,6 +18,7 @@ import type { OpenworkServerClient } from "../../../../app/lib/openwork-server";
 import type { ComposerAttachment } from "../../../../app/types";
 import { isDesktopRuntime, isMacPlatform, isWindowsPlatform } from "../../../../app/utils";
 import { MarkdownBlock } from "./markdown";
+import { WorkspaceCodePreview } from "./workspace-code-preview";
 
 const WORKSPACE_PANEL_WIDTH_KEY = "openwork.session.workspacePanelWidth.v1";
 const DEFAULT_WORKSPACE_PANEL_WIDTH = 300;
@@ -54,9 +55,23 @@ function joinRelativePath(dir: string, name: string): string {
   return `${d.replace(/\/+$/, "")}/${name}`;
 }
 
-/** Matches OpenWork server `GET .../files/content` supported extensions. */
+/** Matches server `isSupportedWorkspaceTextFilePath` — UTF-8 workspace file previews. */
 function isWorkspacePreviewablePath(path: string): boolean {
-  const lowered = path.toLowerCase();
+  const lowered = path.trim().toLowerCase();
+  const base = lowered.split("/").pop() ?? lowered;
+  if (base.startsWith("dockerfile.")) return true;
+  if (
+    base === "dockerfile" ||
+    base === "gnumakefile" ||
+    base === "makefile" ||
+    base === "rakefile" ||
+    base === "jenkinsfile" ||
+    base === "gemfile" ||
+    base === "podfile" ||
+    base === "vagrantfile"
+  ) {
+    return true;
+  }
   return [
     ".md",
     ".mdx",
@@ -64,15 +79,62 @@ function isWorkspacePreviewablePath(path: string): boolean {
     ".json",
     ".jsonc",
     ".ts",
+    ".tsx",
+    ".mts",
+    ".cts",
     ".js",
+    ".jsx",
     ".mjs",
     ".cjs",
     ".txt",
+    ".py",
+    ".java",
+    ".sh",
+    ".bash",
+    ".zsh",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".sql",
+    ".xml",
+    ".plist",
+    ".css",
+    ".scss",
+    ".sass",
+    ".less",
+    ".c",
+    ".h",
+    ".cc",
+    ".cpp",
+    ".cxx",
+    ".hh",
+    ".hpp",
+    ".rs",
+    ".go",
+    ".cs",
+    ".php",
+    ".rb",
+    ".kt",
+    ".swift",
+    ".vue",
+    ".env",
+    ".ini",
+    ".properties",
+    ".gradle",
     ".svg",
     ".html",
     ".htm",
     ".htmlx",
   ].some((ext) => lowered.endsWith(ext));
+}
+
+/** Full-screen CodeMirror preview (non-markdown, non-web-preview files). */
+function isWorkspaceCodeDocumentPath(path: string): boolean {
+  return (
+    isWorkspacePreviewablePath(path) &&
+    !isMarkdownDocumentPath(path) &&
+    !isWebPreviewDocumentPath(path)
+  );
 }
 
 /** SVG / HTML family: fullscreen iframe preview in the workspace panel. */
@@ -311,8 +373,15 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
     [selectedFile],
   );
 
+  const codeDocumentPreviewOpen = useMemo(
+    () => Boolean(selectedFile && isWorkspaceCodeDocumentPath(selectedFile)),
+    [selectedFile],
+  );
+
   const pollRichPreviewWhileSessionBusy = Boolean(
-    props.liveWorkspacePreview && selectedFile && (markdownPreviewOpen || webPreviewOpen),
+    props.liveWorkspacePreview &&
+      selectedFile &&
+      (markdownPreviewOpen || webPreviewOpen || codeDocumentPreviewOpen),
   );
   const pollWhileSessionBusy = Boolean(props.liveWorkspacePreview);
 
@@ -390,6 +459,10 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       return;
     }
     if (isWebPreviewDocumentPath(rel)) {
+      setSelectedFile(rel);
+      return;
+    }
+    if (isWorkspacePreviewablePath(rel)) {
       setSelectedFile(rel);
       return;
     }
@@ -478,6 +551,38 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
                 className="absolute inset-0 h-full w-full border-0 bg-dls-surface"
                 srcDoc={webPreviewSrcDoc}
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
+              />
+            )}
+          </div>
+        </div>
+      ) : codeDocumentPreviewOpen ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar/60">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-border bg-dls-surface/95 px-3 py-2.5">
+            <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
+              {selectedFileTitle}
+            </span>
+            <button
+              type="button"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+              onClick={() => setSelectedFile(null)}
+              aria-label={t("session.workspace_panel_close_preview")}
+              title={t("session.workspace_panel_close_preview")}
+            >
+              <X size={18} strokeWidth={1.75} />
+            </button>
+          </div>
+          <div className="relative min-h-0 flex-1 overflow-hidden bg-dls-surface">
+            {previewQuery.isLoading ? (
+              <div className="flex min-h-[200px] items-center justify-center py-12">
+                <Loader2 className="animate-spin text-dls-secondary" size={22} />
+              </div>
+            ) : previewQuery.isError ? (
+              <div className="p-4 text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
+            ) : (
+              <WorkspaceCodePreview
+                filePath={selectedFile ?? ""}
+                content={previewQuery.data?.content ?? ""}
+                className="absolute inset-0 min-h-0 min-w-0"
               />
             )}
           </div>
@@ -647,7 +752,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
           ) : null}
         </div>
 
-        {selectedFile && !markdownPreviewOpen && !webPreviewOpen ? (
+        {selectedFile && !markdownPreviewOpen && !webPreviewOpen && !codeDocumentPreviewOpen ? (
           <div className="flex max-h-[42%] min-h-[120px] shrink-0 flex-col border-t border-dls-border bg-dls-surface/90">
             <div className="shrink-0 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wide text-dls-secondary">
               {t("session.workspace_panel_preview")}

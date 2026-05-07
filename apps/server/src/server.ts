@@ -767,8 +767,24 @@ export function normalizeWorkspaceRelativePath(input: string, options: { allowSu
   return parts.join("/");
 }
 
+const WORKSPACE_TEXT_SPECIAL_BASENAMES = new Set([
+  "dockerfile",
+  "gnumakefile",
+  "makefile",
+  "rakefile",
+  "jenkinsfile",
+  "gemfile",
+  "podfile",
+  "vagrantfile",
+]);
+
+/** Relative POSIX paths readable as UTF-8 workspace previews (session panel). Keep aligned with app `isWorkspacePreviewablePath`. */
 export function isSupportedWorkspaceTextFilePath(relativePath: string): boolean {
-  const lowered = relativePath.toLowerCase();
+  const lowered = relativePath.trim().toLowerCase();
+  const base = lowered.split("/").pop() ?? lowered;
+  if (base.startsWith("dockerfile.")) return true;
+  if (WORKSPACE_TEXT_SPECIAL_BASENAMES.has(base)) return true;
+
   return [
     ".md",
     ".mdx",
@@ -776,10 +792,48 @@ export function isSupportedWorkspaceTextFilePath(relativePath: string): boolean 
     ".json",
     ".jsonc",
     ".ts",
+    ".tsx",
+    ".mts",
+    ".cts",
     ".js",
+    ".jsx",
     ".mjs",
     ".cjs",
     ".txt",
+    ".py",
+    ".java",
+    ".sh",
+    ".bash",
+    ".zsh",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".sql",
+    ".xml",
+    ".plist",
+    ".css",
+    ".scss",
+    ".sass",
+    ".less",
+    ".c",
+    ".h",
+    ".cc",
+    ".cpp",
+    ".cxx",
+    ".hh",
+    ".hpp",
+    ".rs",
+    ".go",
+    ".cs",
+    ".php",
+    ".rb",
+    ".kt",
+    ".swift",
+    ".vue",
+    ".env",
+    ".ini",
+    ".properties",
+    ".gradle",
     ".svg",
     ".html",
     ".htm",
