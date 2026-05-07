@@ -131,30 +131,34 @@ export function StatusBar(props: StatusBarProps) {
   }), [props.onOpenSettings, props.settingsOpen, props.showSettingsButton]);
   useControlAction(settingsControlAction);
 
+  const sidebar = variant === "sidebar";
+
   return (
     <div
       className={
-        variant === "sidebar"
+        sidebar
           ? "border-t border-dls-border/80 bg-dls-sidebar"
           : "border-t border-dls-border bg-dls-surface"
       }
     >
       <div
         className={`flex items-center justify-between text-[12px] text-dls-secondary ${
-          variant === "sidebar"
-            ? "min-h-11 gap-2 px-2 py-2"
+          sidebar
+            ? "min-h-9 gap-2 px-2 py-1.5"
             : "h-12 gap-3 px-4 md:px-6"
         }`}
       >
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
+        <div className={`flex min-w-0 items-center ${sidebar ? "gap-2" : "gap-2.5"}`}>
+          <span
+            className={`relative flex shrink-0 items-center justify-center ${sidebar ? "h-2 w-2" : "h-2.5 w-2.5"}`}
+          >
             {statusCopy.pulse ? (
               <span
                 className={`absolute inline-flex h-full w-full rounded-full ${statusCopy.pingClass}`}
               />
             ) : null}
             <span
-              className={`relative inline-flex h-2.5 w-2.5 rounded-full ${statusCopy.dotClass}`}
+              className={`relative inline-flex rounded-full ${statusCopy.dotClass} ${sidebar ? "h-2 w-2" : "h-2.5 w-2.5"}`}
             />
           </span>
           <span className="shrink-0 font-medium text-dls-text">
@@ -170,7 +174,9 @@ export function StatusBar(props: StatusBarProps) {
             <button
               ref={settingsButtonRef}
               type="button"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+              className={`flex shrink-0 items-center justify-center rounded-md text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text ${
+                sidebar ? "h-7 w-7" : "h-8 w-8"
+              }`}
               onClick={props.onOpenSettings}
               title={
                 props.settingsOpen ? t("status.back") : t("status.settings")
@@ -179,7 +185,7 @@ export function StatusBar(props: StatusBarProps) {
                 props.settingsOpen ? t("status.back") : t("status.settings")
               }
             >
-              <Settings className="h-4 w-4" />
+              <Settings className={sidebar ? "h-3.5 w-3.5" : "h-4 w-4"} />
             </button>
           ) : null}
         </div>

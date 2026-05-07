@@ -1032,15 +1032,17 @@ export function WorkspaceSessionList(props: Props) {
         </div>
       </div>
 
-      <div className="relative mt-auto shrink-0 space-y-3 border-t border-dls-border/80 bg-dls-sidebar px-3 pt-3 pb-3">
-        <button
-          type="button"
-          className="w-full flex items-center justify-center gap-2 rounded-[18px] border border-dls-border bg-dls-surface px-3.5 py-2.5 text-[12px] font-medium text-gray-11 shadow-[var(--dls-card-shadow)] transition-colors hover:bg-gray-2"
-          onClick={props.onOpenCreateWorkspace}
-        >
-          <Plus size={14} />
-          {t("workspace_list.add_workspace")}
-        </button>
+      <div className="relative mt-auto flex shrink-0 flex-col gap-4 border-t border-dls-border/80 bg-dls-sidebar px-3 pb-3 pt-4">
+        <div className="flex w-full items-center justify-center py-1">
+          <button
+            type="button"
+            className="flex w-full items-center justify-center gap-2 rounded-[18px] border border-dls-border bg-dls-surface px-3.5 py-2 text-[12px] font-medium text-gray-11 shadow-[var(--dls-card-shadow)] transition-colors hover:bg-gray-2"
+            onClick={props.onOpenCreateWorkspace}
+          >
+            <Plus size={14} />
+            {t("workspace_list.add_workspace")}
+          </button>
+        </div>
         {props.sessionStatusFooter ?? null}
       </div>
     </div>
