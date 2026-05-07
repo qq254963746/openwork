@@ -179,6 +179,8 @@ export function createExtensionsStore(options: {
   let started = false;
   let stopOpenworkSubscription: (() => void) | null = null;
   let lastWorkspaceContextKey = "";
+  /** Dedupes sync when only OpenWork/opencode transport becomes available (workspace key unchanged). */
+  let lastSkillsTransportFingerprint = "";
   let snapshot: ExtensionsStoreSnapshot;
 
   let refreshSkillsInFlight = false;
@@ -520,6 +522,21 @@ export function createExtensionsStore(options: {
     hubSkillsLoadKey = "";
   };
 
+  const getSkillsTransportFingerprint = () => {
+    const root = options.selectedWorkspaceRoot().trim();
+    const wsType = options.workspaceType();
+    const ow = getOpenworkServerSnapshot();
+    const runtimeId = (options.runtimeWorkspaceId() ?? "").trim();
+    const canUseOpenworkSkills =
+      ow.openworkServerStatus === "connected" &&
+      !!ow.openworkServerClient &&
+      !!runtimeId &&
+      !!ow.openworkServerCapabilities?.skills?.read;
+    const desktopLocal = wsType === "local" && isDesktopRuntime();
+    const hasOpencodeClient = !!options.client();
+    return `root:${root}|ow:${canUseOpenworkSkills ? 1 : 0}|dl:${desktopLocal ? 1 : 0}|oc:${hasOpencodeClient ? 1 : 0}`;
+  };
+
   const touch = () => {
     refreshSnapshot();
     emitChange();
@@ -725,7 +742,7 @@ export function createExtensionsStore(options: {
         setStateField("skillsStatus", null);
         const response = await openworkClient.listSkills(openworkWorkspaceId, { includeGlobal: isLocalWorkspace });
         if (refreshSkillsAborted) return;
-        const next: SkillCard[] = Array.isArray(response.items)
+        let next: SkillCard[] = Array.isArray(response.items)
           ? response.items.map((entry) => ({
               name: entry.name,
               description: entry.description,
@@ -733,6 +750,26 @@ export function createExtensionsStore(options: {
               trigger: entry.trigger,
             }))
           : [];
+
+        // Server can briefly return an empty catalog while the engine/workspace warms up.
+        // Desktop host can still see skills on disk — fall back so the UI isn't stuck until manual refresh.
+        if (next.length === 0 && isLocalWorkspace && isDesktopRuntime() && root) {
+          try {
+            const local = await listLocalSkills(root);
+            if (refreshSkillsAborted) return;
+            if (Array.isArray(local) && local.length > 0) {
+              next = local.map((entry) => ({
+                name: entry.name,
+                description: entry.description,
+                path: entry.path,
+                trigger: entry.trigger,
+              }));
+            }
+          } catch {
+            // keep empty OpenWork result
+          }
+        }
+
         mutateState((current) => ({
           ...current,
           skills: next,
@@ -1623,6 +1660,8 @@ export function createExtensionsStore(options: {
     if (disposed) return;
     disposed = true;
     started = false;
+    lastWorkspaceContextKey = "";
+    lastSkillsTransportFingerprint = "";
     abortRefreshes();
     stopOpenworkSubscription?.();
     stopOpenworkSubscription = null;
@@ -1632,8 +1671,12 @@ export function createExtensionsStore(options: {
   const syncFromOptions = () => {
     if (disposed) return;
     const key = getWorkspaceContextKey();
-    if (key === lastWorkspaceContextKey) return;
+    const transportFp = getSkillsTransportFingerprint();
+    if (key === lastWorkspaceContextKey && transportFp === lastSkillsTransportFingerprint) {
+      return;
+    }
     lastWorkspaceContextKey = key;
+    lastSkillsTransportFingerprint = transportFp;
     invalidateWorkspaceCaches();
     touch();
     if (!key || key === "::::") return;

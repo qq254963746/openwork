@@ -54,7 +54,7 @@ export function SettingsShell(props: SettingsShellProps) {
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-dls-surface">
           <header
-            className="shrink-0 flex h-12 items-center justify-between border-b border-dls-border bg-dls-surface px-4 md:px-6"
+            className="shrink-0 flex h-12 items-center justify-between border-b border-dls-border bg-dls-surface pl-4 pr-1 md:pl-6 md:pr-3"
             {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
             style={
               isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)

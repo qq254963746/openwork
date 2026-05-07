@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
 import type * as React from "react";
+import type { CSSProperties } from "react";
 import {
   Bug,
   Cog,
@@ -118,7 +119,10 @@ export function SettingsPage(props: SettingsPageProps) {
   const globalTabs = getGlobalSettingsTabs(props.developerMode);
 
   return (
-    <SidebarProvider className="relative min-h-full min-w-0">
+    <SidebarProvider
+      className="relative min-h-full min-w-0"
+      style={{ "--sidebar-border": "var(--dls-border)", "--border": "var(--dls-border)" } as CSSProperties}
+    >
         <Sidebar collapsible="none" className="absolute inset-0">
           <SidebarContent>
             <SidebarGroup>

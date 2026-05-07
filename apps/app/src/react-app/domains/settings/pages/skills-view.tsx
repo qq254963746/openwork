@@ -7,8 +7,6 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import {
-  ArrowLeft,
-  Copy,
   Edit2,
   FolderOpen,
   Loader2,
@@ -16,7 +14,6 @@ import {
   Plus,
   RefreshCw,
   Search,
-  Share2,
   Sparkles,
   Trash2,
   Upload,
@@ -24,11 +21,6 @@ import {
 } from "lucide-react";
 
 import { t } from "../../../../i18n";
-import type { SkillBundleV1 } from "../../../../app/bundles/types";
-import {
-  DEFAULT_OPENWORK_PUBLISHER_BASE_URL,
-  publishOpenworkBundleJson,
-} from "../../../../app/lib/publisher";
 import type { HubSkillCard, HubSkillRepo, SkillCard } from "../../../../app/types";
 import {
   inputClass,
@@ -47,6 +39,7 @@ import {
 } from "../../workspace/modal-styles";
 import { Button } from "../../../design-system/button";
 import { ConfirmModal } from "../../../design-system/modals/confirm-modal";
+import { useExtensionsStoreSnapshot, type ExtensionsStore } from "../state/extensions-store";
 type InstallResult = { ok: boolean; message: string };
 type SkillsFilter = "all" | "installed" | "hub";
 type ToastTone = "info" | "success" | "warning" | "error";
@@ -106,6 +99,7 @@ export type SkillsViewProps = {
 
 export function SkillsView(props: SkillsViewProps) {
   const { extensions } = props;
+  useExtensionsStoreSnapshot(extensions as ExtensionsStore);
   const [uninstallTarget, setUninstallTarget] = useState<SkillCard | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<SkillsFilter>("all");
@@ -114,11 +108,6 @@ export function SkillsView(props: SkillsViewProps) {
   const [customRepoName, setCustomRepoName] = useState("");
   const [customRepoRef, setCustomRepoRef] = useState("main");
   const [customRepoError, setCustomRepoError] = useState<string | null>(null);
-
-  const [shareTarget, setShareTarget] = useState<SkillCard | null>(null);
-  const [shareBusy, setShareBusy] = useState(false);
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [shareError, setShareError] = useState<string | null>(null);
 
   const [selectedSkill, setSelectedSkill] = useState<SkillCard | null>(null);
   const [selectedContent, setSelectedContent] = useState("");
@@ -143,19 +132,10 @@ export function SkillsView(props: SkillsViewProps) {
   );
 
   useEffect(() => {
+    void extensions.refreshSkills({ force: true });
+    void extensions.refreshHubSkills({ force: true });
     void extensions.ensureHubSkillsFresh();
   }, [extensions]);
-
-  useEffect(() => {
-    if (!shareTarget) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      setShareTarget(null);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [shareTarget]);
 
   const skills = extensions.skills();
   const hubSkills = extensions.hubSkills();
@@ -208,13 +188,6 @@ export function SkillsView(props: SkillsViewProps) {
   const showInstalledSection = activeFilter === "all" || activeFilter === "installed";
   const showHubSection = activeFilter === "all" || activeFilter === "hub";
   const canCreateInChat = !props.busy && (props.canInstallSkillCreator || props.canUseDesktopTools);
-
-  const closeShareLink = useCallback(() => {
-    setShareTarget(null);
-    setShareBusy(false);
-    setShareUrl(null);
-    setShareError(null);
-  }, []);
 
   const runDesktopAction = useCallback(
     (action: () => void | Promise<void>) => {
@@ -276,63 +249,6 @@ export function SkillsView(props: SkillsViewProps) {
     }
     await Promise.resolve(props.createSessionAndOpen("/skill-creator"));
   }, [installSkillCreator, props, skillCreatorInstalled]);
-
-  const openShareLink = useCallback(
-    (skill: SkillCard) => {
-      if (props.busy) return;
-      setShareTarget(skill);
-      setShareBusy(false);
-      setShareUrl(null);
-      setShareError(null);
-    },
-    [props.busy],
-  );
-
-  const publishShareLink = useCallback(async () => {
-    if (!shareTarget || props.busy || shareBusy) return;
-    setShareBusy(true);
-    setShareUrl(null);
-    setShareError(null);
-    try {
-      const skill = await extensions.readSkill(shareTarget.name);
-      if (!skill) throw new Error(t("skills.skill_load_failed"));
-      const payload: SkillBundleV1 = {
-        schemaVersion: 1,
-        type: "skill",
-        name: shareTarget.name,
-        content: skill.content,
-        description: shareTarget.description ?? undefined,
-        trigger: shareTarget.trigger ?? undefined,
-      };
-      const result = await publishOpenworkBundleJson({
-        payload,
-        bundleType: "skill",
-        name: shareTarget.name,
-      });
-      setShareUrl(result.url);
-      try {
-        await navigator.clipboard.writeText(result.url);
-        showToast(t("skills.link_copied"), "success");
-      } catch {
-        // ignore clipboard failures
-      }
-    } catch (error) {
-      setShareError(maskError(error));
-    } finally {
-      setShareBusy(false);
-    }
-  }, [extensions, maskError, props.busy, shareBusy, shareTarget, showToast]);
-
-  const copyShareLink = useCallback(async () => {
-    const url = shareUrl?.trim();
-    if (!url) return;
-    try {
-      await navigator.clipboard.writeText(url);
-      showToast(t("skills.link_copied"), "success");
-    } catch {
-      setShareError(t("skills.copy_link_failed"));
-    }
-  }, [shareUrl, showToast]);
 
   const openSkill = useCallback(
     async (skill: SkillCard) => {
@@ -536,7 +452,7 @@ export function SkillsView(props: SkillsViewProps) {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {filteredSkills.map((skill) => (
                   <div
-                    key={skill.path}
+                    key={`${skill.name}::${skill.path || ""}`}
                     role="button"
                     tabIndex={0}
                     className={`${panelCardClass} flex cursor-pointer flex-col gap-4 text-left`}
@@ -561,20 +477,6 @@ export function SkillsView(props: SkillsViewProps) {
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-dls-border pt-4">
                       <span className={tagClass}>{t("skills.installed_status")}</span>
                       <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className={pillGhostClass}
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            openShareLink(skill);
-                          }}
-                          disabled={props.busy}
-                          title={t("skills.share_title")}
-                        >
-                          <Share2 size={14} />
-                          {t("skills.share_title")}
-                        </button>
                         <button
                           type="button"
                           className={pillSecondaryClass}
@@ -822,62 +724,6 @@ export function SkillsView(props: SkillsViewProps) {
           void extensions.uninstallSkill(target.name);
         }}
       />
-
-      {shareTarget ? (
-        <div className={`${modalOverlayClass} items-start pt-[10vh]`}>
-          <div className={`${modalShellClass} max-h-[78vh] max-w-md`} role="dialog" aria-modal="true">
-            <div className={modalHeaderClass}>
-              <div className="flex min-w-0 items-start gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className={modalTitleClass}>{t("skills.share_title")}</h2>
-                    <span className={tagClass}>{shareTarget.name}</span>
-                  </div>
-                  <p className={modalSubtitleClass}>{t("skills.share_subtitle_public")}</p>
-                </div>
-              </div>
-              <button type="button" onClick={closeShareLink} className={modalHeaderButtonClass} aria-label={t("skills.share_close")} title={t("skills.share_close")}>
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 pb-7 pt-2">
-              <div className="animate-in space-y-5 pt-2 fade-in slide-in-from-right-4 duration-300">
-                <p className="text-[14px] leading-relaxed text-dls-secondary">{t("skills.share_public_intro")}</p>
-                <div className={surfaceCardClass}>
-                  <div className="mb-3 break-all font-mono text-[12px] text-dls-secondary">
-                    {t("skills.share_publisher_label")}: {DEFAULT_OPENWORK_PUBLISHER_BASE_URL}
-                  </div>
-                  {shareError ? <div className={`mb-3 ${modalNoticeErrorClass}`}>{shareError}</div> : null}
-                  {!shareUrl ? (
-                    <button type="button" onClick={() => void publishShareLink()} disabled={shareBusy || props.busy} className={`${pillPrimaryClass} w-full`}>
-                      {shareBusy ? t("skills.share_public_creating") : t("skills.share_public_create")}
-                    </button>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <input type="text" readOnly value={shareUrl} className={`${inputClass} flex-1 font-mono text-[12px]`} />
-                        <button type="button" onClick={() => void copyShareLink()} className={pillSecondaryClass}>
-                          <Copy size={14} className="mr-1 inline" />
-                          {t("skills.share_copy_link")}
-                        </button>
-                      </div>
-                      <button type="button" onClick={() => void publishShareLink()} disabled={shareBusy} className={`${pillSecondaryClass} mt-3 w-full`}>
-                        {shareBusy ? t("skills.share_public_creating") : t("skills.share_public_regenerate")}
-                      </button>
-                    </>
-                  )}
-                </div>
-                <div className="flex justify-end">
-                  <button type="button" onClick={closeShareLink} className={pillSecondaryClass}>
-                    {t("skills.share_done")}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       {customRepoOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4 backdrop-blur-sm">
