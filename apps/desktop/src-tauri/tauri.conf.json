@@ -15,6 +15,8 @@
         "title": "OpenWork",
         "width": 1180,
         "height": 820,
+        "minWidth": 1024,
+        "minHeight": 700,
         "resizable": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,

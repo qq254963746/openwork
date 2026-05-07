@@ -1524,6 +1524,8 @@ async function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1180,
     height: 820,
+    minWidth: 1024,
+    minHeight: 700,
     title: APP_NAME,
     show: false,
     ...(process.platform === "darwin"
