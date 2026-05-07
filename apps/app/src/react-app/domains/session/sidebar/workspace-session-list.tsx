@@ -204,6 +204,35 @@ function WorkspaceSidebarGlyph(props: { className?: string }) {
   );
 }
 
+/** Session row glyph (speech bubble outline + typing dots). */
+function SessionSidebarGlyph(props: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 1024 1024"
+      xmlns="http://www.w3.org/2000/svg"
+      className={props.className}
+      aria-hidden
+    >
+      <path
+        fill="currentColor"
+        d="M509.83822222 942.64888889c-132.89244445 0-258.16177778-44.032-352.71111111-123.904C110.36444445 779.37777778 73.61422222 733.184 47.78666667 681.64266667c-27.07911111-54.04444445-40.73244445-111.38844445-40.73244445-170.66666667S20.70755555 394.24 47.78666667 340.19555555c25.82755555-51.54133333 62.57777778-97.73511111 109.34044444-137.10222222 94.54933333-79.872 219.81866667-123.904 352.71111111-123.904s258.16177778 44.032 352.71111111 123.904c46.76266667 39.48088889 83.51288889 85.67466667 109.34044445 137.10222222C998.96888889 394.24 1012.62222222 451.584 1012.62222222 510.86222222c0 80.09955555-25.37244445 157.58222222-73.61422222 225.16622223 8.30577778 23.43822222 26.73777778 62.00888889 48.128 99.89688888 8.41955555 15.01866667 7.96444445 33.33688889-1.25155555 47.78666667s-25.6 22.75555555-42.66666667 21.504c-17.74933333-1.25155555-106.60977778-7.96444445-186.02666667-18.31822222-75.09333333 36.52266667-160.31288889 55.75111111-247.35288889 55.75111111zM743.424 885.19111111h0.22755555-0.22755555zM509.83822222 170.21155555c-227.10044445 0-411.87555555 152.80355555-411.87555555 340.76444445 0 187.84711111 184.77511111 340.76444445 411.87555555 340.76444445 77.48266667 0 152.91733333-17.97688889 218.22577778-51.88266667 8.64711111-4.43733333 18.31822222-6.144 27.87555555-4.77866667 37.54666667 5.12 79.18933333 9.55733333 114.46044445 12.85688889-12.17422222-26.624-22.86933333-54.272-25.82755555-74.63822222-1.82044445-12.62933333 1.70666667-25.6 9.6711111-35.61244445 44.14577778-55.52355555 67.47022222-120.03555555 67.47022223-186.70933333 0-187.96088889-184.77511111-340.76444445-411.87555556-340.76444445z m439.97866667 644.32355556c0.11377778 0 0.11377778 0 0 0 0.11377778 0 0.11377778 0 0 0z"
+      />
+      <path
+        fill="currentColor"
+        d="M274.77333333 516.55111111m-61.78133333 0a61.78133333 61.78133333 0 1 0 123.56266667 0 61.78133333 61.78133333 0 1 0-123.56266667 0Z"
+      />
+      <path
+        fill="currentColor"
+        d="M510.06577778 516.55111111m-61.78133333 0a61.78133333 61.78133333 0 1 0 123.56266666 0 61.78133333 61.78133333 0 1 0-123.56266666 0Z"
+      />
+      <path
+        fill="currentColor"
+        d="M745.472 516.55111111m-61.78133333 0a61.78133333 61.78133333 0 1 0 123.56266666 0 61.78133333 61.78133333 0 1 0-123.56266666 0Z"
+      />
+    </svg>
+  );
+}
+
 function RemoteConnectionIssueCard(props: {
   message: string;
   tone: "error" | "offline";
@@ -466,7 +495,7 @@ export function WorkspaceSessionList(props: Props) {
         <div
           role="button"
           tabIndex={0}
-          className={`group flex min-h-9 w-full items-center justify-between rounded-xl px-3 py-1.5 text-left text-[13px] font-normal transition-colors ${
+          className={`group flex min-h-8 w-full items-center justify-between rounded-xl px-3 py-1 text-left text-[13px] font-normal transition-colors ${
             isSelected
               ? "bg-gray-3 text-gray-12"
               : "text-gray-10 hover:bg-gray-1/70 hover:text-gray-11"
@@ -486,7 +515,7 @@ export function WorkspaceSessionList(props: Props) {
             {hasChildren ? (
               <button
                 type="button"
-                className="-ml-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-gray-9 transition-colors hover:bg-gray-3/80 hover:text-gray-11"
+                className="-ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-gray-9 transition-colors hover:bg-gray-3/80 hover:text-gray-11"
                 aria-label={isExpanded ? t("workspace_list.hide_child_sessions") : t("workspace_list.show_child_sessions")}
                 onClick={(event) => {
                   event.preventDefault();
@@ -494,27 +523,33 @@ export function WorkspaceSessionList(props: Props) {
                   toggleSessionExpanded(session.id);
                 }}
               >
-                {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
               </button>
             ) : row.depth > 0 ? (
               <span className="h-[1px] w-3 shrink-0 rounded-full bg-dls-border" />
             ) : null}
 
-            <span className="flex h-1.5 w-1.5 shrink-0 items-center justify-center" aria-hidden>
-              {isSessionActive ? <span className="h-1.5 w-1.5 rounded-full bg-amber-9" /> : null}
-            </span>
-            <span className="block min-w-0 flex-1 truncate text-current" title={displayTitle}>
-              {displayTitle}
-            </span>
+            <div className="flex min-w-0 flex-1 items-center gap-0.5">
+              <SessionSidebarGlyph
+                className={`h-3.5 w-3.5 shrink-0 ${isSelected ? "text-gray-10" : "text-gray-9 group-hover:text-gray-10"}`}
+              />
+
+              <span className="flex h-1.5 w-1.5 shrink-0 items-center justify-center" aria-hidden>
+                {isSessionActive ? <span className="h-1.5 w-1.5 rounded-full bg-amber-9" /> : null}
+              </span>
+              <span className="block min-w-0 flex-1 truncate text-current" title={displayTitle}>
+                {displayTitle}
+              </span>
+            </div>
           </div>
 
           {/* Fixed slot when session menus exist: avoids horizontal jump when selection moves. */}
           {props.showSessionActions ? (
-            <div className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center">
+            <div className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center">
               {canManageSession ? (
                 <button
                   type="button"
-                  className="flex h-7 w-7 items-center justify-center rounded-md text-gray-9 transition-colors hover:bg-gray-3/80 hover:text-gray-11"
+                  className="flex h-6 w-6 items-center justify-center rounded-md text-gray-9 transition-colors hover:bg-gray-3/80 hover:text-gray-11"
                   aria-label={t("workspace_list.session_actions")}
                   onClick={(event) => {
                     event.preventDefault();
@@ -522,7 +557,7 @@ export function WorkspaceSessionList(props: Props) {
                     setSessionMenuOpen((current) => !current);
                   }}
                 >
-                  <MoreHorizontal size={14} />
+                  <MoreHorizontal size={13} />
                 </button>
               ) : null}
             </div>
@@ -618,7 +653,7 @@ export function WorkspaceSessionList(props: Props) {
         </div>
       </div>
       <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pr-1">
-        <div className="space-y-2 pb-3">
+        <div className="space-y-1 pb-2">
           {props.workspaceSessionGroups.map((group, workspaceIndex) => {
             const canReorder =
               Boolean(props.onReorderWorkspaces) && props.workspaceSessionGroups.length > 1;
@@ -678,7 +713,7 @@ export function WorkspaceSessionList(props: Props) {
             return (
               <div
                 key={workspace.id}
-                className={`space-y-2 rounded-xl ${
+                className={`space-y-1 rounded-xl ${
                   dropTargetWorkspaceIndex === workspaceIndex ? "ring-1 ring-inset ring-gray-8/45" : ""
                 }`}
                 onDragOver={(event) => {
@@ -719,7 +754,7 @@ export function WorkspaceSessionList(props: Props) {
                     role="button"
                     tabIndex={0}
                     aria-expanded={expandedWorkspaceIds.has(workspace.id)}
-                    className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-left text-[13px] transition-colors ${
+                    className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-left text-[13px] transition-colors ${
                       props.selectedWorkspaceId === workspace.id
                         ? "bg-gray-2/70 text-gray-12"
                         : "text-gray-10 hover:bg-gray-1/70 hover:text-gray-12"
@@ -740,7 +775,7 @@ export function WorkspaceSessionList(props: Props) {
                       toggleWorkspaceExpanded(workspace.id);
                     }}
                   >
-                    <div className="flex min-w-0 flex-1 items-center gap-3.5 py-0.5 text-left">
+                    <div className="flex min-w-0 flex-1 items-center gap-3 py-0 text-left">
                       <div
                         draggable={canReorder}
                         className={`flex h-5 w-5 shrink-0 items-center justify-center text-[#3e3e3e] ${
@@ -762,14 +797,14 @@ export function WorkspaceSessionList(props: Props) {
                           setDropTargetWorkspaceIndex(null);
                         }}
                       >
-                        <WorkspaceSidebarGlyph className="h-[17px] w-[17px]" />
+                        <WorkspaceSidebarGlyph className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="min-w-0 truncate text-[14px] font-normal text-dls-text">
                           {workspaceLabel(workspace)}
                         </div>
                         {statusLabel ? (
-                          <div className={`mt-0.5 truncate text-[11px] ${statusTone}`} title={statusLabel}>
+                          <div className={`mt-px truncate text-[11px] ${statusTone}`} title={statusLabel}>
                             {statusLabel}
                           </div>
                         ) : null}
@@ -782,10 +817,10 @@ export function WorkspaceSessionList(props: Props) {
                       ) : null}
 
                       <div
-                        className={`items-center gap-0.5 ${
+                        className={`flex items-center gap-0.5 transition-opacity duration-150 ${
                           props.selectedWorkspaceId === workspace.id
-                            ? "flex"
-                            : "hidden group-hover:flex group-focus-within:flex"
+                            ? "opacity-100"
+                            : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
                         }`}
                       >
                         <button
@@ -898,7 +933,7 @@ export function WorkspaceSessionList(props: Props) {
                 </div>
 
                 {expandedWorkspaceIds.has(workspace.id) ? (
-                  <div className="mt-3 px-1 pb-1">
+                  <div className="px-1 pb-1">
                     <div className="relative flex flex-col gap-1 pl-2.5 before:absolute before:bottom-2 before:left-0 before:top-2 before:w-[2px] before:bg-gray-3 before:content-['']">
                       {showRemoteConnectionIssue ? (
                         <RemoteConnectionIssueCard
