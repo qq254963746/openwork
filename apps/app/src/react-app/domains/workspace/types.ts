@@ -84,31 +84,3 @@ export type CreateRemoteWorkspaceModalProps = {
   confirmLabel?: string;
 };
 
-export type ShareField = {
-  label: string;
-  value: string;
-  secret?: boolean;
-  placeholder?: string;
-  hint?: string;
-};
-
-export type ShareView = "chooser" | "access";
-
-export type ShareWorkspaceModalProps = {
-  open: boolean;
-  onClose: () => void;
-  title?: string;
-  workspaceName: string;
-  workspaceDetail?: string | null;
-  fields: ShareField[];
-  remoteAccess?: {
-    enabled: boolean;
-    busy: boolean;
-    error?: string | null;
-    status?: string | null;
-    onSave: (enabled: boolean) => void | Promise<void>;
-  };
-  note?: string | null;
-  onExportConfig?: () => void;
-  exportDisabledReason?: string | null;
-};

@@ -315,7 +315,7 @@ Post-cutover, all four handlers were stubs.
 
 Steps:
 1. In the sidebar, click the `…` button on the selected workspace row.
-2. Expect: popover opens with **Edit name**, **Share…**, **Reveal in Finder**
+2. Expect: popover opens with **Edit name**, **Reveal in Finder**
    (desktop only), **Remove workspace**.
 3. Click **Edit name** → modal appears with current name selected.
 4. Type a new name and click **Save**.
@@ -323,10 +323,7 @@ Steps:
 5. Open the menu again → **Reveal in Finder**.
    - Pass: Finder becomes frontmost with the workspace folder highlighted
      (desktop only; no-op on web).
-6. Open the menu again → **Share…**.
-   - Pass: workspace path is copied to the clipboard. (Full ShareWorkspaceModal
-     flow is still pending a second pass — see change log.)
-7. Open the menu again → **Remove workspace**.
+6. Open the menu again → **Remove workspace**.
    - Pass: workspace disappears from the sidebar; `workspace_bootstrap`
      returns the remaining workspaces.
 

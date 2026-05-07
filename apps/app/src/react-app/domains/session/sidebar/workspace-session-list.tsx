@@ -47,7 +47,6 @@ type Props = {
   onOpenRenameSession?: () => void;
   onOpenDeleteSession?: () => void;
   onOpenRenameWorkspace: (workspaceId: string) => void;
-  onShareWorkspace: (workspaceId: string) => void;
   onRevealWorkspace: (workspaceId: string) => void;
   onRecoverWorkspace: (workspaceId: string) => Promise<boolean> | boolean | void;
   onTestWorkspaceConnection: (workspaceId: string) => Promise<boolean> | boolean | void;
@@ -764,16 +763,6 @@ export function WorkspaceSessionList(props: Props) {
                         }}
                       >
                         {t("workspace_list.edit_name")}
-                      </button>
-                      <button
-                        type="button"
-                        className="w-full rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
-                        onClick={() => {
-                          props.onShareWorkspace(workspace.id);
-                          setWorkspaceMenuId(null);
-                        }}
-                      >
-                        {t("workspace_list.share")}
                       </button>
                       {workspace.workspaceType === "local" ? (
                         <button

@@ -20,19 +20,16 @@ import {
 } from "../../app/lib/openwork-server";
 import { buildOpenworkEnvRuntimeKey } from "../../app/lib/openwork-env-runtime";
 import {
-  engineInfo,
   revealDesktopItemInDir,
   pickDirectory,
   resolveWorkspaceListSelectedId,
   workspaceBootstrap,
   workspaceCreate,
   workspaceCreateRemote,
-  workspaceExportConfig,
   workspaceForget,
   workspaceSetRuntimeActive,
   workspaceSetSelected,
   workspaceUpdateDisplayName,
-  type EngineInfo,
   type OpenworkServerInfo,
   type WorkspaceInfo,
   type WorkspaceList,
@@ -60,7 +57,6 @@ import {
 } from "../../app/utils";
 import { t } from "../../i18n";
 import { useLocal } from "../kernel/local-provider";
-import { usePlatform } from "../kernel/platform";
 import { SessionPage } from "../domains/session/chat/session-page";
 import { isDesktopProviderBlocked } from "../../app/cloud/desktop-app-restrictions";
 import { useCheckDesktopRestriction } from "../domains/cloud/desktop-restriction-hooks";
@@ -73,7 +69,6 @@ import {
 } from "../domains/session/sync/session-sync";
 import { CreateRemoteWorkspaceModal } from "../domains/workspace/create-remote-workspace-modal";
 import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-modal";
-import { useRemoteAccessRestart } from "../domains/workspace/remote-access-restart";
 import { RenameWorkspaceModal } from "../domains/workspace/rename-workspace-modal";
 import { useRemoteWorkspaceConnectionEditor } from "../domains/workspace/use-remote-workspace-connection-editor";
 import {
@@ -81,7 +76,6 @@ import {
   getRemoteWorkspaceConnectionKey,
   testRemoteWorkspaceConnection,
 } from "../domains/workspace/remote-workspace-diagnostics";
-import { useShareWorkspaceState } from "../domains/workspace/share-workspace-state";
 import { ModelPickerModal } from "../domains/session/modals/model-picker-modal";
 import { CommandPalette, type SessionOption as PaletteSessionOption } from "./command-palette";
 import { getDisplaySessionTitle } from "../../app/lib/session-title";
@@ -342,7 +336,6 @@ async function draftToParts(draft: ComposerDraft, workspaceRoot: string) {
 
 export function SessionRoute() {
   const navigate = useNavigate();
-  const platform = usePlatform();
   const local = useLocal();
   const reloadCoordinator = useReloadCoordinator();
   const { showToast } = useStatusToasts();
@@ -419,23 +412,12 @@ export function SessionRoute() {
   });
   const [openworkServerSettingsVersion, setOpenworkServerSettingsVersion] = useState(0);
   const [engineReloadVersion, setEngineReloadVersion] = useState(0);
-  const [routeEngineInfo, setRouteEngineInfo] = useState<EngineInfo | null>(null);
   const reconnectAttemptedWorkspaceIdRef = useRef("");
 
   const openworkServerSettings = useMemo(
     () => readOpenworkServerSettings(),
     [openworkServerSettingsVersion],
   );
-
-  const shareWorkspaceState = useShareWorkspaceState({
-    workspaces,
-    openworkServerHostInfo: openworkServerHostInfoState,
-    openworkServerSettings,
-    engineInfo: routeEngineInfo,
-    exportWorkspaceBusy: false,
-    openLink: (url) => platform.openLink(url),
-    workspaceLabel,
-  });
 
   const activeReloadBlockingSessions = useMemo(
     () =>
@@ -675,12 +657,6 @@ export function SessionRoute() {
     }
   }, [loadWorkspaceSessionsInBackground, markBootRouteReady, routeWorkspaceId, selectedSessionId]);
 
-  const remoteAccessRestart = useRemoteAccessRestart({
-    isEnabled: () => openworkServerSettings.remoteAccessEnabled === true,
-    onHostInfo: setOpenworkServerHostInfoState,
-    onSettingsChanged: () => setOpenworkServerSettingsVersion((value) => value + 1),
-  });
-
   const reloadWorkspaceEngineFromUi = useCallback(async () => {
     if (!client || !selectedWorkspaceId) {
       setRouteError(t("app.error_connect_first"));
@@ -864,21 +840,6 @@ export function SessionRoute() {
       }
     };
   }, [refreshRouteState]);
-
-  useEffect(() => {
-    if (!isDesktopRuntime()) return;
-    let cancelled = false;
-    void engineInfo()
-      .then((info) => {
-        if (!cancelled) setRouteEngineInfo(info);
-      })
-      .catch(() => {
-        if (!cancelled) setRouteEngineInfo(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // Inspector wiring: publish the route's current state so an external
   // operator (or an AI driver like Chrome MCP) can call
@@ -1558,38 +1519,6 @@ export function SessionRoute() {
     }
   }, [workspaces]);
 
-  const handleShareWorkspace = useCallback((workspaceId: string) => {
-    shareWorkspaceState.openShareWorkspace(workspaceId);
-  }, [shareWorkspaceState]);
-
-  const handleSaveShareRemoteAccess = useCallback(
-    async (enabled: boolean) => {
-      if (!isDesktopRuntime()) return;
-      await remoteAccessRestart.save(enabled);
-    },
-    [remoteAccessRestart],
-  );
-
-  const handleExportWorkspaceConfig = useCallback(
-    async (workspaceId: string) => {
-      if (!isDesktopRuntime()) return;
-      const workspace = workspaces.find((item) => item.id === workspaceId) ?? null;
-      if (!workspace) return;
-      const outputPath = await pickDirectory({
-        title: `Choose where to export ${workspaceLabel(workspace)}`,
-      });
-      const targetPath = Array.isArray(outputPath) ? outputPath[0] : outputPath;
-      if (!targetPath) return;
-      await workspaceExportConfig({ workspaceId, outputPath: targetPath });
-      try {
-        await revealDesktopItemInDir(targetPath);
-      } catch {
-        // ignore reveal failures
-      }
-    },
-    [workspaces],
-  );
-
   const handleForgetWorkspace = useCallback(
     async (workspaceId: string) => {
       if (typeof window !== "undefined") {
@@ -2036,7 +1965,6 @@ export function SessionRoute() {
           void refreshRouteState();
         },
         onOpenRenameWorkspace: handleOpenRenameWorkspace,
-        onShareWorkspace: handleShareWorkspace,
         onRevealWorkspace: (id) => void handleRevealWorkspace(id),
         onRecoverWorkspace: (workspaceId) => runRemoteWorkspaceConnectionCheck(workspaceId, "recover"),
         onTestWorkspaceConnection: (workspaceId) => runRemoteWorkspaceConnectionCheck(workspaceId, "test"),
@@ -2047,37 +1975,6 @@ export function SessionRoute() {
       surface={surfaceProps}
       todos={[] satisfies TodoItem[]}
       sessionLoadingById={(sessionId) => effectiveLoading && Boolean(sessionId && sessionId === selectedSessionId)}
-      shareWorkspaceModal={
-        shareWorkspaceState.shareWorkspaceOpen
-          ? {
-              open: true,
-              onClose: shareWorkspaceState.closeShareWorkspace,
-              workspaceName: shareWorkspaceState.shareWorkspaceName,
-              workspaceDetail: shareWorkspaceState.shareWorkspaceDetail,
-              fields: shareWorkspaceState.shareFields,
-              remoteAccess:
-                isDesktopRuntime() && shareWorkspaceState.shareWorkspace?.workspaceType === "local"
-                  ? {
-                      enabled: openworkServerSettings.remoteAccessEnabled === true,
-                      busy: remoteAccessRestart.busy,
-                      error: remoteAccessRestart.error,
-                      status: remoteAccessRestart.status,
-                      onSave: handleSaveShareRemoteAccess,
-                    }
-                  : undefined,
-              note: shareWorkspaceState.shareNote,
-              onExportConfig:
-                shareWorkspaceState.exportDisabledReason === null
-                  ? () => {
-                      const id = shareWorkspaceState.shareWorkspaceId;
-                      if (!id) return;
-                      void handleExportWorkspaceConfig(id);
-                    }
-                  : undefined,
-              exportDisabledReason: shareWorkspaceState.exportDisabledReason,
-            }
-          : null
-      }
       activePermission={activePermission}
       permissionReplyBusy={permissionReplyBusy}
       respondPermission={respondPermission}

@@ -16,7 +16,6 @@ import type {
   WorkspaceConnectionState,
   WorkspaceSessionGroup,
 } from "../../../../app/types";
-import type { ShareWorkspaceModalProps } from "../../workspace/types";
 import { Button } from "../../../design-system/button";
 import { ConfirmModal } from "../../../design-system/modals/confirm-modal";
 import ProviderAuthModal, { type ProviderAuthModalProps } from "../../connections/provider-auth/provider-auth-modal";
@@ -25,7 +24,6 @@ import { QuestionModal } from "../modals/question-modal";
 import { RenameSessionModal } from "../modals/rename-session-modal";
 import { WorkspaceSessionList } from "../sidebar/workspace-session-list";
 import { SessionSurface, type SessionSurfaceProps } from "../surface/session-surface";
-import { ShareWorkspaceModal } from "../../workspace/share-workspace-modal";
 import { StatusBar, type StatusBarProps } from "./status-bar";
 import {
   DEFAULT_WORKSPACE_LEFT_SIDEBAR_WIDTH,
@@ -62,7 +60,6 @@ export type SessionPageSidebarProps = {
   onPrefetchSession?: (workspaceId: string, sessionId: string) => void;
   onCreateTaskInWorkspace: (workspaceId: string) => void;
   onOpenRenameWorkspace: (workspaceId: string) => void;
-  onShareWorkspace: (workspaceId: string) => void;
   onRevealWorkspace: (workspaceId: string) => void;
   onRecoverWorkspace: (workspaceId: string) => Promise<boolean> | boolean | void;
   onTestWorkspaceConnection: (workspaceId: string) => Promise<boolean> | boolean | void;
@@ -104,7 +101,6 @@ export type SessionPageProps = {
   surface?: SessionPageSurfaceProps | null;
   todos: TodoItem[];
   sessionLoadingById: (sessionId: string | null) => boolean;
-  shareWorkspaceModal?: ShareWorkspaceModalProps | null;
   providerAuthModal?: ProviderAuthModalProps | null;
   activePermission?: PendingPermission | null;
   permissionReplyBusy?: boolean;
@@ -349,7 +345,6 @@ export function SessionPage(props: SessionPageProps) {
               onOpenRenameSession={props.onRenameSession ? openRenameModal : undefined}
               onOpenDeleteSession={props.onDeleteSession ? () => setDeleteOpen(true) : undefined}
               onOpenRenameWorkspace={props.sidebar.onOpenRenameWorkspace}
-              onShareWorkspace={props.sidebar.onShareWorkspace}
               onRevealWorkspace={props.sidebar.onRevealWorkspace}
               onRecoverWorkspace={props.sidebar.onRecoverWorkspace}
               onTestWorkspaceConnection={props.sidebar.onTestWorkspaceConnection}
@@ -640,7 +635,6 @@ export function SessionPage(props: SessionPageProps) {
         />
       ) : null}
 
-      {props.shareWorkspaceModal ? <ShareWorkspaceModal {...props.shareWorkspaceModal} /> : null}
 
       {props.activePermission ? (
         <PermissionApprovalModal

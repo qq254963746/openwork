@@ -8,10 +8,7 @@ import StatusBar from "../../app/src/app/components/status-bar";
 import Composer from "../../app/src/app/components/session/composer";
 import MessageList from "../../app/src/app/components/session/message-list";
 import WorkspaceSessionList from "../../app/src/app/components/session/workspace-session-list";
-import {
-  CreateWorkspaceModal,
-  ShareWorkspaceModal,
-} from "../../app/src/app/workspace";
+import { CreateWorkspaceModal } from "../../app/src/app/workspace";
 import { MCP_QUICK_CONNECT, SUGGESTED_PLUGINS } from "../../app/src/app/constants";
 import { createWorkspaceShellLayout } from "../../app/src/app/lib/workspace-shell-layout";
 import { getModelBehaviorSummary, sanitizeModelBehaviorValue } from "../../app/src/app/lib/model-behavior";
@@ -214,26 +211,6 @@ const storyModels: Array<{
   },
 ];
 
-const mockShareFields = [
-  {
-    label: "Worker URL",
-    value: "https://worker.openworklabs.com/opencode",
-    hint: "Paste this into Add worker -> Connect remote.",
-  },
-  {
-    label: "Password",
-    value: "ow_story_worker_owner_password_7f9a1b3c",
-    secret: true,
-    hint: "Use when the remote client must answer permission prompts.",
-  },
-  {
-    label: "Collaborator token",
-    value: "ow_story_worker_collab_token_1c4d2e8a",
-    secret: true,
-    hint: "Routine access when you do not need owner-only actions.",
-  },
-] as const;
-
 const initialSkills: SkillCard[] = [
   {
     name: "workspace-guide",
@@ -328,7 +305,6 @@ export default function NewLayoutApp() {
   const [createWorkspaceSubmitting, setCreateWorkspaceSubmitting] = createSignal(false);
   const [mockFolderPickCount, setMockFolderPickCount] = createSignal(0);
   const [agentPickerOpen, setAgentPickerOpen] = createSignal(false);
-  const [shareWorkspaceId, setShareWorkspaceId] = createSignal<string | null>(null);
   const [messageRows, setMessageRows] = createSignal<MessageWithParts[]>(sessionMessages);
   const [expandedStepIds, setExpandedStepIds] = createSignal(new Set<string>());
   const [headerActionBusy, setHeaderActionBusy] = createSignal<"undo" | "redo" | "compact" | null>(null);
@@ -466,18 +442,6 @@ export default function NewLayoutApp() {
   const activeWorkspace = createMemo(
     () => workspaceSessionGroups.find((group) => group.workspace.id === selectedWorkspaceId())?.workspace ?? localWorkspace,
   );
-  const shareWorkspace = createMemo(
-    () => storyWorkspaces.find((workspace) => workspace.id === shareWorkspaceId()) ?? null,
-  );
-  const shareWorkspaceName = createMemo(
-    () => shareWorkspace()?.displayName?.trim() || shareWorkspace()?.name?.trim() || "Workspace",
-  );
-  const shareWorkspaceDetail = createMemo(() => {
-    const workspace = shareWorkspace();
-    if (!workspace) return null;
-    if (workspace.workspaceType === "remote") return workspace.baseUrl ?? workspace.path ?? null;
-    return workspace.path ?? null;
-  });
   const selectedWorkspaceRoot = createMemo(() => activeWorkspace().path?.trim() || "");
 
   const refreshSkills = () => setComposerToast("Story-book: refreshed skills.");
@@ -900,11 +864,6 @@ export default function NewLayoutApp() {
     window.setTimeout(() => setHeaderActionBusy(null), 240);
   };
 
-  const openMockShareModal = (workspaceId?: string | null) => {
-    const nextId = workspaceId?.trim() || selectedWorkspaceId();
-    setShareWorkspaceId(nextId);
-  };
-
   const totalSessionCount = createMemo(() =>
     workspaceSessionGroups.reduce((count, group) => count + group.sessions.length, 0),
   );
@@ -1046,16 +1005,6 @@ export default function NewLayoutApp() {
         action: () => {
           closeCommandPalette();
           setShowingSettings(true);
-        },
-      },
-      {
-        id: "share",
-        title: "Share current workspace",
-        detail: activeWorkspace().displayName ?? activeWorkspace().name,
-        meta: "Share",
-        action: () => {
-          closeCommandPalette();
-          openMockShareModal(selectedWorkspaceId());
         },
       },
     ];
@@ -1225,7 +1174,6 @@ export default function NewLayoutApp() {
               onOpenRenameSession={() => undefined}
               onOpenDeleteSession={() => undefined}
               onOpenRenameWorkspace={() => undefined}
-              onShareWorkspace={(workspaceId) => openMockShareModal(workspaceId)}
               onRevealWorkspace={() => undefined}
               onRecoverWorkspace={() => true}
               onTestWorkspaceConnection={() => true}
@@ -1707,18 +1655,6 @@ export default function NewLayoutApp() {
           </div>
         </div>
       </Show>
-
-      <ShareWorkspaceModal
-        open={Boolean(shareWorkspaceId())}
-        onClose={() => setShareWorkspaceId(null)}
-        workspaceName={shareWorkspaceName()}
-        workspaceDetail={shareWorkspaceDetail()}
-        fields={[...mockShareFields]}
-        note="This is the real share modal from the app, mounted with safe mock values for shell review."
-        onExportConfig={() => setComposerToast("Story-book: export config is mocked in this shell.")}
-        exportDisabledReason={null}
-        onOpenBots={() => setComposerToast("Story-book: bots sharing flow is mocked in this shell.")}
-      />
 
       <CreateWorkspaceModal
         open={createWorkspaceOpen()}
