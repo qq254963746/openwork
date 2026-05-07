@@ -434,7 +434,7 @@ export function SkillsView(props: SkillsViewProps) {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             {props.showHeader !== false ? <h2 className={pageTitleClass}>{t("skills.title")}</h2> : null}
-            <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-dls-secondary">
+            <p className="mt-2 text-[14px] leading-relaxed text-dls-secondary">
               {t("skills.worker_profile_desc")}
             </p>
           </div>
@@ -755,7 +755,7 @@ export function SkillsView(props: SkillsViewProps) {
 
       {selectedSkill ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-4xl overflow-hidden rounded-2xl border border-dls-border bg-dls-surface shadow-2xl">
+          <div className="w-full overflow-hidden rounded-2xl border border-dls-border bg-dls-surface shadow-2xl">
             <div className="flex items-center justify-between gap-3 border-b border-dls-border px-5 py-4">
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold text-dls-text">{selectedSkill.name}</div>
@@ -881,7 +881,7 @@ export function SkillsView(props: SkillsViewProps) {
 
       {customRepoOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-dls-border bg-dls-surface shadow-2xl">
+          <div className="w-full overflow-hidden rounded-2xl border border-dls-border bg-dls-surface shadow-2xl">
             <div className="space-y-4 p-6">
               <div>
                 <h3 className="text-lg font-semibold text-dls-text">{t("skills.add_custom_repo")}</h3>

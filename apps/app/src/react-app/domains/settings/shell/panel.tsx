@@ -10,7 +10,11 @@ type SettingsContentProps = {
 };
 
 export function SettingsContent(props: SettingsContentProps) {
-  return <div className="min-w-0 min-h-0 flex-1 overflow-y-auto flex flex-col gap-8 p-8 items-center">{props.children}</div>;
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col items-stretch gap-8 overflow-y-auto p-6 md:p-8">
+      {props.children}
+    </div>
+  );
 }
 
 type SettingsPanelProps = {
@@ -21,7 +25,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 md:flex-row md:items-center md:justify-between lg:max-w-3xl w-full",
+        "flex w-full flex-col gap-3 md:flex-row md:items-center md:justify-between",
       )}
     >
       {props.children}

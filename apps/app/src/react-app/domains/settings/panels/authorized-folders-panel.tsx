@@ -300,7 +300,7 @@ export function AuthorizedFoldersPanel(props: AuthorizedFoldersPanelProps) {
           <FolderLock size={16} className="text-gray-10" />
           {t("context_panel.authorized_folders")}
         </div>
-        <div className="max-w-[65ch] text-xs leading-relaxed text-gray-9">
+        <div className="text-xs leading-relaxed text-gray-9">
           {t("context_panel.authorized_folders_desc")}
         </div>
       </div>
@@ -370,7 +370,7 @@ export function AuthorizedFoldersPanel(props: AuthorizedFoldersPanelProps) {
                 <Folder size={20} />
               </div>
               <div className="text-sm font-medium text-gray-11">{t("context_panel.no_external_folders")}</div>
-              <div className="mt-1 max-w-[40ch] text-[11px] text-gray-9">
+              <div className="mt-1 text-[11px] text-gray-9">
                 {t("context_panel.add_folder_hint")}
               </div>
             </div>

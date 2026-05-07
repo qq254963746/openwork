@@ -219,7 +219,6 @@ function folderNameFromPath(path: string) {
 type PersistedThemeMode = "light" | "dark" | "system";
 
 const SETTINGS_THEME_KEY = "openwork.react.settings.theme-mode";
-const SETTINGS_HIDE_TITLEBAR_KEY = "openwork.react.settings.hide-titlebar";
 function workspaceLabel(workspace: OpenworkWorkspaceInfo) {
   return (
     workspace.displayName?.trim() ||
@@ -287,26 +286,6 @@ function parseSettingsPath(pathname: string): {
       return { tab: "extensions", redirectPath: null, extensionsSection: "all" };
     default:
       return { tab: "general", redirectPath: "general" };
-  }
-}
-
-function readStoredBoolean(key: string, fallback: boolean) {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (raw == null) return fallback;
-    return raw === "1";
-  } catch {
-    return fallback;
-  }
-}
-
-function writeStoredBoolean(key: string, value: boolean) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(key, value ? "1" : "0");
-  } catch {
-    // ignore persistence failures
   }
 }
 
@@ -395,7 +374,6 @@ export function SettingsRoute() {
   const [disabledProviders, setDisabledProviders] = useState<string[]>([]);
   const [developerMode, setDeveloperMode] = useState(false);
   const [themeMode, setThemeMode] = useState<PersistedThemeMode>(readStoredThemeMode);
-  const [hideTitlebar, setHideTitlebar] = useState(() => readStoredBoolean(SETTINGS_HIDE_TITLEBAR_KEY, false));
   const [configActionStatus, setConfigActionStatus] = useState<string | null>(null);
   const [revealConfigBusy, setRevealConfigBusy] = useState(false);
   const [resetConfigBusy, setResetConfigBusy] = useState(false);
@@ -752,10 +730,6 @@ export function SettingsRoute() {
       window.localStorage.setItem(SETTINGS_THEME_KEY, themeMode);
     }
   }, [themeMode]);
-
-  useEffect(() => {
-    writeStoredBoolean(SETTINGS_HIDE_TITLEBAR_KEY, hideTitlebar);
-  }, [hideTitlebar]);
 
   const { markRouteReady: markBootRouteReady } = useBootState();
   const refreshRouteState = useMemo(() => async () => {
@@ -1558,8 +1532,6 @@ export function SettingsRoute() {
             setThemeMode={setThemeMode}
             language={currentLocale() as Language}
             setLanguage={setLocale}
-            hideTitlebar={hideTitlebar}
-            toggleHideTitlebar={() => setHideTitlebar((current) => !current)}
           />
         );
       case "recovery":

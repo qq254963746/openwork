@@ -104,7 +104,7 @@ export function SettingsShell(props: SettingsShellProps) {
             <SettingsPage {...props}>{props.children}</SettingsPage>
 
             {props.error ? (
-              <div className="mx-auto max-w-5xl px-6 pb-24 md:px-10 md:pb-10">
+              <div className="w-full px-6 pb-24 md:px-8 md:pb-10">
                 <div className="flex flex-col gap-y-3 rounded-2xl border border-red-7/20 bg-red-1/40 px-5 py-4 text-sm text-red-12">
                   <div>{props.error}</div>
                   {props.errorSlot}

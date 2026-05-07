@@ -237,7 +237,7 @@ export function EnvironmentView(props: EnvironmentViewProps) {
             <div className="text-sm font-medium text-gray-12">
               {t("settings.environment.title")}
             </div>
-            <p className="mt-1 max-w-[52ch] text-xs text-gray-10">
+            <p className="mt-1 text-xs text-gray-10">
               {t("settings.environment.description")}
             </p>
           </div>
@@ -276,7 +276,7 @@ export function EnvironmentView(props: EnvironmentViewProps) {
                   <div className="text-xs font-medium text-gray-12">
                     {t("settings.environment.apply_pending_title")}
                   </div>
-                  <p className="mt-0.5 max-w-[54ch] text-xs text-gray-10">
+                  <p className="mt-0.5 text-xs text-gray-10">
                     {props.onApplyChanges
                       ? t("settings.environment.apply_pending_body")
                       : t("settings.environment.apply_pending_body_manual")}
@@ -325,7 +325,7 @@ export function EnvironmentView(props: EnvironmentViewProps) {
             <div className="text-sm text-gray-12">
               {t("settings.environment.empty_title")}
             </div>
-            <p className="mx-auto mt-1 max-w-[42ch] text-xs text-gray-10">
+            <p className="mt-1 text-xs text-gray-10">
               {t("settings.environment.empty_body")}
             </p>
           </div>
