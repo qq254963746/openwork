@@ -53,7 +53,7 @@ function deriveStatusCopy(props: StatusBarProps): StatusCopy {
 
   if (!props.clientConnected && props.openworkServerStatus === "disconnected" && props.initializing) {
     return {
-      label: "Preparing workspace",
+      label: "Preparing",
       detail: t("session.loading_detail"),
       dotClass: "bg-amber-9",
       pingClass: "bg-amber-9/35 animate-ping",

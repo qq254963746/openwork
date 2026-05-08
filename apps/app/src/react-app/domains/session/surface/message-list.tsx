@@ -622,7 +622,46 @@ function StepRow(props: {
         </button>
 
         <div className="mt-3 w-full">
-          <div className="w-full rounded-[20px] border border-dls-border bg-dls-surface shadow-[var(--dls-card-shadow)]">
+          {props.expanded ? (
+            <div className="max-h-[420px] space-y-3 overflow-y-auto pr-3">
+              {hasStructuredValue(toolInput) ? (
+                <div>
+                  <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-gray-8">
+                    Request
+                  </div>
+                  <pre className="overflow-x-auto rounded-[16px] border border-dls-border/70 bg-dls-surface px-4 py-3 text-[12px] leading-6 text-gray-10">
+                    {formatStructuredValue(toolInput)}
+                  </pre>
+                </div>
+              ) : null}
+              {hasStructuredValue(toolOutput) ? (
+                <div>
+                  <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-gray-8">
+                    Result
+                  </div>
+                  <pre className="overflow-x-auto rounded-[16px] border border-dls-border/70 bg-dls-surface px-4 py-3 text-[12px] leading-6 text-gray-10">
+                    {formatStructuredValue(toolOutput)}
+                  </pre>
+                </div>
+              ) : null}
+              {toolError ? (
+                <div>
+                  <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-red-10">
+                    Error
+                  </div>
+                  <pre className="overflow-x-auto rounded-[16px] border border-red-6/40 bg-red-3/20 px-4 py-3 text-[12px] leading-6 text-red-11">
+                    {toolError}
+                  </pre>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div
+            className={`w-full rounded-[20px] border border-dls-border bg-dls-surface shadow-[var(--dls-card-shadow)] ${
+              props.expanded ? "mt-3" : ""
+            }`}
+          >
             <div className="flex items-center justify-between gap-3 border-b border-dls-border px-4 py-3">
               <div className="min-w-0">
                 <div className="text-xs font-medium text-gray-12">Todo</div>
@@ -634,7 +673,7 @@ function StepRow(props: {
                 {toolNameLower}
               </div>
             </div>
-            <div className="max-h-72 space-y-2.5 overflow-auto px-4 pb-3">
+            <div className="space-y-2.5 px-4 pb-3">
               {todos.map((todo, index) => {
                 const done = todo.status === "completed";
                 const cancelled = todo.status === "cancelled";
@@ -676,41 +715,6 @@ function StepRow(props: {
               })}
             </div>
           </div>
-
-          {props.expanded ? (
-            <div className="mt-3 space-y-3">
-              {hasStructuredValue(toolInput) ? (
-                <div>
-                  <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-gray-8">
-                    Request
-                  </div>
-                  <pre className="overflow-x-auto rounded-[16px] border border-dls-border/70 bg-dls-surface px-4 py-3 text-[12px] leading-6 text-gray-10">
-                    {formatStructuredValue(toolInput)}
-                  </pre>
-                </div>
-              ) : null}
-              {hasStructuredValue(toolOutput) ? (
-                <div>
-                  <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-gray-8">
-                    Result
-                  </div>
-                  <pre className="overflow-x-auto rounded-[16px] border border-dls-border/70 bg-dls-surface px-4 py-3 text-[12px] leading-6 text-gray-10">
-                    {formatStructuredValue(toolOutput)}
-                  </pre>
-                </div>
-              ) : null}
-              {toolError ? (
-                <div>
-                  <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-red-10">
-                    Error
-                  </div>
-                  <pre className="overflow-x-auto rounded-[16px] border border-red-6/40 bg-red-3/20 px-4 py-3 text-[12px] leading-6 text-red-11">
-                    {toolError}
-                  </pre>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
         </div>
       </div>
     );
@@ -741,7 +745,10 @@ function StepRow(props: {
         </span>
       </button>
       {props.expanded ? (
-        <div className="mt-3 ml-[22px] space-y-3">
+        <div
+          className="mt-3 ml-[22px] max-h-[420px] space-y-3 overflow-y-auto pr-3"
+          data-scrollable="true"
+        >
           {hasStructuredValue(toolInput) ? (
             <div>
               <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-gray-8">Request</div>
@@ -776,7 +783,6 @@ function StepsContainer(props: {
   stepGroups: StepTimelineGroup[];
   isUser: boolean;
   isInline?: boolean;
-  isNestedVariant: boolean;
   expandedStepIds: Set<string>;
   onExpandedStepIdsChange: (updater: (current: Set<string>) => Set<string>) => void;
   todos: TodoItem[];
@@ -793,35 +799,28 @@ function StepsContainer(props: {
     });
   };
 
+  const stepRow = (groupId: string, part: TranscriptPart, index: number) => {
+    const rowId = `${groupId}:${index}`;
+    return (
+      <StepRow
+        key={rowId}
+        id={rowId}
+        part={part}
+        expanded={props.expandedStepIds.has(rowId)}
+        onToggle={() => toggleSteps(rowId)}
+        todos={props.todos}
+      />
+    );
+  };
+
   return (
     <div className={props.isInline ? (props.isUser ? "mt-3" : "mt-4") : ""}>
-      <div
-        data-scrollable={!props.isNestedVariant ? "true" : undefined}
-        className={
-          !props.isNestedVariant
-            ? "max-h-[420px] overflow-y-auto pr-3"
-            : ""
-        }
-      >
-        <div className="flex flex-col gap-4">
-          {props.stepGroups.map((group) => (
-            <div key={group.id} className="flex flex-col gap-4">
-              {group.parts.map((part, index) => {
-                const rowId = `${group.id}:${index}`;
-                return (
-                  <StepRow
-                    key={rowId}
-                    id={rowId}
-                    part={part}
-                    expanded={props.expandedStepIds.has(rowId)}
-                    onToggle={() => toggleSteps(rowId)}
-                    todos={props.todos}
-                  />
-                );
-              })}
-            </div>
-          ))}
-        </div>
+      <div className="flex flex-col gap-4">
+        {props.stepGroups.map((group) => (
+          <div key={group.id} className="flex flex-col gap-4">
+            {group.parts.map((part, index) => stepRow(group.id, part, index))}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -1088,7 +1087,6 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
             <StepsContainer
               stepGroups={block.stepGroups}
               isUser={block.isUser}
-              isNestedVariant={isNestedVariant}
               expandedStepIds={expandedStepIds}
               onExpandedStepIdsChange={onExpandedStepIdsChange}
               todos={todos}
@@ -1221,7 +1219,6 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                     }]}
                     isUser={block.isUser}
                     isInline={true}
-                    isNestedVariant={isNestedVariant}
                     expandedStepIds={expandedStepIds}
                     onExpandedStepIdsChange={onExpandedStepIdsChange}
                     todos={todos}

@@ -665,7 +665,7 @@ export function SessionPage(props: SessionPageProps) {
                   <Minimize2 size={12} className={`text-gray-8 transition-transform ${todoExpanded ? "" : "rotate-180"}`} />
                 </button>
                 {todoExpanded ? (
-                  <div className="max-h-60 space-y-2.5 overflow-auto border-t border-dls-border px-4 pb-3">
+                  <div className="space-y-2.5 border-t border-dls-border px-4 pb-3">
                     {todos.map((todo, index) => {
                       const done = todo.status === "completed";
                       const cancelled = todo.status === "cancelled";
