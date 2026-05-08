@@ -594,6 +594,7 @@ export function SettingsRoute() {
         providerDefaults: () => routeStateRef.current.providerDefaults,
         providerConnectedIds: () => routeStateRef.current.providerConnectedIds,
         disabledProviders: () => routeStateRef.current.disabledProviders,
+        selectedWorkspaceId: () => routeStateRef.current.selectedWorkspaceId,
         selectedWorkspaceDisplay: () => routeStateRef.current.selectedWorkspaceDisplay,
         selectedWorkspaceRoot: () => routeStateRef.current.selectedWorkspaceRoot,
         runtimeWorkspaceId: () => routeStateRef.current.runtimeWorkspaceId,

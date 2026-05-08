@@ -121,6 +121,7 @@ type CreateProviderAuthStoreOptions = {
   providerDefaults: () => Record<string, string>;
   providerConnectedIds: () => string[];
   disabledProviders: () => string[];
+  selectedWorkspaceId: () => string;
   selectedWorkspaceDisplay: () => WorkspaceDisplay;
   selectedWorkspaceRoot: () => string;
   runtimeWorkspaceId: () => string | null;
@@ -229,7 +230,9 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       options.selectedWorkspaceDisplay().workspaceType === "local";
     const openworkSnapshot = options.openworkServer.getSnapshot();
     const openworkClient = openworkSnapshot.openworkServerClient;
-    const openworkWorkspaceId = options.runtimeWorkspaceId();
+    const openworkWorkspaceId =
+      options.runtimeWorkspaceId() ??
+      (options.selectedWorkspaceId().trim() || null);
     const openworkCapabilities = openworkSnapshot.openworkServerCapabilities;
     const canUseOpenworkServer =
       openworkSnapshot.openworkServerStatus === "connected" &&
@@ -259,7 +262,9 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       options.selectedWorkspaceDisplay().workspaceType === "local";
     const openworkSnapshot = options.openworkServer.getSnapshot();
     const openworkClient = openworkSnapshot.openworkServerClient;
-    const openworkWorkspaceId = options.runtimeWorkspaceId();
+    const openworkWorkspaceId =
+      options.runtimeWorkspaceId() ??
+      (options.selectedWorkspaceId().trim() || null);
     const openworkCapabilities = openworkSnapshot.openworkServerCapabilities;
     const canUseOpenworkServer =
       openworkSnapshot.openworkServerStatus === "connected" &&
@@ -324,7 +329,9 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       options.selectedWorkspaceDisplay().workspaceType === "local";
     const openworkSnapshot = options.openworkServer.getSnapshot();
     const openworkClient = openworkSnapshot.openworkServerClient;
-    const openworkWorkspaceId = options.runtimeWorkspaceId();
+    const openworkWorkspaceId =
+      options.runtimeWorkspaceId() ??
+      (options.selectedWorkspaceId().trim() || null);
     const openworkCapabilities = openworkSnapshot.openworkServerCapabilities;
     const canUseOpenworkServer =
       openworkSnapshot.openworkServerStatus === "connected" &&
@@ -350,7 +357,9 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       options.selectedWorkspaceDisplay().workspaceType === "local";
     const openworkSnapshot = options.openworkServer.getSnapshot();
     const openworkClient = openworkSnapshot.openworkServerClient;
-    const openworkWorkspaceId = options.runtimeWorkspaceId();
+    const openworkWorkspaceId =
+      options.runtimeWorkspaceId() ??
+      (options.selectedWorkspaceId().trim() || null);
     const openworkCapabilities = openworkSnapshot.openworkServerCapabilities;
     const canUseOpenworkServer =
       openworkSnapshot.openworkServerStatus === "connected" &&

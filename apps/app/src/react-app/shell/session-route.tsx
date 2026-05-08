@@ -76,7 +76,11 @@ import {
 } from "../domains/workspace/remote-workspace-diagnostics";
 import { ModelPickerModal } from "../domains/session/modals/model-picker-modal";
 import { CommandPalette, type SessionOption as PaletteSessionOption } from "./command-palette";
-import { getDisplaySessionTitle } from "../../app/lib/session-title";
+import {
+  DEFAULT_SESSION_TITLE,
+  getDisplaySessionTitle,
+  isGeneratedSessionTitle,
+} from "../../app/lib/session-title";
 import { useBootState } from "./boot-state";
 import {
   forgetWorkspaceMemory,
@@ -140,6 +144,16 @@ function folderNameFromPath(path: string) {
   const normalized = path.replace(/\\/g, "/").replace(/\/+$/, "");
   const parts = normalized.split("/").filter(Boolean);
   return parts[parts.length - 1] ?? "workspace";
+}
+
+function titleFromFirstUserText(input: string) {
+  const trimmed = input.trim();
+  if (!trimmed) return "";
+  const firstLine = trimmed.split(/\r?\n/)[0]?.trim() ?? "";
+  const cleaned = firstLine.replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  const max = 80;
+  return cleaned.length > max ? `${cleaned.slice(0, max - 1).trimEnd()}…` : cleaned;
 }
 
 function isTransientStartupError(message: string | null | undefined) {
@@ -370,6 +384,7 @@ export function SessionRoute() {
   const remoteWorkspaceCheckRunRef = useRef<Record<string, string>>({});
   const remoteWorkspaceCheckRunCounterRef = useRef(0);
   const sessionsByWorkspaceIdRef = useRef<Record<string, any[]>>({});
+  const sessionAutoRenamedRef = useRef<Set<string>>(new Set());
   const startupRetryTimerRef = useRef<number | null>(null);
   const [retryingWorkspaceIds, setRetryingWorkspaceIds] = useState<string[]>([]);
   const launchEngineReloadOncePerWorkspaceRef = useRef(new Set<string>());
@@ -1367,6 +1382,32 @@ export function SessionRoute() {
         });
         if (result.error) {
           throw new Error(serializeSDKError(result.error));
+        }
+
+        const sessionId = selectedSessionId;
+        if (!sessionId || sessionAutoRenamedRef.current.has(sessionId)) return;
+        const derived = titleFromFirstUserText(text);
+        if (!derived) return;
+        const existing =
+          (sessionsByWorkspaceIdRef.current[selectedWorkspaceId] ?? []).find(
+            (session: any) => session?.id === sessionId,
+          ) ?? null;
+        const existingTitle = String(existing?.title ?? "").trim();
+        const isDefault =
+          !existingTitle ||
+          existingTitle === DEFAULT_SESSION_TITLE ||
+          isGeneratedSessionTitle(existingTitle);
+        if (!isDefault) return;
+        sessionAutoRenamedRef.current.add(sessionId);
+        try {
+          await opencodeClient.session.update({
+            sessionID: sessionId,
+            title: derived,
+            directory: selectedWorkspaceRoot || undefined,
+          });
+          void refreshRouteState();
+        } catch {
+          // best-effort
         }
       },
       onDraftChange: () => {
