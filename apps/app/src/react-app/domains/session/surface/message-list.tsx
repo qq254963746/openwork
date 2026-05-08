@@ -983,10 +983,10 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
         >
           <div className={`w-full relative ${isNestedVariant ? "" : "max-w-[650px]"} ${searchOutlineClass}`}>
             <div
-              className="inline-flex max-w-full items-start gap-2 rounded-[18px] border border-red-7/20 bg-red-1/35 px-3 py-2 text-[13px] leading-5 text-red-12 shadow-sm"
+              className="inline-flex max-w-full items-start gap-2 rounded-[18px] border border-red-7/20 bg-red-1/35 px-3 py-2 text-[13px] leading-5 text-red-11 shadow-sm"
               role="alert"
             >
-              <CircleAlert size={14} className="mt-0.5 shrink-0" />
+              <CircleAlert size={14} className="mt-0.5 shrink-0 text-red-11" />
               <div className="min-w-0 break-words">{messageText}</div>
             </div>
           </div>

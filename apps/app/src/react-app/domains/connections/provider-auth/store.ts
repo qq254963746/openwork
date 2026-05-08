@@ -351,6 +351,34 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     return null;
   };
 
+  const readGlobalConfigFile = async () => {
+    const root = options.selectedWorkspaceRoot().trim();
+    const isLocalWorkspace =
+      options.selectedWorkspaceDisplay().workspaceType === "local";
+    const openworkSnapshot = options.openworkServer.getSnapshot();
+    const openworkClient = openworkSnapshot.openworkServerClient;
+    const openworkWorkspaceId =
+      options.runtimeWorkspaceId() ??
+      (options.selectedWorkspaceId().trim() || null);
+    const openworkCapabilities = openworkSnapshot.openworkServerCapabilities;
+    const canUseOpenworkServer =
+      openworkSnapshot.openworkServerStatus === "connected" &&
+      openworkClient &&
+      openworkWorkspaceId &&
+      openworkCapabilities?.config?.read &&
+      typeof openworkClient.readOpencodeConfigFile === "function";
+
+    if (canUseOpenworkServer) {
+      return await openworkClient.readOpencodeConfigFile(openworkWorkspaceId, "global");
+    }
+
+    if (isLocalWorkspace && isDesktopRuntime() && root) {
+      return await readOpencodeConfig("global", root);
+    }
+
+    return null;
+  };
+
   const writeProjectConfigFile = async (content: string) => {
     const root = options.selectedWorkspaceRoot().trim();
     const isLocalWorkspace =
@@ -391,6 +419,50 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     return false;
   };
 
+  const writeGlobalConfigFile = async (content: string) => {
+    const root = options.selectedWorkspaceRoot().trim();
+    const isLocalWorkspace =
+      options.selectedWorkspaceDisplay().workspaceType === "local";
+    const openworkSnapshot = options.openworkServer.getSnapshot();
+    const openworkClient = openworkSnapshot.openworkServerClient;
+    const openworkWorkspaceId =
+      options.runtimeWorkspaceId() ??
+      (options.selectedWorkspaceId().trim() || null);
+    const openworkCapabilities = openworkSnapshot.openworkServerCapabilities;
+    const canUseOpenworkServer =
+      openworkSnapshot.openworkServerStatus === "connected" &&
+      openworkClient &&
+      openworkWorkspaceId &&
+      openworkCapabilities?.config?.write &&
+      typeof openworkClient.writeOpencodeConfigFile === "function";
+
+    if (canUseOpenworkServer) {
+      const result = await openworkClient.writeOpencodeConfigFile(
+        openworkWorkspaceId,
+        "global",
+        content,
+      );
+      if (!result.ok) {
+        throw new Error(
+          result.stderr || result.stdout || "Failed to write global opencode config",
+        );
+      }
+      return true;
+    }
+
+    if (isLocalWorkspace && isDesktopRuntime() && root) {
+      const result = await writeOpencodeConfig("global", root, content);
+      if (!result.ok) {
+        throw new Error(
+          result.stderr || result.stdout || "Failed to write global opencode config",
+        );
+      }
+      return true;
+    }
+
+    return false;
+  };
+
   const updateProjectConfigFile = async (
     updater: (raw: string) => string,
     fallbackUpdate?: (config: Record<string, unknown>) => Record<string, unknown>,
@@ -415,6 +487,17 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     const config = unwrap(await c.config.get());
     const next = fallbackUpdate(config);
     await c.config.update({ config: next });
+    return true;
+  };
+
+  const updateGlobalConfigFile = async (updater: (raw: string) => string) => {
+    const configFile = await readGlobalConfigFile();
+    if (!configFile) return false;
+
+    const raw = configFile.content?.trim()
+      ? configFile.content
+      : '{\n  "$schema": "https://opencode.ai/config.json"\n}\n';
+    await writeGlobalConfigFile(updater(raw));
     return true;
   };
 
@@ -857,10 +940,21 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       await c.auth.set({ providerID: providerId, auth: { type: "api", key: trimmed } });
 
       const trimmedBase = baseUrl.trim();
-      const persisted = await updateProjectConfigFile(
-        (raw) => mergeProviderOptionsBaseUrl(raw, providerId, trimmedBase ? trimmedBase : undefined),
-        (config) => mergeProviderBaseUrlInConfig(config, providerId, trimmedBase ? trimmedBase : undefined),
-      );
+      const baseUrlValue = trimmedBase ? trimmedBase : undefined;
+      let persisted = false;
+      try {
+        persisted = await updateGlobalConfigFile((raw) =>
+          mergeProviderOptionsBaseUrl(raw, providerId, baseUrlValue),
+        );
+      } catch {
+        persisted = false;
+      }
+      if (!persisted) {
+        persisted = await updateProjectConfigFile(
+          (raw) => mergeProviderOptionsBaseUrl(raw, providerId, baseUrlValue),
+          (config) => mergeProviderBaseUrlInConfig(config, providerId, baseUrlValue),
+        );
+      }
       if (persisted) {
         options.markOpencodeConfigReloadRequired();
       }

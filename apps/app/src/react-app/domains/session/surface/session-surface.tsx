@@ -43,6 +43,7 @@ import {
   statusKey as reactStatusKey,
   transcriptKey as reactTranscriptKey,
 } from "../sync/session-sync";
+import { SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX } from "../../../../app/types";
 
 const EMPTY_TRANSCRIPT: UIMessage[] = [];
 const IDLE_STATUS: SessionStatus = { type: "idle" };
@@ -191,6 +192,20 @@ function parseSessionError(thrown: unknown): SessionError {
     return { message: raw, kind: "model-not-found" };
   }
   return { message: raw || "Failed to send prompt." };
+}
+
+function formatSessionErrorMessage(error: SessionError) {
+  const detail = (error.message ?? "").trim();
+  if (!detail) return "Request failed.";
+  return `Request failed.\n\n${detail}`;
+}
+
+function buildLocalAssistantErrorMessage(text: string): UIMessage {
+  return {
+    id: `${SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    role: "assistant",
+    parts: [{ type: "text", text, state: "done" }],
+  };
 }
 
 function SessionErrorCard({ error, onDismiss, onChangeModel, onOpenModelPicker }: {
@@ -562,8 +577,8 @@ export function SessionSurface(props: SessionSurfaceProps) {
   const liveStatus = statusState ?? snapshot?.status ?? IDLE_STATUS;
   const chatStreaming = sending || liveStatus.type === "busy" || liveStatus.type === "retry";
   const renderedMessages = useMemo(
-    () => deriveRenderedSessionMessages({ transcriptState, snapshot, includeLiveOnlyMessages: chatStreaming }),
-    [chatStreaming, snapshot, transcriptState],
+    () => deriveRenderedSessionMessages({ transcriptState, snapshot, includeLiveOnlyMessages: chatStreaming || Boolean(error) }),
+    [chatStreaming, error, snapshot, transcriptState],
   );
 
   const workspacePanelRefreshPrevStreamingRef = useRef<boolean | null>(null);
@@ -695,11 +710,24 @@ export function SessionSurface(props: SessionSurfaceProps) {
     } catch (nextError) {
       const parsed = parseSessionError(nextError);
       setError(parsed);
+      getReactQueryClient().setQueryData<UIMessage[]>(
+        reactTranscriptKey(props.workspaceId, props.sessionId),
+        (current = []) => [...current, buildLocalAssistantErrorMessage(formatSessionErrorMessage(parsed))],
+      );
       setDraft("");
       setAwaitingAssistantBaseline(null);
       setSending(false);
     }
-  }, [attachments, buildDraft, draft, props.onDraftChange, props.onSendDraft, renderedMessages.length]);
+  }, [
+    attachments,
+    buildDraft,
+    draft,
+    props.onDraftChange,
+    props.onSendDraft,
+    props.sessionId,
+    props.workspaceId,
+    renderedMessages.length,
+  ]);
 
   const handleAbort = useCallback(async () => {
     if (!chatStreaming) return;

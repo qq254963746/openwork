@@ -625,7 +625,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
           <div>
             <h3 className="text-lg font-semibold text-gray-12">Connect providers</h3>
             <p className="text-sm text-gray-11 mt-1">
-              Sign in with OAuth or paste an API key for your workspace.
+              Sign in with OAuth or paste an API key for this device.
             </p>
           </div>
           <Button variant="ghost" className="!p-2 rounded-full" onClick={handleClose} aria-label="Close">

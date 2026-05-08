@@ -3,8 +3,9 @@ import type { Part, PermissionRequest, QuestionRequest, SessionStatus, Todo } fr
 
 import { getReactQueryClient } from "../../../infra/query-client";
 import { createClient } from "../../../../app/lib/opencode";
-import { normalizeEvent } from "../../../../app/utils";
+import { normalizeEvent, safeStringify } from "../../../../app/utils";
 import type { OpencodeEvent, PendingPermission, PendingQuestion } from "../../../../app/types";
+import { SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX } from "../../../../app/types";
 import { snapshotToUIMessages } from "./usechat-adapter";
 import type { OpenworkSessionSnapshot } from "../../../../app/lib/openwork-server";
 import { mergeSnapshotIntoCachedMessages, messageListContainsAll } from "./message-merge";
@@ -38,6 +39,79 @@ type SyncEntry = {
 
 const idleStatus: SessionStatus = { type: "idle" };
 const syncs = new Map<string, SyncEntry>();
+
+function buildLocalAssistantErrorMessage(text: string): UIMessage {
+  return {
+    id: `${SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    role: "assistant",
+    parts: [{ type: "text", text, state: "done" }],
+  };
+}
+
+function formatSessionErrorText(details: { type?: string | null; message?: string | null }) {
+  const type = (details.type ?? "").trim();
+  const message = (details.message ?? "").trim();
+  const header = "Request failed.";
+  if (type && message) return `${header}\n\n[${type}]: ${message}`;
+  if (type) return `${header}\n\n[${type}]`;
+  if (message) return `${header}\n\n${message}`;
+  return header;
+}
+
+function extractSessionErrorDetails(error: unknown): { type?: string; message?: string } {
+  if (!error) return {};
+  if (typeof error === "string") return { message: error };
+  if (error instanceof Error) return { message: error.message || safeStringify(error) };
+  if (typeof error !== "object") return { message: String(error) };
+
+  const record = error as Record<string, unknown>;
+  const type = typeof record.type === "string" ? record.type : undefined;
+  const message = typeof record.message === "string" ? record.message : undefined;
+  if ((type?.trim() || message?.trim()) && (type?.trim() || message?.trim())) {
+    // don't early-return; nested may have better message/type
+  }
+
+  if ("error" in record) {
+    const nested = extractSessionErrorDetails(record.error);
+    if ((nested.type?.trim() || nested.message?.trim()) && (!type || !message)) {
+      return { type: nested.type ?? type, message: nested.message ?? message };
+    }
+  }
+
+  if ("data" in record) {
+    const nested = extractSessionErrorDetails(record.data);
+    if ((nested.type?.trim() || nested.message?.trim()) && (!type || !message)) {
+      return { type: nested.type ?? type, message: nested.message ?? message };
+    }
+  }
+
+  const responseBody = typeof record.responseBody === "string" ? record.responseBody : "";
+  if (responseBody.trim()) {
+    try {
+      const parsed = JSON.parse(responseBody) as any;
+      const parsedType =
+        typeof parsed?.error?.type === "string"
+          ? parsed.error.type
+          : typeof parsed?.type === "string"
+            ? parsed.type
+            : undefined;
+      const parsedMessage =
+        typeof parsed?.error?.message === "string"
+          ? parsed.error.message
+          : typeof parsed?.message === "string"
+            ? parsed.message
+            : undefined;
+      if (parsedType?.trim() || parsedMessage?.trim()) {
+        return { type: parsedType ?? type, message: parsedMessage ?? message };
+      }
+    } catch {
+      return { type, message: responseBody };
+    }
+  }
+
+  const fallback = safeStringify(error);
+  return { type, message: message ?? fallback };
+}
 
 export const transcriptKey = (workspaceId: string, sessionId: string) =>
   ["react-session-transcript", workspaceId, sessionId] as const;
@@ -337,6 +411,31 @@ function appendDelta(messages: UIMessage[], messageId: string, partId: string, d
 
 function applyEvent(entry: SyncEntry, workspaceId: string, event: OpencodeEvent) {
   const queryClient = getReactQueryClient();
+
+  if (event.type === "session.error") {
+    const props = (event.properties ?? {}) as { sessionID?: string; error?: unknown };
+    const sessionId = typeof props.sessionID === "string" ? props.sessionID : "";
+    if (!sessionId) return;
+    const details = extractSessionErrorDetails(props.error);
+    const text = formatSessionErrorText({
+      type: details.type,
+      message: details.message || "Session failed",
+    });
+    queryClient.setQueryData<UIMessage[]>(transcriptKey(workspaceId, sessionId), (current = []) => {
+      const last = current[current.length - 1];
+      const lastText =
+        last?.role === "assistant"
+          ? last.parts
+              .flatMap((part) => (part.type === "text" ? [part.text] : []))
+              .join("")
+              .trim()
+          : "";
+      if (lastText && lastText === text.trim()) return current;
+      return [...current, buildLocalAssistantErrorMessage(text)];
+    });
+    queryClient.setQueryData(statusKey(workspaceId, sessionId), idleStatus);
+    return;
+  }
 
   if (event.type === "session.status") {
     const props = (event.properties ?? {}) as { sessionID?: string; status?: SessionStatus };
