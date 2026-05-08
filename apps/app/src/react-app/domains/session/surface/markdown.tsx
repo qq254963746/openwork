@@ -5,9 +5,11 @@ import type { Components, Options as ReactMarkdownOptions } from "react-markdown
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import rehypeHighlight from "rehype-highlight";
 import { Streamdown } from "streamdown";
 
 import "katex/dist/katex.min.css";
+import "highlight.js/styles/github.min.css";
 
 import { applyTextHighlights } from "./text-highlights";
 
@@ -15,15 +17,27 @@ import { applyTextHighlights } from "./text-highlights";
 const remarkMarkdownPlugins = [remarkGfm, remarkMath];
 const rehypeMarkdownPlugins: NonNullable<ReactMarkdownOptions["rehypePlugins"]> = [
   [rehypeKatex, { throwOnError: false }],
+  rehypeHighlight,
 ];
 
+function nodeToPlainText(node: React.ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(nodeToPlainText).join("");
+  if (typeof node === "object" && "props" in node) {
+    const props = (node as { props?: { children?: React.ReactNode } }).props;
+    return nodeToPlainText(props?.children);
+  }
+  return "";
+}
+
 function MarkdownCodeBlock(props: { className?: string; children: React.ReactNode }) {
-  const text = Array.isArray(props.children) ? props.children.join("") : String(props.children ?? "");
+  const text = nodeToPlainText(props.children);
   const [copied, setCopied] = useState(false);
 
   return (
-    <div className="my-4 overflow-hidden rounded-[18px] border border-dls-border/70 bg-gray-1/80">
-      <div className="flex items-center justify-end border-b border-dls-border/70 px-3 py-2">
+    <div className="my-4 overflow-hidden rounded-[18px] border border-dls-border/70 bg-dls-surface">
+      <div className="flex items-center justify-end border-b border-dls-border/70 bg-dls-surface px-3 py-2">
         <button
           type="button"
           className="rounded-full border border-dls-border bg-dls-surface px-3 py-1 text-[11px] font-medium text-dls-text transition-colors hover:bg-dls-hover"
@@ -36,8 +50,10 @@ function MarkdownCodeBlock(props: { className?: string; children: React.ReactNod
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <pre className="overflow-x-auto px-4 py-3 text-[12px] leading-6 text-gray-12">
-        <code className={props.className}>{props.children}</code>
+      <pre className="overflow-x-auto px-4 py-3 text-[12px] leading-6 text-gray-12 !bg-transparent">
+        <code className={props.className} style={{ backgroundColor: "transparent" }}>
+          {props.children}
+        </code>
       </pre>
     </div>
   );
@@ -58,7 +74,7 @@ const markdownComponents: Components = {
   },
   pre({ children }) {
     return (
-      <pre className="my-4 overflow-x-auto rounded-[18px] border border-dls-border/70 bg-gray-1/80 px-4 py-3 text-[12px] leading-6 text-gray-12">
+      <pre className="my-4 overflow-x-auto rounded-[18px] border border-dls-border/70 bg-dls-surface px-4 py-3 text-[12px] leading-6 text-gray-12 !bg-transparent">
         {children}
       </pre>
     );
@@ -102,6 +118,9 @@ const markdownClassName = `markdown-content max-w-none text-gray-12
   [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6
   [&_li]:my-1
   [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto
+  [&_pre]:!bg-transparent
+  [&_pre_code]:!bg-transparent
+  [&_.hljs]:!bg-transparent
 `.trim();
 
 function MarkdownBlockInner(props: {
