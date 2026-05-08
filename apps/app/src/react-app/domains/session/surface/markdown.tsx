@@ -1,11 +1,21 @@
 /** @jsxImportSource react */
 import { memo, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import type { Components } from "react-markdown";
+import type { Components, Options as ReactMarkdownOptions } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import { Streamdown } from "streamdown";
 
+import "katex/dist/katex.min.css";
+
 import { applyTextHighlights } from "./text-highlights";
+
+/** GFM + LaTeX ($...$, $$...$$); KaTeX won't throw on incomplete streams */
+const remarkMarkdownPlugins = [remarkGfm, remarkMath];
+const rehypeMarkdownPlugins: NonNullable<ReactMarkdownOptions["rehypePlugins"]> = [
+  [rehypeKatex, { throwOnError: false }],
+];
 
 function MarkdownCodeBlock(props: { className?: string; children: React.ReactNode }) {
   const text = Array.isArray(props.children) ? props.children.join("") : String(props.children ?? "");
@@ -91,6 +101,7 @@ const markdownClassName = `markdown-content max-w-none text-gray-12
   [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6
   [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6
   [&_li]:my-1
+  [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto
 `.trim();
 
 function MarkdownBlockInner(props: {
@@ -115,7 +126,12 @@ function MarkdownBlockInner(props: {
   if (props.streaming) {
     return (
       <div ref={rootRef} className={markdownClassName}>
-        <Streamdown remarkPlugins={[remarkGfm]} components={markdownComponents} skipHtml>
+        <Streamdown
+          remarkPlugins={remarkMarkdownPlugins}
+          rehypePlugins={rehypeMarkdownPlugins}
+          components={markdownComponents}
+          skipHtml
+        >
           {props.text}
         </Streamdown>
       </div>
@@ -124,7 +140,12 @@ function MarkdownBlockInner(props: {
 
   return (
     <div ref={rootRef} className={markdownClassName}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents} skipHtml>
+      <ReactMarkdown
+        remarkPlugins={remarkMarkdownPlugins}
+        rehypePlugins={rehypeMarkdownPlugins}
+        components={markdownComponents}
+        skipHtml
+      >
         {props.text}
       </ReactMarkdown>
     </div>

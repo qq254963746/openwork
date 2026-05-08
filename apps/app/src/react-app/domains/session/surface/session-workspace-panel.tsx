@@ -740,21 +740,20 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <div
-          className="shrink-0 select-none border-b border-dls-border px-3 py-2"
-          {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
-          style={{
-            ...WORKSPACE_PANEL_HEADER_DRAG_STYLE,
-            ...(isElectronRuntime() && isMacPlatform()
-              ? ({ WebkitAppRegion: "drag" } as CSSProperties)
-              : {}),
-          }}
-        >
+        {/* Drag region must not wrap toolbar buttons (WKWebView hit-testing); mirror workspace-session-list. */}
+        <div className="shrink-0 border-b border-dls-border px-3 py-2">
           <div
-            className={`flex items-center justify-between gap-2 ${isDesktopRuntime() ? "cursor-default" : ""}`}
+            className={`flex min-h-[28px] items-center gap-2 ${isDesktopRuntime() ? "cursor-default" : ""}`}
           >
             <div
-              className={`inline-flex w-fit max-w-full shrink-0 text-[11px] font-semibold uppercase tracking-wide text-dls-secondary ${isDesktopRuntime() ? "cursor-default" : ""}`}
+              className={`flex min-w-0 flex-1 items-center select-none text-[11px] font-semibold uppercase tracking-wide text-dls-secondary ${isDesktopRuntime() ? "cursor-default" : ""}`}
+              {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
+              style={{
+                ...WORKSPACE_PANEL_HEADER_DRAG_STYLE,
+                ...(isElectronRuntime() && isMacPlatform()
+                  ? ({ WebkitAppRegion: "drag" } as CSSProperties)
+                  : {}),
+              }}
             >
               {t("session.workspace_panel_files")}
             </div>

@@ -465,7 +465,7 @@ export function SessionPage(props: SessionPageProps) {
               />
             ) : null}
             <div
-              className={`relative z-[1] flex min-w-0 flex-1 items-center gap-3 ${
+              className={`relative z-[2] flex min-w-0 flex-1 items-center gap-3 ${
                 mainHeaderDragPassThrough ? "pointer-events-none" : ""
               } ${isDesktopRuntime() && !mainHeaderDragPassThrough ? "cursor-default" : ""}`}
             >
@@ -522,14 +522,12 @@ export function SessionPage(props: SessionPageProps) {
               </div>
             </div>
             <div
-              className={`relative z-[1] flex shrink-0 items-center ${
+              className={`relative z-[2] flex shrink-0 items-center ${
                 mainHeaderDragPassThrough ? "pointer-events-none" : ""
               }`}
-              {...(!mainHeaderDragPassThrough && isTauriRuntime()
-                ? ({ "data-tauri-drag-region": "false" } as const)
-                : {})}
+              {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
               style={
-                !mainHeaderDragPassThrough && isElectronRuntime() && isMacPlatform()
+                isElectronRuntime() && isMacPlatform()
                   ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
                   : undefined
               }
