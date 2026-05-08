@@ -16,6 +16,7 @@ import { normalizeModelBehaviorValue } from "../../app/lib/model-behavior";
 export type SessionChoiceOverride = {
   model?: ModelRef | null;
   variant?: string | null;
+  agent?: string | null;
 };
 
 export type ModelPickerTarget = "default" | "session";
@@ -62,7 +63,10 @@ const normalizeSessionChoice = (
   if (hasOwn(value, "variant")) {
     next.variant = normalizeModelBehaviorValue(value.variant ?? null);
   }
-  return hasOwn(next, "variant") || next.model ? next : null;
+  if (hasOwn(value, "agent")) {
+    next.agent = typeof value.agent === "string" ? value.agent : null;
+  }
+  return hasOwn(next, "variant") || hasOwn(next, "agent") || next.model ? next : null;
 };
 
 export function parseSessionChoiceOverrides(
@@ -90,6 +94,9 @@ export function parseSessionChoiceOverrides(
         ...(hasOwn(record, "variant")
           ? { variant: normalizeVariantOverride(record.variant) }
           : {}),
+        ...(hasOwn(record, "agent")
+          ? { agent: typeof record.agent === "string" ? record.agent : null }
+          : {}),
       });
       if (choice) next[sessionId] = choice;
     }
@@ -114,12 +121,15 @@ export function serializeSessionChoiceOverrides(
 
   if (!entries.length) return null;
 
-  const payload: Record<string, { model?: string; variant?: string | null }> =
-    {};
+  const payload: Record<
+    string,
+    { model?: string; variant?: string | null; agent?: string | null }
+  > = {};
   for (const [sessionId, choice] of entries) {
-    const next: { model?: string; variant?: string | null } = {};
+    const next: { model?: string; variant?: string | null; agent?: string | null } = {};
     if (choice.model) next.model = formatModelRef(choice.model);
     if (hasOwn(choice, "variant")) next.variant = choice.variant ?? null;
+    if (hasOwn(choice, "agent")) next.agent = choice.agent ?? null;
     payload[sessionId] = next;
   }
   return JSON.stringify(payload);
@@ -176,6 +186,56 @@ export function writeSessionModelOverride(
   if (!ws || !sid) return;
   const overrides = readSessionChoiceOverridesForWorkspace(ws);
   overrides[sid] = { ...(overrides[sid] ?? {}), model };
+  const serialized = serializeSessionChoiceOverrides(overrides);
+  safeLocalStorageSet(sessionModelOverridesKey(ws), serialized);
+}
+
+export function readSessionVariantOverride(
+  workspaceId: string,
+  sessionId: string,
+): string | null {
+  const ws = workspaceId.trim();
+  const sid = sessionId.trim();
+  if (!ws || !sid) return null;
+  const overrides = readSessionChoiceOverridesForWorkspace(ws);
+  return hasOwn(overrides[sid] ?? {}, "variant") ? (overrides[sid]?.variant ?? null) : null;
+}
+
+export function writeSessionVariantOverride(
+  workspaceId: string,
+  sessionId: string,
+  variant: string | null,
+): void {
+  const ws = workspaceId.trim();
+  const sid = sessionId.trim();
+  if (!ws || !sid) return;
+  const overrides = readSessionChoiceOverridesForWorkspace(ws);
+  overrides[sid] = { ...(overrides[sid] ?? {}), variant: normalizeModelBehaviorValue(variant ?? null) };
+  const serialized = serializeSessionChoiceOverrides(overrides);
+  safeLocalStorageSet(sessionModelOverridesKey(ws), serialized);
+}
+
+export function readSessionAgentOverride(
+  workspaceId: string,
+  sessionId: string,
+): string | null {
+  const ws = workspaceId.trim();
+  const sid = sessionId.trim();
+  if (!ws || !sid) return null;
+  const overrides = readSessionChoiceOverridesForWorkspace(ws);
+  return hasOwn(overrides[sid] ?? {}, "agent") ? (overrides[sid]?.agent ?? null) : null;
+}
+
+export function writeSessionAgentOverride(
+  workspaceId: string,
+  sessionId: string,
+  agent: string | null,
+): void {
+  const ws = workspaceId.trim();
+  const sid = sessionId.trim();
+  if (!ws || !sid) return;
+  const overrides = readSessionChoiceOverridesForWorkspace(ws);
+  overrides[sid] = { ...(overrides[sid] ?? {}), agent: typeof agent === "string" ? agent : null };
   const serialized = serializeSessionChoiceOverrides(overrides);
   safeLocalStorageSet(sessionModelOverridesKey(ws), serialized);
 }

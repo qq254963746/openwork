@@ -107,7 +107,14 @@ import { getReactQueryClient } from "../infra/query-client";
 import { useStatusToasts } from "../domains/shell-feedback/status-toasts";
 import { useSessionControlActions } from "../domains/session/control/session-control-actions";
 import { legacySessionRoute, workspaceSessionRoute, workspaceSettingsRoute } from "./workspace-routes";
-import { readSessionModelOverride, writeSessionModelOverride } from "../kernel/model-config";
+import {
+  readSessionAgentOverride,
+  readSessionModelOverride,
+  readSessionVariantOverride,
+  writeSessionAgentOverride,
+  writeSessionModelOverride,
+  writeSessionVariantOverride,
+} from "../kernel/model-config";
 
 type RouteWorkspace = OpenworkWorkspaceInfo & {
   displayNameResolved: string;
@@ -380,7 +387,7 @@ export function SessionRoute() {
   const [routeError, setRouteError] = useState<string | null>(null);
   const [legacySelectedWorkspaceId, setLegacySelectedWorkspaceId] = useState<string>(() => readActiveWorkspaceId() ?? "");
   const selectedWorkspaceId = routeWorkspaceId || legacySelectedWorkspaceId;
-  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [sessionAgentOverrideState, setSessionAgentOverrideState] = useState<string | null>(null);
   // One-way latch for "a refreshRouteState is currently running"; prevents
   // overlapping route refreshes from queueing up when the user clicks fast.
   const refreshInFlightRef = useRef(false);
@@ -413,6 +420,7 @@ export function SessionRoute() {
   const [permissionReplyBusy, setPermissionReplyBusy] = useState(false);
   const permissionReplyBusyRef = useRef(false);
   const [sessionModelOverrideState, setSessionModelOverrideState] = useState<ModelRef | null>(null);
+  const [sessionVariantOverrideState, setSessionVariantOverrideState] = useState<string | null>(null);
   // Provider catalog cache. Used to compute the reasoning/thinking variant
   // options for whichever model is currently selected so the composer's
   // behavior pill actually shows its options (bug: was empty before).
@@ -1281,10 +1289,18 @@ export function SessionRoute() {
   useEffect(() => {
     if (!selectedWorkspaceId || !selectedSessionId) {
       setSessionModelOverrideState(null);
+      setSessionVariantOverrideState(null);
+      setSessionAgentOverrideState(null);
       return;
     }
     setSessionModelOverrideState(
       readSessionModelOverride(selectedWorkspaceId, selectedSessionId),
+    );
+    setSessionVariantOverrideState(
+      readSessionVariantOverride(selectedWorkspaceId, selectedSessionId),
+    );
+    setSessionAgentOverrideState(
+      readSessionAgentOverride(selectedWorkspaceId, selectedSessionId),
     );
   }, [selectedSessionId, selectedWorkspaceId]);
 
@@ -1325,8 +1341,8 @@ export function SessionRoute() {
   // Compute behavior (reasoning/thinking variant) options for the current
   // default model. This is what the composer renders as its variant pill.
   const { modelVariantLabel, modelBehaviorOptions } = useMemo(() => {
-    const ref = local.prefs.defaultModel;
-    const variant = local.prefs.modelVariant ?? null;
+    const ref = effectiveModel ?? local.prefs.defaultModel;
+    const variant = sessionVariantOverrideState ?? null;
     if (!ref) {
       return { modelVariantLabel: t("settings.default_label"), modelBehaviorOptions: [] as { value: string | null; label: string }[] };
     }
@@ -1336,7 +1352,7 @@ export function SessionRoute() {
     }
     const summary = getModelBehaviorSummary(ref.providerID, model, variant);
     return { modelVariantLabel: summary.label, modelBehaviorOptions: summary.options };
-  }, [local.prefs.defaultModel, local.prefs.modelVariant, providerCatalog]);
+  }, [effectiveModel, local.prefs.defaultModel, providerCatalog, sessionVariantOverrideState]);
 
   // Load the picker list lazily the first time the modal opens. Uses the
   // cached catalog when available, otherwise re-fetches.
@@ -1479,8 +1495,8 @@ export function SessionRoute() {
           sessionID: selectedSessionId,
           parts,
           model: effectiveModel ?? undefined,
-          agent: selectedAgent ?? undefined,
-          ...(local.prefs.modelVariant ? { variant: local.prefs.modelVariant } : {}),
+          agent: sessionAgentOverrideState ?? undefined,
+          ...(sessionVariantOverrideState ? { variant: sessionVariantOverrideState } : {}),
           ...(envSystemContext ? { system: envSystemContext } : {}),
         });
         if (result.error) {
@@ -1519,18 +1535,28 @@ export function SessionRoute() {
       attachmentsEnabled: true,
       attachmentsDisabledReason: null,
       modelVariantLabel,
-      modelVariant: local.prefs.modelVariant ?? null,
+      modelVariant: sessionVariantOverrideState ?? null,
       modelBehaviorOptions,
       onModelVariantChange: (value: string | null) => {
-        local.setPrefs((previous) => ({ ...previous, modelVariant: value }));
+        if (selectedWorkspaceId && selectedSessionId) {
+          writeSessionVariantOverride(selectedWorkspaceId, selectedSessionId, value);
+          setSessionVariantOverrideState(value);
+        }
       },
-      agentLabel: selectedAgent ? selectedAgent.charAt(0).toUpperCase() + selectedAgent.slice(1) : t("session.default_agent"),
-      selectedAgent,
+      agentLabel: sessionAgentOverrideState
+        ? sessionAgentOverrideState.charAt(0).toUpperCase() + sessionAgentOverrideState.slice(1)
+        : t("session.default_agent"),
+      selectedAgent: sessionAgentOverrideState,
       listAgents: async () => {
-        const list = unwrap(await opencodeClient.app.agents());
-        return list.filter((agent) => !agent.hidden && agent.mode !== "subagent");
+        const list = unwrap(await opencodeClient.app.agents()) as import("@opencode-ai/sdk/v2/client").Agent[];
+        return list.filter((agent: import("@opencode-ai/sdk/v2/client").Agent) => !agent.hidden && agent.mode !== "subagent");
       },
-      onSelectAgent: (agent: string | null) => setSelectedAgent(agent),
+      onSelectAgent: (agent: string | null) => {
+        if (selectedWorkspaceId && selectedSessionId) {
+          writeSessionAgentOverride(selectedWorkspaceId, selectedSessionId, agent);
+          setSessionAgentOverrideState(agent);
+        }
+      },
       listCommands: listSlashCommands,
       recentFiles: [],
       searchFiles: async (query: string) => {
@@ -1571,9 +1597,10 @@ export function SessionRoute() {
     opencodeBaseUrl,
     opencodeClient,
     effectiveModel,
-    selectedAgent,
+    sessionAgentOverrideState,
     selectedSessionId,
     sessionModelOverrideState,
+    sessionVariantOverrideState,
     selectedWorkspace,
     selectedWorkspaceId,
     selectedWorkspaceRoot,

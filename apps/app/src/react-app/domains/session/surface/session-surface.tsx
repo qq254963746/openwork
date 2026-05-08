@@ -39,6 +39,7 @@ import { deriveSessionRenderModel } from "../sync/transition-controller";
 import { useSessionScrollController } from "./scroll-controller";
 import {
   seedSessionState,
+  questionKey as reactQuestionKey,
   statusKey as reactStatusKey,
   transcriptKey as reactTranscriptKey,
 } from "../sync/session-sync";
@@ -706,6 +707,13 @@ export function SessionSurface(props: SessionSurfaceProps) {
     try {
       await abortSessionSafe(opencodeClient, props.sessionId);
       await snapshotQuery.refetch();
+      // If we were waiting on an AskQuestion prompt, aborting won't always
+      // emit question.replied; clear UI state immediately so the prompt
+      // doesn't linger after Stop/close.
+      getReactQueryClient().removeQueries({
+        queryKey: reactQuestionKey(props.workspaceId, props.sessionId),
+        exact: true,
+      });
     } catch (nextError) {
       setError({ message: nextError instanceof Error ? nextError.message : "Failed to stop run." });
     }
@@ -1127,6 +1135,9 @@ export function SessionSurface(props: SessionSurfaceProps) {
             active={{ id: props.activeQuestion.id, questions: props.activeQuestion.questions ?? [] }}
             busy={Boolean(props.questionReplyBusy)}
             onReply={(answers) => props.respondQuestion?.(props.activeQuestion!.id, answers)}
+            onDismiss={() => {
+              void handleAbort();
+            }}
           />
         ) : null}
         <DevProfiler id="SessionComposer">
