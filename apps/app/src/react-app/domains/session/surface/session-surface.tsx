@@ -437,7 +437,6 @@ export function SessionSurface(props: SessionSurfaceProps) {
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [mentions, setMentions] = useState<Record<string, "agent" | "file">>({});
-  const [pasteParts, setPasteParts] = useState<Array<{ id: string; label: string; text: string; lines: number }>>([]);
   const [notice, setNotice] = useState<ReactComposerNotice | null>(null);
   const [error, setError] = useState<SessionError | null>(null);
   const [sending, setSending] = useState(false);
@@ -501,7 +500,6 @@ export function SessionSurface(props: SessionSurfaceProps) {
       return [];
     });
     setMentions({});
-    setPasteParts([]);
     setNotice(null);
   }, [props.sessionId]);
 
@@ -533,11 +531,6 @@ export function SessionSurface(props: SessionSurfaceProps) {
         kind: attachment.kind,
       })),
       mentions,
-      pasteParts: pasteParts.map((part) => ({
-        id: part.id,
-        label: part.label,
-        lines: part.lines,
-      })),
       sending,
       error,
       hasNotice: Boolean(notice),
@@ -549,7 +542,6 @@ export function SessionSurface(props: SessionSurfaceProps) {
     error,
     mentions,
     notice,
-    pasteParts,
     props.sessionId,
     props.workspaceId,
     sending,
@@ -655,13 +647,6 @@ export function SessionSurface(props: SessionSurfaceProps) {
     const slashMatch = trimmed.match(/^\/([^\s]+)\s*(.*)$/);
     const parts: ComposerPart[] = text.split(/(\[pasted text [^\]]+\]|@[^\s@]+)/).flatMap((segment) => {
       if (!segment) return [] as ComposerDraft["parts"];
-      const pasteMatch = segment.match(/^\[pasted text (.+)\]$/);
-      if (pasteMatch) {
-        const target = pasteParts.find((item) => item.label === pasteMatch[1]);
-        if (target) {
-          return [{ type: "paste", id: target.id, label: target.label, text: target.text, lines: target.lines }];
-        }
-      }
       if (segment.startsWith("@")) {
         const value = segment.slice(1);
         const kind = mentions[value];
@@ -670,21 +655,15 @@ export function SessionSurface(props: SessionSurfaceProps) {
       }
       return [{ type: "text", text: segment } satisfies ComposerDraft["parts"][number]];
     });
-    // Expand paste placeholders in resolvedText so the model receives
-    // the actual pasted content instead of "[pasted text <label>]".
-    let resolved = text;
-    for (const part of pasteParts) {
-      resolved = resolved.replace(`[pasted text ${part.label}]`, part.text);
-    }
     return {
       mode: "prompt",
       parts,
       attachments: nextAttachments,
       text,
-      resolvedText: resolved,
+      resolvedText: text,
       command: slashMatch ? { name: slashMatch[1] ?? "", arguments: slashMatch[2] ?? "" } : undefined,
     };
-  }, [mentions, pasteParts]);
+  }, [mentions]);
 
   const handleCopyTranscript = async () => {
     try {
@@ -807,32 +786,6 @@ export function SessionSurface(props: SessionSurfaceProps) {
   const handleInsertMention = (kind: "agent" | "file", value: string) => {
     setDraft((current) => current.replace(/@([^\s@]*)$/, `@${value} `));
     setMentions((current) => ({ ...current, [value]: kind }));
-  };
-
-  const handlePasteText = (text: string) => {
-    const id = `paste-${Math.random().toString(36).slice(2)}`;
-    const label = `${id.slice(-4)} · ${text.split(/\r?\n/).length} lines`;
-    setPasteParts((current) => [...current, { id, label, text, lines: text.split(/\r?\n/).length }]);
-    setDraft((current) => `${current}[pasted text ${label}]`);
-  };
-
-  const handleRevealPastedText = (id: string) => {
-    const part = pasteParts.find((item) => item.id === id);
-    if (!part) return;
-    setNotice({
-      title: `Pasted text · ${part.label}`,
-      description: part.text.slice(0, 800),
-      tone: "info",
-    });
-  };
-
-  const handleRemovePastedText = (id: string) => {
-    setPasteParts((current) => {
-      const target = current.find((item) => item.id === id);
-      if (!target) return current;
-      setDraft((draftValue) => draftValue.replace(`[pasted text ${target.label}]`, ""));
-      return current.filter((item) => item.id !== id);
-    });
   };
 
   const handleUnsupportedFileLinks = (links: string[]) => {
@@ -1224,11 +1177,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
         onInsertMention={handleInsertMention}
         notice={notice}
         onNotice={setNotice}
-        onPasteText={handlePasteText}
         onUnsupportedFileLinks={handleUnsupportedFileLinks}
-        pastedText={pasteParts}
-        onRevealPastedText={handleRevealPastedText}
-        onRemovePastedText={handleRemovePastedText}
         isRemoteWorkspace={props.isRemoteWorkspace}
           isSandboxWorkspace={props.isSandboxWorkspace}
           onUploadInboxFiles={props.onUploadInboxFiles ?? handleUploadInboxFiles}
@@ -1243,7 +1192,6 @@ export function SessionSurface(props: SessionSurfaceProps) {
           workspaceRoot={props.workspaceRoot}
           attachments={attachments}
           mentions={mentions}
-          pasteParts={pasteParts}
           messages={renderedMessages}
           liveWorkspacePreview={chatStreaming}
         />

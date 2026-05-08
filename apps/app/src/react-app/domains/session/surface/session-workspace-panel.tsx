@@ -298,7 +298,6 @@ export type SessionWorkspacePanelProps = {
   workspaceRoot: string;
   attachments: ComposerAttachment[];
   mentions: Record<string, "agent" | "file">;
-  pasteParts: Array<{ id: string; label: string; text: string; lines: number }>;
   messages: UIMessage[];
   /** When true (e.g. assistant streaming / session busy), poll file list, markdown preview, and keep context in sync. */
   liveWorkspacePreview?: boolean;
@@ -749,21 +748,6 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
               </ul>
             </div>
           ) : null}
-          {props.pasteParts.length > 0 ? (
-            <div>
-              <div className="text-[11px] font-medium text-dls-secondary">{t("session.context_pastes")}</div>
-              <ul className="mt-1 space-y-0.5">
-                {props.pasteParts.map((p) => (
-                  <li key={p.id} className="truncate text-[11px] text-dls-text">
-                    {p.label}
-                    <span className="ml-1 text-dls-secondary">
-                      ({p.lines} {t("session.context_lines")})
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
           {toolsUsed.length > 0 ? (
             <div>
               <div className="text-[11px] font-medium text-dls-secondary">{t("session.context_tools")}</div>
@@ -781,7 +765,6 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
           ) : null}
           {!props.attachments.length &&
           !Object.keys(props.mentions).length &&
-          !props.pasteParts.length &&
           !toolsUsed.length ? (
             <div className="text-[11px] text-dls-secondary">{t("session.context_empty")}</div>
           ) : null}

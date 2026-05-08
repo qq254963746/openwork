@@ -19,13 +19,6 @@ type MentionItem = {
   label: string;
 };
 
-type PastedTextChip = {
-  id: string;
-  label: string;
-  text: string;
-  lines: number;
-};
-
 type ToolMenuSettingsSection = "commands" | "skills" | "mcps" | "plugins";
 type ToolMenuSection = "commands" | "skills" | "mcps" | `plugin:${string}`;
 
@@ -68,11 +61,7 @@ type ComposerProps = {
   onInsertMention: (kind: "agent" | "file", value: string) => void;
   notice: ReactComposerNoticeData | null;
   onNotice: (notice: ReactComposerNoticeData) => void;
-  onPasteText: (text: string) => void;
   onUnsupportedFileLinks: (links: string[]) => void;
-  pastedText: PastedTextChip[];
-  onRevealPastedText: (id: string) => void;
-  onRemovePastedText: (id: string) => void;
   isRemoteWorkspace: boolean;
   isSandboxWorkspace: boolean;
   onUploadInboxFiles?: ((files: File[]) => void | Promise<unknown>) | null;
@@ -601,11 +590,6 @@ export function ReactSessionComposer(props: ComposerProps) {
     if (!mentionQuery) return mentionItems.slice(0, 8);
     return fuzzysort.go(mentionQuery, mentionItems, { keys: ["label"], limit: 8 }).map((entry) => entry.obj);
   }, [mentionItems, mentionOpen, mentionQuery]);
-  const pastedTextTokens = useMemo(
-    () => props.pastedText.map((item) => ({ label: item.label, lines: item.lines })),
-    [props.pastedText],
-  );
-
   const activeMenu = slashOpen ? "slash" : mentionOpen ? "mention" : null;
   const activeItems = activeMenu === "slash" ? slashFiltered : activeMenu === "mention" ? mentionFiltered : [];
   const toolCommandItems = commands.filter((command) => !command.source || command.source === "command");
@@ -1005,14 +989,6 @@ export function ReactSessionComposer(props: ComposerProps) {
             </div>
           ) : null}
 
-          {/*
-            The pasted-text chip used to render twice — once inline inside
-            the Lexical editor (via ComposerPastedTextNode) and again as a
-            separate rail here above the composer. Keep only the inline
-            chip; its pill already shows label + line count, and the user
-            removes it with backspace like any other inline token.
-          */}
-
           {dropzoneActive ? (
             <div className="pointer-events-none absolute inset-3 z-20 flex items-center justify-center rounded-[20px] border-2 border-dashed border-dls-accent bg-[color:color-mix(in_oklab,var(--dls-accent)_10%,transparent)]">
               <div className="rounded-2xl border border-dls-border bg-dls-surface/95 px-5 py-4 text-center backdrop-blur-sm">
@@ -1027,12 +1003,10 @@ export function ReactSessionComposer(props: ComposerProps) {
             <LexicalPromptEditor
               value={props.draft}
               mentions={props.mentions}
-              pastedText={pastedTextTokens}
               disabled={props.disabled}
               placeholder={t("composer.placeholder")}
               onChange={props.onDraftChange}
               onSubmit={props.onSend}
-              onPasteText={props.onPasteText}
               onPaste={(event) => {
                 // Paste policy:
                 // 1. Actual files on the clipboard -> attach them.
@@ -1064,12 +1038,6 @@ export function ReactSessionComposer(props: ComposerProps) {
                 }
 
                 const text = event.clipboardData?.getData("text/plain") ?? "";
-
-                // Long pastes (3+ lines / 200+ chars) are collapsed into
-                // an inline chip by PasteChipPlugin inside the Lexical
-                // editor. Do NOT duplicate that here — calling onPasteText
-                // from both the React onPaste handler and the Lexical
-                // PASTE_COMMAND handler causes double chip creation.
 
                 if (
                   text.trim() &&
