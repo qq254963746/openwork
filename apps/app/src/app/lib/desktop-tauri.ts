@@ -725,6 +725,11 @@ export type OpencodeConfigFile = {
   content: string | null;
 };
 
+export type OpencodeAuthJsonFile = {
+  path: string | null;
+  content: string | null;
+};
+
 export type UpdaterEnvironment = {
   supported: boolean;
   reason: string | null;
@@ -749,6 +754,10 @@ export async function writeOpencodeConfig(
   content: string,
 ): Promise<ExecResult> {
   return invoke<ExecResult>("write_opencode_config", { scope, projectDir, content });
+}
+
+export async function readOpencodeAuthJson(): Promise<OpencodeAuthJsonFile> {
+  return invoke<OpencodeAuthJsonFile>("read_opencode_auth_json");
 }
 
 export async function resetOpenworkState(mode: "onboarding" | "all"): Promise<void> {

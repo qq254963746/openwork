@@ -3408,9 +3408,26 @@ function normalizeOpencodeScope(value: string | null | undefined): "project" | "
   return value?.trim().toLowerCase() === "global" ? "global" : "project";
 }
 
+/**
+ * Directory that contains global `opencode.json` / `opencode.jsonc`, aligned with OpenCode:
+ * `OPENCODE_CONFIG_DIR` (managed OpenWork / dev isolation), else `XDG_CONFIG_HOME/opencode`,
+ * else `~/.config/opencode`.
+ */
+function resolveGlobalOpencodeConfigBaseDir(): string {
+  const explicitDir = process.env.OPENCODE_CONFIG_DIR?.trim();
+  if (explicitDir) {
+    return explicitDir;
+  }
+  const xdgConfig = process.env.XDG_CONFIG_HOME?.trim();
+  if (xdgConfig) {
+    return join(xdgConfig, "opencode");
+  }
+  return join(homedir(), ".config", "opencode");
+}
+
 function resolveOpencodeConfigFilePath(scope: "project" | "global", workspaceRoot: string): string {
   if (scope === "global") {
-    const base = join(homedir(), ".config", "opencode");
+    const base = resolveGlobalOpencodeConfigBaseDir();
     const jsoncPath = join(base, "opencode.jsonc");
     const jsonPath = join(base, "opencode.json");
     if (existsSync(jsoncPath)) return jsoncPath;

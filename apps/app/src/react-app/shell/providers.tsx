@@ -11,7 +11,6 @@ import { ServerProvider } from "../kernel/server-provider";
 import { BootStateProvider } from "./boot-state";
 import { DesktopRuntimeBoot } from "./desktop-runtime-boot";
 import { startDebugLogger, stopDebugLogger } from "./debug-logger";
-import { MigrationPrompt } from "./migration-prompt";
 import { resolveOpenworkConnection } from "./openwork-connection";
 import { ReloadCoordinatorProvider } from "./reload-coordinator";
 import { LocaleSubscriptionProvider } from "./locale-subscription-provider";
@@ -75,7 +74,6 @@ export function AppProviders({ children }: AppProvidersProps) {
             </StatusToastsProvider>
           </LocalProvider>
         </RestrictionNoticeProvider>
-        <MigrationPrompt />
       </ServerProvider>
     </BootStateProvider>
   );

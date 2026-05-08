@@ -9,6 +9,7 @@ import type {
 import { t } from "../../../../i18n";
 import { unwrap, waitForHealthy } from "../../../../app/lib/opencode";
 import {
+  readOpencodeAuthJson,
   readOpencodeConfig,
   writeOpencodeConfig,
   workspaceOpenworkRead,
@@ -35,6 +36,58 @@ import {
 
 const DEFAULT_PROJECT_CONFIG_HEADER =
   '{\n  "$schema": "https://opencode.ai/config.json"\n}\n';
+
+const STORED_PROVIDER_API_BASE_URL_PREFIX = "openwork:providerApiBaseUrl:v1:";
+
+function storedProviderApiBaseUrlKey(providerId: string) {
+  return `${STORED_PROVIDER_API_BASE_URL_PREFIX}${providerId.trim().toLowerCase()}`;
+}
+
+/** Mirrors last successfully submitted API base URL so Connect providers can echo it even when `provider.list()` only shows vendor defaults. */
+function readStoredProviderApiBaseUrl(providerId: string): string {
+  try {
+    if (typeof window === "undefined" || !window.localStorage) return "";
+    const value = window.localStorage.getItem(storedProviderApiBaseUrlKey(providerId));
+    return typeof value === "string" && value.trim() ? value.trim() : "";
+  } catch {
+    return "";
+  }
+}
+
+function writeStoredProviderApiBaseUrl(providerId: string, baseUrl: string) {
+  try {
+    if (typeof window === "undefined" || !window.localStorage) return;
+    const id = providerId.trim();
+    if (!id) return;
+    const trimmed = baseUrl.trim();
+    const key = storedProviderApiBaseUrlKey(id);
+    if (!trimmed) {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    window.localStorage.setItem(key, trimmed);
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+function resolveGlobalProviderConfigEntry(
+  providersGlobal: Record<string, unknown>,
+  providerId: string,
+): Record<string, unknown> | undefined {
+  const normalized = providerId.trim().toLowerCase();
+  if (!normalized) return undefined;
+  const direct = providersGlobal[providerId];
+  if (direct && typeof direct === "object") {
+    return direct as Record<string, unknown>;
+  }
+  for (const [key, value] of Object.entries(providersGlobal)) {
+    if (key.trim().toLowerCase() === normalized && value && typeof value === "object") {
+      return value as Record<string, unknown>;
+    }
+  }
+  return undefined;
+}
 
 function mergeProviderOptionsBaseUrl(
   raw: string,
@@ -78,6 +131,184 @@ function mergeProviderBaseUrlInConfig(
   return next;
 }
 
+/**
+ * When desktop/global file IO is unavailable (common in remote/web dev),
+ * persist `provider.<id>.options.baseURL` through OpenCode's global config API
+ * so it lands alongside credentials managed by the engine.
+ */
+async function persistProviderBaseUrlGlobalViaEngine(
+  client: Client,
+  providerId: string,
+  baseUrl: string | undefined,
+): Promise<boolean> {
+  try {
+    const currentUnknown = unwrap(await client.global.config.get());
+    const current =
+      currentUnknown && typeof currentUnknown === "object"
+        ? (currentUnknown as Record<string, unknown>)
+        : {};
+    const next = mergeProviderBaseUrlInConfig(current, providerId, baseUrl);
+    unwrap(await client.global.config.update({ config: next }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function providerEntryBaseUrlFromConfigEntry(entry: Record<string, unknown> | undefined): string {
+  if (!entry || typeof entry !== "object") return "";
+  const options = entry.options as Record<string, unknown> | undefined;
+  if (!options || typeof options !== "object") return "";
+  const raw = options.baseURL ?? options.baseUrl;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : "";
+}
+
+/** Same shape as OpenCode `auth.json` / `ApiAuth.metadata.baseURL` (PUT `/auth/{id}` body). */
+function apiAuthMetadataBaseUrlFromPayload(payload: unknown): string {
+  if (!payload || typeof payload !== "object") return "";
+  const meta = (payload as Record<string, unknown>).metadata;
+  if (!meta || typeof meta !== "object") return "";
+  const raw =
+    (meta as Record<string, unknown>).baseURL ?? (meta as Record<string, unknown>).baseUrl;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : "";
+}
+
+function parseAuthJsonProviderBaseUrls(raw: string): Map<string, string> {
+  const map = new Map<string, string>();
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object") return map;
+    for (const [key, value] of Object.entries(parsed)) {
+      const id = key.trim();
+      if (!id) continue;
+      const url = apiAuthMetadataBaseUrlFromPayload(value);
+      if (url) map.set(id.toLowerCase(), url);
+    }
+  } catch {
+    // ignore malformed auth store
+  }
+  return map;
+}
+
+type OpencodeSdkFieldsResult<T> =
+  | { data: T; error?: undefined; request: Request; response: Response }
+  | { data?: undefined; error: unknown; request: Request; response: Response };
+
+async function fetchAuthMetadataBaseUrl(client: Client, providerId: string): Promise<string> {
+  const id = providerId.trim();
+  if (!id) return "";
+  const inner = client as unknown as {
+    client: {
+      get: (opts: Record<string, unknown>) => Promise<OpencodeSdkFieldsResult<unknown>>;
+    };
+  };
+  try {
+    const result = await inner.client.get({
+      url: "/auth/{providerID}",
+      path: { providerID: id },
+      throwOnError: false,
+    });
+    if (result.data === undefined) return "";
+    return apiAuthMetadataBaseUrlFromPayload(result.data);
+  } catch {
+    return "";
+  }
+}
+
+async function resolveAuthMetadataBaseUrlOverlay(
+  client: Client,
+  list: ProviderListResponse,
+): Promise<Map<string, string>> {
+  const overlay = new Map<string, string>();
+
+  if (isDesktopRuntime()) {
+    try {
+      const snapshot = await readOpencodeAuthJson();
+      const raw = snapshot?.content?.trim();
+      if (raw) {
+        for (const [key, value] of parseAuthJsonProviderBaseUrls(raw)) {
+          overlay.set(key, value);
+        }
+      }
+    } catch {
+      // ignore desktop IO failures
+    }
+  }
+
+  const connected = new Set(
+    (list.connected ?? []).map((id: string) => id.trim().toLowerCase()).filter(Boolean),
+  );
+  const probeIds = list.all
+    .map((p: ProviderListItem) => p.id?.trim())
+    .filter((cid: string | undefined): cid is string => !!cid && connected.has(cid.toLowerCase()));
+
+  await Promise.all(
+    probeIds.map(async (id: string) => {
+      const fromHttp = await fetchAuthMetadataBaseUrl(client, id);
+      if (fromHttp) overlay.set(id.toLowerCase(), fromHttp);
+    }),
+  );
+
+  return overlay;
+}
+
+/**
+ * `provider.list()` often omits or merges global `options.baseURL` oddly; the Connect modal
+ * prefills from `Provider.options`. Overlay stored auth metadata (disk / optional GET), then global config.
+ */
+async function mergeGlobalProviderOptionsIntoList(
+  client: Client,
+  list: ProviderListResponse,
+): Promise<ProviderListResponse> {
+  let authOverlay = new Map<string, string>();
+  try {
+    authOverlay = await resolveAuthMetadataBaseUrlOverlay(client, list);
+  } catch {
+    authOverlay = new Map();
+  }
+
+  let providersGlobal: Record<string, unknown> | null = null;
+  try {
+    const globalUnknown = unwrap(await client.global.config.get());
+    const globalCfg =
+      globalUnknown && typeof globalUnknown === "object"
+        ? (globalUnknown as Record<string, unknown>)
+        : null;
+    const gp = globalCfg?.provider;
+    if (gp && typeof gp === "object") {
+      providersGlobal = gp as Record<string, unknown>;
+    }
+  } catch {
+    providersGlobal = null;
+  }
+
+  const mergeOne = (p: ProviderListItem): ProviderListItem => {
+    const id = p.id?.trim();
+    if (!id) return p;
+    const fromAuth = authOverlay.get(id.toLowerCase()) ?? "";
+    const globalEntry = providersGlobal
+      ? resolveGlobalProviderConfigEntry(providersGlobal, id)
+      : undefined;
+    const fromGlobal = providerEntryBaseUrlFromConfigEntry(globalEntry);
+    const fromCache = readStoredProviderApiBaseUrl(id);
+    const chosen = fromAuth || fromGlobal || fromCache;
+    if (!chosen) return p;
+    const existingOpts =
+      p.options && typeof p.options === "object"
+        ? ({ ...(p.options as Record<string, unknown>) } as Record<string, unknown>)
+        : {};
+    return {
+      ...p,
+      options: { ...existingOpts, baseURL: chosen },
+    };
+  };
+
+  return {
+    ...list,
+    all: list.all.map(mergeOne),
+  };
+}
+
 type ProviderReturnFocusTarget = "none" | "composer";
 
 export type ProviderAuthMethod = {
@@ -97,6 +328,11 @@ export type ProviderAuthProvider = {
   options?: Record<string, unknown>;
   /** Prefill for the API base URL field (configured URL or known default). */
   initialApiBaseUrl: string;
+  /**
+   * Optional masked/hidden hint returned by OpenCode when credentials exist (`Provider.key`).
+   * Used to prefill Connect providers → API key so users can rotate without retyping blindly.
+   */
+  existingApiKeyHint?: string;
 };
 
 export type ProviderOAuthStartResult = {
@@ -183,12 +419,17 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
         provider.options && typeof provider.options === "object"
           ? (provider.options as Record<string, unknown>)
           : undefined;
+      const keyRaw = (provider as { key?: unknown }).key;
+      const existingApiKeyHint =
+        typeof keyRaw === "string" && keyRaw.trim() ? keyRaw.trim() : undefined;
+
       merged.set(id, {
         id,
         name: provider.name?.trim() || id,
         env: Array.isArray(provider.env) ? provider.env : [],
         options: opts,
         initialApiBaseUrl: resolveProviderInitialApiBaseUrl(id, opts),
+        existingApiKeyHint,
       });
     }
 
@@ -819,26 +1060,23 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     }
 
     try {
-      const updated = filterProviderList(
-        unwrap(await activeClient.provider.list()),
-        disabledProviders,
-      );
+      const listed = unwrap(await activeClient.provider.list());
+      const withGlobal = await mergeGlobalProviderOptionsIntoList(activeClient, listed);
+      const updated = filterProviderList(withGlobal, disabledProviders);
       applyProviderListState(updated);
       return updated;
     } catch {
       try {
         const fallback = unwrap(await activeClient.config.providers());
         const mapped = mapConfigProvidersToList(fallback.providers);
-        const next = filterProviderList(
-          {
-            all: mapped,
-            connected: options
-              .providerConnectedIds()
-              .filter((id) => mapped.some((provider) => provider.id === id)),
-            default: fallback.default,
-          },
-          disabledProviders,
-        );
+        const mergedList = await mergeGlobalProviderOptionsIntoList(activeClient, {
+          all: mapped,
+          connected: options
+            .providerConnectedIds()
+            .filter((id) => mapped.some((provider) => provider.id === id)),
+          default: fallback.default,
+        });
+        const next = filterProviderList(mergedList, disabledProviders);
         applyProviderListState(next);
         return next;
       } catch {
@@ -937,22 +1175,45 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     }
 
     try {
-      await c.auth.set({ providerID: providerId, auth: { type: "api", key: trimmed } });
-
       const trimmedBase = baseUrl.trim();
       const baseUrlValue = trimmedBase ? trimmedBase : undefined;
-      let persisted = false;
-      try {
-        persisted = await updateGlobalConfigFile((raw) =>
-          mergeProviderOptionsBaseUrl(raw, providerId, baseUrlValue),
-        );
-      } catch {
-        persisted = false;
-      }
+
+      await c.auth.set({
+        providerID: providerId,
+        auth: {
+          type: "api",
+          key: trimmed,
+          ...(trimmedBase ? { metadata: { baseURL: trimmedBase } } : {}),
+        },
+      });
+
+      // UX + echo: OpenCode often surfaces vendor defaults on `provider.list()` even when auth/metadata uses a proxy URL.
+      writeStoredProviderApiBaseUrl(providerId, trimmedBase);
+
+      // OpenCode applies proxy endpoints from merged provider config (`provider.*.options.baseURL`).
+      // `auth.metadata.baseURL` alone is not always honored at inference time (e.g. Anthropic SDK path).
+      let persisted = await persistProviderBaseUrlGlobalViaEngine(c, providerId, baseUrlValue);
       if (!persisted) {
-        persisted = await updateProjectConfigFile(
-          (raw) => mergeProviderOptionsBaseUrl(raw, providerId, baseUrlValue),
-          (config) => mergeProviderBaseUrlInConfig(config, providerId, baseUrlValue),
+        try {
+          persisted = await updateGlobalConfigFile((raw) =>
+            mergeProviderOptionsBaseUrl(raw, providerId, baseUrlValue),
+          );
+        } catch {
+          persisted = false;
+        }
+      }
+      if (!persisted && trimmedBase) {
+        try {
+          persisted = await updateProjectConfigFile((raw) =>
+            mergeProviderOptionsBaseUrl(raw, providerId, baseUrlValue),
+          );
+        } catch {
+          persisted = false;
+        }
+      }
+      if (trimmedBase && !persisted && typeof console !== "undefined") {
+        console.warn(
+          "[OpenWork] Provider base URL was not saved (global.config API, global file, project file). Inference may use the vendor default URL.",
         );
       }
       if (persisted) {
@@ -995,6 +1256,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
           throw error;
         }
       }
+      writeStoredProviderApiBaseUrl(imported.providerId, "");
       const updatedConfig = await updateProjectConfigFile((raw) =>
         formatConfigWithoutCloudProvider(raw, imported.providerId),
       );
@@ -1078,6 +1340,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
 
     try {
       await removeProviderAuthCredentials(resolved);
+      writeStoredProviderApiBaseUrl(resolved, "");
       let updated = await refreshProviders({ dispose: true });
       if (canDisableProvider && Array.isArray(updated?.connected) && updated.connected.includes(resolved)) {
         const disabled = await disableProvider();

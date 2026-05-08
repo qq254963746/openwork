@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::fs;
 use std::net::TcpListener;
 use std::path::Path;
 use std::thread;
@@ -6,6 +7,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tauri::async_runtime::Receiver;
 use tauri::AppHandle;
+use tauri::Manager;
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
@@ -15,6 +17,79 @@ pub const OPENWORK_PORT_RANGE_START: u16 = 48_000;
 pub const OPENWORK_PORT_RANGE_END: u16 = 51_000;
 const PREFERRED_PORT_RETRY_ATTEMPTS: usize = 20;
 const PREFERRED_PORT_RETRY_DELAY_MS: u64 = 50;
+
+fn env_truthy_openwork_dev() -> bool {
+    matches!(
+        std::env::var("OPENWORK_DEV_MODE")
+            .ok()
+            .map(|v| v.trim().to_ascii_lowercase()),
+        Some(ref v) if matches!(v.as_str(), "1" | "true" | "yes" | "on")
+    )
+}
+
+/// Matches `apps/desktop/electron/runtime.mjs` (`ensureDevModePaths` / `buildChildEnv`).
+/// GUI-launched Tauri often inherits no `XDG_*` / `OPENCODE_CONFIG_DIR`; without this,
+/// `openwork-server` resolves global config + managed OpenCode state to `~/.config` while
+/// the UI writes credentials under `Application Support/.../openwork-dev-data/...`.
+fn openwork_dev_isolated_env(app: &AppHandle) -> Result<Option<Vec<(String, String)>>, String> {
+    if !env_truthy_openwork_dev() {
+        return Ok(None);
+    }
+
+    let app_local = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| format!("Failed to resolve app local data dir: {e}"))?;
+
+    let layout_root = app_local.join("openwork-dev-data");
+    let home_dir = layout_root.join("home");
+    let xdg_config_home = layout_root.join("xdg").join("config");
+    let xdg_data_home = layout_root.join("xdg").join("data");
+    let xdg_cache_home = layout_root.join("xdg").join("cache");
+    let xdg_state_home = layout_root.join("xdg").join("state");
+    let opencode_config_dir = layout_root.join("config").join("opencode");
+    let opencode_data_dir = xdg_data_home.join("opencode");
+
+    for dir in [
+        &home_dir,
+        &xdg_config_home,
+        &xdg_data_home,
+        &xdg_cache_home,
+        &xdg_state_home,
+        &opencode_config_dir,
+        &opencode_data_dir,
+    ] {
+        fs::create_dir_all(dir).map_err(|e| format!("Failed to create {}: {e}", dir.display()))?;
+    }
+
+    let home = home_dir.to_string_lossy().into_owned();
+    Ok(Some(vec![
+        ("OPENWORK_DEV_MODE".into(), "1".into()),
+        ("HOME".into(), home.clone()),
+        ("USERPROFILE".into(), home.clone()),
+        (
+            "XDG_CONFIG_HOME".into(),
+            xdg_config_home.to_string_lossy().into_owned(),
+        ),
+        (
+            "XDG_DATA_HOME".into(),
+            xdg_data_home.to_string_lossy().into_owned(),
+        ),
+        (
+            "XDG_CACHE_HOME".into(),
+            xdg_cache_home.to_string_lossy().into_owned(),
+        ),
+        (
+            "XDG_STATE_HOME".into(),
+            xdg_state_home.to_string_lossy().into_owned(),
+        ),
+        (
+            "OPENCODE_CONFIG_DIR".into(),
+            opencode_config_dir.to_string_lossy().into_owned(),
+        ),
+        ("OPENCODE_TEST_HOME".into(), home),
+    ]))
+}
 
 fn bind_available_port(host: &str, port: u16) -> bool {
     TcpListener::bind((host, port)).is_ok()
@@ -271,6 +346,12 @@ pub fn spawn_openwork_server(
 
     for (key, value) in crate::bun_env::bun_env_overrides() {
         command = command.env(key, value);
+    }
+
+    if let Some(pairs) = openwork_dev_isolated_env(app)? {
+        for (key, value) in pairs {
+            command = command.env(key, value);
+        }
     }
 
     command

@@ -22,6 +22,15 @@ fn opencode_config_candidates(
             ])
         }
         "global" => {
+            // Match OpenCode: OPENCODE_CONFIG_DIR is the global config root (OpenWork dev isolation).
+            if let Ok(dir) = env::var("OPENCODE_CONFIG_DIR") {
+                let trimmed = dir.trim();
+                if !trimmed.is_empty() {
+                    let root = PathBuf::from(trimmed);
+                    return Ok(vec![root.join("opencode.jsonc"), root.join("opencode.json")]);
+                }
+            }
+
             let base = if let Ok(dir) = env::var("XDG_CONFIG_HOME") {
                 PathBuf::from(dir)
             } else if let Ok(home) = env::var("HOME") {

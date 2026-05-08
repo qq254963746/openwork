@@ -269,6 +269,10 @@ function configHomePath() {
 }
 
 function globalOpencodeRoot() {
+  const explicit = process.env.OPENCODE_CONFIG_DIR?.trim();
+  if (explicit) {
+    return explicit;
+  }
   return path.join(configHomePath(), "opencode");
 }
 
@@ -659,6 +663,36 @@ async function readOpencodeConfig(scope, projectDir) {
     exists,
     content: exists ? await readFile(chosenPath, "utf8") : null,
   };
+}
+
+function opencodeAuthJsonPathCandidates() {
+  const out = [];
+  const xdgData = process.env.XDG_DATA_HOME?.trim();
+  if (xdgData) {
+    out.push(path.join(xdgData, "opencode", "auth.json"));
+  }
+  const home = os.homedir();
+  out.push(path.join(home, ".local", "share", "opencode", "auth.json"));
+  if (process.platform === "darwin") {
+    out.push(path.join(home, "Library", "Application Support", "opencode", "auth.json"));
+  }
+  if (process.platform === "win32") {
+    const appData = process.env.APPDATA?.trim();
+    if (appData) {
+      out.push(path.join(appData, "opencode", "auth.json"));
+    }
+  }
+  return out;
+}
+
+async function readOpencodeAuthJson() {
+  for (const candidate of opencodeAuthJsonPathCandidates()) {
+    if (await pathExists(candidate)) {
+      const content = await readFile(candidate, "utf8");
+      return { path: candidate, content };
+    }
+  }
+  return { path: null, content: null };
 }
 
 async function writeOpencodeConfig(scope, projectDir, content) {
@@ -1301,6 +1335,8 @@ async function handleDesktopInvoke(event, command, ...args) {
     }
     case "readOpencodeConfig":
       return readOpencodeConfig(String(args[0] ?? "").trim(), String(args[1] ?? "").trim());
+    case "readOpencodeAuthJson":
+      return readOpencodeAuthJson();
     case "writeOpencodeConfig":
       return writeOpencodeConfig(
         String(args[0] ?? "").trim(),

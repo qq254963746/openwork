@@ -146,6 +146,13 @@ pub struct OpencodeConfigFile {
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct OpencodeAuthJsonFile {
+    pub path: Option<String>,
+    pub content: Option<String>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdaterEnvironment {
     pub supported: bool,
     pub reason: Option<String>,

@@ -210,6 +210,13 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   const methodLabel = (method: ProviderAuthMethod) =>
     method.label || (method.type === "oauth" ? "OAuth" : "API key");
 
+  const apiPrefillSignature = useMemo(() => {
+    if (!selectedProviderId) return "";
+    const meta = props.providers.find((item) => item.id === selectedProviderId);
+    if (!meta) return "";
+    return `${meta.initialApiBaseUrl ?? ""}\u0000${meta.existingApiKeyHint ?? ""}`;
+  }, [props.providers, selectedProviderId]);
+
   const actionDisabled = props.loading || props.submitting;
 
   const resetState = () => {
@@ -273,6 +280,15 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     if (!props.open || resolvedView !== "list") return;
     queueMicrotask(() => searchInputRef.current?.focus());
   }, [props.open, resolvedView]);
+
+  /** Backfill base URL / API key hint when provider list updates after opening the API form. */
+  useEffect(() => {
+    if (!props.open || resolvedView !== "api" || !selectedProviderId || !apiPrefillSignature) return;
+    const meta = props.providers.find((item) => item.id === selectedProviderId);
+    if (!meta) return;
+    setBaseUrlInput((prev) => (prev.trim() ? prev : meta.initialApiBaseUrl ?? ""));
+    setApiKeyInput((prev) => (prev.trim() ? prev : meta.existingApiKeyHint ?? ""));
+  }, [apiPrefillSignature, props.open, props.providers, resolvedView, selectedProviderId]);
 
   useEffect(() => {
     if (!props.open || props.loading || resolvedView !== "list") return;
@@ -477,7 +493,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
 
     const providerMeta = props.providers.find((item) => item.id === entry.id);
     setBaseUrlInput(providerMeta?.initialApiBaseUrl ?? "");
-    setApiKeyInput("");
+    setApiKeyInput(providerMeta?.existingApiKeyHint ?? "");
     setView("api");
   };
 
