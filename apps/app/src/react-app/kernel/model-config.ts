@@ -125,6 +125,61 @@ export function serializeSessionChoiceOverrides(
   return JSON.stringify(payload);
 }
 
+function safeLocalStorageGet(key: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeLocalStorageSet(key: string, value: string | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (value == null || value === "") {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    window.localStorage.setItem(key, value);
+  } catch {
+    // ignore quota / privacy errors
+  }
+}
+
+export function readSessionChoiceOverridesForWorkspace(
+  workspaceId: string,
+): Record<string, SessionChoiceOverride> {
+  const id = workspaceId.trim();
+  if (!id) return {};
+  return parseSessionChoiceOverrides(safeLocalStorageGet(sessionModelOverridesKey(id)));
+}
+
+export function readSessionModelOverride(
+  workspaceId: string,
+  sessionId: string,
+): ModelRef | null {
+  const ws = workspaceId.trim();
+  const sid = sessionId.trim();
+  if (!ws || !sid) return null;
+  const overrides = readSessionChoiceOverridesForWorkspace(ws);
+  return overrides[sid]?.model ?? null;
+}
+
+export function writeSessionModelOverride(
+  workspaceId: string,
+  sessionId: string,
+  model: ModelRef | null,
+): void {
+  const ws = workspaceId.trim();
+  const sid = sessionId.trim();
+  if (!ws || !sid) return;
+  const overrides = readSessionChoiceOverridesForWorkspace(ws);
+  overrides[sid] = { ...(overrides[sid] ?? {}), model };
+  const serialized = serializeSessionChoiceOverrides(overrides);
+  safeLocalStorageSet(sessionModelOverridesKey(ws), serialized);
+}
+
 export function parseWorkspaceModelVariants(
   raw: string | null,
   fallbackModel: ModelRef = DEFAULT_MODEL,

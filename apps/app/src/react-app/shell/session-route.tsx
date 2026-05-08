@@ -104,6 +104,7 @@ import { getReactQueryClient } from "../infra/query-client";
 import { useStatusToasts } from "../domains/shell-feedback/status-toasts";
 import { useSessionControlActions } from "../domains/session/control/session-control-actions";
 import { legacySessionRoute, workspaceSessionRoute, workspaceSettingsRoute } from "./workspace-routes";
+import { readSessionModelOverride, writeSessionModelOverride } from "../kernel/model-config";
 
 type RouteWorkspace = OpenworkWorkspaceInfo & {
   displayNameResolved: string;
@@ -407,6 +408,7 @@ export function SessionRoute() {
   const [providerConnectedIds, setProviderConnectedIds] = useState<string[]>([]);
   const [permissionReplyBusy, setPermissionReplyBusy] = useState(false);
   const permissionReplyBusyRef = useRef(false);
+  const [sessionModelOverrideState, setSessionModelOverrideState] = useState<ModelRef | null>(null);
   // Provider catalog cache. Used to compute the reasoning/thinking variant
   // options for whichever model is currently selected so the composer's
   // behavior pill actually shows its options (bug: was empty before).
@@ -1187,8 +1189,20 @@ export function SessionRoute() {
     };
   }, [opencodeClient, selectedWorkspaceRoot]);
 
-  const modelLabel = local.prefs.defaultModel
-    ? `${local.prefs.defaultModel.providerID}/${local.prefs.defaultModel.modelID}`
+  useEffect(() => {
+    if (!selectedWorkspaceId || !selectedSessionId) {
+      setSessionModelOverrideState(null);
+      return;
+    }
+    setSessionModelOverrideState(
+      readSessionModelOverride(selectedWorkspaceId, selectedSessionId),
+    );
+  }, [selectedSessionId, selectedWorkspaceId]);
+
+  const effectiveModel =
+    sessionModelOverrideState ?? local.prefs.defaultModel ?? null;
+  const modelLabel = effectiveModel
+    ? `${effectiveModel.providerID}/${effectiveModel.modelID}`
     : t("session.default_model");
 
   // Prefetch the full provider catalog once so `getModelBehaviorSummary` has
@@ -1375,7 +1389,7 @@ export function SessionRoute() {
         const result = await opencodeClient.session.promptAsync({
           sessionID: selectedSessionId,
           parts,
-          model: local.prefs.defaultModel ?? undefined,
+          model: effectiveModel ?? undefined,
           agent: selectedAgent ?? undefined,
           ...(local.prefs.modelVariant ? { variant: local.prefs.modelVariant } : {}),
           ...(envSystemContext ? { system: envSystemContext } : {}),
@@ -1446,6 +1460,11 @@ export function SessionRoute() {
       isRemoteWorkspace: selectedWorkspace?.workspaceType === "remote",
       isSandboxWorkspace: selectedWorkspace ? isSandboxWorkspace(selectedWorkspace) : false,
       onChangeModel: (model: { providerID: string; modelID: string }) => {
+        if (selectedWorkspaceId && selectedSessionId) {
+          writeSessionModelOverride(selectedWorkspaceId, selectedSessionId, model);
+          setSessionModelOverrideState(model);
+        }
+        // Also update the global "last used" default so NEW sessions inherit it.
         local.setPrefs((previous) => ({ ...previous, defaultModel: model }));
       },
     };
@@ -1458,8 +1477,10 @@ export function SessionRoute() {
     navigate,
     opencodeBaseUrl,
     opencodeClient,
+    effectiveModel,
     selectedAgent,
     selectedSessionId,
+    sessionModelOverrideState,
     selectedWorkspace,
     selectedWorkspaceId,
     selectedWorkspaceRoot,
@@ -2064,8 +2085,12 @@ export function SessionRoute() {
       query={modelPickerQuery}
       setQuery={setModelPickerQuery}
       target="default"
-      current={local.prefs.defaultModel ?? ({ providerID: "", modelID: "" } satisfies ModelRef)}
+      current={effectiveModel ?? ({ providerID: "", modelID: "" } satisfies ModelRef)}
       onSelect={(next: ModelRef) => {
+        if (selectedWorkspaceId && selectedSessionId) {
+          writeSessionModelOverride(selectedWorkspaceId, selectedSessionId, next);
+          setSessionModelOverrideState(next);
+        }
         local.setPrefs((previous) => ({ ...previous, defaultModel: next }));
         setModelPickerOpen(false);
       }}
