@@ -92,6 +92,14 @@ export type EngineInfo = {
   lastStderr: string | null;
 };
 
+export type OpencodeEngineDiskLogsSnapshot = {
+  dir: string;
+  resolvedVariant: string;
+  fileLabel?: string | null;
+  content: string;
+  error?: string | null;
+};
+
 export type OpenworkServerInfo = {
   running: boolean;
   remoteAccessEnabled: boolean;
@@ -578,6 +586,10 @@ export async function openworkServerRestart(options?: {
 
 export async function engineInfo(): Promise<EngineInfo> {
   return invoke<EngineInfo>("engine_info");
+}
+
+export async function readOpencodeEngineDiskLogs(): Promise<OpencodeEngineDiskLogsSnapshot> {
+  return invoke<OpencodeEngineDiskLogsSnapshot>("read_opencode_engine_disk_logs");
 }
 
 export async function runtimeBootstrap(): Promise<unknown> {

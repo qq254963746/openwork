@@ -1140,6 +1140,8 @@ async function handleDesktopInvoke(event, command, ...args) {
       return runtimeManager.engineRestart(args[0] ?? {});
     case "engineInfo":
       return runtimeManager.engineInfo();
+    case "readOpencodeEngineDiskLogs":
+      return runtimeManager.readOpencodeEngineDiskLogs();
     case "engineDoctor":
       return engineDoctor(args[0]);
     case "engineInstall":

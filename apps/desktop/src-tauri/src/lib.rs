@@ -27,7 +27,7 @@ use commands::engine::{
 use commands::migration::{migrate_to_electron, write_migration_snapshot};
 use commands::misc::{
     app_build_info, nuke_openwork_and_opencode_config_and_exit, opencode_mcp_auth,
-    reset_opencode_cache, reset_openwork_state,
+    read_opencode_engine_disk_logs, reset_opencode_cache, reset_openwork_state,
 };
 use commands::openwork_server::{openwork_server_info, openwork_server_restart};
 use commands::orchestrator::{
@@ -197,6 +197,7 @@ pub fn run() {
             nuke_openwork_and_opencode_config_and_exit,
             reset_openwork_state,
             reset_opencode_cache,
+            read_opencode_engine_disk_logs,
             opencode_mcp_auth,
             set_window_decorations
         ])

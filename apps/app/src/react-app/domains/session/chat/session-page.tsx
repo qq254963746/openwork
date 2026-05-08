@@ -21,6 +21,7 @@ import { ConfirmModal } from "../../../design-system/modals/confirm-modal";
 import ProviderAuthModal, { type ProviderAuthModalProps } from "../../connections/provider-auth/provider-auth-modal";
 import { PermissionApprovalModal } from "./permission-approval-modal";
 import { QuestionModal } from "../modals/question-modal";
+import { openAppLogWindow } from "../../../shell/open-app-log-window";
 import { RenameSessionModal } from "../modals/rename-session-modal";
 import { WorkspaceSessionList } from "../sidebar/workspace-session-list";
 import { SessionSurface, type SessionSurfaceProps } from "../surface/session-surface";
@@ -335,6 +336,9 @@ export function SessionPage(props: SessionPageProps) {
       developerMode: props.developerMode,
       settingsOpen: props.statusBar?.settingsOpen ?? false,
       onOpenSettings: props.onOpenSettings,
+      onOpenAppLogs: () => {
+        openAppLogWindow();
+      },
       providerConnectedIds: props.providerConnectedIds,
       mcpConnectedCount: props.mcpConnectedCount,
       statusLabel: props.statusBar?.statusLabel,
@@ -756,6 +760,7 @@ export function SessionPage(props: SessionPageProps) {
           }
         }}
       />
+
     </div>
   );
 }

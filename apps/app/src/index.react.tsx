@@ -17,6 +17,8 @@ import {
 } from "./react-app/kernel/platform";
 import { AppProviders } from "./react-app/shell/providers";
 import { AppRoot } from "./react-app/shell/app-root";
+import { installDesktopLogViewerHostBridge } from "./react-app/shell/desktop-log-viewer-host-bridge";
+import { applyLogViewerPopupNavigationFromStorage } from "./react-app/shell/open-app-log-window";
 import { startDeepLinkBridge } from "./react-app/shell/startup-deep-links";
 import "./app/index.css";
 
@@ -24,6 +26,9 @@ bootstrapTheme();
 initLocale();
 startDeepLinkBridge();
 await initializeOpenworkBootstrapConfig();
+
+applyLogViewerPopupNavigationFromStorage();
+installDesktopLogViewerHostBridge();
 
 const root = document.getElementById("root");
 

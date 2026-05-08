@@ -12,6 +12,7 @@ import { OpenworkControlProvider, OpenworkRouteControlActions } from "./control/
 import { SessionRoute } from "./session-route";
 import { SettingsRoute } from "./settings-route";
 import { WelcomeRoute } from "./welcome-route";
+import { AppLogWindowRoute } from "./app-log-window-route";
 
 export function AppRoot() {
   useDesktopFontZoomBehavior();
@@ -28,6 +29,14 @@ export function AppRoot() {
               element={
                 <DevProfiler id="WelcomeRoute">
                   <WelcomeRoute />
+                </DevProfiler>
+              }
+            />
+            <Route
+              path="/devtools/app-log"
+              element={
+                <DevProfiler id="AppLogWindowRoute">
+                  <AppLogWindowRoute />
                 </DevProfiler>
               }
             />

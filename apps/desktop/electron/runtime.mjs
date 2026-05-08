@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -619,6 +619,135 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       env.OPENCODE_TEST_HOME = devPaths.homeDir;
     }
     return env;
+  }
+
+  const OPENCODE_DISK_LOG_TAIL_BYTES = 256 * 1024;
+
+  function resolveOpencodeDiskLogDirCandidates() {
+    /** @type {{ variant: string; dir: string }[]} */
+    const candidates = [];
+    const home = app.getPath("home");
+
+    if (process.env.OPENWORK_DEV_MODE === "1") {
+      if (process.platform === "darwin") {
+        candidates.push({
+          variant: "macos_electron_dev",
+          dir: path.join(
+            home,
+            "Library/Application Support/com.differentai.openwork.dev/openwork-dev-data/xdg/data/opencode/log",
+          ),
+        });
+      }
+      candidates.push({
+        variant: "openwork_dev_isolated",
+        dir: path.join(userDataDir, "openwork-dev-data", "xdg", "data", "opencode", "log"),
+      });
+    }
+
+    const xdgData =
+      process.env.XDG_DATA_HOME?.trim() ||
+      (process.platform === "win32" ? process.env.LOCALAPPDATA?.trim() : path.join(home, ".local", "share"));
+    if (xdgData) {
+      candidates.push({
+        variant: "standard_data_home",
+        dir: path.join(xdgData, "opencode", "log"),
+      });
+    }
+
+    const seen = new Set();
+    /** @type {{ variant: string; dir: string }[]} */
+    const out = [];
+    for (const entry of candidates) {
+      const abs = path.resolve(entry.dir);
+      const key = abs.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ variant: entry.variant, dir: abs });
+    }
+    return out;
+  }
+
+  async function pickLatestOpencodeLogFile(logDir) {
+    /** @type {import("node:fs").Dirent[]} */
+    let dirents = [];
+    try {
+      dirents = await readdir(logDir, { withFileTypes: true });
+    } catch {
+      return null;
+    }
+    const files = dirents.filter((d) => d.isFile() && d.name.endsWith(".log"));
+    if (!files.length) return null;
+    let bestPath = null;
+    let bestMtime = -Infinity;
+    for (const d of files) {
+      const fp = path.join(logDir, d.name);
+      try {
+        const st = await stat(fp);
+        const m = st.mtimeMs;
+        if (m >= bestMtime) {
+          bestMtime = m;
+          bestPath = fp;
+        }
+      } catch {
+        /* skip */
+      }
+    }
+    return bestPath;
+  }
+
+  async function readUtf8Tail(filePath, maxBytes) {
+    const st = await stat(filePath);
+    const size = st.size;
+    const start = Math.max(0, size - maxBytes);
+    const fh = await open(filePath, "r");
+    try {
+      const buf = Buffer.alloc(size - start);
+      await fh.read(buf, 0, buf.length, start);
+      return buf.toString("utf8");
+    } finally {
+      await fh.close();
+    }
+  }
+
+  async function readOpencodeEngineDiskLogs() {
+    const ordered = resolveOpencodeDiskLogDirCandidates();
+    for (const { variant, dir } of ordered) {
+      if (!existsSync(dir)) {
+        continue;
+      }
+      const latest = await pickLatestOpencodeLogFile(dir);
+      if (!latest) {
+        continue;
+      }
+      try {
+        const label = path.basename(latest);
+        const content = await readUtf8Tail(latest, OPENCODE_DISK_LOG_TAIL_BYTES);
+        return {
+          dir,
+          resolvedVariant: variant,
+          fileLabel: label,
+          content,
+          error: null,
+        };
+      } catch (error) {
+        return {
+          dir,
+          resolvedVariant: variant,
+          fileLabel: path.basename(latest),
+          content: "",
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }
+
+    const fallbackDir = ordered.at(-1)?.dir ?? "";
+    return {
+      dir: fallbackDir,
+      resolvedVariant: "none",
+      fileLabel: null,
+      content: "",
+      error: "log_directory_not_found",
+    };
   }
 
   function resolveBinaryInfo(baseName, extraPaths = []) {
@@ -1721,6 +1850,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     dispose: () => withRuntimeLifecycle(() => stopAllRuntimeChildren()),
     runtimeStatus,
     engineInfo,
+    readOpencodeEngineDiskLogs,
     engineDoctor,
     engineInstall,
     openworkServerInfo,

@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Settings } from "lucide-react";
+import { ScrollText, Settings } from "lucide-react";
 
 import { t } from "../../../../i18n";
 import { useControlAction, type OpenworkControlAction } from "../../../shell/control/control-provider";
@@ -15,6 +15,8 @@ export type StatusBarProps = {
   developerMode: boolean;
   settingsOpen: boolean;
   onOpenSettings: () => void;
+  /** Opens in-app inspector event log (sidebar / footer). */
+  onOpenAppLogs?: () => void;
   providerConnectedIds: string[];
   mcpConnectedCount: number;
   statusLabel?: string;
@@ -104,6 +106,7 @@ function deriveStatusCopy(props: StatusBarProps): StatusCopy {
 export function StatusBar(props: StatusBarProps) {
   const variant = props.variant ?? "main";
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const appLogsButtonRef = useRef<HTMLButtonElement>(null);
   const [initializing, setInitializing] = useState(
     () => Date.now() - STATUS_BAR_BOOT_STARTED_AT < STATUS_BAR_INITIALIZING_MS,
   );
@@ -130,6 +133,17 @@ export function StatusBar(props: StatusBarProps) {
     execute: props.onOpenSettings,
   }), [props.onOpenSettings, props.settingsOpen, props.showSettingsButton]);
   useControlAction(settingsControlAction);
+
+  const appLogsControlAction = useMemo<OpenworkControlAction>(() => ({
+    id: "status.app_logs.open",
+    label: "Open application log viewer",
+    description: "Opens the in-memory application event log.",
+    sideEffect: "navigation",
+    disabled: typeof props.onOpenAppLogs !== "function",
+    targetRef: appLogsButtonRef,
+    execute: () => props.onOpenAppLogs?.(),
+  }), [props.onOpenAppLogs]);
+  useControlAction(appLogsControlAction);
 
   const sidebar = variant === "sidebar";
 
@@ -170,6 +184,20 @@ export function StatusBar(props: StatusBarProps) {
         </div>
 
         <div className="flex items-center gap-1.5">
+          {typeof props.onOpenAppLogs === "function" ? (
+            <button
+              ref={appLogsButtonRef}
+              type="button"
+              className={`flex shrink-0 items-center justify-center rounded-md text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text ${
+                sidebar ? "h-7 w-7" : "h-8 w-8"
+              }`}
+              onClick={props.onOpenAppLogs}
+              title={t("status.app_logs")}
+              aria-label={t("status.app_logs")}
+            >
+              <ScrollText className={sidebar ? "h-3.5 w-3.5" : "h-4 w-4"} />
+            </button>
+          ) : null}
           {props.showSettingsButton !== false ? (
             <button
               ref={settingsButtonRef}

@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::fs;
+use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use crate::engine::doctor::resolve_engine_path;
@@ -38,6 +39,16 @@ pub struct CacheResetResult {
     pub errors: Vec<String>,
 }
 
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpencodeEngineDiskLogsSnapshot {
+    pub dir: String,
+    pub resolved_variant: String,
+    pub file_label: Option<String>,
+    pub content: String,
+    pub error: Option<String>,
+}
+
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppBuildInfo {
@@ -56,6 +67,169 @@ fn env_truthy(key: &str) -> bool {
             .map(|value| value.trim().to_ascii_lowercase()),
         Some(value) if value == "1" || value == "true" || value == "yes" || value == "on"
     )
+}
+
+#[cfg(target_os = "macos")]
+fn macos_dev_application_support_opencode_log_dir() -> Option<PathBuf> {
+    let home = home_dir()?;
+    Some(
+        home.join("Library/Application Support/com.differentai.openwork.dev/openwork-dev-data/xdg/data/opencode/log"),
+    )
+}
+
+fn isolated_dev_opencode_log_dir(app: &AppHandle) -> Option<PathBuf> {
+    let root = app.path().app_local_data_dir().ok()?;
+    Some(root.join("openwork-dev-data/xdg/data/opencode/log"))
+}
+
+fn standard_opencode_log_dir() -> PathBuf {
+    if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
+        let trimmed = xdg.trim();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed).join("opencode/log");
+        }
+    }
+
+    #[cfg(windows)]
+    if let Ok(local) = std::env::var("LOCALAPPDATA") {
+        let trimmed = local.trim();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed).join("opencode/log");
+        }
+    }
+
+    home_dir()
+        .unwrap_or_default()
+        .join(".local/share/opencode/log")
+}
+
+fn collect_opencode_disk_log_dir_candidates(app: &AppHandle) -> Vec<(String, PathBuf)> {
+    let mut ordered = Vec::new();
+
+    #[cfg(target_os = "macos")]
+    if env_truthy("OPENWORK_DEV_MODE") {
+        if let Some(path) = macos_dev_application_support_opencode_log_dir() {
+            ordered.push(("macos_electron_dev".into(), path));
+        }
+    }
+
+    if env_truthy("OPENWORK_DEV_MODE") {
+        if let Some(path) = isolated_dev_opencode_log_dir(app) {
+            ordered.push(("openwork_dev_isolated".into(), path));
+        }
+    }
+
+    ordered.push(("standard_data_home".into(), standard_opencode_log_dir()));
+
+    let mut seen = HashSet::new();
+    let mut deduped = Vec::new();
+    for (label, path) in ordered {
+        let key = path.to_string_lossy().to_string();
+        if seen.insert(key) {
+            deduped.push((label, path));
+        }
+    }
+    deduped
+}
+
+fn read_utf8_file_tail(path: &Path, max_bytes: u64) -> std::io::Result<String> {
+    let mut file = fs::File::open(path)?;
+    let len = file.metadata()?.len();
+    let start = len.saturating_sub(max_bytes);
+    file.seek(SeekFrom::Start(start))?;
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf)?;
+    Ok(String::from_utf8_lossy(&buf).into_owned())
+}
+
+#[tauri::command]
+pub fn read_opencode_engine_disk_logs(app: AppHandle) -> OpencodeEngineDiskLogsSnapshot {
+    const MAX_BYTES: u64 = 256 * 1024;
+
+    let candidates = collect_opencode_disk_log_dir_candidates(&app);
+
+    for (variant, dir) in &candidates {
+        let dir_display = dir.to_string_lossy().to_string();
+        if !dir.is_dir() {
+            continue;
+        }
+
+        let mut newest: Option<(PathBuf, std::time::SystemTime)> = None;
+        let Ok(entries) = fs::read_dir(dir) else {
+            continue;
+        };
+
+        for entry in entries.flatten() {
+            let Ok(file_type) = entry.file_type() else {
+                continue;
+            };
+            if !file_type.is_file() {
+                continue;
+            }
+
+            let name = entry.file_name().to_string_lossy().to_string();
+            if !name.ends_with(".log") {
+                continue;
+            }
+
+            let Ok(meta) = entry.metadata() else {
+                continue;
+            };
+            let Ok(modified) = meta.modified() else {
+                continue;
+            };
+
+            let replace = match &newest {
+                None => true,
+                Some((_, prior)) => modified >= *prior,
+            };
+            if replace {
+                newest = Some((entry.path(), modified));
+            }
+        }
+
+        let Some((path, _)) = newest else {
+            continue;
+        };
+
+        let file_label = path
+            .file_name()
+            .map(|value| value.to_string_lossy().into_owned());
+
+        match read_utf8_file_tail(&path, MAX_BYTES) {
+            Ok(content) => {
+                return OpencodeEngineDiskLogsSnapshot {
+                    dir: dir_display,
+                    resolved_variant: variant.clone(),
+                    file_label,
+                    content,
+                    error: None,
+                };
+            }
+            Err(err) => {
+                return OpencodeEngineDiskLogsSnapshot {
+                    dir: dir_display,
+                    resolved_variant: variant.clone(),
+                    file_label,
+                    content: String::new(),
+                    error: Some(format!("read_failed:{err}")),
+                };
+            }
+        }
+    }
+
+    let fallback_dir = candidates
+        .last()
+        .map(|(_, path)| path.to_string_lossy().into_owned())
+        .unwrap_or_default();
+
+    OpencodeEngineDiskLogsSnapshot {
+        dir: fallback_dir,
+        resolved_variant: "none".into(),
+        file_label: None,
+        content: String::new(),
+        error: Some("log_directory_not_found".into()),
+    }
 }
 
 fn opencode_cache_candidates() -> Vec<PathBuf> {
