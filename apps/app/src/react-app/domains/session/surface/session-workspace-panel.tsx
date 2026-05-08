@@ -38,7 +38,8 @@ const WORKSPACE_PANEL_HEADER_DRAG_STYLE: CSSProperties = {
 const WORKSPACE_PANEL_WIDTH_KEY = "openwork.session.workspacePanelWidth.v1";
 const DEFAULT_WORKSPACE_PANEL_WIDTH = 300;
 const MIN_WORKSPACE_PANEL_WIDTH = 240;
-const MAX_WORKSPACE_PANEL_WIDTH = 720;
+// Keep the chat transcript usable when the right panel grows.
+const MIN_CHAT_COLUMN_WIDTH = 420;
 
 function readStoredWorkspacePanelWidth(): number {
   if (typeof window === "undefined") return DEFAULT_WORKSPACE_PANEL_WIDTH;
@@ -46,7 +47,9 @@ function readStoredWorkspacePanelWidth(): number {
     const raw = window.localStorage.getItem(WORKSPACE_PANEL_WIDTH_KEY);
     const n = Number(raw);
     if (!Number.isFinite(n)) return DEFAULT_WORKSPACE_PANEL_WIDTH;
-    return Math.min(MAX_WORKSPACE_PANEL_WIDTH, Math.max(MIN_WORKSPACE_PANEL_WIDTH, n));
+    const viewportWidth = document.documentElement?.clientWidth || window.innerWidth;
+    const maxAllowed = Math.max(MIN_WORKSPACE_PANEL_WIDTH, viewportWidth - MIN_CHAT_COLUMN_WIDTH);
+    return Math.min(maxAllowed, Math.max(MIN_WORKSPACE_PANEL_WIDTH, n));
   } catch {
     return DEFAULT_WORKSPACE_PANEL_WIDTH;
   }
@@ -333,10 +336,10 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       const handleMove = (moveEvent: PointerEvent) => {
         // Left edge of the panel: moving the grip left (smaller clientX) widens the panel.
         const delta = moveEvent.clientX - initialX;
-        const next = Math.min(
-          MAX_WORKSPACE_PANEL_WIDTH,
-          Math.max(MIN_WORKSPACE_PANEL_WIDTH, initialW - delta),
-        );
+        const container = (grip.parentElement?.parentElement as HTMLElement | null) ?? null;
+        const containerWidth = container?.getBoundingClientRect().width ?? (document.documentElement?.clientWidth || window.innerWidth);
+        const maxAllowed = Math.max(MIN_WORKSPACE_PANEL_WIDTH, containerWidth - MIN_CHAT_COLUMN_WIDTH);
+        const next = Math.min(maxAllowed, Math.max(MIN_WORKSPACE_PANEL_WIDTH, initialW - delta));
         panelWidthRef.current = next;
         setPanelWidth(next);
       };
@@ -564,7 +567,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
   return (
     <aside
       className="relative flex min-h-0 h-full shrink-0 flex-col border-l border-dls-border bg-dls-sidebar/60"
-      style={{ width: panelWidth, minWidth: MIN_WORKSPACE_PANEL_WIDTH, maxWidth: MAX_WORKSPACE_PANEL_WIDTH }}
+      style={{ width: panelWidth, minWidth: MIN_WORKSPACE_PANEL_WIDTH, maxWidth: "100%" }}
     >
       <div
         role="separator"
@@ -579,15 +582,26 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
             <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
               {selectedFileTitle}
             </span>
-            <button
-              type="button"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
-              onClick={() => setSelectedFile(null)}
-              aria-label={t("session.workspace_panel_close_preview")}
-              title={t("session.workspace_panel_close_preview")}
-            >
-              <X size={18} strokeWidth={1.75} />
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                onClick={() => void previewQuery.refetch()}
+                aria-label={t("session.workspace_panel_refresh")}
+                title={t("session.workspace_panel_refresh")}
+              >
+                <RefreshCw size={18} strokeWidth={1.75} />
+              </button>
+              <button
+                type="button"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                onClick={() => setSelectedFile(null)}
+                aria-label={t("session.workspace_panel_close_preview")}
+                title={t("session.workspace_panel_close_preview")}
+              >
+                <X size={18} strokeWidth={1.75} />
+              </button>
+            </div>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto bg-dls-surface px-4 py-4">
             {previewQuery.isLoading ? (
@@ -607,15 +621,26 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
             <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
               {selectedFileTitle}
             </span>
-            <button
-              type="button"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
-              onClick={() => setSelectedFile(null)}
-              aria-label={t("session.workspace_panel_close_preview")}
-              title={t("session.workspace_panel_close_preview")}
-            >
-              <X size={18} strokeWidth={1.75} />
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                onClick={() => void previewQuery.refetch()}
+                aria-label={t("session.workspace_panel_refresh")}
+                title={t("session.workspace_panel_refresh")}
+              >
+                <RefreshCw size={18} strokeWidth={1.75} />
+              </button>
+              <button
+                type="button"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                onClick={() => setSelectedFile(null)}
+                aria-label={t("session.workspace_panel_close_preview")}
+                title={t("session.workspace_panel_close_preview")}
+              >
+                <X size={18} strokeWidth={1.75} />
+              </button>
+            </div>
           </div>
           <div className="relative min-h-0 flex-1 bg-dls-surface">
             {previewQuery.isLoading ? (
@@ -641,15 +666,26 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
             <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
               {selectedFileTitle}
             </span>
-            <button
-              type="button"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
-              onClick={() => setSelectedFile(null)}
-              aria-label={t("session.workspace_panel_close_preview")}
-              title={t("session.workspace_panel_close_preview")}
-            >
-              <X size={18} strokeWidth={1.75} />
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                onClick={() => void previewQuery.refetch()}
+                aria-label={t("session.workspace_panel_refresh")}
+                title={t("session.workspace_panel_refresh")}
+              >
+                <RefreshCw size={18} strokeWidth={1.75} />
+              </button>
+              <button
+                type="button"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                onClick={() => setSelectedFile(null)}
+                aria-label={t("session.workspace_panel_close_preview")}
+                title={t("session.workspace_panel_close_preview")}
+              >
+                <X size={18} strokeWidth={1.75} />
+              </button>
+            </div>
           </div>
           <div className="relative min-h-0 flex-1 overflow-hidden bg-dls-surface">
             {previewQuery.isLoading ? (

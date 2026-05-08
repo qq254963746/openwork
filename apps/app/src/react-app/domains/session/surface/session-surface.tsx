@@ -249,6 +249,7 @@ function revokeAttachmentPreview(attachment: { previewUrl?: string | undefined }
 }
 
 export function SessionSurface(props: SessionSurfaceProps) {
+  const MIN_CHAT_COLUMN_WIDTH = 420;
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [mentions, setMentions] = useState<Record<string, "agent" | "file">>({});
@@ -840,7 +841,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     <DevProfiler id="SessionSurface">
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex min-h-0 flex-1 flex-row">
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col" style={{ minWidth: MIN_CHAT_COLUMN_WIDTH }}>
       {model.transitionState === "switching" && showDelayedLoading ? (
         <div className="flex justify-center px-6 pt-4">
           <div className="rounded-full border border-dls-border bg-dls-hover/80 px-3 py-1 text-xs text-dls-secondary">
