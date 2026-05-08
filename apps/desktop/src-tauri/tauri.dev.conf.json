@@ -17,10 +17,18 @@
   "app": {
     "windows": [
       {
-        "title": "OpenWork - Dev",
+        "title": "OpenWork Dev",
         "width": 1180,
         "height": 820,
-        "resizable": true
+        "minWidth": 1024,
+        "minHeight": 700,
+        "resizable": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": {
+          "x": 14,
+          "y": 16
+        }
       }
     ]
   },
