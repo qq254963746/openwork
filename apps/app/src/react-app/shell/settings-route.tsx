@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { SUGGESTED_PLUGINS } from "../../app/constants";
-import { createClient } from "../../app/lib/opencode";
+import { createClient, unwrap } from "../../app/lib/opencode";
 import {
   buildOpenworkWorkspaceBaseUrl,
   createOpenworkServerClient,
@@ -90,6 +90,7 @@ import { abortSessionSafe } from "../../app/lib/opencode-session";
 import { useReloadCoordinator } from "./reload-coordinator";
 import { readActiveWorkspaceId, writeActiveWorkspaceId } from "./session-memory";
 import { workspaceSessionRoute, workspaceSettingsRoute } from "./workspace-routes";
+import { toSessionTransportDirectory } from "../../app/lib/session-scope";
 
 type RouteWorkspace = OpenworkWorkspaceInfo & {
   displayNameResolved: string;
@@ -671,6 +672,32 @@ export function SettingsRoute() {
           })
         : null,
     [opencodeBaseUrl, selectedWorkspaceRoot, token],
+  );
+
+  const handleCreateTaskInWorkspace = useCallback(
+    (workspaceId: string) => {
+      const id = workspaceId.trim();
+      if (!id) return;
+
+      void (async () => {
+        // When rendered inside settings, the sidebar's “New Task” should create a session
+        // (not just navigate to an empty session route).
+        if (!opencodeClient || id !== selectedWorkspaceId) {
+          navigate(workspaceSessionRoute(id));
+          return;
+        }
+
+        try {
+          const directory = toSessionTransportDirectory(selectedWorkspaceRoot) || undefined;
+          const session = unwrap(await opencodeClient.session.create({ directory }));
+          navigate(workspaceSessionRoute(id, session.id));
+        } catch (error) {
+          setRouteError(describeRouteError(error));
+          navigate(workspaceSessionRoute(id));
+        }
+      })();
+    },
+    [navigate, opencodeClient, selectedWorkspaceId, selectedWorkspaceRoot],
   );
 
   useEffect(() => {
@@ -1619,7 +1646,7 @@ export function SettingsRoute() {
           newTaskDisabled: !opencodeClient,
           onReorderWorkspaces: isDesktopRuntime() || openworkClient ? handleReorderWorkspaces : undefined,
           onOpenSession: (workspaceId, sessionId) => navigate(workspaceSessionRoute(workspaceId, sessionId)),
-          onCreateTaskInWorkspace: (workspaceId) => navigate(workspaceSessionRoute(workspaceId)),
+          onCreateTaskInWorkspace: handleCreateTaskInWorkspace,
           onOpenRenameWorkspace: handleOpenRenameWorkspace,
           onRevealWorkspace: (id) => void handleRevealWorkspace(id),
           onRecoverWorkspace: (workspaceId) => runRemoteWorkspaceConnectionCheck(workspaceId, "recover"),
