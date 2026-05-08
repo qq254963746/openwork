@@ -12,7 +12,7 @@ import {
 import { isToolUIPart, type DynamicToolUIPart, type UIMessage } from "ai";
 import type { Part } from "@opencode-ai/sdk/v2/client";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Check, ChevronDown, CircleAlert, Copy, File as FileIcon } from "lucide-react";
+import { Atom, Check, ChevronDown, CircleAlert, Copy, File as FileIcon } from "lucide-react";
 
 import { openDesktopPath, revealDesktopItemInDir } from "../../../../app/lib/desktop";
 import {
@@ -22,6 +22,7 @@ import {
   type TodoItem,
 } from "../../../../app/types";
 import { groupMessageParts, isDesktopRuntime, summarizeStep } from "../../../../app/utils";
+import { t } from "../../../../i18n";
 import { MarkdownBlock } from "./markdown";
 import { applyTextHighlights } from "./text-highlights";
 
@@ -335,6 +336,61 @@ function cleanReasoningPreview(value: string) {
     .trim();
 }
 
+function ThinkingCollapsible(props: { text: string }) {
+  const [expanded, setExpanded] = useState(true);
+  const paragraphs = useMemo(() => {
+    const cleaned = cleanReasoningPreview(props.text);
+    const blocks = cleaned
+      .split(/\n\n+/)
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+    return blocks.length > 0 ? blocks : cleaned.trim() ? [cleaned.trim()] : [];
+  }, [props.text]);
+
+  return (
+    <div className="w-full max-w-[720px]">
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 rounded-lg py-0.5 text-left [font-size:inherit] [line-height:inherit] text-gray-9 transition-colors hover:text-dls-text"
+        aria-expanded={expanded}
+        aria-label={
+          expanded ? t("session.thinking_collapse_aria") : t("session.thinking_expand_aria")
+        }
+        onClick={() => setExpanded((value) => !value)}
+      >
+        <Atom className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+        <span className="flex min-w-0 max-w-[720px] flex-1 items-center gap-1.5 [line-height:inherit]">
+          <span className="min-w-0 break-words font-medium">{t("session.thinking_block_title")}</span>
+          <ChevronDown
+            size={14}
+            className={`shrink-0 transition-transform ${expanded ? "" : "-rotate-90"}`}
+            aria-hidden
+          />
+        </span>
+      </button>
+      {expanded && paragraphs.length > 0 ? (
+        <div className="mt-2 flex items-stretch gap-2 text-[#61666b] [font-size:inherit] [line-height:inherit]">
+          <div className="relative flex w-4 shrink-0 flex-col items-center" aria-hidden>
+            <div className="flex min-h-[1lh] w-full shrink-0 items-center justify-center">
+              <span className="h-1 w-1 rounded-full bg-gray-8" />
+            </div>
+            <div className="relative min-h-0 w-full flex-1">
+              <div className="absolute bottom-0 left-1/2 top-1 w-[0.5px] -translate-x-1/2 bg-gray-6" />
+            </div>
+          </div>
+          <div className="min-w-0 flex-1 space-y-3 [&>p]:leading-relaxed">
+            {paragraphs.map((paragraph, index) => (
+              <p key={index} className="whitespace-pre-wrap">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function formatStructuredValue(value: unknown) {
   if (value === undefined || value === null) return "";
   if (typeof value === "string") return value.trim();
@@ -590,11 +646,7 @@ function StepRow(props: {
     const raw = typeof (props.part as { text?: unknown }).text === "string"
       ? (props.part as { text: string }).text
       : "";
-    return (
-      <div className="text-[14px] leading-[1.7] text-gray-9 whitespace-pre-wrap">
-        <div className="max-w-[720px]">{cleanReasoningPreview(raw) || headline}</div>
-      </div>
-    );
+    return <ThinkingCollapsible text={raw || headline} />;
   }
 
   if (props.part.type === "tool" && (toolNameLower === "todowrite" || toolNameLower === "todoread")) {

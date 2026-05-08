@@ -54,9 +54,12 @@ const LocalContext = createContext<LocalContextValue | undefined>(undefined);
 const UI_STORAGE_KEY = "openwork.ui";
 const PREFS_STORAGE_KEY = "openwork.preferences";
 
+/** Default for Settings → “Show model reasoning” (new installs, cleared storage, reset). */
+export const DEFAULT_SHOW_MODEL_REASONING = true;
+
 const INITIAL_UI: LocalUIState = { view: "settings", tab: "general" };
 const INITIAL_PREFS: LocalPreferences = {
-  showThinking: false,
+  showThinking: DEFAULT_SHOW_MODEL_REASONING,
   modelVariant: null,
   defaultModel: null,
   releaseChannel: "stable",

@@ -28,7 +28,9 @@ import { useControlAction, type OpenworkControlAction } from "../../../shell/con
 import { getReactQueryClient } from "../../../infra/query-client";
 import { ReactSessionComposer } from "./composer/composer";
 import { DevProfiler } from "../../../shell/dev-profiler";
-import { OwDotTicker } from "../../../shell/dot-ticker";
+import { Loader2 } from "lucide-react";
+
+import { t } from "../../../../i18n";
 import { useReactRenderWatchdog } from "../../../shell/react-render-watchdog";
 import type { ReactComposerNotice } from "./composer/notice";
 import { SessionWorkspacePanel } from "./session-workspace-panel";
@@ -68,6 +70,8 @@ export type SessionSurfaceProps = {
   opencodeBaseUrl: string;
   openworkToken: string;
   developerMode: boolean;
+  /** When true, assistant `reasoning` parts render in the Thinking collapsible (Settings → Show model reasoning). */
+  showThinking?: boolean;
   modelLabel: string;
   onModelClick: () => void;
   onSendDraft: (draft: ComposerDraft) => void;
@@ -162,11 +166,11 @@ function messageHasVisibleAssistantOutput(message: UIMessage) {
 
 function AssistantWaitingCard() {
   return (
-    <div className="flex justify-start py-2" role="status" aria-live="polite">
-      <div className="inline-flex items-center gap-3 rounded-full px-3 py-1.5 text-[12px] text-dls-secondary">
-        <OwDotTicker size="sm" />
-        <span>Thinking</span>
-      </div>
+    <div className="flex justify-center py-2" role="status" aria-live="polite" aria-busy="true">
+      <span className="relative inline-flex items-center justify-center">
+        <Loader2 className="h-5 w-5 shrink-0 animate-spin text-gray-9" strokeWidth={2} aria-hidden />
+        <span className="sr-only">{t("session.assistant_reply_loading")}</span>
+      </span>
     </div>
   );
 }
@@ -1121,6 +1125,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
                     messages={renderedMessages}
                     isStreaming={chatStreaming}
                     developerMode={props.developerMode}
+                    showThinking={props.showThinking}
                     todos={todos}
                     scrollElement={() => scrollRef.current}
                   />

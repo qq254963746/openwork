@@ -28,6 +28,8 @@ type SyncEntry = {
   refs: number;
   dispose: () => void;
   pendingDeltas: Map<string, { messageId: string; reasoning: boolean; text: string }>;
+  /** Mirrors OpenCode part kinds so `message.part.delta` with `field: "text"` can target reasoning parts (same as usechat-adapter). */
+  partKinds: Map<string, Part["type"]>;
   // Coalesce rapid-fire delta events from the SSE stream into one cache
   // commit per animation frame. Without this, a long response produces a
   // setQueryData per token; each triggers a full transcript re-render
@@ -126,6 +128,22 @@ export const questionKey = (workspaceId: string, sessionId: string) =>
 
 function syncKey(input: SyncOptions) {
   return `${input.workspaceId}:${input.baseUrl}:${input.openworkToken}`;
+}
+
+function hydratePartKindsForWorkspace(workspaceId: string, messages: UIMessage[]) {
+  const prefix = `${workspaceId}:`;
+  for (const [key, entry] of syncs) {
+    if (!key.startsWith(prefix)) continue;
+    for (const message of messages) {
+      for (const part of message.parts) {
+        const id = getPartMetadataId(part);
+        if (!id) continue;
+        if (part.type === "reasoning") entry.partKinds.set(id, "reasoning");
+        else if (part.type === "text") entry.partKinds.set(id, "text");
+        else if (part.type === "file") entry.partKinds.set(id, "file");
+      }
+    }
+  }
 }
 
 function getErrorStatus(error: unknown) {
@@ -338,6 +356,16 @@ function upsertPart(messages: UIMessage[], messageId: string, partId: string, ne
   });
 }
 
+function resolveDeltaTargetsReasoning(entry: SyncEntry, messages: UIMessage[], item: PendingDelta): boolean {
+  if (item.reasoning) return true;
+  const kind = entry.partKinds.get(item.partId);
+  if (kind === "reasoning") return true;
+  if (kind === "text" || kind === "tool" || kind === "file" || kind === "step-start") return false;
+  const msg = messages.find((m) => m.id === item.messageId);
+  const hit = msg?.parts.find((p) => getPartMetadataId(p) === item.partId);
+  return hit?.type === "reasoning";
+}
+
 function appendDelta(messages: UIMessage[], messageId: string, partId: string, delta: string, reasoning: boolean) {
   // Fast path: locate the target message by index, only clone that message
   // and its parts array. The previous implementation ran messages.map AND
@@ -516,6 +544,7 @@ function applyEvent(entry: SyncEntry, workspaceId: string, event: OpencodeEvent)
     const props = (event.properties ?? {}) as { part?: Part };
     const part = props.part;
     if (!part?.sessionID || !part.messageID) return;
+    entry.partKinds.set(part.id, part.type);
     const mapped = toUIPart(part);
     if (!mapped) return;
     const pending = entry.pendingDeltas.get(part.id);
@@ -547,13 +576,16 @@ function applyEvent(entry: SyncEntry, workspaceId: string, event: OpencodeEvent)
       delta?: string;
     };
     if (!props.sessionID || !props.messageID || !props.partID || !props.delta) return;
+    const field = typeof props.field === "string" ? props.field : "text";
+    const kind = entry.partKinds.get(props.partID);
+    const isReasoningDelta = field === "reasoning" || (field === "text" && kind === "reasoning");
     // Buffer this delta and let the frame flusher apply all queued deltas
     // for this entry in a single setQueryData call per affected session.
     entry.deltaFlushBuffer.push({
       sessionId: props.sessionID!,
       messageId: props.messageID!,
       partId: props.partID!,
-      reasoning: props.field === "reasoning",
+      reasoning: isReasoningDelta,
       delta: props.delta!,
     });
     scheduleDeltaFlush(entry, workspaceId);
@@ -615,7 +647,8 @@ function flushDeltas(entry: SyncEntry, workspaceId: string) {
             next = upsertMessage(next, { id: item.messageId, role, parts: [] });
             ensuredMessageIds.add(item.messageId);
           }
-          next = appendDelta(next, item.messageId, item.partId, item.delta, item.reasoning);
+          const reasoningDelta = resolveDeltaTargetsReasoning(entry, next, item);
+          next = appendDelta(next, item.messageId, item.partId, item.delta, reasoningDelta);
           // If the delta landed on a synthetic "no matching part" case, keep
           // the text so a later message.part.updated event can stitch it.
           const message = next.find((m) => m.id === item.messageId);
@@ -626,7 +659,7 @@ function flushDeltas(entry: SyncEntry, workspaceId: string) {
           if (!matched) {
             const existing = entry.pendingDeltas.get(item.partId) ?? {
               messageId: item.messageId,
-              reasoning: item.reasoning,
+              reasoning: reasoningDelta,
               text: "",
             };
             existing.text += item.delta;
@@ -694,6 +727,7 @@ export function ensureWorkspaceSessionSync(input: SyncOptions) {
     refs: 1,
     dispose: () => {},
     pendingDeltas: new Map(),
+    partKinds: new Map(),
     deltaFlushBuffer: [],
     deltaFlushScheduled: false,
   });
@@ -744,6 +778,9 @@ export function seedSessionState(workspaceId: string, snapshot: OpenworkSessionS
   } else {
     queryClient.setQueryData(key, incoming);
   }
+
+  const seededMessages = queryClient.getQueryData<UIMessage[]>(key) ?? incoming;
+  hydratePartKindsForWorkspace(workspaceId, seededMessages);
 
   queryClient.setQueryData(statusKey(workspaceId, snapshot.session.id), snapshot.status);
   queryClient.setQueryData(todoKey(workspaceId, snapshot.session.id), snapshot.todos);
