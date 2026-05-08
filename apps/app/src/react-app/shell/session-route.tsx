@@ -42,6 +42,7 @@ import type {
   ModelOption,
   ModelRef,
   PendingPermission,
+  PendingQuestion,
   SlashCommandOption,
   TodoItem,
   WorkspacePreset,
@@ -64,6 +65,8 @@ import { buildOpenworkEnvSystemContext } from "../domains/session/sync/env-conte
 import {
   permissionKey as reactPermissionKey,
   seedPermissionState,
+  questionKey as reactQuestionKey,
+  seedQuestionState,
 } from "../domains/session/sync/session-sync";
 import { CreateRemoteWorkspaceModal } from "../domains/workspace/create-remote-workspace-modal";
 import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-modal";
@@ -199,6 +202,7 @@ function describeWorkspaceCreateError(error: unknown) {
 }
 
 const emptyPendingPermissions: PendingPermission[] = [];
+const emptyPendingQuestions: PendingQuestion[] = [];
 
 function useQueryCacheState<T>(queryKey: readonly unknown[] | null, fallback: T): T {
   const queryClient = getReactQueryClient();
@@ -1059,9 +1063,20 @@ export function SessionRoute() {
         : null,
     [selectedSessionId, selectedWorkspaceId],
   );
+  const questionQueryKey = useMemo(
+    () =>
+      selectedWorkspaceId && selectedSessionId
+        ? reactQuestionKey(selectedWorkspaceId, selectedSessionId)
+        : null,
+    [selectedSessionId, selectedWorkspaceId],
+  );
   const pendingPermissions = useQueryCacheState<PendingPermission[]>(
     permissionQueryKey,
     emptyPendingPermissions,
+  );
+  const pendingQuestions = useQueryCacheState<PendingQuestion[]>(
+    questionQueryKey,
+    emptyPendingQuestions,
   );
   useEffect(() => {
     if (!opencodeClient || !selectedWorkspaceId || !selectedSessionId) return;
@@ -1070,9 +1085,14 @@ export function SessionRoute() {
     void (async () => {
       const snapshotStartedAt = Date.now();
       try {
-        const list = unwrap(await opencodeClient.permission.list({ directory }));
+        const list = unwrap(await opencodeClient.permission.list({ directory })) as unknown;
         if (!cancelled) {
-          seedPermissionState(selectedWorkspaceId, selectedSessionId, list, { snapshotStartedAt });
+          seedPermissionState(
+            selectedWorkspaceId,
+            selectedSessionId,
+            Array.isArray(list) ? (list as any) : [],
+            { snapshotStartedAt },
+          );
         }
       } catch {
         // Keep event-synced permission state if the snapshot read fails.
@@ -1084,7 +1104,38 @@ export function SessionRoute() {
     };
   }, [opencodeClient, selectedSessionId, selectedWorkspaceId, selectedWorkspaceRoot]);
 
+  useEffect(() => {
+    if (!opencodeClient || !selectedWorkspaceId || !selectedSessionId) return;
+    let cancelled = false;
+    const directory = selectedWorkspaceRoot || undefined;
+    void (async () => {
+      const snapshotStartedAt = Date.now();
+      try {
+        // SDK surface for questions is not available in some builds yet.
+        // Use an any-cast to avoid blocking compilation; if missing, we
+        // simply won't show question prompts.
+        const questionApi = (opencodeClient as any).question;
+        const result = await questionApi?.list?.({ directory });
+        const data = result ? unwrap(result as any) : [];
+        if (!cancelled) {
+          seedQuestionState(
+            selectedWorkspaceId,
+            selectedSessionId,
+            Array.isArray(data) ? (data as any) : [],
+            { snapshotStartedAt },
+          );
+        }
+      } catch {
+        // Best-effort: event-synced question state (if any) remains.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [opencodeClient, selectedSessionId, selectedWorkspaceId, selectedWorkspaceRoot]);
+
   const activePermission = pendingPermissions[0] ?? null;
+  const activeQuestion = pendingQuestions[0] ?? null;
   const respondPermission = useCallback(
     async (requestID: string, reply: "once" | "always" | "reject") => {
       if (!opencodeClient || !selectedWorkspaceId || !selectedSessionId) return;
@@ -1112,6 +1163,44 @@ export function SessionRoute() {
       } finally {
         permissionReplyBusyRef.current = false;
         setPermissionReplyBusy(false);
+      }
+    },
+    [opencodeClient, selectedSessionId, selectedWorkspaceId, selectedWorkspaceRoot, showToast],
+  );
+
+  const [questionReplyBusy, setQuestionReplyBusy] = useState(false);
+  const questionReplyBusyRef = useRef(false);
+  const respondQuestion = useCallback(
+    async (requestID: string, answers: string[][]) => {
+      if (!opencodeClient || !selectedWorkspaceId || !selectedSessionId) return;
+      if (questionReplyBusyRef.current) return;
+      questionReplyBusyRef.current = true;
+      setQuestionReplyBusy(true);
+      try {
+        const questionApi = (opencodeClient as any).question;
+        if (!questionApi?.reply) {
+          throw new Error("Question reply API is unavailable in this build.");
+        }
+        unwrap(
+          await questionApi.reply({
+            requestID,
+            answers,
+            directory: selectedWorkspaceRoot || undefined,
+          }),
+        );
+        getReactQueryClient().setQueryData<PendingQuestion[]>(
+          reactQuestionKey(selectedWorkspaceId, selectedSessionId),
+          (current = []) => current.filter((question) => question.id !== requestID),
+        );
+      } catch (error) {
+        showToast({
+          title: t("app.error_request_failed"),
+          description: describeRouteError(error),
+          tone: "error",
+        });
+      } finally {
+        questionReplyBusyRef.current = false;
+        setQuestionReplyBusy(false);
       }
     },
     [opencodeClient, selectedSessionId, selectedWorkspaceId, selectedWorkspaceRoot, showToast],
@@ -1467,9 +1556,13 @@ export function SessionRoute() {
         // Also update the global "last used" default so NEW sessions inherit it.
         local.setPrefs((previous) => ({ ...previous, defaultModel: model }));
       },
+      activeQuestion,
+      questionReplyBusy,
+      respondQuestion,
     };
   }, [
     client,
+    activeQuestion,
     handleOpenSettings,
     local,
     listSlashCommands,
@@ -1486,6 +1579,8 @@ export function SessionRoute() {
     selectedWorkspaceRoot,
     sessionsByWorkspaceId,
     token,
+    questionReplyBusy,
+    respondQuestion,
   ]);
 
   const handleOpenCreateWorkspace = useCallback(() => {

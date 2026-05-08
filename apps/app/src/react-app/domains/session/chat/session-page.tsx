@@ -20,7 +20,6 @@ import { Button } from "../../../design-system/button";
 import { ConfirmModal } from "../../../design-system/modals/confirm-modal";
 import ProviderAuthModal, { type ProviderAuthModalProps } from "../../connections/provider-auth/provider-auth-modal";
 import { PermissionApprovalModal } from "./permission-approval-modal";
-import { QuestionModal } from "../modals/question-modal";
 import { openAppLogWindow } from "../../../shell/open-app-log-window";
 import { RenameSessionModal } from "../modals/rename-session-modal";
 import { WorkspaceSessionList } from "../sidebar/workspace-session-list";
@@ -749,17 +748,6 @@ export function SessionPage(props: SessionPageProps) {
           safeStringify={props.safeStringify}
         />
       ) : null}
-
-      <QuestionModal
-        open={Boolean(props.activeQuestion)}
-        questions={props.activeQuestion?.questions ?? []}
-        busy={props.questionReplyBusy ?? false}
-        onReply={(answers) => {
-          if (props.activeQuestion) {
-            props.respondQuestion?.(props.activeQuestion.id, answers);
-          }
-        }}
-      />
 
     </div>
   );
