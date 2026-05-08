@@ -11,6 +11,12 @@ import {
   fetchOpenworkServerInfoForLogViewer,
   isDesktopServiceLogsAvailableInLogViewer,
 } from "./desktop-log-viewer-host-bridge";
+import {
+  pullShellEventsFromMain,
+  requestClearMainShellEvents,
+} from "../../app/lib/desktop-tauri";
+import { isTauriRuntime } from "../../app/utils";
+import { LOG_VIEWER_POPUP_QUERY } from "./open-app-log-window";
 
 const POLL_SHELL_MS = 600;
 const POLL_SERVICE_MS = 1000;
@@ -65,6 +71,18 @@ function resolveOpenerLogApi(): NonNullable<typeof window.__openwork> | null {
   }
 }
 
+/** Tauri detached log webview uses `open_app_log_window` + `?openworkLogViewer=1` (no `window.opener`). */
+function shouldPullShellEventsFromMainShell(): boolean {
+  if (!isTauriRuntime()) return false;
+  try {
+    return new URL(window.location.href).searchParams.get(LOG_VIEWER_POPUP_QUERY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+type ShellInspectorEvent = { at: number; name: string; data: unknown };
+
 const tabButtonBase =
   "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[rgba(var(--dls-accent-rgb),0.2)]";
 const tabButtonIdle = "text-dls-secondary hover:bg-dls-hover hover:text-dls-text";
@@ -97,15 +115,39 @@ export function AppLogWindowRoute() {
     }
   }, []);
 
-  const refreshShell = useCallback(() => {
-    const api = resolveOpenerLogApi();
-    if (!api) {
-      setShellLines([t("session.app_log_window_no_opener")]);
+  const refreshShell = useCallback(async () => {
+    const openerApi = resolveOpenerLogApi();
+    if (openerApi) {
+      const events = openerApi.events(500);
+      setShellLines(events.map((e) => formatEntry(e, stringify)));
       return;
     }
-    const events = api.events(500);
-    setShellLines(events.map((e) => formatEntry(e, stringify)));
-  }, [stringify]);
+
+    if (shouldPullShellEventsFromMainShell()) {
+      try {
+        const raw = await pullShellEventsFromMain(500);
+        const parsed = JSON.parse(raw) as ShellInspectorEvent[];
+        const events = Array.isArray(parsed) ? parsed : [];
+        setShellLines(events.map((e) => formatEntry(e, stringify)));
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        setShellLines([`${t("session.app_log_fetch_error")}\n${detail}`]);
+      }
+      return;
+    }
+
+    try {
+      if (window.__openwork) {
+        const events = window.__openwork.events(500);
+        setShellLines(events.map((e) => formatEntry(e, stringify)));
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
+    setShellLines([t("session.app_log_window_no_opener")]);
+  }, [stringify, t]);
 
   const refreshOpenwork = useCallback(async () => {
     if (!isDesktopServiceLogsAvailableInLogViewer()) return;
@@ -143,7 +185,7 @@ export function AppLogWindowRoute() {
   }, []);
 
   const refreshActive = useCallback(async () => {
-    if (tab === "shell") refreshShell();
+    if (tab === "shell") await refreshShell();
     else if (tab === "openwork_server") await refreshOpenwork();
     else await refreshOpencode();
   }, [refreshOpencode, refreshOpenwork, refreshShell, tab]);
@@ -189,9 +231,20 @@ export function AppLogWindowRoute() {
   };
 
   const handleClear = () => {
-    const api = resolveOpenerLogApi();
-    api?.clearEvents();
-    refreshShell();
+    const openerApi = resolveOpenerLogApi();
+    if (openerApi) {
+      openerApi.clearEvents();
+      void refreshShell();
+      return;
+    }
+    if (shouldPullShellEventsFromMainShell()) {
+      void requestClearMainShellEvents()
+        .then(() => refreshShell())
+        .catch(() => void refreshShell());
+      return;
+    }
+    window.__openwork?.clearEvents();
+    void refreshShell();
   };
 
   const handleCopy = async () => {

@@ -40,6 +40,10 @@ use commands::skills::{
 };
 use commands::updater::updater_environment;
 use commands::host_desktop::{host_open_path_native, host_reveal_path_native, open_app_log_window};
+use commands::shell_events_bridge::{
+    pull_shell_events_from_main, request_clear_main_shell_events, shell_events_bridge_reply,
+    shell_events_clear_bridge_ack, ShellEventsBridge,
+};
 use commands::window::set_window_decorations;
 use commands::workspace::{
     workspace_add_authorized_root, workspace_bootstrap, workspace_create, workspace_create_remote,
@@ -149,6 +153,7 @@ pub fn run() {
         .manage(OrchestratorManager::default())
         .manage(OpenworkServerManager::default())
         .manage(WorkspaceWatchState::default())
+        .manage(ShellEventsBridge::default())
         .invoke_handler(tauri::generate_handler![
             engine_start,
             engine_stop,
@@ -204,7 +209,11 @@ pub fn run() {
             set_window_decorations,
             open_app_log_window,
             host_open_path_native,
-            host_reveal_path_native
+            host_reveal_path_native,
+            pull_shell_events_from_main,
+            shell_events_bridge_reply,
+            request_clear_main_shell_events,
+            shell_events_clear_bridge_ack
         ])
         .build(tauri::generate_context!())
         .expect("error while building OpenWork");

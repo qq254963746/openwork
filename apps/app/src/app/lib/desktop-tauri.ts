@@ -24,6 +24,15 @@ export async function openAppLogWebviewWindow(): Promise<void> {
   await invoke<void>("open_app_log_window");
 }
 
+/** Fetches `window.__openwork.events` from the main shell webview (detached log window has no `window.opener`). */
+export async function pullShellEventsFromMain(limit: number): Promise<string> {
+  return invoke<string>("pull_shell_events_from_main", { limit });
+}
+
+export async function requestClearMainShellEvents(): Promise<void> {
+  await invoke<void>("request_clear_main_shell_events");
+}
+
 export async function relaunchDesktopApp(): Promise<void> {
   const { relaunch } = await import("@tauri-apps/plugin-process");
   await relaunch();
