@@ -662,15 +662,12 @@ function StepRow(props: {
               props.expanded ? "mt-3" : ""
             }`}
           >
-            <div className="flex items-center justify-between gap-3 border-b border-dls-border px-4 py-3">
+            <div className="border-b border-dls-border px-4 py-3">
               <div className="min-w-0">
                 <div className="text-xs font-medium text-gray-12">Todo</div>
                 <div className="mt-0.5 text-[11px] text-gray-11">
                   {total > 0 ? `${completed} / ${total} completed` : "No tasks"}
                 </div>
-              </div>
-              <div className="shrink-0 rounded-full bg-gray-2/40 px-2 py-0.5 text-[11px] font-medium text-gray-11">
-                {toolNameLower}
               </div>
             </div>
             <div className="space-y-2.5 px-4 pb-3">

@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 
 import { useSyncExternalStore } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { getLocaleSnapshot, subscribeLocale } from "../../i18n";
 import { useDesktopFontZoomBehavior } from "./font-zoom";
@@ -14,16 +14,13 @@ import { SettingsRoute } from "./settings-route";
 import { WelcomeRoute } from "./welcome-route";
 import { AppLogWindowRoute } from "./app-log-window-route";
 
-export function AppRoot() {
-  useDesktopFontZoomBehavior();
-  useSyncExternalStore(subscribeLocale, getLocaleSnapshot, getLocaleSnapshot);
+function AppRoutes() {
+  const location = useLocation();
+  const backgroundLocation = (location.state as { backgroundLocation?: typeof location } | null)?.backgroundLocation;
 
   return (
     <>
-      <DevProfiler id="AppRoot">
-        <OpenworkControlProvider>
-          <OpenworkRouteControlActions />
-          <Routes>
+      <Routes location={backgroundLocation ?? location}>
             <Route
               path="/welcome"
               element={
@@ -92,6 +89,40 @@ export function AppRoot() {
             <Route path="/" element={<Navigate to="/session" replace />} />
             <Route path="*" element={<Navigate to="/session" replace />} />
           </Routes>
+      {backgroundLocation ? (
+        <Routes>
+          <Route
+            path="/workspace/:workspaceId/settings/*"
+            element={
+              <DevProfiler id="SettingsRouteOverlay">
+                <SettingsRoute />
+              </DevProfiler>
+            }
+          />
+          <Route
+            path="/settings/*"
+            element={
+              <DevProfiler id="SettingsRouteOverlay">
+                <SettingsRoute />
+              </DevProfiler>
+            }
+          />
+        </Routes>
+      ) : null}
+    </>
+  );
+}
+
+export function AppRoot() {
+  useDesktopFontZoomBehavior();
+  useSyncExternalStore(subscribeLocale, getLocaleSnapshot, getLocaleSnapshot);
+
+  return (
+    <>
+      <DevProfiler id="AppRoot">
+        <OpenworkControlProvider>
+          <OpenworkRouteControlActions />
+          <AppRoutes />
         </OpenworkControlProvider>
         <LoadingOverlay />
       </DevProfiler>

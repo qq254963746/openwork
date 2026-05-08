@@ -21,6 +21,8 @@ export type SettingsShellProps = SettingsPageChromeProps & {
   headerLeadingSlot?: React.ReactNode;
   sidebarWidth?: number;
   onSidebarResizeStart?: React.PointerEventHandler<HTMLDivElement>;
+  /** When set, hide the workspace session sidebar (session route already shows it underneath). */
+  presentation?: "page" | "overlay-panel";
   children: React.ReactNode;
   error?: string | null;
   errorSlot?: React.ReactNode;
@@ -28,29 +30,65 @@ export type SettingsShellProps = SettingsPageChromeProps & {
   footer?: React.ReactNode;
 };
 
+/**
+ * Right-hand settings sheet over the session main column;
+ * width = viewport minus `sidebarWidth` (matches workspace sidebar).
+ * Uses z-40 so fixed modals at z-50 (e.g. provider auth) render above this shell.
+ */
+export function SettingsSessionOverlayFrame(props: {
+  sidebarWidth: number;
+  onDismiss: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-40 flex pointer-events-none">
+      <div className="shrink-0 pointer-events-none" style={{ width: props.sidebarWidth }} aria-hidden />
+      <div className="relative flex min-h-0 min-w-0 flex-1 pointer-events-auto">
+        <button
+          type="button"
+          className="absolute inset-0 z-0 cursor-default border-0 bg-black/25 p-0 transition-colors hover:bg-black/30 dark:bg-black/40 dark:hover:bg-black/45"
+          onClick={props.onDismiss}
+          aria-label={t("dashboard.close_settings")}
+        />
+        <div className="relative z-10 flex h-[100dvh] min-h-0 min-w-0 flex-1 flex-col overflow-hidden border border-dls-border bg-dls-surface shadow-[0_24px_80px_rgba(0,0,0,0.2)]">
+          {props.children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsShell(props: SettingsShellProps) {
   const title = getSettingsTabLabel(props.activeTab);
+  const presentation = props.presentation ?? "page";
+  const overlayPanel = presentation === "overlay-panel";
 
   return (
-    <div className="flex h-[100dvh] min-h-screen w-full flex-col overflow-hidden bg-[var(--dls-app-bg)] text-gray-12">
+    <div
+      className={`flex w-full flex-col overflow-hidden text-gray-12 ${
+        overlayPanel ? "h-full min-h-0 bg-dls-surface" : "h-[100dvh] min-h-screen bg-[var(--dls-app-bg)]"
+      }`}
+    >
       <div className="flex min-h-0 flex-1 gap-0">
-        <aside
-          className="relative hidden min-h-0 shrink-0 flex-col overflow-hidden border-0 border-r border-dls-border bg-dls-sidebar lg:flex lg:flex-col"
-          style={props.sidebarWidth ? { width: `${props.sidebarWidth}px`, minWidth: `${props.sidebarWidth}px` } : undefined}
-        >
-          {props.sidebarTopSlot ? <div className="shrink-0">{props.sidebarTopSlot}</div> : null}
-          <div className="flex min-h-0 flex-1">
-            <WorkspaceSessionList {...props.workspaceSessionListProps} />
-          </div>
-          {props.onSidebarResizeStart ? (
-            <div
-              className="absolute right-0 top-0 hidden h-full w-2 translate-x-1/2 cursor-col-resize rounded-full bg-transparent transition-colors hover:bg-gray-6/40 md:block"
-              onPointerDown={props.onSidebarResizeStart}
-              title={t("session.resize_workspace_column")}
-              aria-label={t("session.resize_workspace_column")}
-            />
-          ) : null}
-        </aside>
+        {!overlayPanel ? (
+          <aside
+            className="relative hidden min-h-0 shrink-0 flex-col overflow-hidden border-0 border-r border-dls-border bg-dls-sidebar lg:flex lg:flex-col"
+            style={props.sidebarWidth ? { width: `${props.sidebarWidth}px`, minWidth: `${props.sidebarWidth}px` } : undefined}
+          >
+            {props.sidebarTopSlot ? <div className="shrink-0">{props.sidebarTopSlot}</div> : null}
+            <div className="flex min-h-0 flex-1">
+              <WorkspaceSessionList {...props.workspaceSessionListProps} />
+            </div>
+            {props.onSidebarResizeStart ? (
+              <div
+                className="absolute right-0 top-0 hidden h-full w-2 translate-x-1/2 cursor-col-resize rounded-full bg-transparent transition-colors hover:bg-gray-6/40 md:block"
+                onPointerDown={props.onSidebarResizeStart}
+                title={t("session.resize_workspace_column")}
+                aria-label={t("session.resize_workspace_column")}
+              />
+            ) : null}
+          </aside>
+        ) : null}
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-dls-surface">
           <header
@@ -58,7 +96,7 @@ export function SettingsShell(props: SettingsShellProps) {
             {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
             style={
               isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
-                ? ({ WebkitAppRegion: "drag" } satisfies CSSProperties)
+                ? ({ WebkitAppRegion: "drag" } as CSSProperties)
                 : undefined
             }
           >
@@ -83,7 +121,7 @@ export function SettingsShell(props: SettingsShellProps) {
               className="flex items-center text-gray-10"
               style={
                 isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
-                  ? ({ WebkitAppRegion: "no-drag" } satisfies CSSProperties)
+                  ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
                   : undefined
               }
             >

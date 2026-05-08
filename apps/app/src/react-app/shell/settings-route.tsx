@@ -44,7 +44,7 @@ import { UsageView } from "../domains/settings/pages/usage-view";
 import { useDebugViewModel } from "../domains/settings/state/debug-view-model";
 import { useMessagingViewProps } from "../domains/settings/state/messaging-view-state";
 import { useBootState } from "./boot-state";
-import { SettingsShell } from "../domains/settings/shell/settings-shell";
+import { SettingsSessionOverlayFrame, SettingsShell } from "../domains/settings/shell/settings-shell";
 import { createExtensionsStore, useExtensionsStoreSnapshot } from "../domains/settings/state/extensions-store";
 import { usePlatform } from "../kernel/platform";
 import { useLocal } from "../kernel/local-provider";
@@ -304,6 +304,22 @@ function readNavigationSessionId(state: unknown): string | null {
   return typeof value === "string" ? value.trim() || null : null;
 }
 
+/** Session route location preserved when opening settings as an overlay (see AppRoutes modal stack). */
+function readBackgroundLocation(state: unknown): { pathname: string; search: string; hash: string } | null {
+  if (!state || typeof state !== "object") return null;
+  const raw = (state as { backgroundLocation?: unknown }).backgroundLocation;
+  if (!raw || typeof raw !== "object") return null;
+  const pathname = (raw as { pathname?: unknown }).pathname;
+  if (typeof pathname !== "string" || pathname.length === 0) return null;
+  const search = (raw as { search?: unknown }).search;
+  const hash = (raw as { hash?: unknown }).hash;
+  return {
+    pathname,
+    search: typeof search === "string" ? search : "",
+    hash: typeof hash === "string" ? hash : "",
+  };
+}
+
 function findSessionWorkspaceId(
   sessionId: string | null,
   entries: Array<{ workspaceId: string; sessions: any[] }>,
@@ -534,6 +550,29 @@ export function SettingsRoute() {
     minLeftWidth: MIN_WORKSPACE_LEFT_SIDEBAR_WIDTH,
     maxLeftWidth: MAX_WORKSPACE_LEFT_SIDEBAR_WIDTH,
   });
+
+  const overlayFromSession = useMemo(() => Boolean(readBackgroundLocation(location.state)), [location.state]);
+
+  const handleCloseSettings = useCallback(() => {
+    const bg = readBackgroundLocation(location.state);
+    if (bg) {
+      navigate({ pathname: bg.pathname, search: bg.search, hash: bg.hash }, { replace: true });
+      return;
+    }
+    navigate(selectedWorkspaceId ? workspaceSessionRoute(selectedWorkspaceId) : "/session");
+  }, [location.state, navigate, selectedWorkspaceId]);
+
+  useEffect(() => {
+    if (!overlayFromSession) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        handleCloseSettings();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleCloseSettings, overlayFromSession]);
 
   const openworkServerStore = useMemo(
     () =>
@@ -1461,7 +1500,10 @@ export function SettingsRoute() {
             initialSection={route.extensionsSection}
             setSectionRoute={(section) => {
               const path = `extensions/${section}`;
-              navigate(selectedWorkspaceId ? workspaceSettingsRoute(selectedWorkspaceId, path) : `/settings/${path}`);
+              navigate(selectedWorkspaceId ? workspaceSettingsRoute(selectedWorkspaceId, path) : `/settings/${path}`, {
+                replace: true,
+                state: location.state,
+              });
             }}
             onRefresh={() => {
               void connectionsStore.refreshMcpServers();
@@ -1627,41 +1669,59 @@ export function SettingsRoute() {
     }
   })();
 
+  const settingsChrome = (
+    <SettingsShell
+      activeTab={route.tab}
+      onSelectTab={(tab) =>
+        navigate(selectedWorkspaceId ? workspaceSettingsRoute(selectedWorkspaceId, tab) : `/settings/${tab}`, {
+          state: location.state,
+        })
+      }
+      developerMode={developerMode}
+      presentation={overlayFromSession ? "overlay-panel" : "page"}
+      selectedWorkspaceName={selectedWorkspaceName}
+      headerStatus={routeOpenworkStatus}
+      busyHint={loading ? t("session.loading_detail") : busyLabel}
+      workspaceSessionListProps={{
+        workspaceSessionGroups,
+        selectedWorkspaceId,
+        developerMode,
+        selectedSessionId: null,
+        connectingWorkspaceId: null,
+        workspaceConnectionStateById,
+        newTaskDisabled: !opencodeClient,
+        onReorderWorkspaces: isDesktopRuntime() || openworkClient ? handleReorderWorkspaces : undefined,
+        onOpenSession: (workspaceId, sessionId) => navigate(workspaceSessionRoute(workspaceId, sessionId)),
+        onCreateTaskInWorkspace: handleCreateTaskInWorkspace,
+        onOpenRenameWorkspace: handleOpenRenameWorkspace,
+        onRevealWorkspace: (id) => void handleRevealWorkspace(id),
+        onRecoverWorkspace: (workspaceId) => runRemoteWorkspaceConnectionCheck(workspaceId, "recover"),
+        onTestWorkspaceConnection: (workspaceId) => runRemoteWorkspaceConnectionCheck(workspaceId, "test"),
+        onEditWorkspaceConnection: remoteWorkspaceConnectionEditor.open,
+        onForgetWorkspace: (id) => void handleForgetWorkspace(id),
+        onOpenCreateWorkspace: handleOpenCreateWorkspace,
+      }}
+      onClose={handleCloseSettings}
+      sidebarWidth={shellLayout.leftSidebarWidth}
+      onSidebarResizeStart={overlayFromSession ? undefined : shellLayout.startLeftSidebarResize}
+      error={routeError ?? notFoundRouteError}
+    >
+      {settingsView}
+    </SettingsShell>
+  );
+
   return (
     <>
-      <SettingsShell
-        activeTab={route.tab}
-        onSelectTab={(tab) => navigate(selectedWorkspaceId ? workspaceSettingsRoute(selectedWorkspaceId, tab) : `/settings/${tab}`)}
-        developerMode={developerMode}
-        selectedWorkspaceName={selectedWorkspaceName}
-        headerStatus={routeOpenworkStatus}
-        busyHint={loading ? t("session.loading_detail") : busyLabel}
-        workspaceSessionListProps={{
-          workspaceSessionGroups,
-          selectedWorkspaceId,
-          developerMode,
-          selectedSessionId: null,
-          connectingWorkspaceId: null,
-          workspaceConnectionStateById,
-          newTaskDisabled: !opencodeClient,
-          onReorderWorkspaces: isDesktopRuntime() || openworkClient ? handleReorderWorkspaces : undefined,
-          onOpenSession: (workspaceId, sessionId) => navigate(workspaceSessionRoute(workspaceId, sessionId)),
-          onCreateTaskInWorkspace: handleCreateTaskInWorkspace,
-          onOpenRenameWorkspace: handleOpenRenameWorkspace,
-          onRevealWorkspace: (id) => void handleRevealWorkspace(id),
-          onRecoverWorkspace: (workspaceId) => runRemoteWorkspaceConnectionCheck(workspaceId, "recover"),
-          onTestWorkspaceConnection: (workspaceId) => runRemoteWorkspaceConnectionCheck(workspaceId, "test"),
-          onEditWorkspaceConnection: remoteWorkspaceConnectionEditor.open,
-          onForgetWorkspace: (id) => void handleForgetWorkspace(id),
-          onOpenCreateWorkspace: handleOpenCreateWorkspace,
-        }}
-        onClose={() => navigate(selectedWorkspaceId ? workspaceSessionRoute(selectedWorkspaceId) : "/session")}
-        sidebarWidth={shellLayout.leftSidebarWidth}
-        onSidebarResizeStart={shellLayout.startLeftSidebarResize}
-        error={routeError ?? notFoundRouteError}
-      >
-        {settingsView}
-      </SettingsShell>
+      {overlayFromSession ? (
+        <SettingsSessionOverlayFrame
+          sidebarWidth={shellLayout.leftSidebarWidth}
+          onDismiss={handleCloseSettings}
+        >
+          {settingsChrome}
+        </SettingsSessionOverlayFrame>
+      ) : (
+        settingsChrome
+      )}
 
       <ProviderAuthModal
         open={providerAuthSnapshot.providerAuthModalOpen}
