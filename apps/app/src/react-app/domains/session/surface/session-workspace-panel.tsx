@@ -598,21 +598,21 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
                 onClick={() => void previewQuery.refetch()}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
               >
-                <RefreshCw size={18} strokeWidth={1.75} />
+                <RefreshCw size={16} strokeWidth={1.75} aria-hidden />
               </button>
               <button
                 type="button"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
                 onClick={() => setSelectedFile(null)}
                 aria-label={t("session.workspace_panel_close_preview")}
                 title={t("session.workspace_panel_close_preview")}
               >
-                <X size={18} strokeWidth={1.75} />
+                <X size={16} strokeWidth={1.75} aria-hidden />
               </button>
             </div>
           </div>
@@ -637,21 +637,21 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
                 onClick={() => void previewQuery.refetch()}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
               >
-                <RefreshCw size={18} strokeWidth={1.75} />
+                <RefreshCw size={16} strokeWidth={1.75} aria-hidden />
               </button>
               <button
                 type="button"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
                 onClick={() => setSelectedFile(null)}
                 aria-label={t("session.workspace_panel_close_preview")}
                 title={t("session.workspace_panel_close_preview")}
               >
-                <X size={18} strokeWidth={1.75} />
+                <X size={16} strokeWidth={1.75} aria-hidden />
               </button>
             </div>
           </div>
@@ -682,21 +682,21 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
                 onClick={() => void previewQuery.refetch()}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
               >
-                <RefreshCw size={18} strokeWidth={1.75} />
+                <RefreshCw size={16} strokeWidth={1.75} aria-hidden />
               </button>
               <button
                 type="button"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
                 onClick={() => setSelectedFile(null)}
                 aria-label={t("session.workspace_panel_close_preview")}
                 title={t("session.workspace_panel_close_preview")}
               >
-                <X size={18} strokeWidth={1.75} />
+                <X size={16} strokeWidth={1.75} aria-hidden />
               </button>
             </div>
           </div>
