@@ -7,7 +7,6 @@ import {
   pickDirectory,
   resolveWorkspaceListSelectedId,
   workspaceCreate,
-  workspaceCreateRemote,
   workspaceSetRuntimeActive,
   workspaceSetSelected,
 } from "../../app/lib/desktop";
@@ -18,7 +17,7 @@ import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-moda
 import { resolveOpenworkConnection } from "./openwork-connection";
 import { createOpenworkServerClient } from "../../app/lib/openwork-server";
 import { writeActiveWorkspaceId } from "./session-memory";
-import { workspaceSessionRoute, workspaceSettingsRoute } from "./workspace-routes";
+import { workspaceSettingsRoute } from "./workspace-routes";
 
 function folderNameFromPath(path: string) {
   const normalized = path.replace(/\\/g, "/").replace(/\/+$/, "");
@@ -30,9 +29,9 @@ function folderNameFromPath(path: string) {
  * WelcomeRoute: full-screen welcome page shown on first launch when
  * the user has no workspaces and has not completed onboarding.
  *
- * Clicking "Get started" opens the CreateWorkspaceModal. Once a
- * workspace is created, hasCompletedOnboarding is set and the user
- * is redirected to /session.
+ * Clicking "Get started" opens the CreateWorkspaceModal (local folder
+ * flow). Once a workspace is created, hasCompletedOnboarding is set
+ * and the user is redirected to settings.
  */
 export function WelcomeRoute() {
   const navigate = useNavigate();
@@ -40,8 +39,6 @@ export function WelcomeRoute() {
   const [modalOpen, setModalOpen] = useState(false);
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [remoteBusy, setRemoteBusy] = useState(false);
-  const [remoteError, setRemoteError] = useState<string | null>(null);
 
   // If user already completed onboarding, redirect away immediately.
   useEffect(() => {
@@ -110,51 +107,6 @@ export function WelcomeRoute() {
     [markOnboardingComplete, navigate],
   );
 
-  const handleCreateRemote = useCallback(
-    async (input: {
-      openworkHostUrl?: string | null;
-      openworkToken?: string | null;
-      directory?: string | null;
-      displayName?: string | null;
-    }) => {
-      const baseUrlValue = input.openworkHostUrl?.trim() ?? "";
-      if (!baseUrlValue) return false;
-      setRemoteBusy(true);
-      setRemoteError(null);
-      try {
-        const list = await workspaceCreateRemote({
-          baseUrl: baseUrlValue,
-          openworkHostUrl: baseUrlValue,
-          openworkToken: input.openworkToken?.trim() || null,
-          displayName: input.displayName?.trim() || null,
-          directory: input.directory?.trim() || null,
-          remoteType: "openwork",
-        });
-        const createdId =
-          resolveWorkspaceListSelectedId(list) ||
-          list.workspaces[list.workspaces.length - 1]?.id ||
-          "";
-        if (createdId) {
-          await workspaceSetSelected(createdId).catch(() => undefined);
-          await workspaceSetRuntimeActive(createdId).catch(() => undefined);
-          writeActiveWorkspaceId(createdId);
-        }
-        markOnboardingComplete();
-        setModalOpen(false);
-        navigate(createdId ? workspaceSessionRoute(createdId) : "/session", { replace: true });
-        return true;
-      } catch (error) {
-        setRemoteError(
-          error instanceof Error ? error.message : "Connection failed.",
-        );
-        return false;
-      } finally {
-        setRemoteBusy(false);
-      }
-    },
-    [markOnboardingComplete, navigate],
-  );
-
   return (
     <>
       <WelcomePage onGetStarted={() => setModalOpen(true)} />
@@ -163,10 +115,8 @@ export function WelcomeRoute() {
         onClose={() => {
           setModalOpen(false);
           setCreateError(null);
-          setRemoteError(null);
         }}
         onConfirm={handleCreateWorkspace}
-        onConfirmRemote={handleCreateRemote}
         onPickFolder={() =>
           pickDirectory({ title: t("onboarding.authorize_folder") }) as Promise<
             string | null
@@ -174,8 +124,6 @@ export function WelcomeRoute() {
         }
         submitting={createBusy}
         localError={createError}
-        remoteSubmitting={remoteBusy}
-        remoteError={remoteError}
         localDisabled={!isDesktopRuntime()}
         localDisabledReason={
           isDesktopRuntime()

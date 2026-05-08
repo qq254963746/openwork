@@ -198,7 +198,7 @@ export default {
   "dashboard.connected": "Connected",
   "dashboard.connecting": "Connecting...",
   "dashboard.create_local_workspace_subtitle": "Create a workspace on this device.",
-  "dashboard.create_local_workspace_title": "Local workspace",
+  "dashboard.create_local_workspace_title": "Create Local workspace",
   "dashboard.create_remote_custom_subtitle": "Attach to a self-hosted OpenWork worker.",
   "dashboard.create_remote_custom_title": "Connect custom remote",
   "dashboard.create_remote_workspace_confirm": "Add Workspace",

@@ -1,7 +1,5 @@
 import type { WorkspacePreset } from "../../../app/types";
 
-export type CreateWorkspaceScreen = "chooser" | "local" | "remote";
-
 export type RemoteWorkspaceInput = {
   openworkHostUrl?: string | null;
   openworkToken?: string | null;
@@ -30,15 +28,12 @@ export type CreateWorkspaceModalProps = {
   open: boolean;
   onClose: () => void;
   onConfirm: (preset: WorkspacePreset, folder: string | null) => void;
-  onConfirmRemote?: (input: RemoteWorkspaceInput) => Promise<boolean> | boolean | void;
   onConfirmWorker?: (preset: WorkspacePreset, folder: string | null) => void;
   onPickFolder: () => Promise<string | null>;
   onImportConfig?: () => void;
   importingConfig?: boolean;
   submitting?: boolean;
   localError?: string | null;
-  remoteSubmitting?: boolean;
-  remoteError?: string | null;
   inline?: boolean;
   showClose?: boolean;
   defaultPreset?: WorkspacePreset;

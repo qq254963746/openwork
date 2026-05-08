@@ -199,7 +199,7 @@ export default {
   "dashboard.connected": "已连接",
   "dashboard.connecting": "正在连接…",
   "dashboard.create_local_workspace_subtitle": "在此设备上创建工作区，可选择从团队模板开始。",
-  "dashboard.create_local_workspace_title": "本地工作区",
+  "dashboard.create_local_workspace_title": "创建本地工作区",
   "dashboard.create_remote_custom_subtitle": "连接自托管的OpenWork工作区。",
   "dashboard.create_remote_custom_title": "连接自定义远程",
   "dashboard.create_remote_workspace_confirm": "添加工作区",
