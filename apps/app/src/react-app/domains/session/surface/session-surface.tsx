@@ -42,8 +42,10 @@ import {
   questionKey as reactQuestionKey,
   statusKey as reactStatusKey,
   transcriptKey as reactTranscriptKey,
+  todoKey as reactTodoKey,
 } from "../sync/session-sync";
 import { SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX } from "../../../../app/types";
+import type { TodoItem } from "../../../../app/types";
 
 const EMPTY_TRANSCRIPT: UIMessage[] = [];
 const IDLE_STATUS: SessionStatus = { type: "idle" };
@@ -366,7 +368,7 @@ function InlineQuestionPrompt(props: {
 
         <div className="px-4 pb-4 sm:px-5">
           <div className="flex flex-col gap-2">
-            {currentQuestion.options.map((opt) => {
+            {currentQuestion.options.map((opt: { description: string; label?: string }) => {
               const value = opt.description;
               const selected = currentSelection.includes(value);
               return (
@@ -962,6 +964,14 @@ export function SessionSurface(props: SessionSurfaceProps) {
     contentRef,
   });
 
+  const todos = useSharedQueryState<TodoItem[]>(
+    reactTodoKey(props.workspaceId, props.sessionId),
+    [],
+  );
+  // TS/JSX can fail to pick up memo'd prop types in some editor setups.
+  // Cast so we can still pass live todo state to the transcript renderer.
+  const SessionTranscriptUnsafe = SessionTranscript as unknown as (props: any) => any;
+
   const sessionScrollTopControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "session.scroll_top",
     label: "Go to the top of the session",
@@ -1107,10 +1117,11 @@ export function SessionSurface(props: SessionSurfaceProps) {
             ) : (
               <DevProfiler id="SessionTranscript">
                 <>
-                  <SessionTranscript
+                  <SessionTranscriptUnsafe
                     messages={renderedMessages}
                     isStreaming={chatStreaming}
                     developerMode={props.developerMode}
+                    todos={todos}
                     scrollElement={() => scrollRef.current}
                   />
                   {error ? (

@@ -1,5 +1,14 @@
 /** @jsxImportSource react */
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MemoExoticComponent,
+  type ReactNode,
+} from "react";
 import { isToolUIPart, type DynamicToolUIPart, type UIMessage } from "ai";
 import type { Part } from "@opencode-ai/sdk/v2/client";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -10,6 +19,7 @@ import {
   SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX,
   type MessageGroup,
   type StepGroupMode,
+  type TodoItem,
 } from "../../../../app/types";
 import { groupMessageParts, isDesktopRuntime, summarizeStep } from "../../../../app/utils";
 import { MarkdownBlock } from "./markdown";
@@ -127,10 +137,11 @@ function blocksAreEquivalent(
   return false;
 }
 
-type SessionTranscriptProps = {
+export type SessionTranscriptProps = {
   messages: UIMessage[];
   isStreaming: boolean;
   developerMode: boolean;
+  todos?: TodoItem[];
   showThinking?: boolean;
   expandedStepIds?: Set<string>;
   onExpandedStepIdsChange?: (updater: (current: Set<string>) => Set<string>) => void;
@@ -556,12 +567,15 @@ function StepRow(props: {
   part: TranscriptPart;
   expanded: boolean;
   onToggle: () => void;
+  todos: TodoItem[];
 }) {
   const summary = useMemo(() => summarizeStep(props.part), [props.part]);
   const toolState = useMemo(() => {
     if (props.part.type !== "tool") return {} as Record<string, unknown>;
     return (((props.part as { state?: unknown }).state ?? {}) as Record<string, unknown>);
   }, [props.part]);
+  const toolName = props.part.type === "tool" ? String((props.part as { tool?: unknown }).tool ?? "") : "";
+  const toolNameLower = toolName.toLowerCase();
   const toolInput = toolState.input && typeof toolState.input === "object"
     ? (toolState.input as Record<string, unknown>)
     : undefined;
@@ -579,6 +593,125 @@ function StepRow(props: {
     return (
       <div className="text-[14px] leading-[1.7] text-gray-9 whitespace-pre-wrap">
         <div className="max-w-[720px]">{cleanReasoningPreview(raw) || headline}</div>
+      </div>
+    );
+  }
+
+  if (props.part.type === "tool" && (toolNameLower === "todowrite" || toolNameLower === "todoread")) {
+    const todos = props.todos.filter((todo) => todo.content.trim());
+    const completed = todos.filter((todo) => todo.status === "completed").length;
+    const total = todos.length;
+
+    return (
+      <div className="text-[14px] text-gray-9">
+        <button
+          type="button"
+          className="w-full text-left transition-colors hover:text-dls-text"
+          aria-expanded={props.expanded}
+          onClick={props.onToggle}
+        >
+          <span className="inline-flex max-w-[720px] items-start gap-1.5 leading-relaxed align-top">
+            <span className="min-w-0 break-words">{headline}</span>
+            <ChevronDown
+              size={14}
+              className={`mt-[2px] shrink-0 text-gray-8 transition-transform ${
+                props.expanded ? "" : "-rotate-90"
+              }`}
+            />
+          </span>
+        </button>
+
+        <div className="mt-3 w-full">
+          <div className="w-full rounded-[20px] border border-dls-border bg-dls-surface shadow-[var(--dls-card-shadow)]">
+            <div className="flex items-center justify-between gap-3 border-b border-dls-border px-4 py-3">
+              <div className="min-w-0">
+                <div className="text-xs font-medium text-gray-12">Todo</div>
+                <div className="mt-0.5 text-[11px] text-gray-11">
+                  {total > 0 ? `${completed} / ${total} completed` : "No tasks"}
+                </div>
+              </div>
+              <div className="shrink-0 rounded-full bg-gray-2/40 px-2 py-0.5 text-[11px] font-medium text-gray-11">
+                {toolNameLower}
+              </div>
+            </div>
+            <div className="max-h-72 space-y-2.5 overflow-auto px-4 pb-3">
+              {todos.map((todo, index) => {
+                const done = todo.status === "completed";
+                const cancelled = todo.status === "cancelled";
+                const active = todo.status === "in_progress";
+                return (
+                  <div
+                    key={todo.id || `${todo.content}-${index}`}
+                    className="flex items-start gap-2.5 pt-2.5 first:pt-2.5"
+                  >
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      <div
+                        className={`flex h-4.5 w-4.5 items-center justify-center rounded-full border ${
+                          done
+                            ? "border-green-6 bg-green-2 text-green-11"
+                            : active
+                              ? "border-amber-6 bg-amber-2 text-amber-11"
+                              : cancelled
+                                ? "border-gray-6 bg-gray-2 text-gray-8"
+                                : "border-gray-6 bg-gray-1 text-gray-8"
+                        }`}
+                      >
+                        {done ? (
+                          <Check size={10} />
+                        ) : active ? (
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-9" />
+                        ) : null}
+                      </div>
+                    </div>
+                    <div
+                      className={`flex-1 text-sm leading-relaxed ${
+                        cancelled ? "text-gray-9 line-through" : "text-gray-12"
+                      }`}
+                    >
+                      <span className="mr-1.5 text-gray-9">{index + 1}.</span>
+                      {todo.content}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {props.expanded ? (
+            <div className="mt-3 space-y-3">
+              {hasStructuredValue(toolInput) ? (
+                <div>
+                  <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-gray-8">
+                    Request
+                  </div>
+                  <pre className="overflow-x-auto rounded-[16px] border border-dls-border/70 bg-dls-surface px-4 py-3 text-[12px] leading-6 text-gray-10">
+                    {formatStructuredValue(toolInput)}
+                  </pre>
+                </div>
+              ) : null}
+              {hasStructuredValue(toolOutput) ? (
+                <div>
+                  <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-gray-8">
+                    Result
+                  </div>
+                  <pre className="overflow-x-auto rounded-[16px] border border-dls-border/70 bg-dls-surface px-4 py-3 text-[12px] leading-6 text-gray-10">
+                    {formatStructuredValue(toolOutput)}
+                  </pre>
+                </div>
+              ) : null}
+              {toolError ? (
+                <div>
+                  <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-red-10">
+                    Error
+                  </div>
+                  <pre className="overflow-x-auto rounded-[16px] border border-red-6/40 bg-red-3/20 px-4 py-3 text-[12px] leading-6 text-red-11">
+                    {toolError}
+                  </pre>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -646,6 +779,7 @@ function StepsContainer(props: {
   isNestedVariant: boolean;
   expandedStepIds: Set<string>;
   onExpandedStepIdsChange: (updater: (current: Set<string>) => Set<string>) => void;
+  todos: TodoItem[];
 }) {
   const toggleSteps = (id: string) => {
     props.onExpandedStepIdsChange((current) => {
@@ -681,6 +815,7 @@ function StepsContainer(props: {
                     part={part}
                     expanded={props.expandedStepIds.has(rowId)}
                     onToggle={() => toggleSteps(rowId)}
+                    todos={props.todos}
                   />
                 );
               })}
@@ -695,6 +830,7 @@ function StepsContainer(props: {
 function SessionTranscriptInner(props: SessionTranscriptProps) {
   const showThinking = props.showThinking ?? props.developerMode;
   const isNestedVariant = props.variant === "nested";
+  const todos = props.todos ?? [];
   const [internalExpandedStepIds, setInternalExpandedStepIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -955,6 +1091,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
               isNestedVariant={isNestedVariant}
               expandedStepIds={expandedStepIds}
               onExpandedStepIdsChange={onExpandedStepIdsChange}
+              todos={todos}
             />
           </div>
         </div>
@@ -1087,6 +1224,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                     isNestedVariant={isNestedVariant}
                     expandedStepIds={expandedStepIds}
                     onExpandedStepIdsChange={onExpandedStepIdsChange}
+                    todos={todos}
                   />
                 ) : null}
               </div>
@@ -1158,5 +1296,6 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
  * when the transcript's own props actually change (messages array
  * identity, isStreaming, developerMode, etc.).
  */
-export const SessionTranscript = memo(SessionTranscriptInner);
+export const SessionTranscript: MemoExoticComponent<(props: SessionTranscriptProps) => ReactNode> =
+  memo(SessionTranscriptInner);
 SessionTranscript.displayName = "SessionTranscript";
