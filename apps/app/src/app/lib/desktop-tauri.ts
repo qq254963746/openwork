@@ -12,13 +12,16 @@ export async function openDesktopUrl(url: string): Promise<void> {
 }
 
 export async function openDesktopPath(target: string): Promise<void> {
-  const { openPath } = await import("@tauri-apps/plugin-opener");
-  await openPath(target);
+  await invoke<void>("host_open_path_native", { path: target });
 }
 
 export async function revealDesktopItemInDir(target: string): Promise<void> {
-  const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
-  await revealItemInDir(target);
+  await invoke<void>("host_reveal_path_native", { path: target });
+}
+
+/** Opens the log viewer in a dedicated Webview window (Release-safe; avoids `window.open`). */
+export async function openAppLogWebviewWindow(): Promise<void> {
+  await invoke<void>("open_app_log_window");
 }
 
 export async function relaunchDesktopApp(): Promise<void> {

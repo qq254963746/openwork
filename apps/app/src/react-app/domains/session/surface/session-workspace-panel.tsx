@@ -250,8 +250,21 @@ function buildWebPreviewSrcDoc(raw: string): string {
 
 /** Join workspace root (host path) with POSIX relative segments from the file tree. */
 function absoluteWorkspaceFilePath(workspaceRoot: string, relativePosix: string): string | null {
-  const root = workspaceRoot.trim();
+  let root = workspaceRoot.trim();
   if (!root) return null;
+  // Desktop shells sometimes surface `file://` roots; Tauri opener expects a native filesystem path.
+  if (/^file:\/\//i.test(root)) {
+    try {
+      const u = new URL(root);
+      let pathname = decodeURIComponent(u.pathname);
+      if (/^\/[a-zA-Z]:/.test(pathname)) {
+        pathname = pathname.slice(1);
+      }
+      root = isWindowsPlatform() ? pathname.replace(/\//g, "\\") : pathname;
+    } catch {
+      root = root.replace(/^file:\/\//i, "");
+    }
+  }
   const segments = relativePosix.split("/").filter(Boolean);
   const rootClean = root.replace(/[/\\]+$/, "");
   const isWin = /^[a-zA-Z]:/.test(rootClean) || rootClean.startsWith("\\\\");

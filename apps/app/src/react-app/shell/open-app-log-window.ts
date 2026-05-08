@@ -1,4 +1,5 @@
-import { isDesktopRuntime } from "../../app/utils";
+import { openAppLogWebviewWindow } from "../../app/lib/desktop-tauri";
+import { isDesktopRuntime, isTauriRuntime } from "../../app/utils";
 
 const APP_LOG_WINDOW_NAME = "openworkAppLog";
 
@@ -118,10 +119,33 @@ export function buildAppLogWindowUrl(): string {
 /** Opens (or focuses) a detached log viewer window; requires `opener` so logs read from the main shell. */
 export function openAppLogWindow(): Window | null {
   if (typeof window === "undefined") return null;
+
+  if (isTauriRuntime()) {
+    void openAppLogWebviewWindow().catch(() => {
+      try {
+        window.location.hash = "#/devtools/app-log";
+      } catch {
+        // ignore
+      }
+    });
+    return null;
+  }
+
   primeLogViewerPopupNavigation();
   const url = buildAppLogWindowUrl();
   const features = ["popup=yes", "width=980", "height=760"].join(",");
   const next = window.open(url, APP_LOG_WINDOW_NAME, features);
-  next?.focus();
-  return next;
+  if (next) {
+    next.focus();
+    return next;
+  }
+
+  if (isDesktopRuntime()) {
+    try {
+      window.location.hash = "#/devtools/app-log";
+    } catch {
+      // ignore
+    }
+  }
+  return null;
 }

@@ -39,6 +39,7 @@ use commands::skills::{
     write_local_skill,
 };
 use commands::updater::updater_environment;
+use commands::host_desktop::{host_open_path_native, host_reveal_path_native, open_app_log_window};
 use commands::window::set_window_decorations;
 use commands::workspace::{
     workspace_add_authorized_root, workspace_bootstrap, workspace_create, workspace_create_remote,
@@ -200,7 +201,10 @@ pub fn run() {
             reset_opencode_cache,
             read_opencode_engine_disk_logs,
             opencode_mcp_auth,
-            set_window_decorations
+            set_window_decorations,
+            open_app_log_window,
+            host_open_path_native,
+            host_reveal_path_native
         ])
         .build(tauri::generate_context!())
         .expect("error while building OpenWork");
