@@ -164,7 +164,7 @@ export function StatusBar(props: StatusBarProps) {
       <div
         className={`flex items-center justify-between text-[12px] text-dls-secondary ${
           sidebar
-            ? "min-h-11 gap-2 px-2.5 py-2"
+            ? "min-h-11 gap-2 px-2 py-2"
             : "h-12 gap-3 px-4 md:px-6"
         }`}
       >
@@ -195,7 +195,7 @@ export function StatusBar(props: StatusBarProps) {
               ref={appLogsButtonRef}
               type="button"
               className={`flex shrink-0 items-center justify-center rounded-md text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12 ${
-                sidebar ? "h-7 w-7" : "h-8 w-8"
+                sidebar ? "h-7 w-7 translate-x-[5px]" : "h-8 w-8"
               }`}
               onClick={props.onOpenAppLogs}
               title={t("status.app_logs")}
@@ -209,7 +209,7 @@ export function StatusBar(props: StatusBarProps) {
               ref={settingsButtonRef}
               type="button"
               className={`flex shrink-0 items-center justify-center rounded-md text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12 ${
-                sidebar ? "h-7 w-7" : "h-8 w-8"
+                sidebar ? "h-7 w-7 translate-x-1" : "h-8 w-8"
               }`}
               onClick={props.onOpenSettings}
               title={

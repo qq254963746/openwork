@@ -43,8 +43,9 @@ type Props = {
   onOpenSession: (workspaceId: string, sessionId: string) => void;
   onPrefetchSession?: (workspaceId: string, sessionId: string) => void;
   onCreateTaskInWorkspace: (workspaceId: string) => void;
-  onOpenRenameSession?: () => void;
-  onOpenDeleteSession?: () => void;
+  /** Pass `workspaceId` + `sessionId` when invoking from a row so non-selected sessions can switch first. */
+  onOpenRenameSession?: (workspaceId?: string, sessionId?: string) => void;
+  onOpenDeleteSession?: (workspaceId?: string, sessionId?: string) => void;
   onOpenRenameWorkspace: (workspaceId: string) => void;
   onRevealWorkspace: (workspaceId: string) => void;
   onRecoverWorkspace: (workspaceId: string) => Promise<boolean> | boolean | void;
@@ -331,7 +332,7 @@ export function WorkspaceSessionList(props: Props) {
   );
   const [previewCountByWorkspaceId, setPreviewCountByWorkspaceId] = useState<Record<string, number>>({});
   const [workspaceMenuId, setWorkspaceMenuId] = useState<string | null>(null);
-  const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
+  const [sessionMenuForSessionId, setSessionMenuForSessionId] = useState<string | null>(null);
   const [expandedSessionIds, setExpandedSessionIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -434,7 +435,7 @@ export function WorkspaceSessionList(props: Props) {
   }, [workspaceMenuId]);
 
   useEffect(() => {
-    setSessionMenuOpen(false);
+    setSessionMenuForSessionId(null);
   }, [props.selectedSessionId]);
 
   useEffect(() => {
@@ -466,17 +467,17 @@ export function WorkspaceSessionList(props: Props) {
   ]);
 
   useEffect(() => {
-    if (!sessionMenuOpen) return;
+    if (!sessionMenuForSessionId) return;
     const closeMenu = (event: PointerEvent) => {
       const target = event.target as Node | null;
       if (target && sessionMenuRef.current?.contains(target)) return;
-      setSessionMenuOpen(false);
+      setSessionMenuForSessionId(null);
     };
     window.addEventListener("pointerdown", closeMenu);
     return () => {
       window.removeEventListener("pointerdown", closeMenu);
     };
-  }, [sessionMenuOpen]);
+  }, [sessionMenuForSessionId]);
 
   const renderSessionRow = (
     workspaceId: string,
@@ -490,14 +491,14 @@ export function WorkspaceSessionList(props: Props) {
     const hasChildren = (tree.descendantCountBySessionId.get(session.id) ?? 0) > 0;
     const isExpanded = expandedSessionIds.has(session.id) || forcedExpandedSessionIds.has(session.id);
     const isSessionActive = tree.activeIds.has(session.id);
-    const canManageSession = Boolean(
+    const sessionActionsAvailable = Boolean(
       props.showSessionActions &&
-      isSelected &&
       (props.onOpenRenameSession || props.onOpenDeleteSession),
     );
+    const menuOpenForThisSession = sessionMenuForSessionId === session.id;
 
     const openSession = () => {
-      setSessionMenuOpen(false);
+      setSessionMenuForSessionId(null);
       props.onOpenSession(workspaceId, session.id);
     };
 
@@ -509,14 +510,21 @@ export function WorkspaceSessionList(props: Props) {
     return (
       <div key={session.id} className="relative">
         <div
+          className="w-full rounded-[10px]"
+          style={isSelected ? { boxShadow: SESSION_ROW_SELECTED_BOX_SHADOW } : undefined}
+        >
+        <div
           role="button"
           tabIndex={0}
-          className={`group flex h-[36px] w-full items-center justify-between rounded-[10px] px-3 text-left text-[13px] font-normal transition-colors ${
+          className={`group relative flex h-[36px] w-full items-center overflow-hidden rounded-[10px] px-3.5 text-left text-[13px] font-normal transition-colors ${
             isSelected ? "bg-white dark:bg-gray-3" : "hover:bg-[#0000000a]"
           }`}
-          style={isSelected ? { boxShadow: SESSION_ROW_SELECTED_BOX_SHADOW } : undefined}
           onPointerEnter={prefetchSession}
           onFocus={prefetchSession}
+          onPointerLeave={(event) => {
+            const row = event.currentTarget;
+            if (document.activeElement === row) row.blur();
+          }}
           onClick={openSession}
           onKeyDown={(event) => {
             if (event.key !== "Enter" && event.key !== " ") return;
@@ -525,7 +533,7 @@ export function WorkspaceSessionList(props: Props) {
             openSession();
           }}
         >
-          <div className="mr-2.5 flex min-w-0 flex-1 items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             {hasChildren ? (
               <button
                 type="button"
@@ -543,7 +551,15 @@ export function WorkspaceSessionList(props: Props) {
               <span className="w-5 shrink-0" aria-hidden />
             ) : null}
 
-            <div className="flex min-w-0 flex-1 items-center gap-1">
+            <div
+              className={`flex min-w-0 flex-1 items-center gap-1 transition-[padding] duration-150 ease-out ${
+                sessionActionsAvailable
+                  ? menuOpenForThisSession
+                    ? "pr-[12px]"
+                    : "pr-0 group-hover:pr-[12px] group-focus-within:pr-[12px]"
+                  : ""
+              }`}
+            >
               <span
                 className={`flex size-5 shrink-0 items-center justify-center rounded-full bg-white ring-1 ring-black/[0.08] dark:bg-gray-2 dark:ring-white/12 ${
                   isSelected ? "" : "group-hover:ring-black/[0.12] dark:group-hover:ring-white/18"
@@ -570,30 +586,30 @@ export function WorkspaceSessionList(props: Props) {
             </div>
           </div>
 
-          {/* Fixed slot when session menus exist: avoids horizontal jump when selection moves. */}
-          {props.showSessionActions ? (
-            <div className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center">
-              {canManageSession ? (
-                <button
-                  type="button"
-                  className={`flex h-6 w-6 items-center justify-center rounded-md text-gray-9 transition-[opacity,colors] duration-150 hover:bg-gray-3/80 hover:text-gray-11 ${
-                    sessionMenuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                  }`}
-                  aria-label={t("workspace_list.session_actions")}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setSessionMenuOpen((current) => !current);
-                  }}
-                >
-                  <MoreHorizontal size={13} />
-                </button>
-              ) : null}
-            </div>
+          {sessionActionsAvailable ? (
+            <button
+              type="button"
+              className={`absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-md p-1 text-gray-9 transition-[opacity,colors] duration-150 hover:bg-[rgba(0,0,0,0.04)] hover:text-gray-11 ${
+                menuOpenForThisSession
+                  ? "pointer-events-auto opacity-100"
+                  : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
+              }`}
+              aria-label={t("workspace_list.session_actions")}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setSessionMenuForSessionId((current) =>
+                  current === session.id ? null : session.id,
+                );
+              }}
+            >
+              <MoreHorizontal size={14} />
+            </button>
           ) : null}
         </div>
+        </div>
 
-        {canManageSession && sessionMenuOpen ? (
+        {sessionActionsAvailable && menuOpenForThisSession ? (
           <div
             ref={sessionMenuRef}
             className="absolute right-0 top-[calc(100%+6px)] z-20 w-48 rounded-[18px] border border-dls-border bg-dls-surface p-1.5 shadow-[var(--dls-shell-shadow)]"
@@ -604,8 +620,8 @@ export function WorkspaceSessionList(props: Props) {
                 type="button"
                 className="w-full rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
                 onClick={() => {
-                  setSessionMenuOpen(false);
-                  props.onOpenRenameSession?.();
+                  setSessionMenuForSessionId(null);
+                  props.onOpenRenameSession?.(workspaceId, session.id);
                 }}
               >
                 {t("workspace_list.rename_session")}
@@ -617,8 +633,8 @@ export function WorkspaceSessionList(props: Props) {
                 type="button"
                 className="w-full rounded-xl px-3 py-2 text-left text-sm text-red-11 transition-colors hover:bg-red-1/40"
                 onClick={() => {
-                  setSessionMenuOpen(false);
-                  props.onOpenDeleteSession?.();
+                  setSessionMenuForSessionId(null);
+                  props.onOpenDeleteSession?.(workspaceId, session.id);
                 }}
               >
                 {t("workspace_list.delete_session")}
@@ -634,7 +650,7 @@ export function WorkspaceSessionList(props: Props) {
     isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col px-1">
       <div className="flex h-[50px] shrink-0 items-stretch gap-1">
         <div
           aria-hidden
@@ -666,8 +682,8 @@ export function WorkspaceSessionList(props: Props) {
           </div>
         ) : null}
       </div>
-      <div className="shrink-0 border-b border-dls-border/80 px-3.5 pb-3 pt-2.5">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className="shrink-0 border-b border-dls-border/80 pb-3 pt-2.5">
+        <div className="flex min-w-0 items-center gap-2 px-3.5">
           <img
             src={OPENWORK_MARK_SRC}
             alt=""
@@ -680,23 +696,26 @@ export function WorkspaceSessionList(props: Props) {
             {t("workspace_list.sidebar_brand")}
           </span>
         </div>
-        <div className="mt-[17px] -ml-2 w-[calc(100%+12px)] min-w-0">
-          <button
-            type="button"
-            className="flex h-[36px] w-full items-center justify-between gap-2 rounded-[12px] border border-blue-6/70 bg-blue-2 px-3 text-left text-[12px] font-medium leading-none text-blue-11 transition-colors hover:border-blue-7 hover:bg-blue-3 dark:border-blue-7/55 dark:bg-blue-a3/25 dark:text-blue-11 dark:hover:bg-blue-a4/35"
-            onClick={props.onOpenCreateWorkspace}
-          >
-            <span className="flex min-w-0 flex-1 items-center gap-2">
-              <span className="inline-flex size-[15px] shrink-0 items-center justify-center" aria-hidden>
-                <SquarePen className="size-[15px] text-blue-10 dark:text-blue-11" strokeWidth={2} />
+        {/* Align with session list: px-1 → px-0.5 like expanded workspace body. */}
+        <div className="mt-[17px] min-w-0 px-1">
+          <div className="px-0.5">
+            <button
+              type="button"
+              className="flex h-[36px] w-full items-center justify-between gap-2 rounded-[12px] border border-blue-6/70 bg-blue-2 px-3 text-left text-[12px] font-medium leading-none text-blue-11 transition-colors hover:border-blue-7 hover:bg-blue-3 dark:border-blue-7/55 dark:bg-blue-a3/25 dark:text-blue-11 dark:hover:bg-blue-a4/35"
+              onClick={props.onOpenCreateWorkspace}
+            >
+              <span className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="inline-flex size-[15px] shrink-0 items-center justify-center" aria-hidden>
+                  <SquarePen className="size-[15px] text-blue-10 dark:text-blue-11" strokeWidth={2} />
+                </span>
+                <span className="truncate leading-none">{t("workspace_list.add_workspace")}</span>
               </span>
-              <span className="truncate leading-none">{t("workspace_list.add_workspace")}</span>
-            </span>
-            <AddWorkspaceShortcutGlyph className="h-3.5 w-[29px] shrink-0 text-blue-11/55 dark:text-blue-11/45" />
-          </button>
+              <AddWorkspaceShortcutGlyph className="h-3.5 w-[29px] shrink-0 text-blue-11/55 dark:text-blue-11/45" />
+            </button>
+          </div>
         </div>
       </div>
-      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pr-1">
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
         <div className="space-y-1 pb-2">
           {props.workspaceSessionGroups.map((group, workspaceIndex) => {
             const canReorder =
@@ -886,7 +905,7 @@ export function WorkspaceSessionList(props: Props) {
                       >
                         <button
                           type="button"
-                          className="rounded-md p-1 text-gray-9 hover:bg-gray-3/80 hover:text-gray-11"
+                          className="rounded-md p-1 text-gray-9 hover:bg-[rgba(0,0,0,0.04)] hover:text-gray-11"
                           onClick={(event) => {
                             event.stopPropagation();
                             props.onCreateTaskInWorkspace(workspace.id);
@@ -899,7 +918,7 @@ export function WorkspaceSessionList(props: Props) {
 
                         <button
                           type="button"
-                          className="rounded-md p-1 text-gray-9 hover:bg-gray-3/80 hover:text-gray-11"
+                          className="rounded-md p-1 text-gray-9 hover:bg-[rgba(0,0,0,0.04)] hover:text-gray-11"
                           onClick={(event) => {
                             event.stopPropagation();
                             setWorkspaceMenuId((current) => (current === workspace.id ? null : workspace.id));

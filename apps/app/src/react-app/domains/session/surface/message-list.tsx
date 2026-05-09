@@ -24,6 +24,7 @@ import {
 import { groupMessageParts, isDesktopRuntime, summarizeStep } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import { MarkdownBlock } from "./markdown";
+import { ToolStepTitleGlyph } from "./tool-step-title-glyph";
 import { applyTextHighlights } from "./text-highlights";
 
 type TranscriptPart = Part;
@@ -366,7 +367,7 @@ function ThinkingCollapsible(props: { text: string; thinkingActive: boolean }) {
   }, [props.text]);
 
   return (
-    <div className="w-full max-w-[720px]">
+    <div className="w-full max-w-[800px]">
       <button
         type="button"
         className={`flex w-full items-center gap-2 rounded-lg py-0.5 text-left [font-size:inherit] [line-height:inherit] text-gray-9 transition-colors ${
@@ -383,7 +384,7 @@ function ThinkingCollapsible(props: { text: string; thinkingActive: boolean }) {
         }}
       >
         <Atom className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
-        <span className="flex min-w-0 max-w-[720px] flex-1 items-center gap-1.5 [line-height:inherit]">
+        <span className="flex min-w-0 max-w-[800px] flex-1 items-center gap-1.5 [line-height:inherit]">
           <span
             className={`min-w-0 break-words font-medium ${
               props.thinkingActive ? "thinking-title-shimmer" : ""
@@ -713,14 +714,17 @@ function StepRow(props: {
           aria-expanded={props.expanded}
           onClick={props.onToggle}
         >
-          <span className="inline-flex max-w-[720px] items-start gap-1.5 leading-relaxed align-top">
-            <span className="min-w-0 break-words">{headline}</span>
-            <ChevronDown
-              size={14}
-              className={`mt-[2px] shrink-0 text-gray-8 transition-transform ${
-                props.expanded ? "" : "-rotate-90"
-              }`}
-            />
+          <span className="flex w-full max-w-[800px] items-center gap-2 leading-relaxed">
+            <ToolStepTitleGlyph className="size-[14px] shrink-0 text-gray-10" />
+            <span className="flex min-w-0 flex-1 items-center gap-1.5">
+              <span className="min-w-0 break-words">{headline}</span>
+              <ChevronDown
+                size={14}
+                className={`shrink-0 text-gray-8 transition-transform ${
+                  props.expanded ? "" : "-rotate-90"
+                }`}
+              />
+            </span>
           </span>
         </button>
 
@@ -832,21 +836,26 @@ function StepRow(props: {
           props.onToggle();
         }}
       >
-        <span className="inline-flex max-w-[720px] items-start gap-1.5 leading-relaxed align-top">
-          <span className="min-w-0 break-words">{headline}</span>
-          {expandable ? (
-            <ChevronDown
-              size={14}
-              className={`mt-[2px] shrink-0 text-gray-8 transition-transform ${
-                props.expanded ? "" : "-rotate-90"
-              }`}
-            />
+        <span className="flex w-full max-w-[800px] items-center gap-2 leading-relaxed">
+          {props.part.type === "tool" ? (
+            <ToolStepTitleGlyph className="size-[14px] shrink-0 text-gray-10" />
           ) : null}
+          <span className="flex min-w-0 flex-1 items-center gap-1.5">
+            <span className="min-w-0 break-words">{headline}</span>
+            {expandable ? (
+              <ChevronDown
+                size={14}
+                className={`shrink-0 text-gray-8 transition-transform ${
+                  props.expanded ? "" : "-rotate-90"
+                }`}
+              />
+            ) : null}
+          </span>
         </span>
       </button>
       {props.expanded ? (
         <div
-          className="mt-3 ml-[22px] max-h-[420px] space-y-3 overflow-y-auto pr-3"
+          className="mt-3 ml-[38px] max-h-[420px] space-y-3 overflow-y-auto pr-3"
           data-scrollable="true"
         >
           {hasStructuredValue(toolInput) ? (
@@ -1204,7 +1213,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                   : "relative max-w-[85%] rounded-[12px] bg-[rgba(0,0,0,0.04)] px-4 py-[9px] text-[15px] leading-relaxed text-[rgba(0,0,0,0.85)] dark:bg-white/[0.08] dark:text-gray-12"
                 : isNestedVariant
                   ? "w-full relative text-[14px] leading-[1.65] text-dls-text group"
-                  : "w-full relative max-w-[760px] text-[15px] leading-[1.7] text-dls-text group"
+                  : "w-full relative max-w-[800px] text-[15px] leading-[1.7] text-dls-text group"
             } ${searchOutlineClass}`}
           >
             <StepsContainer
@@ -1273,7 +1282,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                 : "relative max-w-[85%] rounded-[12px] bg-[rgba(0,0,0,0.04)] px-4 py-[9px] text-[15px] leading-relaxed text-[rgba(0,0,0,0.85)] dark:bg-white/[0.08] dark:text-gray-12"
               : isNestedVariant
                 ? "w-full relative text-[14px] leading-[1.65] text-dls-text antialiased group"
-                : "w-full relative max-w-[760px] text-[15px] leading-[1.72] text-dls-text antialiased group"
+                : "w-full relative max-w-[800px] text-[15px] leading-[1.72] text-dls-text antialiased group"
           } ${searchOutlineClass}`}
         >
           {block.attachments.length > 0 ? (

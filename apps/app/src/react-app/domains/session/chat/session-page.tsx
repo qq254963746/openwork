@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import type { CSSProperties } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Loader2, Minimize2, PanelLeftOpen, PanelRightIcon, Zap } from "lucide-react";
 
 import { t } from "../../../../i18n";
@@ -203,6 +203,10 @@ export function SessionPage(props: SessionPageProps) {
   const [narrowWorkspaceSidebarOpen, setNarrowWorkspaceSidebarOpen] = useState(false);
   const [showDelayedSessionLoadingState, setShowDelayedSessionLoadingState] = useState(false);
 
+  /** After sidebar picks rename/delete on another session, open modal once selection catches up. */
+  const pendingSidebarRenameSessionIdRef = useRef<string | null>(null);
+  const pendingSidebarDeleteSessionIdRef = useRef<string | null>(null);
+
   const toggleWorkspaceSidePanel = useCallback(() => {
     setWorkspaceSidePanelOpen((current) => !current);
   }, []);
@@ -272,11 +276,27 @@ export function SessionPage(props: SessionPageProps) {
     setDeleteBusy(false);
   }, [props.selectedSessionId]);
 
-  const openRenameModal = () => {
+  const openRenameModal = useCallback(() => {
     if (!props.selectedSessionId || !props.onRenameSession) return;
     setRenameTitle(selectedSessionTitle);
     setRenameOpen(true);
-  };
+  }, [props.onRenameSession, props.selectedSessionId, selectedSessionTitle]);
+
+  useEffect(() => {
+    const pending = pendingSidebarRenameSessionIdRef.current;
+    if (!pending || props.selectedSessionId !== pending) return;
+    pendingSidebarRenameSessionIdRef.current = null;
+    if (!props.onRenameSession || !props.selectedSessionId) return;
+    setRenameTitle(sessionTitleForId(props.sidebar.workspaceSessionGroups, props.selectedSessionId));
+    setRenameOpen(true);
+  }, [props.onRenameSession, props.selectedSessionId, props.sidebar.workspaceSessionGroups]);
+
+  useEffect(() => {
+    const pending = pendingSidebarDeleteSessionIdRef.current;
+    if (!pending || props.selectedSessionId !== pending) return;
+    pendingSidebarDeleteSessionIdRef.current = null;
+    setDeleteOpen(true);
+  }, [props.selectedSessionId]);
 
   const submitRename = async () => {
     const sessionId = props.selectedSessionId;
@@ -290,6 +310,32 @@ export function SessionPage(props: SessionPageProps) {
       setRenameBusy(false);
     }
   };
+
+  const handleSidebarRenameRequest = useCallback(
+    (workspaceId?: string, sessionId?: string) => {
+      if (!props.onRenameSession) return;
+      if (workspaceId && sessionId && props.selectedSessionId !== sessionId) {
+        pendingSidebarRenameSessionIdRef.current = sessionId;
+        props.sidebar.onOpenSession(workspaceId, sessionId);
+        return;
+      }
+      openRenameModal();
+    },
+    [openRenameModal, props.onRenameSession, props.selectedSessionId, props.sidebar.onOpenSession],
+  );
+
+  const handleSidebarDeleteRequest = useCallback(
+    (workspaceId?: string, sessionId?: string) => {
+      if (!props.onDeleteSession) return;
+      if (workspaceId && sessionId && props.selectedSessionId !== sessionId) {
+        pendingSidebarDeleteSessionIdRef.current = sessionId;
+        props.sidebar.onOpenSession(workspaceId, sessionId);
+        return;
+      }
+      setDeleteOpen(true);
+    },
+    [props.onDeleteSession, props.selectedSessionId, props.sidebar.onOpenSession],
+  );
 
   const confirmDelete = async () => {
     const sessionId = props.selectedSessionId;
@@ -428,8 +474,8 @@ export function SessionPage(props: SessionPageProps) {
               onOpenSession={props.sidebar.onOpenSession}
               onPrefetchSession={props.sidebar.onPrefetchSession}
               onCreateTaskInWorkspace={props.sidebar.onCreateTaskInWorkspace}
-              onOpenRenameSession={props.onRenameSession ? openRenameModal : undefined}
-              onOpenDeleteSession={props.onDeleteSession ? () => setDeleteOpen(true) : undefined}
+              onOpenRenameSession={props.onRenameSession ? handleSidebarRenameRequest : undefined}
+              onOpenDeleteSession={props.onDeleteSession ? handleSidebarDeleteRequest : undefined}
               onOpenRenameWorkspace={props.sidebar.onOpenRenameWorkspace}
               onRevealWorkspace={props.sidebar.onRevealWorkspace}
               onRecoverWorkspace={props.sidebar.onRecoverWorkspace}
@@ -520,19 +566,21 @@ export function SessionPage(props: SessionPageProps) {
               <div className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1">
                 <div className="flex min-w-0 max-w-full items-center gap-2">
                   <SessionTitleGlyph className="h-[18px] w-[18px] shrink-0 text-dls-text opacity-90" />
-                  <h1
-                    className={`max-w-full min-w-0 truncate text-[15px] font-semibold text-dls-text ${isDesktopRuntime() ? "cursor-default" : ""}`}
-                  >
-                    {showWorkspaceSetupEmptyState
-                      ? t("session.create_or_connect_workspace")
-                      : selectedSessionTitle || t("session.default_title")}
-                  </h1>
+                  <div className="flex min-w-0 max-w-full flex-1 items-end gap-x-3">
+                    <h1
+                      className={`max-w-full min-w-0 flex-1 truncate text-[15px] font-semibold leading-none text-dls-text ${isDesktopRuntime() ? "cursor-default" : ""}`}
+                    >
+                      {showWorkspaceSetupEmptyState
+                        ? t("session.create_or_connect_workspace")
+                        : selectedSessionTitle || t("session.default_title")}
+                    </h1>
+                    <span
+                      className={`hidden max-w-[14rem] shrink-0 truncate text-[10px] leading-none text-[rgba(0,0,0,0.2)] lg:inline dark:text-gray-11/45 ${isDesktopRuntime() ? "cursor-default" : ""}`}
+                    >
+                      {workspaceName}
+                    </span>
+                  </div>
                 </div>
-                <span
-                  className={`hidden max-w-full min-w-0 truncate text-[13px] text-dls-secondary lg:inline ${isDesktopRuntime() ? "cursor-default" : ""}`}
-                >
-                  {workspaceName}
-                </span>
                 {props.developerMode ? (
                   <span
                     className={`hidden max-w-full min-w-0 truncate text-[12px] text-dls-secondary lg:inline ${isDesktopRuntime() ? "cursor-default" : ""}`}

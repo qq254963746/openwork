@@ -937,7 +937,7 @@ export function ReactSessionComposer(props: ComposerProps) {
   return (
     <div
       ref={rootRef}
-      className={`sticky bottom-0 ${toolMenuOpen ? "z-50" : "z-20"} bg-gradient-to-t from-dls-surface via-dls-surface/95 to-transparent px-4 md:px-8 pb-3 pt-0`}
+      className={`sticky bottom-0 ${toolMenuOpen ? "z-50" : "z-20"} bg-white px-4 md:px-8 pb-3 pt-0 dark:bg-gray-1`}
       style={{ contain: "layout style" }}
       onKeyDownCapture={handleKeyDownCapture}
       onCompositionStart={() => {
@@ -950,7 +950,7 @@ export function ReactSessionComposer(props: ComposerProps) {
       <div className="max-w-[800px] mx-auto">
         {/* Main composer panel */}
         <div
-          className={`relative overflow-visible rounded-[24px] border border-solid border-[rgba(0,0,0,0.12)] bg-dls-surface transition-all ${panelRoundedClass}`}
+          className={`relative overflow-visible rounded-[24px] border border-solid border-[rgba(0,0,0,0.12)] bg-white transition-all dark:bg-gray-1 ${panelRoundedClass}`}
           style={{ boxShadow: COMPOSER_PANEL_BOX_SHADOW }}
         >
           <ReactComposerNotice notice={props.notice} />
@@ -1305,7 +1305,7 @@ export function ReactSessionComposer(props: ComposerProps) {
                     type="button"
                     onClick={canSend ? props.onSend : props.busy ? props.onStop : undefined}
                     disabled={props.disabled || (!canSend && !props.busy)}
-                    className={`inline-flex h-9 max-h-9 items-center gap-2 rounded-full px-4 text-[13px] font-medium transition-colors ${
+                    className={`inline-flex h-9 max-h-9 items-center gap-2 rounded-full px-4 text-[13px] font-semibold transition-colors ${
                       !canSend || props.disabled
                         ? "bg-gray-4 text-gray-10"
                         : "bg-[#000000] text-white hover:bg-gray-12"

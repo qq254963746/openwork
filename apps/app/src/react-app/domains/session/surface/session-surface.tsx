@@ -55,6 +55,10 @@ const DEFAULT_COMPOSER_CONTROL_TEXT = "Help me outline the next OpenWork task.";
 const JUMP_TO_LATEST_BOX_SHADOW =
   "0 2px 4px 0 rgba(0,0,0,0.03), 0 4px 10px 0 rgba(0,0,0,0.05), 0 4px 16px 0 rgba(0,0,0,0.05)";
 
+/** Soft light shadow along the top edge of the composer stack (separates from transcript). */
+const COMPOSER_SHELL_TOP_SHADOW =
+  "0 -14px 52px rgba(255, 255, 255, 0.7), 0 -6px 24px rgba(255, 255, 255, 0.5), 0 -2px 12px rgba(255, 255, 255, 0.4)";
+
 function JumpToLatestGlyph(props: { className?: string }) {
   return (
     <svg
@@ -245,7 +249,7 @@ function SessionErrorCard({ error, onDismiss, onChangeModel, onOpenModelPicker }
   onOpenModelPicker?: () => void;
 }) {
   return (
-    <div className="mx-auto max-w-[720px] px-3 py-3 sm:px-5">
+    <div className="mx-auto max-w-[800px] px-3 py-3 sm:px-5">
       <div className="rounded-2xl border border-red-6/30 bg-red-3/15 px-5 py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
@@ -1064,15 +1068,14 @@ export function SessionSurface(props: SessionSurfaceProps) {
             sessionScroll.markScrollGesture(event.currentTarget);
           }}
           onScroll={sessionScroll.handleScroll}
-          className={`absolute inset-0 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-4 sm:px-5${
+          className={`absolute inset-0 overflow-x-hidden overflow-y-auto overscroll-y-contain py-4 pl-3 pr-4 md:pl-7 md:pr-8${
             showEmptyTranscriptWelcome ? " flex min-h-0 flex-col" : ""
           }`}
         >
-          {/* Chat column: tighter than the composer (800px) so messages
-               keep a comfortable reading width and don't feel "too big". */}
+          {/* Chat column: same max width as composer panel (800px). */}
           <div
             ref={contentRef}
-            className={`mx-auto w-full max-w-[720px]${
+            className={`mx-auto w-full max-w-[800px]${
               showEmptyTranscriptWelcome ? " flex min-h-0 flex-1 flex-col" : ""
             }`}
           >
@@ -1168,7 +1171,11 @@ export function SessionSurface(props: SessionSurfaceProps) {
         ) : null}
       </div>
 
-      <div ref={composerShellRef} className="shrink-0 px-0 pb-1 pt-0">
+      <div
+        ref={composerShellRef}
+        className="relative z-10 shrink-0 bg-white px-0 pb-1 pt-0 dark:bg-gray-1"
+        style={{ boxShadow: COMPOSER_SHELL_TOP_SHADOW }}
+      >
         {props.activeQuestion && props.respondQuestion ? (
           <InlineQuestionPrompt
             active={{ id: props.activeQuestion.id, questions: props.activeQuestion.questions ?? [] }}

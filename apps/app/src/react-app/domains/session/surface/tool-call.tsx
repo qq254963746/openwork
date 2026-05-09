@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import type { DynamicToolUIPart } from "ai";
 
 import { safeStringify, summarizeStep } from "../../../../app/utils";
+import { ToolStepTitleGlyph } from "./tool-step-title-glyph";
 
 function normalizeToolText(value: unknown) {
   if (typeof value !== "string") return "";
@@ -99,8 +100,11 @@ export function ToolCallView(props: { part: DynamicToolUIPart; developerMode: bo
         }}
       >
         <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-gray-12">{title}</div>
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2">
+              <ToolStepTitleGlyph className="size-[14px] shrink-0 text-gray-10" />
+              <span className="text-xs font-medium text-gray-12">{title}</span>
+            </div>
             <div className="text-[11px] text-gray-11">{props.part.toolName}</div>
             {subtitle ? <div className="text-xs text-gray-11">{subtitle}</div> : null}
           </div>
@@ -121,7 +125,7 @@ export function ToolCallView(props: { part: DynamicToolUIPart; developerMode: bo
       </button>
 
       {expanded ? (
-        <div className="space-y-3 pl-[22px]">
+        <div className="space-y-3 pl-[38px]">
           {Boolean(diff) ? (
             <div className="rounded-lg border bg-gray-2/30 p-2">
               <div className="mb-2 flex items-center justify-between gap-2">
