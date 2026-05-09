@@ -560,7 +560,9 @@ export function WorkspaceSessionList(props: Props) {
                 {isSessionActive ? <span className="h-1.5 w-1.5 rounded-full bg-amber-9" /> : null}
               </span>
               <span
-                className="block min-w-0 flex-1 truncate text-[#000000] dark:text-gray-12"
+                className={`block min-w-0 flex-1 truncate text-[#000000] dark:text-gray-12 ${
+                  isSelected ? "font-semibold" : "font-normal"
+                }`}
                 title={displayTitle}
               >
                 {displayTitle}
