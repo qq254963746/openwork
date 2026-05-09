@@ -187,6 +187,9 @@ const workspaceKindLabel = (workspace: WorkspaceInfo) =>
 
 const OPENWORK_MARK_SRC = `${import.meta.env.BASE_URL}openwork-mark.svg`;
 
+const SESSION_ROW_SELECTED_BOX_SHADOW =
+  "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.02) 0px 2px 4px 0px, rgba(0, 0, 0, 0.02) 0px 4px 10px 0px";
+
 function AddWorkspaceShortcutGlyph(props: { className?: string }) {
   return (
     <svg
@@ -509,10 +512,9 @@ export function WorkspaceSessionList(props: Props) {
           role="button"
           tabIndex={0}
           className={`group flex h-[36px] w-full items-center justify-between rounded-[10px] px-3 text-left text-[13px] font-normal transition-colors ${
-            isSelected
-              ? "bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)] dark:bg-gray-3 dark:shadow-none"
-              : "hover:bg-gray-1/70"
+            isSelected ? "bg-white dark:bg-gray-3" : "hover:bg-gray-1/70"
           }`}
+          style={isSelected ? { boxShadow: SESSION_ROW_SELECTED_BOX_SHADOW } : undefined}
           onPointerEnter={prefetchSession}
           onFocus={prefetchSession}
           onClick={openSession}
@@ -676,19 +678,21 @@ export function WorkspaceSessionList(props: Props) {
             {t("workspace_list.sidebar_brand")}
           </span>
         </div>
-        <button
-          type="button"
-          className="mt-[17px] flex h-[36px] w-full items-center justify-between gap-2 rounded-[12px] border border-blue-6/70 bg-blue-2 px-3.5 text-left text-[12px] font-medium leading-none text-blue-11 transition-colors hover:border-blue-7 hover:bg-blue-3 dark:border-blue-7/55 dark:bg-blue-a3/25 dark:text-blue-11 dark:hover:bg-blue-a4/35"
-          onClick={props.onOpenCreateWorkspace}
-        >
-          <span className="flex min-w-0 flex-1 items-center gap-2">
-            <span className="inline-flex size-[15px] shrink-0 items-center justify-center" aria-hidden>
-              <SquarePen className="size-[15px] text-blue-10 dark:text-blue-11" strokeWidth={2} />
+        <div className="mt-[17px] -ml-2 w-[calc(100%+12px)] min-w-0">
+          <button
+            type="button"
+            className="flex h-[36px] w-full items-center justify-between gap-2 rounded-[12px] border border-blue-6/70 bg-blue-2 px-3 text-left text-[12px] font-medium leading-none text-blue-11 transition-colors hover:border-blue-7 hover:bg-blue-3 dark:border-blue-7/55 dark:bg-blue-a3/25 dark:text-blue-11 dark:hover:bg-blue-a4/35"
+            onClick={props.onOpenCreateWorkspace}
+          >
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <span className="inline-flex size-[15px] shrink-0 items-center justify-center" aria-hidden>
+                <SquarePen className="size-[15px] text-blue-10 dark:text-blue-11" strokeWidth={2} />
+              </span>
+              <span className="truncate leading-none">{t("workspace_list.add_workspace")}</span>
             </span>
-            <span className="truncate leading-none">{t("workspace_list.add_workspace")}</span>
-          </span>
-          <AddWorkspaceShortcutGlyph className="h-3.5 w-[29px] shrink-0 text-blue-11/55 dark:text-blue-11/45" />
-        </button>
+            <AddWorkspaceShortcutGlyph className="h-3.5 w-[29px] shrink-0 text-blue-11/55 dark:text-blue-11/45" />
+          </button>
+        </div>
       </div>
       <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pr-1">
         <div className="space-y-1 pb-2">

@@ -36,6 +36,7 @@ type StatusCopy = {
   dotClass: string;
   pingClass: string;
   pulse: boolean;
+  labelClass: string;
 };
 
 function deriveStatusCopy(props: StatusBarProps): StatusCopy {
@@ -46,6 +47,7 @@ function deriveStatusCopy(props: StatusBarProps): StatusCopy {
       dotClass: props.statusDotClass ?? "bg-green-9",
       pingClass: props.statusPingClass ?? "bg-green-9/45 animate-ping",
       pulse: props.statusPulse ?? true,
+      labelClass: "font-medium text-dls-text",
     };
   }
 
@@ -58,6 +60,7 @@ function deriveStatusCopy(props: StatusBarProps): StatusCopy {
       dotClass: "bg-amber-9",
       pingClass: "bg-amber-9/35 animate-ping",
       pulse: true,
+      labelClass: "font-medium text-dls-text",
     };
   }
 
@@ -78,6 +81,7 @@ function deriveStatusCopy(props: StatusBarProps): StatusCopy {
       dotClass: "bg-green-9",
       pingClass: "bg-green-9/45 animate-ping",
       pulse: true,
+      labelClass: "font-medium text-dls-secondary",
     };
   }
 
@@ -91,6 +95,7 @@ function deriveStatusCopy(props: StatusBarProps): StatusCopy {
       dotClass: "bg-amber-9",
       pingClass: "bg-amber-9/35",
       pulse: false,
+      labelClass: "font-medium text-dls-text",
     };
   }
 
@@ -100,6 +105,7 @@ function deriveStatusCopy(props: StatusBarProps): StatusCopy {
     dotClass: "bg-red-9",
     pingClass: "bg-red-9/35",
     pulse: false,
+    labelClass: "font-medium text-dls-text",
   };
 }
 
@@ -175,7 +181,7 @@ export function StatusBar(props: StatusBarProps) {
               className={`relative inline-flex rounded-full ${statusCopy.dotClass} ${sidebar ? "h-2 w-2" : "h-2.5 w-2.5"}`}
             />
           </span>
-          <span className="shrink-0 font-medium text-dls-text">
+          <span className={`shrink-0 ${statusCopy.labelClass}`}>
             {statusCopy.label}
           </span>
           <span className="truncate text-dls-secondary">
