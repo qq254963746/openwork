@@ -26,12 +26,12 @@ Where are workflows created:
 - [We need better places for this to happen[
 
 Where are workflows maintain:
-- In OpenWork Cloud (internal name is Den).
+- In OpenWork Cloud.
 
 Where are workflow hosted:
 - Local Machine
 - Remote via a OpenWork Host (CLI or desktop)
-- Remote on OpenWork Cloud (via Den sandbox workers)
+- Remote on OpenWork Cloud (hosted sandbox workers)
 
 ## Actors
 Bob IT guy makes the config.

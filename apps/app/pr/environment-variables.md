@@ -28,7 +28,7 @@ Boundaries vs. adjacent features:
 - Not a replacement for OpenCode's native `provider auth` flow, which owns
   credentials for LLM providers OpenCode directly supports (stored in
   `auth.json`). Users should keep using that for model keys where possible.
-- Not a replacement for Den's cloud `LLM Providers` push, which owns
+- Not a replacement for OpenWork Cloud `LLM Providers` push, which owns
   org-wide distribution for signed-in users. On remote workspaces, the pane
   shows a read-only hint and does not fetch or display local env values.
 - This fills the OSS / local-machine path for every other service skills
@@ -186,4 +186,4 @@ git diff --check                                                      # clean
   leaving the JSON file as a manifest of key names + timestamps.
 - Per-workspace scoping. The issue asks for user-level; workspace overrides
   are a separate feature.
-- Cloud push for MCP keys — owned by the Den / LLM Providers team.
+- Cloud push for MCP keys — owned by the OpenWork Cloud / LLM Providers area.

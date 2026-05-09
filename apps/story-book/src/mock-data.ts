@@ -37,7 +37,7 @@ export const storyWorkspaces: WorkspaceInfo[] = [
 ];
 
 export const sessionList = [
-  { title: "Refresh den cloud worker states", meta: "6m ago", active: true },
+  { title: "Refresh cloud worker states", meta: "6m ago", active: true },
   { title: "Polish mobile workspace connect flow", meta: "31m ago", active: false },
   { title: "Audit release screenshots", meta: "Yesterday", active: false },
   { title: "Tighten status copy in settings", meta: "Yesterday", active: false },

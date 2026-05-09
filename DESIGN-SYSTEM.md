@@ -3,7 +3,7 @@
 This document turns the visual direction in `DESIGN-LANGUAGE.md` into an implementation system that can unify:
 
 - `apps/app` (OpenWork app)
-- `ee/apps/den-web` (OpenWork Cloud / Den web surfaces)
+- hosted OpenWork Cloud web surfaces (maintained outside this monorepo when shipped)
 
 The goal is not to create several divergent styles. The goal is one OpenWork design system with a few environment-specific expressions.
 
@@ -330,7 +330,7 @@ Even when implementations differ, the primitive names and behaviors should match
 Example:
 
 - `Button` in app
-- `Button` in den-web
+- `Button` in hosted Cloud web
 
 Both should resolve to the same token logic and visual rules.
 
@@ -374,7 +374,7 @@ Standardize:
 Prioritize:
 
 - workspace/session surfaces in `apps/app`
-- Cloud dashboard shells in `ee/apps/den-web`
+- Cloud dashboard shells in hosted OpenWork Cloud web
 - share/package/connect flows in `apps/app`
 
 ### Phase 5: remove local style drift
@@ -417,7 +417,7 @@ Refactor `Button`, `Card`, and `TextInput` to consume shared semantic tokens.
 
 ### Step C
 
-Use the Den dashboard shell as the reference for:
+Use hosted OpenWork Cloud dashboard shells as the reference for:
 
 - sidebar shell
 - row selection
@@ -467,6 +467,6 @@ If continuing from this doc, the best next change is:
 
 1. add `--ow-*` semantic token aliases in `apps/app/src/app/index.css`
 2. standardize `Button`, `Card`, and `TextInput`
-3. then restyle one app shell to match the calmer Den dashboard direction
+3. then restyle one app shell to match the calmer cloud dashboard direction
 
 That gives a real system foothold without a broad rewrite.

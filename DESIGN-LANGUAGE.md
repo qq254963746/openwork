@@ -346,7 +346,7 @@ Prefer:
 
 Avoid:
 
-- "Den" in user-facing copy
+- internal codenames (for example legacy “Den”) in user-facing copy
 - "Provisioned setups"
 - "Configured setups"
 - "Choose how to run..." when the real goal is to explain team value
@@ -861,7 +861,7 @@ If the answer to those is not clearly yes, simplify.
 
 Use these as implementation references:
 
-- Cloud dashboard sidebar shell + selected state: `_repos/openwork/ee/apps/den-web/app/(den)/o/[orgSlug]/dashboard/_components/org-dashboard-shell.tsx`
+- Cloud dashboard sidebar shell + selected state: match the calm sidebar/list patterns in `apps/app` settings shells (`apps/app/src/react-app/domains/settings/shell/settings-shell.tsx`) and session sidebars (`workspace-session-list.tsx`) unless a hosted Cloud reference implementation is available separately
 - Share/package modal direction: `_repos/openwork/apps/app/src/app/components/share-workspace-modal.tsx`
 - App workspace/session list rhythm: `_repos/openwork/apps/app/src/app/components/session/workspace-session-list.tsx`
 
