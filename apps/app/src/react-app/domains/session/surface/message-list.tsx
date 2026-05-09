@@ -11,6 +11,7 @@ import {
 } from "react";
 import { isToolUIPart, type DynamicToolUIPart, type UIMessage } from "ai";
 import type { Part } from "@opencode-ai/sdk/v2/client";
+import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Atom, Check, ChevronDown, CircleAlert, Copy, File as FileIcon } from "lucide-react";
 
@@ -163,6 +164,10 @@ export type SessionTranscriptProps = {
   workspaceRoot?: string;
   /** Routes “View” into the workspace side panel (same rules as clicking a file there). */
   onOpenWorkspaceRelativePath?: (relativePath: string) => void;
+  /** Loads workspace-relative file text for SVG inline previews on written-file cards */
+  fetchWorkspaceFileText?: (relativePath: string) => Promise<string | undefined>;
+  /** Prefix for SVG preview cache keys (typically `workspaceId`) */
+  writtenFileSvgQueryKey?: string;
 };
 
 // 500 was too high for real-world OpenWork sessions: a handful of giant
@@ -661,11 +666,97 @@ function looksAbsoluteWorkspacePath(p: string): boolean {
   return n.startsWith("/") || /^[a-zA-Z]:\//.test(n);
 }
 
+/** Align with workspace panel path normalization so `readWorkspaceFile` sees the same key as the file list */
+function normalizeWorkspaceRelativeFetchPath(raw: string): string {
+  let s = String(raw ?? "").trim().replace(/\\/g, "/");
+  if (!s) return "";
+  s = s.replace(/^\/+/, "");
+  s = s.replace(/^\.\//, "");
+  s = s.replace(/^workspace\//i, "");
+  s = s.replace(/^\/+/, "");
+  const parts = s.split("/").filter(Boolean);
+  return parts.join("/");
+}
+
+function tryStripWorkspaceRootPrefix(posixPath: string, workspaceRoot: string): string | null {
+  const root = workspaceRoot.trim().replace(/[/\\]+$/, "").replace(/\\/g, "/");
+  if (!root) return null;
+  const p = posixPath.replace(/\\/g, "/");
+  const prefix = root.endsWith("/") ? root : `${root}/`;
+  if (p === root) return "";
+  if (!p.startsWith(prefix)) return null;
+  const rest = p.slice(prefix.length);
+  const n = normalizeWorkspaceRelativeFetchPath(rest);
+  return n || null;
+}
+
+/**
+ * API path for `readWorkspaceFile` — must match workspace-side normalization.
+ * Tools often emit POSIX paths from repo root (`/diagrams/a.svg`); older logic treated every
+ * leading `/` as OS-absolute and skipped the fetch.
+ */
+function workspaceRelativePathForServerRead(raw: string, workspaceRoot: string): string | null {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) return null;
+  const slash = trimmed.replace(/\\/g, "/");
+
+  if (/^[a-zA-Z]:\//.test(slash)) {
+    return tryStripWorkspaceRootPrefix(slash, workspaceRoot);
+  }
+
+  if (slash.startsWith("/")) {
+    const rootTrim = workspaceRoot.trim();
+    if (rootTrim) {
+      const stripped = tryStripWorkspaceRootPrefix(slash, workspaceRoot);
+      if (stripped != null) return stripped;
+    }
+    // Real host paths not under workspace — do not turn "/Users/..." into "Users/..."
+    if (/^\/(Users|home|Volumes|private)\//i.test(slash)) {
+      return null;
+    }
+    const n = normalizeWorkspaceRelativeFetchPath(slash);
+    return n || null;
+  }
+
+  const rel = normalizeWorkspaceRelativeFetchPath(slash);
+  return rel || null;
+}
+
+/** Mutate root `<svg>` so the preview spans the card width (inline render + intrinsic sizing). */
+function prepareWrittenFileSvgForFullWidthRender(svgText: string): string {
+  const trimmed = svgText.trim();
+  let replaced = false;
+  return trimmed.replace(/<svg\b[\s\S]*?>/i, (openTag) => {
+    if (replaced) return openTag;
+    replaced = true;
+    const inner = openTag.slice(4, -1);
+    let attrs = inner
+      .replace(/\swidth\s*=\s*("[^"]*"|'[^']*')/gi, "")
+      .replace(/\sheight\s*=\s*("[^"]*"|'[^']*')/gi, "");
+    const inject =
+      "display:block;margin:0;padding:0;max-width:100%;width:100%;height:auto;vertical-align:top";
+    const dq = attrs.match(/\sstyle\s*=\s*"([^"]*)"/i);
+    const sq = attrs.match(/\sstyle\s*=\s*'([^']*)'/i);
+    if (dq) {
+      const prev = dq[1].trim().replace(/;+\s*$/, "");
+      attrs = attrs.replace(/\sstyle\s*=\s*"[^"]*"/i, ` style="${prev};${inject}"`);
+    } else if (sq) {
+      const prev = sq[1].trim().replace(/;+\s*$/, "");
+      attrs = attrs.replace(/\sstyle\s*=\s*'[^']*'/i, ` style='${prev};${inject}'`);
+    } else {
+      attrs += ` style="${inject}"`;
+    }
+    return `<svg${attrs}>`;
+  });
+}
+
 function WrittenFileRow(props: {
   touch: WorkspaceWriteTouch;
   workspaceRoot: string;
   desktop: boolean;
   onOpenWorkspaceRelativePath?: (relativePath: string) => void;
+  fetchWorkspaceFileText?: (relativePath: string) => Promise<string | undefined>;
+  writtenFileSvgQueryKey?: string;
 }) {
   const badge =
     props.touch.kind === "created"
@@ -677,6 +768,39 @@ function WrittenFileRow(props: {
     Boolean(props.onOpenWorkspaceRelativePath) ||
     (props.desktop &&
       (looksAbsoluteWorkspacePath(props.touch.displayPath) || Boolean(props.workspaceRoot.trim())));
+
+  const isSvg = props.touch.filename.toLowerCase().endsWith(".svg");
+  const svgFetchPath = useMemo(() => {
+    if (!isSvg || !props.fetchWorkspaceFileText) return null;
+    return workspaceRelativePathForServerRead(props.touch.displayPath, props.workspaceRoot);
+  }, [isSvg, props.fetchWorkspaceFileText, props.touch.displayPath, props.workspaceRoot]);
+
+  const svgQuery = useQuery({
+    queryKey: [
+      "sessionWrittenSvgPreview",
+      props.writtenFileSvgQueryKey ?? "",
+      props.touch.displayPath,
+    ],
+    queryFn: async () => {
+      const text = await props.fetchWorkspaceFileText!(svgFetchPath!);
+      if (typeof text !== "string" || !text.trim()) throw new Error("empty svg");
+      return text;
+    },
+    enabled: Boolean(svgFetchPath && props.fetchWorkspaceFileText),
+    staleTime: 20_000,
+    /** Virtualized transcript rows unmount off-screen observers; keep payload long enough to survive scroll-away/back. */
+    gcTime: 1000 * 60 * 60,
+    retry: 2,
+  });
+
+  const svgMarkup = useMemo(() => {
+    const text = svgQuery.data;
+    if (typeof text !== "string" || !text.trim()) return null;
+    return prepareWrittenFileSvgForFullWidthRender(text);
+  }, [svgQuery.data]);
+
+  const showSvgPreview =
+    isSvg && Boolean(svgFetchPath && props.fetchWorkspaceFileText) && Boolean(svgMarkup);
 
   const handleView = () => {
     if (props.onOpenWorkspaceRelativePath) {
@@ -701,26 +825,77 @@ function WrittenFileRow(props: {
     })();
   };
 
+  if (showSvgPreview) {
+    return (
+      <div
+        role="listitem"
+        className="relative w-full min-w-0 overflow-hidden rounded-2xl border border-gray-6/40 bg-dls-surface dark:bg-gray-1/30"
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center" aria-hidden>
+            <WorkspacePanelFileGlyph filename={props.touch.displayPath} size={18} className="shrink-0 text-[#000000]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13px] font-medium leading-snug text-gray-12">{props.touch.filename}</div>
+            <div className="mt-0.5 text-[12px] leading-snug text-gray-9">{metaLine}</div>
+          </div>
+          {canTryOpen ? (
+            <button
+              type="button"
+              className="shrink-0 rounded-xl border border-gray-6/60 bg-dls-surface px-3 py-1.5 text-[13px] font-medium text-gray-12 transition-colors hover:bg-gray-3/40 dark:border-gray-6/50"
+              onClick={handleView}
+            >
+              {t("session.written_file_view")}
+            </button>
+          ) : null}
+        </div>
+        {/* Scroll tall SVGs here; do not put max-height on <img> — it scales the whole graphic down and causes side letterboxing. */}
+        <div
+          className="max-h-[min(75vh,1200px)] w-full min-w-0 overflow-x-hidden overflow-y-auto leading-none [&_svg]:block [&_svg]:h-auto [&_svg]:max-w-none [&_svg]:w-full"
+          // Inline markup survives virtualized unmount/remount; blob URLs were revoked on unmount and broke <img> after scroll-back.
+          dangerouslySetInnerHTML={{ __html: svgMarkup ?? "" }}
+        />
+      </div>
+    );
+  }
+
+  const svgWaiting =
+    isSvg &&
+    Boolean(svgFetchPath && props.fetchWorkspaceFileText) &&
+    !svgMarkup &&
+    (svgQuery.isPending || svgQuery.isFetching);
+
   return (
     <div
       role="listitem"
-      className="flex w-full min-w-0 items-center gap-3 rounded-2xl border border-gray-6/40 bg-dls-surface px-4 py-3 dark:bg-gray-1/30"
+      className="relative flex w-full min-w-0 flex-col rounded-2xl border border-gray-6/40 bg-dls-surface dark:bg-gray-1/30"
     >
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center" aria-hidden>
-        <WorkspacePanelFileGlyph filename={props.touch.displayPath} size={18} className="shrink-0 text-[#000000]" />
+      <div className="flex w-full min-w-0 items-center gap-3 px-4 py-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center" aria-hidden>
+          <WorkspacePanelFileGlyph filename={props.touch.displayPath} size={18} className="shrink-0 text-[#000000]" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] font-medium leading-snug text-gray-12">{props.touch.filename}</div>
+          <div className="mt-0.5 text-[12px] leading-snug text-gray-9">{metaLine}</div>
+        </div>
+        {canTryOpen ? (
+          <button
+            type="button"
+            className="shrink-0 rounded-xl border border-gray-6/60 bg-dls-surface px-3 py-1.5 text-[13px] font-medium text-gray-12 transition-colors hover:bg-gray-3/40 dark:border-gray-6/50"
+            onClick={handleView}
+          >
+            {t("session.written_file_view")}
+          </button>
+        ) : null}
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-[13px] font-medium leading-snug text-gray-12">{props.touch.filename}</div>
-        <div className="mt-0.5 text-[12px] leading-snug text-gray-9">{metaLine}</div>
-      </div>
-      {canTryOpen ? (
-        <button
-          type="button"
-          className="shrink-0 rounded-xl border border-gray-6/60 bg-dls-surface px-3 py-1.5 text-[13px] font-medium text-gray-12 transition-colors hover:bg-gray-3/40 dark:border-gray-6/50"
-          onClick={handleView}
-        >
-          {t("session.written_file_view")}
-        </button>
+      {svgWaiting ? (
+        <div className="border-t border-gray-6/25 px-4 pb-3 pt-2">
+          <div
+            className="h-24 w-full animate-pulse rounded-xl bg-gray-3/40 dark:bg-gray-3/25"
+            aria-busy
+            aria-label={props.touch.filename}
+          />
+        </div>
       ) : null}
     </div>
   );
@@ -730,6 +905,8 @@ const AssistantWrittenFiles = memo(function AssistantWrittenFiles(props: {
   message: UIMessage;
   workspaceRoot: string;
   onOpenWorkspaceRelativePath?: (relativePath: string) => void;
+  fetchWorkspaceFileText?: (relativePath: string) => Promise<string | undefined>;
+  writtenFileSvgQueryKey?: string;
   /** Reserve space when a floating copy control sits at the bottom-right of the bubble */
   clearFloatingCopySlot?: boolean;
 }) {
@@ -754,6 +931,8 @@ const AssistantWrittenFiles = memo(function AssistantWrittenFiles(props: {
           workspaceRoot={props.workspaceRoot}
           desktop={desktop}
           onOpenWorkspaceRelativePath={props.onOpenWorkspaceRelativePath}
+          fetchWorkspaceFileText={props.fetchWorkspaceFileText}
+          writtenFileSvgQueryKey={props.writtenFileSvgQueryKey}
         />
       ))}
     </div>
@@ -1350,6 +1529,8 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                 message={clusterMessage}
                 workspaceRoot={props.workspaceRoot ?? ""}
                 onOpenWorkspaceRelativePath={props.onOpenWorkspaceRelativePath}
+                fetchWorkspaceFileText={props.fetchWorkspaceFileText}
+                writtenFileSvgQueryKey={props.writtenFileSvgQueryKey}
               />
             ) : null}
           </div>
@@ -1499,6 +1680,8 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
               message={block.message}
               workspaceRoot={props.workspaceRoot ?? ""}
               onOpenWorkspaceRelativePath={props.onOpenWorkspaceRelativePath}
+              fetchWorkspaceFileText={props.fetchWorkspaceFileText}
+              writtenFileSvgQueryKey={props.writtenFileSvgQueryKey}
               clearFloatingCopySlot={!isNestedVariant}
             />
           ) : null}

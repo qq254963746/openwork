@@ -514,6 +514,18 @@ export function SessionSurface(props: SessionSurfaceProps) {
     [props.workspaceSidePanelOpen, props.requestWorkspaceSidePanelOpen],
   );
 
+  const fetchWorkspaceFileText = useCallback(
+    async (relativePath: string) => {
+      try {
+        const res = await props.client.readWorkspaceFile(props.workspaceId, relativePath);
+        return res.content;
+      } catch {
+        return undefined;
+      }
+    },
+    [props.client, props.workspaceId],
+  );
+
   useLayoutEffect(() => {
     if (!props.workspaceSidePanelOpen) return;
     const pending = pendingWorkspaceRelativePathRef.current;
@@ -656,6 +668,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
       void snapshotQuery.refetch();
       void qc.invalidateQueries({ queryKey: ["workspaceDirList", props.workspaceId] });
       void qc.invalidateQueries({ queryKey: ["workspaceFilePreview", props.workspaceId] });
+      void qc.invalidateQueries({ queryKey: ["sessionWrittenSvgPreview", props.workspaceId] });
     }
     workspacePanelRefreshPrevStreamingRef.current = chatStreaming;
   }, [chatStreaming, props.workspaceId, props.workspaceSidePanelOpen, snapshotQuery]);
@@ -1175,6 +1188,8 @@ export function SessionSurface(props: SessionSurfaceProps) {
                     scrollElement={() => scrollRef.current}
                     workspaceRoot={props.workspaceRoot}
                     onOpenWorkspaceRelativePath={openWorkspaceRelativePath}
+                    fetchWorkspaceFileText={fetchWorkspaceFileText}
+                    writtenFileSvgQueryKey={props.workspaceId}
                   />
                   {error ? (
                     <SessionErrorCard
