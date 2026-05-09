@@ -29,6 +29,8 @@ import {
 } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 
+import { sidebarSessionRunningKey, useSidebarSessionsRunning } from "./use-sidebar-session-running";
+
 type Props = {
   workspaceSessionGroups: WorkspaceSessionGroup[];
   showInitialLoading?: boolean;
@@ -83,7 +85,6 @@ type SessionTreeState = {
   childrenByParent: Map<string, SessionListItem[]>;
   ancestorIdsBySessionId: Map<string, string[]>;
   descendantCountBySessionId: Map<string, number>;
-  activeIds: Set<string>;
 };
 
 const normalizeSessionParentID = (session: SessionListItem) => {
@@ -99,14 +100,10 @@ const getRootSessions = (sessions: WorkspaceSessionGroup["sessions"]) => {
   });
 };
 
-const buildSessionTreeState = (
-  sessions: WorkspaceSessionGroup["sessions"],
-  sessionStatusById: Record<string, string> | undefined,
-): SessionTreeState => {
+const buildSessionTreeState = (sessions: WorkspaceSessionGroup["sessions"]): SessionTreeState => {
   const childrenByParent = new Map<string, SessionListItem[]>();
   const ancestorIdsBySessionId = new Map<string, string[]>();
   const descendantCountBySessionId = new Map<string, number>();
-  const activeIds = new Set<string>();
   const sessionIds = new Set(sessions.map((session) => session.id));
 
   sessions.forEach((session) => {
@@ -121,17 +118,14 @@ const buildSessionTreeState = (
     ancestorIdsBySessionId.set(session.id, ancestors);
     const children = childrenByParent.get(session.id) ?? [];
     let descendantCount = 0;
-    let subtreeActive = (sessionStatusById?.[session.id] ?? "idle") !== "idle";
 
     children.forEach((child) => {
       const childState = walk(child, [...ancestors, session.id]);
       descendantCount += 1 + childState.descendantCount;
-      subtreeActive = subtreeActive || childState.subtreeActive;
     });
 
     descendantCountBySessionId.set(session.id, descendantCount);
-    if (subtreeActive) activeIds.add(session.id);
-    return { descendantCount, subtreeActive };
+    return { descendantCount };
   };
 
   getRootSessions(sessions).forEach((session) => {
@@ -142,7 +136,6 @@ const buildSessionTreeState = (
     childrenByParent,
     ancestorIdsBySessionId,
     descendantCountBySessionId,
-    activeIds,
   };
 };
 
@@ -342,6 +335,8 @@ export function WorkspaceSessionList(props: Props) {
   const workspaceMenuRef = useRef<HTMLDivElement | null>(null);
   const sessionMenuRef = useRef<HTMLDivElement | null>(null);
 
+  const sessionRunningByKey = useSidebarSessionsRunning(props.workspaceSessionGroups);
+
   const revealLabel = isWindowsPlatform()
     ? t("workspace_list.reveal_explorer")
     : t("workspace_list.reveal_finder");
@@ -490,7 +485,7 @@ export function WorkspaceSessionList(props: Props) {
     const displayTitle = getDisplaySessionTitle(session.title);
     const hasChildren = (tree.descendantCountBySessionId.get(session.id) ?? 0) > 0;
     const isExpanded = expandedSessionIds.has(session.id) || forcedExpandedSessionIds.has(session.id);
-    const isSessionActive = tree.activeIds.has(session.id);
+    const isRunning = Boolean(sessionRunningByKey[sidebarSessionRunningKey(workspaceId, session.id)]);
     const sessionActionsAvailable = Boolean(
       props.showSessionActions &&
       (props.onOpenRenameSession || props.onOpenDeleteSession),
@@ -516,6 +511,7 @@ export function WorkspaceSessionList(props: Props) {
         <div
           role="button"
           tabIndex={0}
+          aria-busy={isRunning}
           className={`group relative flex h-[36px] w-full items-center overflow-hidden rounded-[10px] px-3.5 text-left text-[13px] font-normal transition-colors ${
             isSelected ? "bg-white dark:bg-gray-3" : "hover:bg-[#0000000a]"
           }`}
@@ -561,20 +557,20 @@ export function WorkspaceSessionList(props: Props) {
               }`}
             >
               <span
-                className={`flex size-5 shrink-0 items-center justify-center rounded-full bg-white ring-1 ring-black/[0.08] dark:bg-gray-2 dark:ring-white/12 ${
+                className={`relative flex size-5 shrink-0 items-center justify-center rounded-full bg-white ring-1 ring-black/[0.08] dark:bg-gray-2 dark:ring-white/12 ${
                   isSelected ? "" : "group-hover:ring-black/[0.12] dark:group-hover:ring-white/18"
                 }`}
                 aria-hidden
               >
-                <SessionSidebarGlyph className="size-3 shrink-0 text-[#00000059] dark:text-gray-11" />
+                <SessionSidebarGlyph
+                  className={`size-3 shrink-0 ${
+                    isRunning
+                      ? "ow-session-sidebar-running-icon text-blue-10 dark:text-blue-11"
+                      : "text-[#00000059] dark:text-gray-11"
+                  }`}
+                />
               </span>
 
-              <span
-                className={`flex h-1.5 shrink-0 items-center justify-center ${isSessionActive ? "w-1.5" : "w-0 overflow-hidden"}`}
-                aria-hidden
-              >
-                {isSessionActive ? <span className="h-1.5 w-1.5 rounded-full bg-amber-9" /> : null}
-              </span>
               <span
                 className={`block min-w-0 flex-1 truncate text-[#000000] dark:text-gray-12 ${
                   isSelected ? "font-semibold" : "font-normal"
@@ -720,7 +716,7 @@ export function WorkspaceSessionList(props: Props) {
           {props.workspaceSessionGroups.map((group, workspaceIndex) => {
             const canReorder =
               Boolean(props.onReorderWorkspaces) && props.workspaceSessionGroups.length > 1;
-            const tree = buildSessionTreeState(group.sessions, props.sessionStatusById);
+            const tree = buildSessionTreeState(group.sessions);
             const forcedExpandedSessionIds = new Set(
               props.selectedSessionId
                 ? tree.ancestorIdsBySessionId.get(props.selectedSessionId) ?? []

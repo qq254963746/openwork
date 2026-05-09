@@ -562,3 +562,27 @@ select:disabled {
     @apply font-sans;
   }
 }
+
+/** Sidebar session row: running indicator — blue icon opacity blink only. */
+@keyframes ow-session-sidebar-icon-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.38;
+  }
+}
+
+@layer components {
+  .ow-session-sidebar-running-icon {
+    animation: ow-session-sidebar-icon-blink 1.1s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ow-session-sidebar-running-icon {
+      animation: none;
+      opacity: 1;
+    }
+  }
+}
