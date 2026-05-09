@@ -1041,59 +1041,6 @@ jobs:
       tag: ${{ needs.resolve-release.outputs.release_tag }}
     secrets: inherit
 
-  aur-publish:
-    name: Publish AUR
-    needs: [resolve-release, publish-electron, publish-release]
-    if: |
-      always() &&
-      needs.resolve-release.result == 'success' &&
-      needs.publish-electron.result == 'success' &&
-      (needs.publish-release.result == 'success' || needs.publish-release.result == 'skipped')
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    permissions:
-      contents: write
-    env:
-      RELEASE_TAG: ${{ needs.resolve-release.outputs.release_tag }}
-    steps:
-      - name: Checkout dev
-        uses: actions/checkout@v6
-        with:
-          ref: dev
-          fetch-depth: 0
-
-      - name: Update AUR packaging files
-        run: scripts/aur/update-aur.sh "$RELEASE_TAG"
-
-      - name: Commit packaging update to dev
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if ! git status --porcelain -- packaging/aur/PKGBUILD packaging/aur/.SRCINFO | grep -q .; then
-            echo "AUR packaging already up to date in dev."
-            exit 0
-          fi
-
-          version="${RELEASE_TAG#v}"
-          git add packaging/aur/PKGBUILD packaging/aur/.SRCINFO
-          git -c user.name="OpenWork Release Bot" \
-              -c user.email="release-bot@users.noreply.github.com" \
-              commit -m "chore(aur): update PKGBUILD for ${version}"
-          git push origin HEAD:dev
-
-      - name: Publish to AUR
-        env:
-          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          AUR_REPO: ${{ vars.AUR_REPO || 'openwork' }}
-          AUR_SKIP_UPDATE: "1"
-        run: |
-          set -euo pipefail
-          if [ -z "${AUR_SSH_PRIVATE_KEY:-}" ]; then
-            echo "AUR_SSH_PRIVATE_KEY not set; skipping publish to AUR."
-            exit 0
-          fi
-          scripts/aur/publish-aur.sh "$RELEASE_TAG"
-
   publish-release:
     name: Publish GitHub Release
     needs:

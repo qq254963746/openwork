@@ -861,9 +861,6 @@ If the answer to those is not clearly yes, simplify.
 
 Use these as implementation references:
 
-- Landing button + shell primitives: `_repos/openwork/ee/apps/landing/app/globals.css`
-- Landing hero and selector patterns: `_repos/openwork/ee/apps/landing/components/landing-home.tsx`
-- Landing demo list rhythm: `_repos/openwork/ee/apps/landing/components/landing-app-demo-panel.tsx`
 - Cloud dashboard sidebar shell + selected state: `_repos/openwork/ee/apps/den-web/app/(den)/o/[orgSlug]/dashboard/_components/org-dashboard-shell.tsx`
 - Share/package modal direction: `_repos/openwork/apps/app/src/app/components/share-workspace-modal.tsx`
 - App workspace/session list rhythm: `_repos/openwork/apps/app/src/app/components/session/workspace-session-list.tsx`

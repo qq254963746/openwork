@@ -4,9 +4,8 @@ This document turns the visual direction in `DESIGN-LANGUAGE.md` into an impleme
 
 - `apps/app` (OpenWork app)
 - `ee/apps/den-web` (OpenWork Cloud / Den web surfaces)
-- `ee/apps/landing` (marketing + product storytelling)
 
-The goal is not to create three similar styles. The goal is one OpenWork design system with a few environment-specific expressions.
+The goal is not to create several divergent styles. The goal is one OpenWork design system with a few environment-specific expressions.
 
 ---
 
@@ -17,7 +16,7 @@ Today the product already has the beginnings of a system, but it is split across
 - app-specific CSS variables in `apps/app/src/app/index.css`
 - Tailwind theme setup in `apps/app/tailwind.config.ts`
 - Radix color tokens in `apps/app/src/styles/colors.css`
-- repeated utility-class decisions across app, Cloud, and landing
+- repeated utility-class decisions across app and Cloud
 
 That creates three problems:
 
@@ -250,7 +249,6 @@ Default behavior:
 
 - app: mostly `none` or `control`
 - Cloud: mostly `none`, `control`, occasional `card`
-- landing: selective `card` or `shell`
 
 ---
 
@@ -441,7 +439,7 @@ Recommended pilot screens:
 
 We will know this is working when:
 
-1. app, Cloud, and landing feel obviously from the same product family
+1. app and Cloud feel obviously from the same product family
 2. a new screen can be built mostly from existing primitives
 3. visual changes happen by adjusting tokens or primitives, not by editing many pages
 4. selection, buttons, cards, and inputs behave consistently everywhere

@@ -63,17 +63,6 @@ OpenWork releases should be deterministic, easy to reproduce, and fully verifiab
 
 Use `pnpm release:review --json` when automating these checks in scripts or agents.
 
-## AUR
-
-`Release App` publishes the Arch AUR package automatically after the Electron Linux tarball assets are uploaded.
-
-For local AMD64 Arch builds without Docker, see `packaging/aur/README.md`.
-
-Required repo config:
-
-- GitHub Actions secret: `AUR_SSH_PRIVATE_KEY` (SSH key with push access to the AUR package repo)
-- Optional repo variable: `AUR_REPO` (defaults to `openwork`)
-
 ## npm publishing
 
 If you want `Release App` to publish `openwork-orchestrator`, `openwork-server`, and `opencode-router` to npm, configure:

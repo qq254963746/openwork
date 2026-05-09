@@ -190,7 +190,6 @@ These are all opencode primitives you can read the docs to find out exactly how 
 - `/apps/server/`: OpenWork server (API/control layer consumed by the app).
 - `/apps/orchestrator/`: OpenWork orchestrator CLI/daemon. In `start`/`serve` host mode it manages OpenWork server + OpenCode; in daemon mode it manages worker/sandbox lifecycle.
 - `/apps/share/`: share-link publisher service for OpenWork bundle imports.
-- `/ee/apps/landing/`: OpenWork landing page surfaces.
 - `/ee/apps/den-web/`: Den web UI for sign-in, worker creation, and future user-management flows.
 - `/ee/apps/den-api/`: Den control plane API (formerly `/ee/apps/den-controller/`) that provisions/spins up worker runtimes.
 - `/ee/apps/den-worker-proxy/`: proxy layer that keeps Daytona API keys server-side, refreshes signed worker preview URLs, and forwards worker traffic so users do not manage provider keys directly.

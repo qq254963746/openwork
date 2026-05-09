@@ -43,7 +43,7 @@ Frontend for `app.openworklabs.com`.
   - default: `https://app.openworklabs.com`
   - this host must serve `/api/auth/*`; the included proxy route does that
 - `NEXT_PUBLIC_POSTHOG_KEY` (client): PostHog project key used for Den analytics.
-  - optional override; defaults to the same project key used by `ee/apps/landing`
+  - optional override; set explicitly per deployment if you share a key across sites
 - `NEXT_PUBLIC_POSTHOG_HOST` (client): PostHog ingest host or same-origin proxy path.
   - default: `/ow`
   - set it to `https://us.i.posthog.com` to bypass the local proxy

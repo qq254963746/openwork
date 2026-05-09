@@ -50,9 +50,6 @@ INFRA_GLOBS=(
   "ee/apps/den-web/next.config.js"
   "ee/apps/den-web/postcss.config.js"
   "ee/apps/den-web/tailwind.config.js"
-  "ee/apps/landing/next.config.js"
-  "ee/apps/landing/postcss.config.js"
-  "ee/apps/landing/tailwind.config.js"
   "ee/packages/den-db/drizzle.config.ts"
   "ee/packages/den-db/tsup.config.ts"
   "ee/packages/utils/tsup.config.ts"
@@ -87,7 +84,6 @@ ROUTING_DIRS=(
   "apps/share/server/"
   "apps/share/app/"
   "ee/apps/den-web/app/"
-  "ee/apps/landing/app/"
 )
 
 # Paths to ignore entirely
