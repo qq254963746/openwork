@@ -668,7 +668,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
       void snapshotQuery.refetch();
       void qc.invalidateQueries({ queryKey: ["workspaceDirList", props.workspaceId] });
       void qc.invalidateQueries({ queryKey: ["workspaceFilePreview", props.workspaceId] });
-      void qc.invalidateQueries({ queryKey: ["sessionWrittenSvgPreview", props.workspaceId] });
+      void qc.invalidateQueries({ queryKey: ["sessionWrittenFilePreview", props.workspaceId] });
     }
     workspacePanelRefreshPrevStreamingRef.current = chatStreaming;
   }, [chatStreaming, props.workspaceId, props.workspaceSidePanelOpen, snapshotQuery]);

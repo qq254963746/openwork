@@ -30,6 +30,7 @@ import { t } from "../../../../i18n";
 import { MarkdownBlock } from "./markdown";
 import { ToolStepTitleGlyph } from "./tool-step-title-glyph";
 import { applyTextHighlights } from "./text-highlights";
+import { buildWebPreviewSrcDoc } from "./web-preview-srcdoc";
 
 type TranscriptPart = Part;
 
@@ -750,6 +751,13 @@ function prepareWrittenFileSvgForFullWidthRender(svgText: string): string {
   });
 }
 
+function writtenFileRichPreviewKind(filename: string): "svg" | "html" | null {
+  const l = filename.toLowerCase();
+  if (l.endsWith(".svg")) return "svg";
+  if (l.endsWith(".html") || l.endsWith(".htm") || l.endsWith(".htmlx")) return "html";
+  return null;
+}
+
 function WrittenFileRow(props: {
   touch: WorkspaceWriteTouch;
   workspaceRoot: string;
@@ -769,38 +777,48 @@ function WrittenFileRow(props: {
     (props.desktop &&
       (looksAbsoluteWorkspacePath(props.touch.displayPath) || Boolean(props.workspaceRoot.trim())));
 
-  const isSvg = props.touch.filename.toLowerCase().endsWith(".svg");
-  const svgFetchPath = useMemo(() => {
-    if (!isSvg || !props.fetchWorkspaceFileText) return null;
+  const previewKind = writtenFileRichPreviewKind(props.touch.filename);
+  const previewFetchPath = useMemo(() => {
+    if (!previewKind || !props.fetchWorkspaceFileText) return null;
     return workspaceRelativePathForServerRead(props.touch.displayPath, props.workspaceRoot);
-  }, [isSvg, props.fetchWorkspaceFileText, props.touch.displayPath, props.workspaceRoot]);
+  }, [previewKind, props.fetchWorkspaceFileText, props.touch.displayPath, props.workspaceRoot]);
 
-  const svgQuery = useQuery({
+  const filePreviewQuery = useQuery({
     queryKey: [
-      "sessionWrittenSvgPreview",
+      "sessionWrittenFilePreview",
       props.writtenFileSvgQueryKey ?? "",
       props.touch.displayPath,
+      previewKind ?? "",
     ],
     queryFn: async () => {
-      const text = await props.fetchWorkspaceFileText!(svgFetchPath!);
-      if (typeof text !== "string" || !text.trim()) throw new Error("empty svg");
+      const text = await props.fetchWorkspaceFileText!(previewFetchPath!);
+      if (typeof text !== "string" || !text.trim()) throw new Error("empty file");
       return text;
     },
-    enabled: Boolean(svgFetchPath && props.fetchWorkspaceFileText),
+    enabled: Boolean(previewKind && previewFetchPath && props.fetchWorkspaceFileText),
     staleTime: 20_000,
     /** Virtualized transcript rows unmount off-screen observers; keep payload long enough to survive scroll-away/back. */
     gcTime: 1000 * 60 * 60,
     retry: 2,
   });
 
-  const svgMarkup = useMemo(() => {
-    const text = svgQuery.data;
-    if (typeof text !== "string" || !text.trim()) return null;
-    return prepareWrittenFileSvgForFullWidthRender(text);
-  }, [svgQuery.data]);
+  const previewRaw = filePreviewQuery.data;
+  const hasPreviewContent = typeof previewRaw === "string" && previewRaw.trim().length > 0;
 
-  const showSvgPreview =
-    isSvg && Boolean(svgFetchPath && props.fetchWorkspaceFileText) && Boolean(svgMarkup);
+  const svgMarkup = useMemo(() => {
+    if (previewKind !== "svg" || !hasPreviewContent || typeof previewRaw !== "string") return null;
+    return prepareWrittenFileSvgForFullWidthRender(previewRaw);
+  }, [previewKind, hasPreviewContent, previewRaw]);
+
+  const htmlSrcDoc = useMemo(() => {
+    if (previewKind !== "html" || !hasPreviewContent || typeof previewRaw !== "string") return null;
+    return buildWebPreviewSrcDoc(previewRaw);
+  }, [previewKind, hasPreviewContent, previewRaw]);
+
+  const showRichPreview =
+    Boolean(previewKind && previewFetchPath && props.fetchWorkspaceFileText) &&
+    hasPreviewContent &&
+    (previewKind === "html" || Boolean(svgMarkup));
 
   const handleView = () => {
     if (props.onOpenWorkspaceRelativePath) {
@@ -825,7 +843,7 @@ function WrittenFileRow(props: {
     })();
   };
 
-  if (showSvgPreview) {
+  if (showRichPreview) {
     return (
       <div
         role="listitem"
@@ -849,21 +867,29 @@ function WrittenFileRow(props: {
             </button>
           ) : null}
         </div>
-        {/* Scroll tall SVGs here; do not put max-height on <img> — it scales the whole graphic down and causes side letterboxing. */}
-        <div
-          className="max-h-[min(75vh,1200px)] w-full min-w-0 overflow-x-hidden overflow-y-auto leading-none [&_svg]:block [&_svg]:h-auto [&_svg]:max-w-none [&_svg]:w-full"
-          // Inline markup survives virtualized unmount/remount; blob URLs were revoked on unmount and broke <img> after scroll-back.
-          dangerouslySetInnerHTML={{ __html: svgMarkup ?? "" }}
-        />
+        {previewKind === "svg" && svgMarkup ? (
+          <div
+            className="max-h-[min(75vh,1200px)] w-full min-w-0 overflow-x-hidden overflow-y-auto leading-none [&_svg]:block [&_svg]:h-auto [&_svg]:max-w-none [&_svg]:w-full"
+            dangerouslySetInnerHTML={{ __html: svgMarkup }}
+          />
+        ) : previewKind === "html" && htmlSrcDoc ? (
+          <div className="max-h-[min(75vh,1200px)] w-full min-w-0 overflow-hidden bg-white dark:bg-gray-1">
+            <iframe
+              title={props.touch.filename}
+              className="m-0 block h-[min(75vh,1200px)] w-full min-w-0 border-0"
+              srcDoc={htmlSrcDoc}
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
+            />
+          </div>
+        ) : null}
       </div>
     );
   }
 
-  const svgWaiting =
-    isSvg &&
-    Boolean(svgFetchPath && props.fetchWorkspaceFileText) &&
-    !svgMarkup &&
-    (svgQuery.isPending || svgQuery.isFetching);
+  const previewWaiting =
+    Boolean(previewKind && previewFetchPath && props.fetchWorkspaceFileText) &&
+    !hasPreviewContent &&
+    (filePreviewQuery.isPending || filePreviewQuery.isFetching);
 
   return (
     <div
@@ -888,7 +914,7 @@ function WrittenFileRow(props: {
           </button>
         ) : null}
       </div>
-      {svgWaiting ? (
+      {previewWaiting ? (
         <div className="border-t border-gray-6/25 px-4 pb-3 pt-2">
           <div
             className="h-24 w-full animate-pulse rounded-xl bg-gray-3/40 dark:bg-gray-3/25"

@@ -21,6 +21,36 @@ import { LOG_VIEWER_POPUP_QUERY } from "./open-app-log-window";
 const POLL_SHELL_MS = 600;
 const POLL_SERVICE_MS = 1000;
 
+/** Cap displayed/stored log volume so the log viewer cannot retain unbounded text in memory. */
+const LOG_VIEWER_MAX_LINES = 2500;
+
+function truncateLogLines(text: string, maxLines: number): string {
+  if (maxLines <= 0 || !text) return text;
+  const lines = text.split(/\r?\n/);
+  if (lines.length <= maxLines) return text;
+  return lines.slice(-maxLines).join("\n");
+}
+
+/** Keeps the newest log lines across shell events (each event may be multi-line JSON). */
+function truncateFormattedShellEntries(formattedEntries: string[], maxLines: number): string[] {
+  if (maxLines <= 0) return [];
+  if (formattedEntries.length === 0) return [];
+  const out: string[] = [];
+  let budget = maxLines;
+  for (let i = formattedEntries.length - 1; i >= 0; i--) {
+    const entry = formattedEntries[i];
+    const lines = entry.split(/\r?\n/);
+    if (lines.length > budget) {
+      out.push(lines.slice(-budget).join("\n"));
+      break;
+    }
+    out.push(entry);
+    budget -= lines.length;
+    if (budget <= 0) break;
+  }
+  return out.reverse();
+}
+
 type LogTabId = "shell" | "openwork_server" | "opencode";
 
 function formatServiceLogs(stdout: string | null | undefined, stderr: string | null | undefined): string {
@@ -119,7 +149,12 @@ export function AppLogWindowRoute() {
     const openerApi = resolveOpenerLogApi();
     if (openerApi) {
       const events = openerApi.events(500);
-      setShellLines(events.map((e) => formatEntry(e, stringify)));
+      setShellLines(
+        truncateFormattedShellEntries(
+          events.map((e) => formatEntry(e, stringify)),
+          LOG_VIEWER_MAX_LINES,
+        ),
+      );
       return;
     }
 
@@ -128,7 +163,12 @@ export function AppLogWindowRoute() {
         const raw = await pullShellEventsFromMain(500);
         const parsed = JSON.parse(raw) as ShellInspectorEvent[];
         const events = Array.isArray(parsed) ? parsed : [];
-        setShellLines(events.map((e) => formatEntry(e, stringify)));
+        setShellLines(
+          truncateFormattedShellEntries(
+            events.map((e) => formatEntry(e, stringify)),
+            LOG_VIEWER_MAX_LINES,
+          ),
+        );
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
         setShellLines([`${t("session.app_log_fetch_error")}\n${detail}`]);
@@ -139,7 +179,12 @@ export function AppLogWindowRoute() {
     try {
       if (window.__openwork) {
         const events = window.__openwork.events(500);
-        setShellLines(events.map((e) => formatEntry(e, stringify)));
+        setShellLines(
+          truncateFormattedShellEntries(
+            events.map((e) => formatEntry(e, stringify)),
+            LOG_VIEWER_MAX_LINES,
+          ),
+        );
         return;
       }
     } catch {
@@ -155,7 +200,7 @@ export function AppLogWindowRoute() {
     try {
       const info = await fetchOpenworkServerInfoForLogViewer();
       const raw = formatServiceLogs(info.lastStdout, info.lastStderr);
-      setOpenworkText(raw || t("settings.no_logs_captured"));
+      setOpenworkText(truncateLogLines(raw || t("settings.no_logs_captured"), LOG_VIEWER_MAX_LINES));
     } catch (error) {
       setOpenworkError(error instanceof Error ? error.message : String(error));
       setOpenworkText("");
@@ -177,7 +222,7 @@ export function AppLogWindowRoute() {
       if (capture.trim()) {
         sections.push(`# process capture\n${capture}`);
       }
-      setOpencodeText(sections.join("\n\n"));
+      setOpencodeText(truncateLogLines(sections.join("\n\n"), LOG_VIEWER_MAX_LINES));
     } catch (error) {
       setOpencodeError(error instanceof Error ? error.message : String(error));
       setOpencodeText("");
