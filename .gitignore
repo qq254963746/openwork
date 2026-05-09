@@ -1,4 +1,3 @@
-.turbo/
 node_modules/
 apps/desktop/dist-electron/
 packages/*/node_modules/

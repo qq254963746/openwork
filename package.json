@@ -41,9 +41,6 @@
     "release:ship:watch": "node scripts/release/ship.mjs --watch",
     "tauri": "pnpm --filter @openwork/desktop exec tauri"
   },
-  "devDependencies": {
-    "turbo": "^2.5.5"
-  },
   "pnpm": {
     "onlyBuiltDependencies": [
       "@whiskeysockets/baileys",

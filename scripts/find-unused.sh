@@ -32,8 +32,6 @@ INFRA_GLOBS=(
   "apps/app/vercel.json"
   # Tauri
   "apps/desktop/src-tauri/tauri.conf.json"
-  # Monorepo orchestration
-  "turbo.json"
   # Build configs
   "apps/app/vite.config.ts"
   "apps/app/tailwind.config.ts"
