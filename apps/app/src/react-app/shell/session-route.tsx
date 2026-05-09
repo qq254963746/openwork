@@ -1419,6 +1419,21 @@ export function SessionRoute() {
     navigate(target, { state: { workspaceId, sessionId, backgroundLocation: routeLocation } });
   }, [navigate, routeLocation, selectedSessionId, sidebarActiveWorkspaceId]);
 
+  /** After sending in the composer, surface this session at the top of the workspace sidebar list. */
+  const promoteSessionToFirstInWorkspace = useCallback((workspaceId: string, sessionId: string) => {
+    const ws = workspaceId.trim();
+    const sid = sessionId.trim();
+    if (!ws || !sid) return;
+    setSessionsByWorkspaceId((current) => {
+      const list = current[ws] ?? [];
+      const index = list.findIndex((session: any) => session?.id === sid);
+      if (index <= 0) return current;
+      const picked = list[index];
+      const rest = [...list.slice(0, index), ...list.slice(index + 1)];
+      return { ...current, [ws]: [picked, ...rest] };
+    });
+  }, []);
+
   const surfaceProps = useMemo(() => {
     if (!client || !selectedWorkspaceId || !selectedSessionId || !opencodeBaseUrl || !token || !opencodeClient) {
       return null;
@@ -1465,6 +1480,7 @@ export function SessionRoute() {
 
         if (draft.mode === "shell") {
           await shellInSession(opencodeClient, selectedSessionId, text);
+          promoteSessionToFirstInWorkspace(selectedWorkspaceId, selectedSessionId);
           return;
         }
 
@@ -1477,6 +1493,7 @@ export function SessionRoute() {
           if (result.error) {
             throw new Error(serializeSDKError(result.error));
           }
+          promoteSessionToFirstInWorkspace(selectedWorkspaceId, selectedSessionId);
           return;
         }
 
@@ -1501,6 +1518,8 @@ export function SessionRoute() {
         if (result.error) {
           throw new Error(serializeSDKError(result.error));
         }
+
+        promoteSessionToFirstInWorkspace(selectedWorkspaceId, selectedSessionId);
 
         const sessionId = selectedSessionId;
         if (!sessionId || sessionAutoRenamedRef.current.has(sessionId)) return;
@@ -1596,6 +1615,7 @@ export function SessionRoute() {
     opencodeBaseUrl,
     opencodeClient,
     effectiveModel,
+    promoteSessionToFirstInWorkspace,
     sessionAgentOverrideState,
     selectedSessionId,
     sessionModelOverrideState,
