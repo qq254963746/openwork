@@ -699,6 +699,10 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
     ? selectedFile.split("/").filter(Boolean).pop() ?? selectedFile
     : "";
 
+  const previewUpdatedAtMs = previewQuery.data?.updatedAt;
+  const previewUpdatedAtLabel =
+    typeof previewUpdatedAtMs === "number" ? formatWorkspaceFileListMtime(previewUpdatedAtMs) : null;
+
   return (
     <aside
       ref={asideRef}
@@ -725,6 +729,14 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
                 {selectedFileTitle}
               </span>
             </div>
+            {previewUpdatedAtLabel ? (
+              <span
+                className="max-w-[min(11rem,38%)] shrink-0 truncate text-right text-[10px] tabular-nums text-dls-secondary"
+                title={previewUpdatedAtLabel}
+              >
+                {previewUpdatedAtLabel}
+              </span>
+            ) : null}
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
@@ -771,6 +783,14 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
                 {selectedFileTitle}
               </span>
             </div>
+            {previewUpdatedAtLabel ? (
+              <span
+                className="max-w-[min(11rem,38%)] shrink-0 truncate text-right text-[10px] tabular-nums text-dls-secondary"
+                title={previewUpdatedAtLabel}
+              >
+                {previewUpdatedAtLabel}
+              </span>
+            ) : null}
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
@@ -823,6 +843,14 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
                 {selectedFileTitle}
               </span>
             </div>
+            {previewUpdatedAtLabel ? (
+              <span
+                className="max-w-[min(11rem,38%)] shrink-0 truncate text-right text-[10px] tabular-nums text-dls-secondary"
+                title={previewUpdatedAtLabel}
+              >
+                {previewUpdatedAtLabel}
+              </span>
+            ) : null}
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"

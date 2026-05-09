@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import * as React from "react";
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useContext, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components, Options as ReactMarkdownOptions } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -13,6 +13,12 @@ import "katex/dist/katex.min.css";
 import "highlight.js/styles/github.min.css";
 
 import { applyTextHighlights } from "./text-highlights";
+
+/** True when `code` is rendered inside a markdown fenced block (`pre` → `code`), not inline `` ` ``. */
+const MarkdownFencedBlockContext = React.createContext(false);
+
+/** Body padding + typography for fenced code: ```lang``` and plain `````` blocks stay aligned. */
+const MARKDOWN_FENCED_CODE_INNER = "px-4 py-3 text-[12px] leading-6 text-gray-12";
 
 /** GFM + LaTeX ($...$, $$...$$); KaTeX won't throw on incomplete streams */
 const remarkMarkdownPlugins = [remarkGfm, remarkMath];
@@ -35,13 +41,15 @@ function nodeToPlainText(node: React.ReactNode): string {
 function MarkdownCodeBlock(props: { className?: string; children: React.ReactNode }) {
   const text = nodeToPlainText(props.children);
   const [copied, setCopied] = useState(false);
+  const lang = /language-([\w-]+)/.exec(props.className ?? "")?.[1] ?? "";
 
   return (
     <div className="my-4 overflow-hidden rounded-[18px] border border-dls-border/70 bg-[rgb(249,250,251)]">
-      <div className="flex items-center justify-end border-b border-dls-border/70 bg-[rgb(249,250,251)] px-3 py-2">
+      <div className="flex items-center justify-between gap-3 border-b border-dls-border/70 px-3 py-1.5">
+        <span className="min-w-0 truncate font-mono text-[11px] font-medium text-gray-10">{lang}</span>
         <button
           type="button"
-          className="rounded-full border border-dls-border bg-[rgb(249,250,251)] px-3 py-1 text-[11px] font-medium text-dls-text transition-colors hover:bg-dls-hover"
+          className="shrink-0 rounded-full border border-dls-border bg-[rgb(249,250,251)] px-3 py-1 text-[11px] font-medium text-dls-text transition-colors hover:bg-dls-hover"
           onClick={async () => {
             await navigator.clipboard.writeText(text);
             setCopied(true);
@@ -51,12 +59,41 @@ function MarkdownCodeBlock(props: { className?: string; children: React.ReactNod
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <pre className="overflow-x-auto px-4 py-3 text-[12px] leading-6 text-gray-12 !bg-transparent">
+      <pre className={`overflow-x-auto ${MARKDOWN_FENCED_CODE_INNER} !bg-transparent`}>
         <code className={props.className} style={{ backgroundColor: "transparent" }}>
           {props.children}
         </code>
       </pre>
     </div>
+  );
+}
+
+function MarkdownCode(props: { className?: string; children?: React.ReactNode }) {
+  const inFencedBlock = useContext(MarkdownFencedBlockContext);
+  const className = props.className;
+  const children = props.children;
+  const hasLanguageFence = Boolean(className?.includes("language-"));
+
+  if (!inFencedBlock) {
+    return (
+      <code className="rounded-md bg-gray-2/70 px-1.5 py-0.5 font-mono text-[0.92em] text-gray-12">
+        {children}
+      </code>
+    );
+  }
+
+  if (hasLanguageFence) {
+    return <MarkdownCodeBlock className={className}>{children}</MarkdownCodeBlock>;
+  }
+
+  return (
+    <pre
+      className={`my-4 overflow-x-auto rounded-[18px] border border-dls-border/70 bg-[rgb(249,250,251)] ${MARKDOWN_FENCED_CODE_INNER}`}
+    >
+      <code className={className} style={{ backgroundColor: "transparent" }}>
+        {children}
+      </code>
+    </pre>
   );
 }
 
@@ -199,23 +236,9 @@ function createMarkdownComponents(): Components {
     h5: createHeading("h5"),
     h6: createHeading("h6"),
     pre({ children }) {
-      return (
-        <pre className="my-4 overflow-x-auto rounded-[18px] border border-dls-border/70 bg-[rgb(249,250,251)] px-4 py-3 text-[12px] leading-6 text-gray-12">
-          {children}
-        </pre>
-      );
+      return <MarkdownFencedBlockContext.Provider value={true}>{children}</MarkdownFencedBlockContext.Provider>;
     },
-    code({ className, children }) {
-      const isBlock = Boolean(className?.includes("language-"));
-      if (isBlock) {
-        return <MarkdownCodeBlock className={className}>{children}</MarkdownCodeBlock>;
-      }
-      return (
-        <code className="rounded-md bg-gray-2/70 px-1.5 py-0.5 font-mono text-[0.92em] text-gray-12">
-          {children}
-        </code>
-      );
-    },
+    code: MarkdownCode,
     blockquote({ children }) {
       return (
         <blockquote className="my-4 border-l-4 border-dls-border pl-4 italic text-gray-11">{children}</blockquote>
@@ -223,7 +246,7 @@ function createMarkdownComponents(): Components {
     },
     table({ children }) {
       return (
-        <div className="my-4 overflow-hidden rounded-[20px] border border-dls-border">
+        <div className="my-4 overflow-hidden rounded-[20px]">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">{children}</table>
           </div>
