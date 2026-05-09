@@ -1070,7 +1070,17 @@ export function SessionSurface(props: SessionSurfaceProps) {
                   onChangeModel={props.onChangeModel}
                   onOpenModelPicker={props.onModelClick}
                 />
-              ) : null
+              ) : (
+                <div
+                  className="flex min-h-[min(50vh,560px)] flex-col items-center justify-center px-6 py-16"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <p className="text-center text-2xl font-medium leading-relaxed text-dls-text">
+                    {t("session.empty_transcript_prompt")}
+                  </p>
+                </div>
+              )
             ) : (
               <DevProfiler id="SessionTranscript">
                 <>

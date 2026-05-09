@@ -184,34 +184,14 @@ type VersionManifest = {
   entries: Record<string, VersionInfo>;
 };
 
-type RemoteSidecarAsset = {
-  asset?: string;
-  url?: string;
-  sha256?: string;
-  size?: number;
-};
-
-type RemoteSidecarEntry = {
-  version: string;
-  targets: Record<string, RemoteSidecarAsset>;
-};
-
-type RemoteSidecarManifest = {
-  version: string;
-  generatedAt?: string;
-  entries: Record<string, RemoteSidecarEntry>;
-};
-
 type SidecarConfig = {
   dir: string;
-  baseUrl: string;
-  manifestUrl: string;
   target: SidecarTarget | null;
 };
 
-type BinarySource = "bundled" | "external" | "downloaded";
+type BinarySource = "bundled" | "external";
 
-type BinarySourcePreference = "auto" | "bundled" | "downloaded" | "external";
+type BinarySourcePreference = "auto" | "bundled" | "external";
 
 type ResolvedBinary = {
   bin: string;
@@ -250,8 +230,6 @@ type RuntimeUpgradeState = {
 
 type SidecarDiagnostics = {
   dir: string;
-  baseUrl: string;
-  manifestUrl: string;
   target: SidecarTarget | null;
   source: BinarySourcePreference;
   opencodeSource: BinarySourcePreference;
@@ -307,8 +285,6 @@ type RouterBinaryState = {
 
 type RouterSidecarState = {
   dir: string;
-  baseUrl: string;
-  manifestUrl: string;
   target: SidecarTarget | null;
   source: BinarySourcePreference;
   opencodeSource: BinarySourcePreference;
@@ -531,13 +507,17 @@ function readBinarySource(
   if (
     normalized === "auto" ||
     normalized === "bundled" ||
-    normalized === "downloaded" ||
     normalized === "external"
   ) {
     return normalized as BinarySourcePreference;
   }
+  if (normalized === "downloaded") {
+    throw new Error(
+      `Invalid ${key} value: downloaded (remote sidecar downloads are disabled). Use auto|bundled|external.`,
+    );
+  }
   throw new Error(
-    `Invalid ${key} value: ${raw}. Use auto|bundled|downloaded|external.`,
+    `Invalid ${key} value: ${raw}. Use auto|bundled|external.`,
   );
 }
 
@@ -1588,11 +1568,6 @@ async function readVersionManifest(): Promise<VersionManifest | null> {
   return null;
 }
 
-const remoteManifestCache = new Map<
-  string,
-  Promise<RemoteSidecarManifest | null>
->();
-
 let cachedExtraPathEntries: string[] | null = null;
 
 function isDirectory(path: string): boolean {
@@ -1795,14 +1770,10 @@ function resolveSandboxSidecarTarget(
 
 function resolveSidecarConfigForTarget(
   flags: Map<string, string | boolean>,
-  cliVersion: string,
   targetOverride: SidecarTarget | null,
 ): SidecarConfig {
-  const baseUrl = resolveSidecarBaseUrl(flags, cliVersion);
   return {
     dir: resolveSidecarDir(flags),
-    baseUrl,
-    manifestUrl: resolveSidecarManifestUrl(flags, baseUrl),
     target: targetOverride,
   };
 }
@@ -1903,93 +1874,13 @@ function resolveSidecarDir(flags: Map<string, string | boolean>): string {
   return join(resolveRouterDataDir(flags), "sidecars");
 }
 
-function resolveSidecarBaseUrl(
-  flags: Map<string, string | boolean>,
-  cliVersion: string,
-): string {
-  const override =
-    readFlag(flags, "sidecar-base-url") ??
-    process.env.OPENWORK_SIDECAR_BASE_URL;
-  if (override && override.trim()) return override.trim();
-  return `https://github.com/different-ai/openwork/releases/download/openwork-orchestrator-v${cliVersion}`;
-}
-
-function resolveSidecarManifestUrl(
-  flags: Map<string, string | boolean>,
-  baseUrl: string,
-): string {
-  const override =
-    readFlag(flags, "sidecar-manifest") ??
-    process.env.OPENWORK_SIDECAR_MANIFEST_URL;
-  if (override && override.trim()) return override.trim();
-  return `${baseUrl.replace(/\/$/, "")}/openwork-orchestrator-sidecars.json`;
-}
-
 function resolveSidecarConfig(
   flags: Map<string, string | boolean>,
-  cliVersion: string,
 ): SidecarConfig {
-  const baseUrl = resolveSidecarBaseUrl(flags, cliVersion);
   return {
     dir: resolveSidecarDir(flags),
-    baseUrl,
-    manifestUrl: resolveSidecarManifestUrl(flags, baseUrl),
     target: resolveSidecarTarget(),
   };
-}
-
-async function fetchRemoteManifest(
-  url: string,
-): Promise<RemoteSidecarManifest | null> {
-  const cached = remoteManifestCache.get(url);
-  if (cached) return cached;
-  const task = (async () => {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) return null;
-      return (await response.json()) as RemoteSidecarManifest;
-    } catch {
-      return null;
-    }
-  })();
-  remoteManifestCache.set(url, task);
-  return task;
-}
-
-function resolveAssetUrl(
-  baseUrl: string,
-  asset?: string,
-  url?: string,
-): string | null {
-  if (url && url.trim()) return url.trim();
-  if (asset && asset.trim())
-    return `${baseUrl.replace(/\/$/, "")}/${asset.trim()}`;
-  return null;
-}
-
-function resolveAssetName(asset?: string, url?: string): string | null {
-  if (asset && asset.trim()) return asset.trim();
-  if (url && url.trim()) {
-    try {
-      return basename(new URL(url).pathname);
-    } catch {
-      const parts = url.split("/").filter(Boolean);
-      return parts.length ? parts[parts.length - 1] : null;
-    }
-  }
-  return null;
-}
-
-async function downloadToPath(url: string, dest: string): Promise<void> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to download ${url} (HTTP ${response.status})`);
-  }
-  const buffer = Buffer.from(await response.arrayBuffer());
-  await mkdir(dirname(dest), { recursive: true });
-  const tmpPath = `${dest}.tmp-${randomUUID()}`;
-  await writeFile(tmpPath, buffer);
-  await rename(tmpPath, dest);
 }
 
 async function ensureExecutable(path: string): Promise<void> {
@@ -1998,205 +1889,6 @@ async function ensureExecutable(path: string): Promise<void> {
     await chmod(path, 0o755);
   } catch {
     // ignore
-  }
-}
-
-async function downloadSidecarBinary(options: {
-  name: SidecarName;
-  sidecar: SidecarConfig;
-  expectedVersion?: string;
-}): Promise<ResolvedBinary | null> {
-  if (!options.sidecar.target) return null;
-  const manifest = await fetchRemoteManifest(options.sidecar.manifestUrl);
-  if (!manifest) return null;
-  const entry = manifest.entries[options.name];
-  if (!entry) return null;
-  if (options.expectedVersion && entry.version !== options.expectedVersion) {
-    return null;
-  }
-  const targetInfo = entry.targets[options.sidecar.target];
-  if (!targetInfo) return null;
-
-  const assetName = resolveAssetName(targetInfo.asset, targetInfo.url);
-  const assetUrl = resolveAssetUrl(
-    options.sidecar.baseUrl,
-    targetInfo.asset,
-    targetInfo.url,
-  );
-  if (!assetName || !assetUrl) return null;
-
-  const targetDir = join(
-    options.sidecar.dir,
-    entry.version,
-    options.sidecar.target,
-  );
-  const targetPath = join(targetDir, assetName);
-  if (await fileExists(targetPath)) {
-    if (targetInfo.sha256) {
-      try {
-        await verifyBinary(targetPath, {
-          version: entry.version,
-          sha256: targetInfo.sha256,
-        });
-        await ensureExecutable(targetPath);
-        return {
-          bin: targetPath,
-          source: "downloaded",
-          expectedVersion: entry.version,
-        };
-      } catch {
-        await rm(targetPath, { force: true });
-      }
-    } else {
-      await ensureExecutable(targetPath);
-      return {
-        bin: targetPath,
-        source: "downloaded",
-        expectedVersion: entry.version,
-      };
-    }
-  }
-
-  await downloadToPath(assetUrl, targetPath);
-  if (targetInfo.sha256) {
-    await verifyBinary(targetPath, {
-      version: entry.version,
-      sha256: targetInfo.sha256,
-    });
-  }
-  await ensureExecutable(targetPath);
-  return {
-    bin: targetPath,
-    source: "downloaded",
-    expectedVersion: entry.version,
-  };
-}
-
-function resolveOpencodeAsset(target: SidecarTarget): string | null {
-  const assets: Record<SidecarTarget, string> = {
-    "darwin-arm64": "opencode-darwin-arm64.zip",
-    "darwin-x64": "opencode-darwin-x64-baseline.zip",
-    "linux-x64": "opencode-linux-x64-baseline.tar.gz",
-    "linux-arm64": "opencode-linux-arm64.tar.gz",
-    "windows-x64": "opencode-windows-x64-baseline.zip",
-    "windows-arm64": "opencode-windows-arm64.zip",
-  };
-  return assets[target] ?? null;
-}
-
-async function runCommand(
-  command: string,
-  args: string[],
-  cwd?: string,
-): Promise<void> {
-  const child = spawnProcess(command, args, { cwd, stdio: "inherit" });
-  const result = await Promise.race([
-    once(child, "exit").then(([code]) => ({ type: "exit" as const, code })),
-    once(child, "error").then(([error]) => ({ type: "error" as const, error })),
-  ]);
-  if (result.type === "error") {
-    throw new Error(
-      `Command failed: ${command} ${args.join(" ")}: ${String(result.error)}`,
-    );
-  }
-  if (result.code !== 0) {
-    throw new Error(`Command failed: ${command} ${args.join(" ")}`);
-  }
-}
-
-async function resolveOpencodeDownload(
-  sidecar: SidecarConfig,
-  expectedVersion?: string,
-): Promise<string | null> {
-  if (!expectedVersion) return null;
-  if (!sidecar.target) return null;
-
-  const assetOverride =
-    process.env.OPENWORK_OPENCODE_ASSET ?? process.env.OPENCODE_ASSET;
-  const asset = assetOverride?.trim() || resolveOpencodeAsset(sidecar.target);
-  if (!asset) return null;
-
-  const version = expectedVersion.startsWith("v")
-    ? expectedVersion.slice(1)
-    : expectedVersion;
-  const url = `https://github.com/anomalyco/opencode/releases/download/v${version}/${asset}`;
-  const targetDir = join(sidecar.dir, "opencode", version, sidecar.target);
-  const targetPath = join(
-    targetDir,
-    process.platform === "win32" ? "opencode.exe" : "opencode",
-  );
-
-  const hostTarget = resolveSidecarTarget();
-  const runnableOnHost = hostTarget !== null && sidecar.target === hostTarget;
-
-  if (await fileExists(targetPath)) {
-    if (!runnableOnHost) {
-      await ensureExecutable(targetPath);
-      return targetPath;
-    }
-    const actual = await readCliVersion(targetPath);
-    if (actual === version) {
-      await ensureExecutable(targetPath);
-      return targetPath;
-    }
-  }
-
-  await mkdir(targetDir, { recursive: true });
-  const stamp = Date.now();
-  const archivePath = join(
-    tmpdir(),
-    `openwork-orchestrator-opencode-${stamp}-${asset}`,
-  );
-  const extractDir = await mkdtemp(
-    join(tmpdir(), "openwork-orchestrator-opencode-"),
-  );
-
-  try {
-    await downloadToPath(url, archivePath);
-    if (process.platform === "win32") {
-      const psQuote = (value: string) => `'${value.replace(/'/g, "''")}'`;
-      const psScript = [
-        "$ErrorActionPreference = 'Stop'",
-        `Expand-Archive -Path ${psQuote(archivePath)} -DestinationPath ${psQuote(extractDir)} -Force`,
-      ].join("; ");
-      await runCommand("powershell", ["-NoProfile", "-Command", psScript]);
-    } else if (asset.endsWith(".zip")) {
-      await runCommand("unzip", ["-q", archivePath, "-d", extractDir]);
-    } else if (asset.endsWith(".tar.gz")) {
-      await runCommand("tar", ["-xzf", archivePath, "-C", extractDir]);
-    } else {
-      throw new Error(`Unsupported opencode asset type: ${asset}`);
-    }
-
-    const entries = await readdir(extractDir, { withFileTypes: true });
-    const queue = entries.map((entry) => join(extractDir, entry.name));
-    let candidate: string | null = null;
-    while (queue.length) {
-      const current = queue.shift();
-      if (!current) break;
-      const statInfo = await stat(current);
-      if (statInfo.isDirectory()) {
-        const nested = await readdir(current, { withFileTypes: true });
-        queue.push(...nested.map((entry) => join(current, entry.name)));
-        continue;
-      }
-      const base = basename(current);
-      if (base === "opencode" || base === "opencode.exe") {
-        candidate = current;
-        break;
-      }
-    }
-
-    if (!candidate) {
-      throw new Error("OpenCode binary not found after extraction.");
-    }
-
-    await copyFile(candidate, targetPath);
-    await ensureExecutable(targetPath);
-    return targetPath;
-  } finally {
-    await rm(extractDir, { recursive: true, force: true });
-    await rm(archivePath, { force: true });
   }
 }
 
@@ -2219,12 +1911,30 @@ async function verifyBinary(
 async function resolveBundledBinary(
   manifest: VersionManifest | null,
   name: string,
+  bundleTarget?: SidecarTarget | null,
 ): Promise<string | null> {
   if (!manifest) return null;
-  const candidates = [join(manifest.dir, name)];
-  if (process.platform === "win32") {
-    candidates.push(join(manifest.dir, `${name}.exe`));
+  const hostTarget = resolveSidecarTarget();
+  const cross =
+    bundleTarget != null &&
+    hostTarget != null &&
+    bundleTarget !== hostTarget;
+
+  const candidates: string[] = [];
+  if (!cross) {
+    candidates.push(join(manifest.dir, name));
+    if (process.platform === "win32") {
+      candidates.push(join(manifest.dir, `${name}.exe`));
+    }
+  } else {
+    candidates.push(join(manifest.dir, bundleTarget, name));
+    candidates.push(join(manifest.dir, `${name}-${bundleTarget}`));
+    if (process.platform === "win32") {
+      candidates.push(join(manifest.dir, bundleTarget, `${name}.exe`));
+      candidates.push(join(manifest.dir, `${name}-${bundleTarget}.exe`));
+    }
   }
+
   for (const bundled of candidates) {
     if (!(await isExecutable(bundled))) continue;
     // Desktop bundles may be code-signed after we generate versions.json, which
@@ -2476,12 +2186,12 @@ async function assertSandboxBinaryFile(
   const lower = bin.toLowerCase();
   if (lower.endsWith(".js") || lower.endsWith(".ts")) {
     throw new Error(
-      `Sandbox mode requires ${name} to be a native binary (got ${bin}). Use downloaded sidecars or pass a Linux binary path.`,
+      `Sandbox mode requires ${name} to be a native binary (got ${bin}). Ship Linux sidecars next to versions.json (see <target>/binary) or pass a Linux binary path.`,
     );
   }
   if (!isPathLikeBinary(bin)) {
     throw new Error(
-      `Sandbox mode requires ${name} to be a file path (got ${bin}). Use downloaded sidecars or pass --${name}-bin with a Linux binary path.`,
+      `Sandbox mode requires ${name} to be a file path (got ${bin}). Pass --${name}-bin with a Linux binary path or use bundled Linux artifacts.`,
     );
   }
   const resolved = resolve(process.cwd(), bin);
@@ -2554,26 +2264,14 @@ async function resolveOpenworkServerBin(options: {
     const bundled = await resolveBundledBinary(
       options.manifest,
       "openwork-server",
+      options.sidecar.target,
     );
     if (!bundled) {
       throw new Error(
-        "Bundled openwork-server binary missing. Build with pnpm --filter openwork-orchestrator build:bin:bundled.",
+        "Bundled openwork-server binary missing. Build with pnpm --filter openwork-orchestrator build:bin:bundled (sandbox: place linux-arm64/linux-x64 copies next to versions.json).",
       );
     }
     return { bin: bundled, source: "bundled", expectedVersion };
-  }
-
-  if (options.source === "downloaded") {
-    const downloaded = await downloadSidecarBinary({
-      name: "openwork-server",
-      sidecar: options.sidecar,
-    });
-    if (!downloaded) {
-      throw new Error(
-        "openwork-server download failed. Check sidecar manifest or base URL.",
-      );
-    }
-    return downloaded;
   }
 
   if (options.source === "external") {
@@ -2583,6 +2281,7 @@ async function resolveOpenworkServerBin(options: {
   const bundled = await resolveBundledBinary(
     options.manifest,
     "openwork-server",
+    options.sidecar.target,
   );
   if (bundled && !(options.allowExternal && options.explicit)) {
     return { bin: bundled, source: "bundled", expectedVersion };
@@ -2592,15 +2291,9 @@ async function resolveOpenworkServerBin(options: {
     return resolveExternal();
   }
 
-  const downloaded = await downloadSidecarBinary({
-    name: "openwork-server",
-    sidecar: options.sidecar,
-  });
-  if (downloaded) return downloaded;
-
   if (!options.allowExternal) {
     throw new Error(
-      "Bundled openwork-server binary missing and download failed. Use --allow-external or --sidecar-source external.",
+      "Bundled openwork-server binary missing. Install sidecars next to the orchestrator (versions.json directory) or pass --allow-external with --openwork-server-bin.",
     );
   }
 
@@ -2647,39 +2340,28 @@ async function resolveOpencodeBin(options: {
   };
 
   if (options.source === "bundled") {
-    const bundled = await resolveBundledBinary(options.manifest, "opencode");
+    const bundled = await resolveBundledBinary(
+      options.manifest,
+      "opencode",
+      options.sidecar.target,
+    );
     if (!bundled) {
       throw new Error(
-        "Bundled opencode binary missing. Build with pnpm --filter openwork-orchestrator build:bin:bundled.",
+        "Bundled opencode binary missing. Build with pnpm --filter openwork-orchestrator build:bin:bundled (sandbox: place linux-arm64/linux-x64 copies next to versions.json).",
       );
     }
     return { bin: bundled, source: "bundled", expectedVersion };
-  }
-
-  if (options.source === "downloaded") {
-    const downloaded = await downloadSidecarBinary({
-      name: "opencode",
-      sidecar: options.sidecar,
-      expectedVersion,
-    });
-    if (downloaded) return downloaded;
-    const opencodeDownloaded = await resolveOpencodeDownload(
-      options.sidecar,
-      expectedVersion,
-    );
-    if (opencodeDownloaded) {
-      return { bin: opencodeDownloaded, source: "downloaded", expectedVersion };
-    }
-    throw new Error(
-      "opencode download failed. Check sidecar manifest/network access, or update constants.json.",
-    );
   }
 
   if (options.source === "external") {
     return resolveExternal();
   }
 
-  const bundled = await resolveBundledBinary(options.manifest, "opencode");
+  const bundled = await resolveBundledBinary(
+    options.manifest,
+    "opencode",
+    options.sidecar.target,
+  );
   if (bundled && !(options.allowExternal && options.explicit)) {
     return { bin: bundled, source: "bundled", expectedVersion };
   }
@@ -2688,24 +2370,9 @@ async function resolveOpencodeBin(options: {
     return resolveExternal();
   }
 
-  const downloaded = await downloadSidecarBinary({
-    name: "opencode",
-    sidecar: options.sidecar,
-    expectedVersion,
-  });
-  if (downloaded) return downloaded;
-
-  const opencodeDownloaded = await resolveOpencodeDownload(
-    options.sidecar,
-    expectedVersion,
-  );
-  if (opencodeDownloaded) {
-    return { bin: opencodeDownloaded, source: "downloaded", expectedVersion };
-  }
-
   if (!options.allowExternal) {
     throw new Error(
-      "Bundled opencode binary missing and download failed. Use --allow-external or --opencode-source external.",
+      "Bundled opencode binary missing. Install opencode next to the orchestrator (versions.json directory) or pass --allow-external with --opencode-bin.",
     );
   }
 
@@ -2788,26 +2455,14 @@ async function resolveOpenCodeRouterBin(options: {
     const bundled = await resolveBundledBinary(
       options.manifest,
       "opencode-router",
+      options.sidecar.target,
     );
     if (!bundled) {
       throw new Error(
-        "Bundled opencodeRouter binary missing. Build with pnpm --filter openwork-orchestrator build:bin:bundled.",
+        "Bundled opencodeRouter binary missing. Build with pnpm --filter openwork-orchestrator build:bin:bundled (sandbox: place linux-arm64/linux-x64 copies next to versions.json).",
       );
     }
     return { bin: bundled, source: "bundled", expectedVersion };
-  }
-
-  if (options.source === "downloaded") {
-    const downloaded = await downloadSidecarBinary({
-      name: "opencode-router",
-      sidecar: options.sidecar,
-    });
-    if (!downloaded) {
-      throw new Error(
-        "opencodeRouter download failed. Check sidecar manifest or base URL.",
-      );
-    }
-    return downloaded;
   }
 
   if (options.source === "external") {
@@ -2817,6 +2472,7 @@ async function resolveOpenCodeRouterBin(options: {
   const bundled = await resolveBundledBinary(
     options.manifest,
     "opencode-router",
+    options.sidecar.target,
   );
   if (bundled && !(options.allowExternal && options.explicit)) {
     return { bin: bundled, source: "bundled", expectedVersion };
@@ -2826,15 +2482,9 @@ async function resolveOpenCodeRouterBin(options: {
     return resolveExternal();
   }
 
-  const downloaded = await downloadSidecarBinary({
-    name: "opencode-router",
-    sidecar: options.sidecar,
-  });
-  if (downloaded) return downloaded;
-
   if (!options.allowExternal) {
     throw new Error(
-      "Bundled opencodeRouter binary missing and download failed. Use --allow-external or --sidecar-source external.",
+      "Bundled opencodeRouter binary missing. Install sidecars next to the orchestrator (versions.json directory) or pass --allow-external with --opencode-router-bin.",
     );
   }
 
@@ -3730,11 +3380,9 @@ function printHelp(): void {
     "  --no-opencode-router             Disable opencodeRouter sidecar",
     "  --opencode-router-required       Exit if opencodeRouter stops",
     "  --allow-external          Allow external sidecar binaries (dev only, required for custom bins)",
-    "  --sidecar-dir <path>      Cache directory for downloaded sidecars",
-    "  --sidecar-base-url <url>  Base URL for sidecar downloads",
-    "  --sidecar-manifest <url>  Override sidecar manifest URL",
-    "  --sidecar-source <mode>   auto | bundled | downloaded | external",
-    "  --opencode-source <mode>  auto | bundled | downloaded | external",
+    "  --sidecar-dir <path>      Directory for bundled sidecar lookup (default under data dir)",
+    "  --sidecar-source <mode>   auto | bundled | external",
+    "  --opencode-source <mode>  auto | bundled | external",
     "  --check                   Run health checks then exit",
     "  --check-events            Verify SSE events during check",
     "  --tui                     Force interactive dashboard (TTY only)",
@@ -6003,7 +5651,7 @@ async function runRouterDaemon(args: ParsedArgs) {
     "openwork-orchestrator",
   );
 
-  const sidecar = resolveSidecarConfig(args.flags, cliVersion);
+  const sidecar = resolveSidecarConfig(args.flags);
   const allowExternal = readBool(
     args.flags,
     "allow-external",
@@ -6014,8 +5662,6 @@ async function runRouterDaemon(args: ParsedArgs) {
   logVerbose(`cli version: ${cliVersion}`);
   logVerbose(`sidecar target: ${sidecar.target ?? "unknown"}`);
   logVerbose(`sidecar dir: ${sidecar.dir}`);
-  logVerbose(`sidecar base URL: ${sidecar.baseUrl}`);
-  logVerbose(`sidecar manifest: ${sidecar.manifestUrl}`);
   logVerbose(`sidecar source: ${sidecarSource}`);
   logVerbose(`opencode source: ${opencodeSource}`);
   logVerbose(
@@ -6037,8 +5683,6 @@ async function runRouterDaemon(args: ParsedArgs) {
     state.cliVersion = cliVersion;
     state.sidecar = {
       dir: sidecar.dir,
-      baseUrl: sidecar.baseUrl,
-      manifestUrl: sidecar.manifestUrl,
       target: sidecar.target,
       source: sidecarSource,
       opencodeSource,
@@ -7109,34 +6753,21 @@ async function runStart(args: ParsedArgs) {
     "OPENWORK_ALLOW_EXTERNAL",
   );
   const sidecarTarget = resolveSandboxSidecarTarget(sandboxMode);
-  const sidecar = resolveSidecarConfigForTarget(
-    args.flags,
-    cliVersion,
-    sidecarTarget,
-  );
+  const sidecar = resolveSidecarConfigForTarget(args.flags, sidecarTarget);
 
   let sidecarSource = sidecarSourceInput;
   let opencodeSource = opencodeSourceInput;
   if (sandboxMode !== "none") {
-    if (sidecarSourceInput === "bundled") {
-      throw new Error("Sandbox mode does not support --sidecar-source bundled");
-    }
-    if (opencodeSourceInput === "bundled") {
-      throw new Error(
-        "Sandbox mode does not support --opencode-source bundled",
-      );
-    }
-    // In sandbox mode, we must run Linux binaries inside the container. When
-    // custom *-bin paths are provided, treat the source as external so we don't
-    // accidentally pick host (darwin) bundled binaries.
+    // Sandbox runs Linux binaries; resolveBundledBinary uses sidecar.target to
+    // prefer manifestDir/<target>/… when the host triple differs.
     if (sidecarSourceInput === "auto") {
       sidecarSource =
         explicitOpenworkServerBin || explicitOpenCodeRouterBin
           ? "external"
-          : "downloaded";
+          : "bundled";
     }
     if (opencodeSourceInput === "auto") {
-      opencodeSource = explicitOpencodeBin ? "external" : "downloaded";
+      opencodeSource = explicitOpencodeBin ? "external" : "bundled";
     }
   }
   const dockerCommand =
@@ -7155,8 +6786,6 @@ async function runStart(args: ParsedArgs) {
   }
   logVerbose(`sidecar target: ${sidecar.target ?? "unknown"}`);
   logVerbose(`sidecar dir: ${sidecar.dir}`);
-  logVerbose(`sidecar base URL: ${sidecar.baseUrl}`);
-  logVerbose(`sidecar manifest: ${sidecar.manifestUrl}`);
   logVerbose(`sidecar source: ${sidecarSource}`);
   logVerbose(`opencode source: ${opencodeSource}`);
   logVerbose(
@@ -8558,8 +8187,6 @@ async function runStart(args: ParsedArgs) {
         cliVersion,
         sidecar: {
           dir: sidecar.dir,
-          baseUrl: sidecar.baseUrl,
-          manifestUrl: sidecar.manifestUrl,
           target: sidecar.target,
           source: sidecarSource,
           opencodeSource,

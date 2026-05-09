@@ -752,6 +752,7 @@ export default {
   "session.create_or_connect_workspace": "创建或连接工作区",
   "session.default_agent": "默认智能体",
   "session.default_title": "新建会话",
+  "session.empty_transcript_prompt": "有什么我能帮你的吗？",
   "session.delete": "删除",
   "session.delete_named_session_message": "这将永久删除「{title}」及其消息。",
   "session.delete_session_generic": "这将永久删除所选会话及其消息。",

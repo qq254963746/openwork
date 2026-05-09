@@ -807,6 +807,7 @@ export default {
   "session.default_agent": "Default agent",
   "session.default_model": "Pick a model",
   "session.default_title": "New session",
+  "session.empty_transcript_prompt": "What can I help you with?",
   "session.delete": "Delete",
   "session.delete_named_session_message": "This will permanently delete \"{title}\" and its messages.",
   "session.delete_session_generic": "This will permanently delete the selected session and its messages.",
