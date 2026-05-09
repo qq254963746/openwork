@@ -6,7 +6,6 @@
 - Local-first, cloud-ready: OpenWork runs on your machine in one click. Send a message instantly.
 - Composable: desktop app, Slack/Telegram connector, or server. Use what fits, no lock-in.
 - Ejectable: OpenWork is powered by OpenCode, so everything OpenCode can do works in OpenWork, even without a UI yet.
-- Sharing is caring: start solo on localhost, then explicitly opt into remote sharing when you need it.
 
 OpenWork is designed around the idea that you can easily ship your agentic workflows for your team as a repeatable, productized process.
 
@@ -20,7 +19,7 @@ OpenWork is designed to be:
 - **Extensible**: skill and opencode plugins are installable modules.
 - **Auditable**: show what happened, when, and why.
 - **Permissioned**: access to privileged flows.
-- **Local/Remote**: OpenWork works locally as well as can connect to remote servers.
+- **Local**: OpenWork works locally
 
 ## What’s Included
 
