@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key>
-  <string>com.differentai.openwork.dev</string>
+  <string>com.fengai.openwork.dev</string>
   <key>CFBundleName</key>
   <string>OpenWork - Dev</string>
   <key>CFBundleDisplayName</key>
@@ -14,7 +14,7 @@
       <key>CFBundleTypeRole</key>
       <string>Editor</string>
       <key>CFBundleURLName</key>
-      <string>com.differentai.openwork.dev openwork-dev</string>
+      <string>com.fengai.openwork.dev openwork-dev</string>
       <key>CFBundleURLSchemes</key>
       <array>
         <string>openwork-dev</string>

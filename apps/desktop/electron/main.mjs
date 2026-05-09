@@ -24,8 +24,8 @@ import { exportWorkspaceConfig, importWorkspaceConfig } from "./workspace-archiv
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const NATIVE_DEEP_LINK_EVENT = "openwork:deep-link-native";
-const TAURI_APP_IDENTIFIER = "com.differentai.openwork";
-const DEV_APP_IDENTIFIER = "com.differentai.openwork.dev";
+const TAURI_APP_IDENTIFIER = "com.fengai.openwork";
+const DEV_APP_IDENTIFIER = "com.fengai.openwork.dev";
 const DESKTOP_PROTOCOL_SCHEME = "openwork";
 const isDevMode = process.env.OPENWORK_DEV_MODE === "1";
 const APP_NAME = isDevMode ? "OpenWork - Dev" : "OpenWork";

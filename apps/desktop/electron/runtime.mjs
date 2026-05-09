@@ -634,7 +634,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
           variant: "macos_electron_dev",
           dir: path.join(
             home,
-            "Library/Application Support/com.differentai.openwork.dev/openwork-dev-data/xdg/data/opencode/log",
+            "Library/Application Support/com.fengai.openwork.dev/openwork-dev-data/xdg/data/opencode/log",
           ),
         });
       }

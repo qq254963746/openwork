@@ -3,7 +3,7 @@ import path from "node:path";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { HTTPException } from "hono/http-exception";
 import type { ServerRepositories } from "../database/repositories.js";
-import type { CloudSigninRecord, JsonObject, ManagedConfigRecord, WorkspaceRecord, WorkspaceShareRecord } from "../database/types.js";
+import type { JsonObject, ManagedConfigRecord, WorkspaceRecord } from "../database/types.js";
 import type { ServerWorkingDirectory } from "../database/working-directory.js";
 import type { ConfigMaterializationService } from "./config-materialization-service.js";
 import type { WorkspaceFileService } from "./workspace-file-service.js";

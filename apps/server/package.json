@@ -23,12 +23,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/different-ai/openwork.git",
+    "url": "git+https://github.com/qq254963746/openwork.git",
     "directory": "apps/server"
   },
-  "homepage": "https://github.com/different-ai/openwork/tree/dev/apps/server",
+  "homepage": "https://github.com/qq254963746/openwork/tree/dev/apps/server",
   "bugs": {
-    "url": "https://github.com/different-ai/openwork/issues"
+    "url": "https://github.com/qq254963746/openwork/issues"
   },
   "keywords": [
     "openwork",

@@ -1,5 +1,5 @@
 {
-  "name": "@different-ai/openwork-workspace",
+  "name": "@fengai/openwork-workspace",
   "private": true,
   "version": "0.0.0",
   "scripts": {
@@ -37,8 +37,6 @@
     "release:review": "node scripts/release/review.mjs",
     "release:prepare": "node scripts/release/prepare.mjs",
     "release:prepare:dry": "node scripts/release/prepare.mjs --dry-run",
-    "release:ship": "node scripts/release/ship.mjs",
-    "release:ship:watch": "node scripts/release/ship.mjs --watch",
     "tauri": "pnpm --filter @openwork/desktop exec tauri"
   },
   "pnpm": {

@@ -1,7 +1,7 @@
 # IMPORTANT: appId intentionally matches the Tauri shell so both builds share
 # the same macOS bundle identifier, keychain entries, Launchpad slot, and TCC
 # permissions. In-place migration from Tauri to Electron depends on this.
-appId: com.differentai.openwork
+appId: com.fengai.openwork
 productName: OpenWork
 protocols:
   - name: OpenWork

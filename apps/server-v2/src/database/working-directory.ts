@@ -32,7 +32,7 @@ function isTruthy(value: string | undefined) {
 function resolvePlatformDataRoot() {
   const home = os.homedir();
   const devMode = isTruthy(process.env.OPENWORK_DEV_MODE);
-  const folderName = devMode ? "com.differentai.openwork.dev" : "com.differentai.openwork";
+  const folderName = devMode ? "com.fengai.openwork.dev" : "com.fengai.openwork";
 
   if (process.platform === "darwin") {
     return path.join(home, "Library", "Application Support", folderName);

@@ -220,7 +220,7 @@ function legacyDesktopDataDirCandidates(explicitDir?: string) {
 
   const candidates: string[] = [];
   const home = os.homedir();
-  const names = ["com.differentai.openwork.dev", "com.differentai.openwork", "OpenWork Dev", "OpenWork"];
+  const names = ["com.fengai.openwork.dev", "com.fengai.openwork", "OpenWork Dev", "OpenWork"];
   if (process.platform === "darwin") {
     for (const name of names) {
       candidates.push(path.join(home, "Library", "Application Support", name));

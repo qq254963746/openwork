@@ -248,12 +248,12 @@ This triggers the workflow automatically (`on: push.tags: v*`).
 
 If the workflow needs to be re-run for an existing tag (e.g. notarization retry), use workflow dispatch:
 
-* `gh workflow run "Release App" --repo different-ai/openwork -f tag=vX.Y.Z`
+* `gh workflow run "Release App" --repo fengai/openwork -f tag=vX.Y.Z`
 
 ### Verify
 
-* Runs: `gh run list --repo different-ai/openwork --workflow "Release App" --limit 5`
-* Release: `gh release view vX.Y.Z --repo different-ai/openwork`
+* Runs: `gh run list --repo fengai/openwork --workflow "Release App" --limit 5`
+* Release: `gh release view vX.Y.Z --repo fengai/openwork`
 
 Confirm the DMG assets are attached and versioned correctly.
 
@@ -266,7 +266,7 @@ This is usually covered by `Release App` when `publish_sidecars` + `publish_npm`
 3.  Commit the bump.
 4.  Build and upload sidecar assets for the same version tag:
     * `pnpm --filter openwork-orchestrator build:sidecars`
-    * `gh release create openwork-orchestrator-vX.Y.Z apps/orchestrator/dist/sidecars/* --repo different-ai/openwork`
+    * `gh release create openwork-orchestrator-vX.Y.Z apps/orchestrator/dist/sidecars/* --repo fengai/openwork`
 5.  Publish:
     * `pnpm --filter openwork-orchestrator publish --access public`
 6.  Verify:

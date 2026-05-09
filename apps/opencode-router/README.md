@@ -9,7 +9,7 @@ Runtime requirement: Bun 1.3+ (`bun --version`).
 One-command install (recommended):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/different-ai/openwork/dev/apps/opencode-router/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/qq254963746/openwork/dev/apps/opencode-router/install.sh | bash
 ```
 
 Install from npm:

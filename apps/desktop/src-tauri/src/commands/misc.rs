@@ -73,7 +73,7 @@ fn env_truthy(key: &str) -> bool {
 fn macos_dev_application_support_opencode_log_dir() -> Option<PathBuf> {
     let home = home_dir()?;
     Some(
-        home.join("Library/Application Support/com.differentai.openwork.dev/openwork-dev-data/xdg/data/opencode/log"),
+        home.join("Library/Application Support/com.fengai.openwork.dev/openwork-dev-data/xdg/data/opencode/log"),
     )
 }
 
