@@ -189,7 +189,6 @@ These are all opencode primitives you can read the docs to find out exactly how 
 - `/apps/desktop/`: Tauri desktop shell that hosts the app UI and manages native process lifecycles.
 - `/apps/server/`: OpenWork server (API/control layer consumed by the app).
 - `/apps/orchestrator/`: OpenWork orchestrator CLI/daemon. In `start`/`serve` host mode it manages OpenWork server + OpenCode; in daemon mode it manages worker/sandbox lifecycle.
-- `/apps/share/`: share-link publisher service for OpenWork bundle imports.
 
 Hosted OpenWork Cloud control-plane services (sign-in, worker provisioning, org policy) are not maintained in this repository tree; desktop and web clients integrate with them over HTTPS using the shipped URL/deep-link flows.
 

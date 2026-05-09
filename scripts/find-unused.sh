@@ -33,7 +33,6 @@ INFRA_GLOBS=(
   "packaging/docker/docker-compose*.yml"
   # Deployment
   "apps/app/vercel.json"
-  "apps/share/vercel.json"
   # Tauri
   "apps/desktop/src-tauri/tauri.conf.json"
   # Monorepo orchestration
@@ -41,9 +40,6 @@ INFRA_GLOBS=(
   # Build configs
   "apps/app/vite.config.ts"
   "apps/app/tailwind.config.ts"
-  "apps/story-book/vite.config.ts"
-  "apps/share/next.config.ts"
-  "apps/share/playwright.config.ts"
   "packages/ui/tsup.config.ts"
   # Build scripts (all)
   "scripts/*.mjs"
@@ -70,8 +66,6 @@ CONVENTION_PATTERNS=(
 
 # File-based routing directories — files here are entry points by convention
 ROUTING_DIRS=(
-  "apps/share/server/"
-  "apps/share/app/"
 )
 
 # Paths to ignore entirely
