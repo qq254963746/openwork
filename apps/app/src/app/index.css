@@ -404,6 +404,42 @@ select:disabled {
   animation: progress-shimmer 2s infinite linear;
 }
 
+/* Session "Thinking" row: highlight sweeps left → right while reasoning streams. */
+@keyframes thinking-title-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: -100% 50%;
+  }
+}
+
+.thinking-title-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--slate-11) 0%,
+    var(--slate-11) 38%,
+    var(--slate-12) 50%,
+    var(--slate-11) 62%,
+    var(--slate-11) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: thinking-title-shimmer 1.75s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinking-title-shimmer {
+    animation: none;
+    background-image: none;
+    color: var(--slate-11);
+    -webkit-text-fill-color: var(--slate-11);
+  }
+}
+
 /* Quiet, small dot ticker (`:: :: ::`). Each dot pulses briefly in sequence,
    illuminating left-to-right like a subtle running light. Used for boot,
    "awaiting first token", and any idle-but-alive hint. */

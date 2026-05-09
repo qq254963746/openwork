@@ -201,7 +201,13 @@ function toLegacyPart(
   }
 
   if (part.type === "reasoning") {
-    return { id, type: "reasoning", text: part.text } as TranscriptPart;
+    const record = part as { text: string; state?: "streaming" | "done" };
+    return {
+      id,
+      type: "reasoning",
+      text: record.text,
+      ...(record.state ? { state: record.state } : {}),
+    } as TranscriptPart;
   }
 
   if (part.type === "file") {
@@ -336,8 +342,20 @@ function cleanReasoningPreview(value: string) {
     .trim();
 }
 
-function ThinkingCollapsible(props: { text: string }) {
-  const [expanded, setExpanded] = useState(true);
+function ThinkingCollapsible(props: { text: string; thinkingActive: boolean }) {
+  /** After streaming ends, stay collapsed unless the user opens the block. */
+  const [manualOpen, setManualOpen] = useState(false);
+  const prevThinkingRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    const prev = prevThinkingRef.current;
+    if (prev === true && !props.thinkingActive) {
+      setManualOpen(false);
+    }
+    prevThinkingRef.current = props.thinkingActive;
+  }, [props.thinkingActive]);
+
+  const expanded = props.thinkingActive || manualOpen;
   const paragraphs = useMemo(() => {
     const cleaned = cleanReasoningPreview(props.text);
     const blocks = cleaned
@@ -351,16 +369,28 @@ function ThinkingCollapsible(props: { text: string }) {
     <div className="w-full max-w-[720px]">
       <button
         type="button"
-        className="flex w-full items-center gap-2 rounded-lg py-0.5 text-left [font-size:inherit] [line-height:inherit] text-gray-9 transition-colors hover:text-dls-text"
+        className={`flex w-full items-center gap-2 rounded-lg py-0.5 text-left [font-size:inherit] [line-height:inherit] text-gray-9 transition-colors ${
+          props.thinkingActive ? "cursor-default" : "hover:text-dls-text"
+        }`}
         aria-expanded={expanded}
+        aria-busy={props.thinkingActive}
         aria-label={
           expanded ? t("session.thinking_collapse_aria") : t("session.thinking_expand_aria")
         }
-        onClick={() => setExpanded((value) => !value)}
+        onClick={() => {
+          if (props.thinkingActive) return;
+          setManualOpen((value) => !value);
+        }}
       >
         <Atom className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
         <span className="flex min-w-0 max-w-[720px] flex-1 items-center gap-1.5 [line-height:inherit]">
-          <span className="min-w-0 break-words font-medium">{t("session.thinking_block_title")}</span>
+          <span
+            className={`min-w-0 break-words font-medium ${
+              props.thinkingActive ? "thinking-title-shimmer" : ""
+            }`}
+          >
+            {t("session.thinking_block_title")}
+          </span>
           <ChevronDown
             size={14}
             className={`shrink-0 transition-transform ${expanded ? "" : "-rotate-90"}`}
@@ -618,12 +648,20 @@ function FileCard(props: {
   );
 }
 
+type ReasoningStreamContext = {
+  isStreaming: boolean;
+  messageId: string;
+  latestAssistantMessageId: string;
+  isLastReasoningPart: boolean;
+};
+
 function StepRow(props: {
   id: string;
   part: TranscriptPart;
   expanded: boolean;
   onToggle: () => void;
   todos: TodoItem[];
+  reasoningStreamContext?: ReasoningStreamContext;
 }) {
   const summary = useMemo(() => summarizeStep(props.part), [props.part]);
   const toolState = useMemo(() => {
@@ -646,7 +684,20 @@ function StepRow(props: {
     const raw = typeof (props.part as { text?: unknown }).text === "string"
       ? (props.part as { text: string }).text
       : "";
-    return <ThinkingCollapsible text={raw || headline} />;
+    const rState = (props.part as { state?: string }).state;
+    let thinkingActive = rState === "streaming";
+    const ctx = props.reasoningStreamContext;
+    if (
+      !thinkingActive &&
+      rState !== "done" &&
+      ctx &&
+      ctx.isStreaming &&
+      ctx.messageId === ctx.latestAssistantMessageId &&
+      ctx.isLastReasoningPart
+    ) {
+      thinkingActive = true;
+    }
+    return <ThinkingCollapsible text={raw || headline} thinkingActive={thinkingActive} />;
   }
 
   if (props.part.type === "tool" && (toolNameLower === "todowrite" || toolNameLower === "todoread")) {
@@ -835,7 +886,20 @@ function StepsContainer(props: {
   expandedStepIds: Set<string>;
   onExpandedStepIdsChange: (updater: (current: Set<string>) => Set<string>) => void;
   todos: TodoItem[];
+  reasoningStreamContext?: Omit<ReasoningStreamContext, "isLastReasoningPart">;
 }) {
+  const reasoningPartIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const group of props.stepGroups) {
+      for (const part of group.parts) {
+        if (part.type === "reasoning") {
+          ids.push(part.id);
+        }
+      }
+    }
+    return ids;
+  }, [props.stepGroups]);
+
   const toggleSteps = (id: string) => {
     props.onExpandedStepIdsChange((current) => {
       const next = new Set(current);
@@ -850,6 +914,15 @@ function StepsContainer(props: {
 
   const stepRow = (groupId: string, part: TranscriptPart, index: number) => {
     const rowId = `${groupId}:${index}`;
+    const baseCtx = props.reasoningStreamContext;
+    const isLastReasoning =
+      part.type === "reasoning" &&
+      reasoningPartIds.length > 0 &&
+      part.id === reasoningPartIds[reasoningPartIds.length - 1];
+    const reasoningCtx =
+      baseCtx && part.type === "reasoning"
+        ? { ...baseCtx, isLastReasoningPart: Boolean(isLastReasoning) }
+        : undefined;
     return (
       <StepRow
         key={rowId}
@@ -858,6 +931,7 @@ function StepsContainer(props: {
         expanded={props.expandedStepIds.has(rowId)}
         onToggle={() => toggleSteps(rowId)}
         todos={props.todos}
+        reasoningStreamContext={reasoningCtx}
       />
     );
   };
@@ -1139,6 +1213,11 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
               expandedStepIds={expandedStepIds}
               onExpandedStepIdsChange={onExpandedStepIdsChange}
               todos={todos}
+              reasoningStreamContext={{
+                isStreaming: props.isStreaming,
+                messageId: block.messageIds[0] ?? "",
+                latestAssistantMessageId,
+              }}
             />
           </div>
         </div>
@@ -1271,6 +1350,11 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                     expandedStepIds={expandedStepIds}
                     onExpandedStepIdsChange={onExpandedStepIdsChange}
                     todos={todos}
+                    reasoningStreamContext={{
+                      isStreaming: props.isStreaming,
+                      messageId: block.messageId,
+                      latestAssistantMessageId,
+                    }}
                   />
                 ) : null}
               </div>
