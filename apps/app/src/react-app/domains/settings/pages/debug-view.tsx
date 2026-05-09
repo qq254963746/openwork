@@ -15,11 +15,7 @@ import type {
   OpenworkServerDiagnostics,
 } from "../../../../app/lib/openwork-server";
 import type { SandboxDebugProbeResult } from "../../../../app/lib/desktop";
-import type {
-  OpencodeConnectStatus,
-  ReleaseChannel,
-  StartupPreference,
-} from "../../../../app/types";
+import type { OpencodeConnectStatus, StartupPreference } from "../../../../app/types";
 import { formatRelativeTime, isDesktopRuntime } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import { Button } from "../../../design-system/button";
@@ -98,12 +94,6 @@ export type DebugViewProps = {
   onRevealElectronMigrationBackup: () => void | Promise<void>;
   onPrepareElectronMigrationSnapshot: () => void | Promise<void>;
   onInstallElectronPreviewFromTauri: () => void | Promise<void>;
-  electronAlphaUpdaterAvailable: boolean;
-  electronAlphaUpdaterBusy: boolean;
-  electronAlphaUpdaterStatus: string | null;
-  electronAlphaUpdaterChannel: ReleaseChannel;
-  onSetElectronAlphaUpdaterChannel: (channel: ReleaseChannel) => void | Promise<void>;
-  onCheckElectronAlphaUpdates: () => void | Promise<void>;
   sandboxProbeBusy: boolean;
   sandboxProbeResult: SandboxDebugProbeResult | null;
   sandboxProbeStatus: string | null;
@@ -970,59 +960,6 @@ export function DebugView(props: DebugViewProps) {
 
           {props.electronMigrationStatus ? (
             <StatusBanner tone="info" message={props.electronMigrationStatus} />
-          ) : null}
-        </div>
-      ) : null}
-
-      {/* Section: Electron alpha updater (debug only) */}
-      {props.electronAlphaUpdaterAvailable ? (
-        <div className={cardClass}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className={sectionTitleClass}>Electron alpha channel</div>
-              <div className={sectionDescClass}>
-                Debug-only controls for migrated Electron users. Stable updates remain the default in Settings → Updates.
-              </div>
-            </div>
-            <div className="rounded-full border border-dls-border bg-dls-sidebar/50 px-2.5 py-1 text-[11px] font-medium text-dls-secondary">
-              {props.electronAlphaUpdaterChannel === "alpha" ? "Alpha" : "Stable"}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant={props.electronAlphaUpdaterChannel === "alpha" ? "secondary" : "outline"}
-              className="h-9 px-3 py-0 text-xs"
-              onClick={() => void props.onSetElectronAlphaUpdaterChannel("alpha")}
-              disabled={props.electronAlphaUpdaterBusy}
-            >
-              Use alpha feed
-            </Button>
-            <Button
-              variant={props.electronAlphaUpdaterChannel === "stable" ? "secondary" : "outline"}
-              className="h-9 px-3 py-0 text-xs"
-              onClick={() => void props.onSetElectronAlphaUpdaterChannel("stable")}
-              disabled={props.electronAlphaUpdaterBusy}
-            >
-              Return to stable
-            </Button>
-            <Button
-              variant="outline"
-              className="h-9 px-3 py-0 text-xs"
-              onClick={() => void props.onCheckElectronAlphaUpdates()}
-              disabled={props.electronAlphaUpdaterBusy}
-            >
-              {props.electronAlphaUpdaterBusy ? "Checking…" : "Check selected feed"}
-            </Button>
-          </div>
-
-          <div className="text-[11px] text-dls-secondary">
-            Alpha feed: <span className="font-mono">alpha-macos-latest/latest-mac.yml</span>. Stable feed:{" "}
-            <span className="font-mono">releases/latest/download/latest-mac.yml</span>.
-          </div>
-
-          {props.electronAlphaUpdaterStatus ? (
-            <StatusBanner tone="info" message={props.electronAlphaUpdaterStatus} />
           ) : null}
         </div>
       ) : null}

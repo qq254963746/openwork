@@ -153,9 +153,7 @@ pub struct OpencodeAuthJsonFile {
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct UpdaterEnvironment {
-    pub supported: bool,
-    pub reason: Option<String>,
+pub struct DesktopAppPaths {
     pub executable_path: Option<String>,
     pub app_bundle_path: Option<String>,
 }

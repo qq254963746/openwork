@@ -474,12 +474,12 @@ export function SessionPage(props: SessionPageProps) {
             >
               {!leftWorkspaceSidebarVisible ? (
                 <div
-                  className={`flex shrink-0 ${mainHeaderDragPassThrough ? "pointer-events-auto" : ""}`}
-                  {...(!mainHeaderDragPassThrough && isTauriRuntime()
-                    ? ({ "data-tauri-drag-region": "false" } as const)
-                    : {})}
+                  className={`flex shrink-0 ${mainHeaderDragPassThrough ? "pointer-events-auto" : ""} ${
+                    import.meta.env.PROD && macHeaderTrafficInset ? "ml-2" : ""
+                  }`}
+                  {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
                   style={
-                    !mainHeaderDragPassThrough && isElectronRuntime() && isMacPlatform()
+                    isElectronRuntime() && isMacPlatform()
                       ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
                       : undefined
                   }

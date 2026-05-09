@@ -20,7 +20,6 @@ import { fileURLToPath } from "node:url";
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
 import { registerMigrationIpc } from "./migration.mjs";
 import { createRuntimeManager } from "./runtime.mjs";
-import { registerUpdaterIpc } from "./updater.mjs";
 import { exportWorkspaceConfig, importWorkspaceConfig } from "./workspace-archive.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1321,11 +1320,9 @@ async function handleDesktopInvoke(event, command, ...args) {
       await rm(path.dirname(skillPath), { recursive: true, force: true });
       return execResult(true, `Removed skill ${args[1]}`);
     }
-    case "updaterEnvironment": {
+    case "desktopAppPaths": {
       const executablePath = app.isPackaged ? app.getPath("exe") : process.execPath;
       return {
-        supported: true,
-        reason: null,
         executablePath,
         appBundlePath:
           process.platform === "darwin"
@@ -1637,7 +1634,6 @@ ipcMain.handle("openwork:shell:relaunch", async () => {
 });
 
 registerMigrationIpc({ app, ipcMain });
-const { ensureAutoUpdater } = registerUpdaterIpc({ app, ipcMain, getMainWindow: () => mainWindow });
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -1684,13 +1680,6 @@ if (!app.requestSingleInstanceLock()) {
     const win = await createMainWindow();
     win.webContents.on("did-finish-load", () => {
       flushPendingDeepLinks();
-    });
-
-    // Kick the packaged-only updater after the window is up so the user
-    // sees a working app first. This is a no-op in dev.
-    void ensureAutoUpdater().then((updater) => {
-      if (!updater) return;
-      void updater.checkForUpdates().catch(() => undefined);
     });
   });
 

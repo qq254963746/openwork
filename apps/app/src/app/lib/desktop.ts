@@ -18,30 +18,6 @@ declare global {
         readSnapshot?: () => Promise<unknown>;
         ackSnapshot?: () => Promise<{ ok: boolean; moved: boolean }>;
       };
-      updater?: {
-        getChannel?: () => Promise<{
-          channel: "stable" | "alpha";
-          feedUrl: string;
-          currentVersion: string;
-        }>;
-        setChannel?: (channel: "stable" | "alpha") => Promise<{
-          channel: "stable" | "alpha";
-          feedUrl: string;
-          currentVersion: string;
-        }>;
-        check?: () => Promise<{
-          available: boolean;
-          currentVersion?: string;
-          latestVersion?: string | null;
-          releaseDate?: string | null;
-          releaseNotes?: unknown;
-          channel?: "stable" | "alpha";
-          feedUrl?: string;
-          reason?: string;
-        }>;
-        download?: () => Promise<{ ok: boolean; reason?: string }>;
-        installAndRestart?: () => Promise<{ ok: boolean; reason?: string }>;
-      };
       meta?: {
         initialDeepLinks?: string[];
         platform?: "darwin" | "linux" | "windows";
@@ -286,7 +262,7 @@ const {
   readLocalSkill,
   writeLocalSkill,
   uninstallSkill,
-  updaterEnvironment,
+  desktopAppPaths,
   readOpencodeConfig,
   readOpencodeAuthJson,
   writeOpencodeConfig,
@@ -343,7 +319,7 @@ export {
   readLocalSkill,
   writeLocalSkill,
   uninstallSkill,
-  updaterEnvironment,
+  desktopAppPaths,
   readOpencodeConfig,
   readOpencodeAuthJson,
   writeOpencodeConfig,

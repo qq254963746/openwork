@@ -154,17 +154,6 @@ export type View = "settings" | "session" | "signin";
 
 export type StartupPreference = "local" | "server";
 
-/**
- * Release channel the desktop app is subscribed to.
- *
- * - "stable": default. Auto-updates from the rolling stable GitHub release.
- * - "alpha": macOS-only. Auto-updates from the rolling alpha release that
- *   every merge to `dev` publishes to.
- *
- * See `apps/app/src/app/lib/release-channels.ts` for URL resolution.
- */
-export type ReleaseChannel = "stable" | "alpha";
-
 export type EngineRuntime = "direct";
 
 export type OnboardingStep = "welcome" | "local" | "server" | "connecting";
@@ -429,17 +418,4 @@ export type PluginState = {
 
 export type WorkspaceDisplay = WorkspaceInfo & {
   name: string;
-};
-
-export type UpdateHandle = {
-  available: boolean;
-  currentVersion: string;
-  version: string;
-  date?: string;
-  body?: string;
-  rawJson: Record<string, unknown>;
-  close: () => Promise<void>;
-  download: (onEvent?: (event: any) => void) => Promise<void>;
-  install: () => Promise<void>;
-  downloadAndInstall: (onEvent?: (event: any) => void) => Promise<void>;
 };

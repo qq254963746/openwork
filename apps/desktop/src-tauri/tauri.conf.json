@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "OpenWork",
-  "version": "0.13.22",
+  "version": "0.13.29",
   "identifier": "com.differentai.openwork",
   "build": {
     "beforeDevCommand": "node ./scripts/tauri-before-dev.mjs",
@@ -22,7 +22,7 @@
         "hiddenTitle": true,
         "trafficLightPosition": {
           "x": 14,
-          "y": 16
+          "y": 26
         }
       }
     ],
@@ -31,7 +31,7 @@
     }
   },
   "bundle": {
-    "createUpdaterArtifacts": true,
+    "createUpdaterArtifacts": false,
     "macOS": {
       "entitlements": "./entitlements.plist"
     },
@@ -59,12 +59,6 @@
           "openwork"
         ]
       }
-    },
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUwNDdCNTAwMTcxNUUxQTQKUldTazRSVVhBTFZIVUpNRi9OQnNRaElZY1NUWUQxS1ZJOTFUeUdPd2d6ZnFmMW5QV2xJQ1hXTTkK",
-      "endpoints": [
-        "https://github.com/different-ai/openwork/releases/latest/download/latest.json"
-      ]
     }
   }
 }

@@ -13,7 +13,7 @@ import {
   revealDesktopItemInDir,
   resetOpenworkState,
   sandboxDebugProbe as sandboxDebugProbeCmd,
-  updaterEnvironment as updaterEnvironmentCmd,
+  desktopAppPaths as desktopAppPathsCmd,
   workspaceBootstrap as workspaceBootstrapCmd,
   type AppBuildInfo,
   type EngineInfo,
@@ -42,7 +42,6 @@ import {
 } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import type { DebugViewProps } from "../pages/debug-view";
-import type { ReleaseChannel } from "../../../../app/types";
 import type { OpenworkServerStore, OpenworkServerStoreSnapshot } from "../../connections/openwork-server-store";
 
 const STARTUP_PREFERENCE_KEY = "openwork.startupPreference";
@@ -270,10 +269,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   const [electronMigrationArtifact, setElectronMigrationArtifact] = useState<ElectronAlphaArtifact | null>(null);
   const [electronMigrationBusy, setElectronMigrationBusy] = useState(false);
   const [electronMigrationStatus, setElectronMigrationStatus] = useState<string | null>(null);
-  const [electronAlphaUpdaterBusy, setElectronAlphaUpdaterBusy] = useState(false);
-  const [electronAlphaUpdaterStatus, setElectronAlphaUpdaterStatus] = useState<string | null>(null);
-  const [electronAlphaUpdaterChannel, setElectronAlphaUpdaterChannel] = useState<ReleaseChannel>("stable");
-
   const refreshEngineInfo = useCallback(async () => {
     if (!isDesktopRuntime()) return;
     try {
@@ -480,7 +475,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       return;
     }
     try {
-      const env = await updaterEnvironmentCmd();
+      const env = await desktopAppPathsCmd();
       const appBundlePath = env.appBundlePath?.trim();
       if (!appBundlePath) {
         setElectronMigrationStatus("Could not resolve the current OpenWork.app bundle path.");
@@ -541,7 +536,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     const confirmed =
       typeof window === "undefined" ||
       window.confirm(
-        "This debug-only migration action first writes a migration snapshot, then starts the Tauri → Electron handoff. On macOS, the installer swaps OpenWork.app in place and keeps OpenWork.app.migrate-bak for rollback. Tauri stable updates remain unchanged. Continue?",
+        "This debug-only migration action first writes a migration snapshot, then starts the Tauri → Electron handoff. On macOS, the installer swaps OpenWork.app in place and keeps OpenWork.app.migrate-bak for rollback. Continue?",
       );
     if (!confirmed) return;
 
@@ -577,87 +572,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       setElectronMigrationBusy(false);
     }
   }, [electronMigrationSha256, electronMigrationSha512, electronMigrationUrl, pushDeveloperLog]);
-
-  useEffect(() => {
-    if (!developerMode || !isElectronRuntime()) return;
-    const bridge = window.__OPENWORK_ELECTRON__?.updater;
-    if (!bridge?.getChannel) return;
-    let cancelled = false;
-    void bridge.getChannel()
-      .then((state) => {
-        if (cancelled) return;
-        setElectronAlphaUpdaterChannel(state.channel ?? "stable");
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [developerMode]);
-
-  const onSetElectronAlphaUpdaterChannel = useCallback(async (channel: ReleaseChannel) => {
-    if (!isElectronRuntime()) {
-      setElectronAlphaUpdaterStatus("Electron updater channels are available only in the Electron desktop app.");
-      return;
-    }
-    if (channel === "alpha" && !isMacPlatform()) {
-      setElectronAlphaUpdaterStatus("Electron alpha updates are macOS-only for now.");
-      return;
-    }
-    const bridge = window.__OPENWORK_ELECTRON__?.updater;
-    if (!bridge?.setChannel) {
-      setElectronAlphaUpdaterStatus("Electron updater bridge is unavailable.");
-      return;
-    }
-    setElectronAlphaUpdaterBusy(true);
-    setElectronAlphaUpdaterStatus(null);
-    try {
-      const state = await bridge.setChannel(channel);
-      setElectronAlphaUpdaterChannel(state.channel ?? channel);
-      setElectronAlphaUpdaterStatus(
-        `Subscribed Electron updater to ${state.channel ?? channel} (${state.feedUrl}).`,
-      );
-      pushDeveloperLog(`set Electron updater channel=${state.channel ?? channel}`);
-    } catch (error) {
-      setElectronAlphaUpdaterStatus(error instanceof Error ? error.message : safeStringify(error));
-    } finally {
-      setElectronAlphaUpdaterBusy(false);
-    }
-  }, [pushDeveloperLog]);
-
-  const onCheckElectronAlphaUpdates = useCallback(async () => {
-    if (!isElectronRuntime()) {
-      setElectronAlphaUpdaterStatus("Electron update checks are available only in the Electron desktop app.");
-      return;
-    }
-    const bridge = window.__OPENWORK_ELECTRON__?.updater;
-    if (!bridge?.check) {
-      setElectronAlphaUpdaterStatus("Electron updater bridge is unavailable.");
-      return;
-    }
-    setElectronAlphaUpdaterBusy(true);
-    setElectronAlphaUpdaterStatus(null);
-    try {
-      const result = await bridge.check();
-      if (result.channel) setElectronAlphaUpdaterChannel(result.channel);
-      if (result.reason === "unavailable") {
-        setElectronAlphaUpdaterStatus("Electron updater is available only in packaged Electron builds.");
-        return;
-      }
-      if (result.reason) {
-        setElectronAlphaUpdaterStatus(result.reason);
-        return;
-      }
-      setElectronAlphaUpdaterStatus(
-        result.available
-          ? `Update available: v${result.latestVersion ?? "unknown"} on ${result.channel ?? electronAlphaUpdaterChannel}. Use Settings → Updates to download and install.`
-          : `No Electron update available on ${result.channel ?? electronAlphaUpdaterChannel}.`,
-      );
-    } catch (error) {
-      setElectronAlphaUpdaterStatus(error instanceof Error ? error.message : safeStringify(error));
-    } finally {
-      setElectronAlphaUpdaterBusy(false);
-    }
-  }, [electronAlphaUpdaterChannel]);
 
   const onRunSandboxDebugProbe = useCallback(async () => {
     if (!isDesktopRuntime()) return;
@@ -1004,12 +918,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       onRevealElectronMigrationBackup,
       onPrepareElectronMigrationSnapshot,
       onInstallElectronPreviewFromTauri,
-      electronAlphaUpdaterAvailable: isElectronRuntime() && isMacPlatform(),
-      electronAlphaUpdaterBusy,
-      electronAlphaUpdaterStatus,
-      electronAlphaUpdaterChannel,
-      onSetElectronAlphaUpdaterChannel,
-      onCheckElectronAlphaUpdates,
       sandboxProbeBusy,
       sandboxProbeResult,
       sandboxProbeStatus,
@@ -1071,9 +979,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       electronMigrationSha512,
       electronMigrationStatus,
       electronMigrationUrl,
-      electronAlphaUpdaterBusy,
-      electronAlphaUpdaterChannel,
-      electronAlphaUpdaterStatus,
       engineCard,
       engineCustomBinPath,
       engineSource,
@@ -1087,7 +992,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       onExportDeveloperLog,
       onExportRuntimeDebugReport,
       onInstallElectronPreviewFromTauri,
-      onCheckElectronAlphaUpdates,
       onNukeOpenworkAndOpencodeConfig,
       onOpenElectronPreviewRelease,
       onOpenResetModal,
@@ -1099,7 +1003,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       onRestartOpencode,
       onRestartOpenworkServer,
       onRunSandboxDebugProbe,
-      onSetElectronAlphaUpdaterChannel,
       onSetElectronMigrationSha512,
       onSetElectronMigrationUrl,
       onSetEngineSource,

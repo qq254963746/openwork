@@ -10,7 +10,6 @@ mod orchestrator;
 mod paths;
 mod platform;
 mod types;
-mod updater;
 mod utils;
 mod workspace;
 
@@ -26,7 +25,7 @@ use commands::engine::{
 };
 use commands::migration::{migrate_to_electron, write_migration_snapshot};
 use commands::misc::{
-    app_build_info, nuke_openwork_and_opencode_config_and_exit, opencode_mcp_auth,
+    app_build_info, desktop_app_paths, nuke_openwork_and_opencode_config_and_exit, opencode_mcp_auth,
     read_opencode_engine_disk_logs, reset_opencode_cache, reset_openwork_state,
 };
 use commands::openwork_server::{openwork_server_info, openwork_server_restart};
@@ -38,7 +37,6 @@ use commands::skills::{
     import_skill, install_skill_template, list_local_skills, read_local_skill, uninstall_skill,
     write_local_skill,
 };
-use commands::updater::updater_environment;
 use commands::host_desktop::{host_open_path_native, host_reveal_path_native, open_app_log_window};
 use commands::shell_events_bridge::{
     pull_shell_events_from_main, request_clear_main_shell_events, shell_events_bridge_reply,
@@ -141,8 +139,7 @@ pub fn run() {
     #[cfg(desktop)]
     let builder = builder
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_updater::Builder::new().build());
+        .plugin(tauri_plugin_shell::init());
 
     let app = builder
         .setup(|_| {
@@ -197,7 +194,7 @@ pub fn run() {
             write_opencode_config,
             get_desktop_bootstrap_config,
             set_desktop_bootstrap_config,
-            updater_environment,
+            desktop_app_paths,
             migrate_to_electron,
             write_migration_snapshot,
             app_build_info,

@@ -14,18 +14,6 @@
 
 OpenWork is designed around the idea that you can easily ship your agentic workflows for your team as a repeatable, productized process.
 
-## Alternate UIs
-- **OpenWork Orchestrator (CLI host)**: run OpenCode + OpenWork server without the desktop UI.
-  - install: `npm install -g openwork-orchestrator`
-  - run: `openwork start --workspace /path/to/workspace --approval auto`
-  - docs: [apps/orchestrator/README.md](./apps/orchestrator/README.md)
-
-## Quick start
-
-Download the desktop app from [openworklabs.com/download](https://openworklabs.com/download), grab the latest [GitHub release](https://github.com/different-ai/openwork/releases), or install from source below.
-
-- macOS and Linux downloads are available directly.
-- Windows access is currently handled through the paid support plan on [openworklabs.com/pricing#windows-support](https://openworklabs.com/pricing#windows-support).
 
 ## Why
 
@@ -51,14 +39,6 @@ OpenWork is designed to be:
 - **Skills manager**:
   - list installed `.opencode/skills` folders
   - import a local skill folder into `.opencode/skills/<skill-name>`
-
-## Skill Manager
-
-<img width="1292" height="932" alt="image" src="https://github.com/user-attachments/assets/b500c1c6-a218-42ce-8a11-52787f5642b6" />
-
-## Works on local computer or servers
-
-<img width="1292" height="932" alt="Screenshot 2026-01-13 at 7 05 16 PM" src="https://github.com/user-attachments/assets/9c864390-de69-48f2-82c1-93b328dd60c3" />
 
 ## Quick Start
 
@@ -195,51 +175,3 @@ WEBKIT_DISABLE_COMPOSITING_MODE=1 openwork
 
 - OpenWork hides model reasoning and sensitive tool metadata by default.
 - Host mode binds to `127.0.0.1` by default.
-
-## Contributing
-
-- Review `AGENTS.md` plus `VISION.md`, `PRINCIPLES.md`, `PRODUCT.md`, and `ARCHITECTURE.md` to understand the product goals before making changes.
-- Ensure Node.js, `pnpm`, the Rust toolchain, and `opencode` are installed before working inside the repo.
-- Run `pnpm install` once per checkout, then verify your change with `pnpm typecheck` plus `pnpm test:e2e` (or the targeted subset of scripts) before opening a PR.
-- Use `.github/pull_request_template.md` when opening PRs and include exact commands, outcomes, manual verification steps, and evidence.
-- If CI fails, classify failures in the PR body as either code-related regressions or external/environment/auth blockers.
-- Add new PRDs to `apps/app/pr/<name>.md` following the `.opencode/skills/prd-conventions/SKILL.md` conventions described in `AGENTS.md`.
-
-Community docs:
-
-- `CODE_OF_CONDUCT.md`
-- `SECURITY.md`
-- `SUPPORT.md`
-- `TRIAGE.md`
-
-First contribution checklist:
-
-- [ ] Run `pnpm install` and baseline verification commands.
-- [ ] Confirm your change has a clear issue link and scope.
-- [ ] Add/update tests for behavioral changes.
-- [ ] Include commands run and outcomes in your PR.
-- [ ] Add screenshots/video for user-facing flow changes.
-
-## Supported Languages
-
-Translated READMEs: [`translated_readmes/`](./translated_readmes/README.md), available in English, 简体中文, 繁體中文, 日本語.
-
-The App is available in the following languages:
-- English (`en`)
-- French (`fr`)
-- Spanish (`es`)
-- Catalan (`ca`)
-- Brazilian Portuguese (`pt-BR`)
-- Japanese (`ja`)
-- Simplified Chinese (`zh`)
-- Thai (`th`)
-- Vietnamese (`vi`)
-- Russian (`ru`)
-
-## For Teams & Businesses
-
-Interested in using OpenWork in your organization? We'd love to hear from you — reach out at [ben@openworklabs.com](mailto:ben@openworklabs.com) to chat about your use case.
-
-## License
-
-MIT — see `LICENSE`.

@@ -9,6 +9,5 @@ pub mod openwork_server;
 pub mod orchestrator;
 pub mod shell_events_bridge;
 pub mod skills;
-pub mod updater;
 pub mod window;
 pub mod workspace;

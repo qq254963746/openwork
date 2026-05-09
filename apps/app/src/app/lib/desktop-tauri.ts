@@ -742,15 +742,13 @@ export type OpencodeAuthJsonFile = {
   content: string | null;
 };
 
-export type UpdaterEnvironment = {
-  supported: boolean;
-  reason: string | null;
+export type DesktopAppPaths = {
   executablePath: string | null;
   appBundlePath: string | null;
 };
 
-export async function updaterEnvironment(): Promise<UpdaterEnvironment> {
-  return invoke<UpdaterEnvironment>("updater_environment");
+export async function desktopAppPaths(): Promise<DesktopAppPaths> {
+  return invoke<DesktopAppPaths>("desktop_app_paths");
 }
 
 export async function readOpencodeConfig(

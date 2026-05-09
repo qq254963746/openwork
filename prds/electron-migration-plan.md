@@ -40,15 +40,6 @@ Contents written today:
 - Each workspace's own `.opencode/` — sessions, messages, skills, MCP config
 - Neither has to migrate.
 
-## Tauri updater today
-
-- `apps/desktop/src-tauri/tauri.conf.json` →
-  `endpoints: ["https://github.com/different-ai/openwork/releases/latest/download/latest.json"]`
-- minisign signature required (pubkey baked into config)
-- installs a DMG/zip in place
-
-A straight-swap to an Electron installer fails: the Tauri updater
-won't accept an asset that isn't minisign-signed in the format it expects.
 
 ## Plan
 

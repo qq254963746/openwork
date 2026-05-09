@@ -31,18 +31,6 @@ Related: `/o/:slug/dashboard/integrations` (Den), `/o/:slug/dashboard/plugins` (
 | How we know it works | [Test strategy](#test-strategy) |
 | What's still undecided | [Open questions](#open-questions) |
 
-## Mental model
-
-Three nouns, kept strictly distinct:
-
-| Noun | What it is | Who creates it | Shape |
-|---|---|---|---|
-| **ConnectorType** | The adapter class itself (e.g., "github", "bitbucket", "npm", "local"). Code in our server. | Us — v1 is in-house. v2 could accept plugin-authored adapters. | Code |
-| **Integration** | An org's authorized grant to one ConnectorType + their selected sources (e.g., "GitHub account `different-ai`, 3 repos"). Persisted, scoped to an org. | End user via OAuth flow. | DB row |
-| **Bundle** ("plugin" in UI copy) | A curated collection of primitives (skills, agents, commands, MCPs, code hooks) that can be installed as a unit. | Either: imported from a connector source (e.g., `.claude-plugin/marketplace.json` in a repo), or authored directly in the app. | DB row + BundleMembers |
-
-The UI already shipped on `/integrations` (PRs #1472, #1475) drives ConnectorType + Integration. The `/plugins` UI (PR #1472) will drive Bundle browsing/detail. **A new page is needed for workspace installation** (Phase 4 below).
-
 ## OpenCode interpretation — what OpenCode actually sees
 
 OpenCode is the execution layer. It **only** reads a workspace directory containing `opencode.json{c}` and an optional `.opencode/`. Any product concept that OpenCode does not see on disk is invisible to the runtime.
@@ -884,46 +872,6 @@ Publishing multiple Bundles to the same repo synthesises a `.claude-plugin/marke
 
 Ingesting an exported tree back into OpenWork MUST produce semantically-identical Primitives (same `contentHash` per primitive, same Bundle membership). This is a tested invariant — see [Test strategy](#test-strategy).
 
-## CLI surface
-
-For agents running inside an OpenCode session to manage the catalog without leaving the shell. Mirrors Claude Code's `claude plugin …` commands.
-
-```
-openwork connector list
-openwork connector add github --repo different-ai/openwork-plugins [--ref main]
-openwork connector remove <source-id>
-openwork connector sync <source-id>
-
-openwork bundle list [--installed]
-openwork bundle show <bundle-slug>
-openwork bundle install <bundle-slug> [--scope workspace|user|org]
-openwork bundle uninstall <bundle-slug>
-openwork bundle publish <bundle-slug> --to github:owner/repo [--ref main]
-
-openwork primitive list [--kind=skill|agent|…]
-openwork primitive show <name> --kind=<kind>
-openwork primitive create --kind=skill --file=./my-skill.md
-```
-
-All commands hit the same API endpoints as the web UI — the CLI is a thin shell over `requestJson`. Output formats: `--json` for scripting, default human-friendly tables.
-
-An **OpenWork skill** wraps the CLI and surfaces it to agents:
-
-```yaml
----
-name: openwork-plugin-manager
-description: |
-  Install, uninstall, and discover OpenWork plugins (bundles).
-
-  Triggers when user mentions:
-  - "install plugin"
-  - "what plugins are available"
-  - "publish this as a plugin"
----
-```
-
-This makes the full lifecycle reachable from inside any OpenCode conversation — living system behavior.
-
 ## Observability + audit events
 
 Every state-changing operation emits an `AuditEvent` row with structured fields. Used for debugging, billing-relevant rate limits, and compliance.
@@ -1022,11 +970,6 @@ No existing data to migrate — these are all new tables. The existing `/v1/orgs
 - **Connector adapters**: mock GitHub/Bitbucket HTTP with `nock`; assert request construction (scopes, OAuth params, webhook payloads).
 - **Materialization**: mock the OpenWork server API; assert correct endpoint + body per primitive kind; assert `appliedPrimitiveDigests` is recorded.
 - **Drift detection**: given `{ primitive.contentHash, disk.hash }` permutations, assert correct classification.
-
-### Integration
-
-- **Real GitHub**: a test org + throwaway repo under `different-ai/openwork-test-plugins` with fixture plugins. CI authenticates with a PAT; runs a full ingest + install + uninstall against a temp worktree. Skipped in local unless `OPENWORK_TEST_GITHUB_PAT` is set.
-- **Real OpenWork server**: starts a local OpenWork app/server stack, provisions a workspace, runs materialization, diffs `.opencode/` against expectations.
 
 ### End-to-end
 

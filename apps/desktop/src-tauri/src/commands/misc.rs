@@ -10,7 +10,7 @@ use crate::orchestrator;
 use crate::orchestrator::manager::OrchestratorManager;
 use crate::paths::{candidate_xdg_config_dirs, candidate_xdg_data_dirs, home_dir};
 use crate::platform::command_for_program;
-use crate::types::{ExecResult, WorkspaceOpenworkConfig};
+use crate::types::{DesktopAppPaths, ExecResult, WorkspaceOpenworkConfig};
 use crate::workspace::state::load_workspace_state;
 use tauri::{AppHandle, Manager, State};
 
@@ -586,6 +586,22 @@ pub fn reset_openwork_state(
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn desktop_app_paths() -> DesktopAppPaths {
+    let executable_path = std::env::current_exe().ok();
+    let app_bundle_path = executable_path
+        .as_ref()
+        .and_then(|exe| exe.parent())
+        .and_then(|p| p.parent())
+        .and_then(|p| p.parent())
+        .map(|p| p.to_path_buf());
+
+    DesktopAppPaths {
+        executable_path: executable_path.map(|p| p.to_string_lossy().to_string()),
+        app_bundle_path: app_bundle_path.map(|p| p.to_string_lossy().to_string()),
+    }
 }
 
 #[tauri::command]
