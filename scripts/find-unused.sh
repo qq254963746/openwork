@@ -28,9 +28,6 @@ fi
 INFRA_GLOBS=(
   # CI/CD
   ".github/workflows/*.yml"
-  # Docker
-  "packaging/docker/Dockerfile*"
-  "packaging/docker/docker-compose*.yml"
   # Deployment
   "apps/app/vercel.json"
   # Tauri
