@@ -2373,15 +2373,25 @@ function createRoutes(
 
     const SKIP_DIR_NAMES = new Set(["node_modules", ".git"]);
     const rawEntries = await readdir(dirAbs, { withFileTypes: true });
-    const entries: Array<{ name: string; kind: "file" | "directory" }> = [];
-    for (const ent of rawEntries) {
-      if (SKIP_DIR_NAMES.has(ent.name)) continue;
-      if (ent.isDirectory()) {
-        entries.push({ name: ent.name, kind: "directory" });
-      } else if (ent.isFile()) {
-        entries.push({ name: ent.name, kind: "file" });
-      }
-    }
+    const pending = rawEntries.filter((ent) => !SKIP_DIR_NAMES.has(ent.name));
+    const entries: Array<{ name: string; kind: "file" | "directory"; updatedAt?: number }> = await Promise.all(
+      pending.map(async (ent) => {
+        const childAbs = resolve(dirAbs, ent.name);
+        let updatedAt: number | undefined;
+        try {
+          updatedAt = (await stat(childAbs)).mtimeMs;
+        } catch {
+          updatedAt = undefined;
+        }
+        if (ent.isDirectory()) {
+          return { name: ent.name, kind: "directory" as const, updatedAt };
+        }
+        if (ent.isFile()) {
+          return { name: ent.name, kind: "file" as const, updatedAt };
+        }
+        return null;
+      }),
+    ).then((rows) => rows.filter((row): row is NonNullable<typeof row> => row !== null));
 
     entries.sort((a, b) => {
       if (a.kind !== b.kind) return a.kind === "directory" ? -1 : 1;

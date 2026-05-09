@@ -474,7 +474,7 @@ function InlineQuestionPrompt(props: {
 }
 
 export function SessionSurface(props: SessionSurfaceProps) {
-  const MIN_CHAT_COLUMN_WIDTH = 420;
+  const MIN_CHAT_COLUMN_WIDTH = 440;
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [mentions, setMentions] = useState<Record<string, "agent" | "file">>({});

@@ -1,5 +1,14 @@
 /** @jsxImportSource react */
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { CSSProperties } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { UIMessage } from "ai";
@@ -38,8 +47,27 @@ const WORKSPACE_PANEL_HEADER_DRAG_STYLE: CSSProperties = {
 const WORKSPACE_PANEL_WIDTH_KEY = "openwork.session.workspacePanelWidth.v1";
 const DEFAULT_WORKSPACE_PANEL_WIDTH = 300;
 const MIN_WORKSPACE_PANEL_WIDTH = 240;
+/** Hide file list “modified” column when the panel is narrower than this (px). */
+const WORKSPACE_FILE_LIST_MTIME_VISIBLE_MIN_WIDTH = 280;
 // Keep the chat transcript usable when the right panel grows.
-const MIN_CHAT_COLUMN_WIDTH = 420;
+const MIN_CHAT_COLUMN_WIDTH = 440;
+
+/** Upper bound for the workspace panel so the chat column can keep `MIN_CHAT_COLUMN_WIDTH` (see session-surface). */
+function maxWorkspacePanelWidthForContainer(containerWidthPx: number): number {
+  return Math.max(MIN_WORKSPACE_PANEL_WIDTH, containerWidthPx - MIN_CHAT_COLUMN_WIDTH);
+}
+
+/** Absolute date + time (includes seconds) for file list mtime; follows browser locale. */
+function formatWorkspaceFileListMtime(timestampMs: number): string {
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date(timestampMs));
+}
 
 function readStoredWorkspacePanelWidth(): number {
   if (typeof window === "undefined") return DEFAULT_WORKSPACE_PANEL_WIDTH;
@@ -48,7 +76,7 @@ function readStoredWorkspacePanelWidth(): number {
     const n = Number(raw);
     if (!Number.isFinite(n)) return DEFAULT_WORKSPACE_PANEL_WIDTH;
     const viewportWidth = document.documentElement?.clientWidth || window.innerWidth;
-    const maxAllowed = Math.max(MIN_WORKSPACE_PANEL_WIDTH, viewportWidth - MIN_CHAT_COLUMN_WIDTH);
+    const maxAllowed = maxWorkspacePanelWidthForContainer(viewportWidth);
     return Math.min(maxAllowed, Math.max(MIN_WORKSPACE_PANEL_WIDTH, n));
   } catch {
     return DEFAULT_WORKSPACE_PANEL_WIDTH;
@@ -374,6 +402,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [panelWidth, setPanelWidth] = useState(readStoredWorkspacePanelWidth);
   const panelWidthRef = useRef(panelWidth);
+  const asideRef = useRef<HTMLElement>(null);
   const dragCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -416,7 +445,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         const delta = moveEvent.clientX - initialX;
         const container = (grip.parentElement?.parentElement as HTMLElement | null) ?? null;
         const containerWidth = container?.getBoundingClientRect().width ?? (document.documentElement?.clientWidth || window.innerWidth);
-        const maxAllowed = Math.max(MIN_WORKSPACE_PANEL_WIDTH, containerWidth - MIN_CHAT_COLUMN_WIDTH);
+        const maxAllowed = maxWorkspacePanelWidthForContainer(containerWidth);
         const next = Math.min(maxAllowed, Math.max(MIN_WORKSPACE_PANEL_WIDTH, initialW - delta));
         panelWidthRef.current = next;
         setPanelWidth(next);
@@ -448,6 +477,23 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
   );
 
   useEffect(() => () => stopPanelResize(), [stopPanelResize]);
+
+  /** When the window or flex row shrinks, clamp stored width so the panel does not overflow (matches drag-resize cap). */
+  useLayoutEffect(() => {
+    const parent = asideRef.current?.parentElement;
+    if (!parent) return;
+
+    const clampToParent = () => {
+      const containerWidth = parent.getBoundingClientRect().width;
+      const maxAllowed = maxWorkspacePanelWidthForContainer(containerWidth);
+      setPanelWidth((prev) => Math.min(prev, maxAllowed));
+    };
+
+    clampToParent();
+    const ro = new ResizeObserver(clampToParent);
+    ro.observe(parent);
+    return () => ro.disconnect();
+  }, []);
 
   /** While the session is busy, re-render periodically so prompt-context props stay fresh even if parents memoize aggressively. */
   const [, setContextSyncTick] = useState(0);
@@ -655,7 +701,8 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
 
   return (
     <aside
-      className="relative flex min-h-0 h-full shrink-0 flex-col border-l border-dls-divider bg-dls-sidebar"
+      ref={asideRef}
+      className="relative flex min-h-0 h-full min-w-0 shrink flex-col border-l border-dls-divider bg-dls-sidebar"
       style={{ width: panelWidth, minWidth: MIN_WORKSPACE_PANEL_WIDTH, maxWidth: "100%" }}
     >
       <div
@@ -1000,6 +1047,16 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
                       <WorkspacePanelFileGlyph filename={entry.name} className="shrink-0 text-[#000000]" />
                     )}
                     <span className="min-w-0 flex-1 truncate font-mono">{entry.name}</span>
+                    {entry.kind === "file" &&
+                    typeof entry.updatedAt === "number" &&
+                    panelWidth >= WORKSPACE_FILE_LIST_MTIME_VISIBLE_MIN_WIDTH ? (
+                      <span
+                        className="max-w-[42%] shrink-0 truncate text-right text-[10px] tabular-nums text-dls-secondary"
+                        title={formatWorkspaceFileListMtime(entry.updatedAt)}
+                      >
+                        {formatWorkspaceFileListMtime(entry.updatedAt)}
+                      </span>
+                    ) : null}
                   </button>
                 </li>
               ))}

@@ -178,6 +178,8 @@ export type OpenworkWorkspaceFileWriteResult = {
 export type OpenworkWorkspaceDirEntry = {
   name: string;
   kind: "file" | "directory";
+  /** Milliseconds since Unix epoch (`mtimeMs`). Omitted when unavailable or from older hosts. */
+  updatedAt?: number;
 };
 
 export type OpenworkWorkspaceDirectoryList = {
