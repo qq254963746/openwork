@@ -10,7 +10,6 @@
     "dev:windows": ".\\scripts\\dev-windows.cmd",
     "dev:windows:x64": ".\\scripts\\dev-windows.cmd x64",
     "dev:ui": "OPENWORK_DEV_MODE=1 pnpm --filter @openwork/app dev",
-    "dev:ui-demo": "pnpm --filter @openwork/ui-demo dev",
     "dev:story": "OPENWORK_DEV_MODE=1 pnpm --filter @openwork/story-book dev",
     "dev:web": "pnpm run dev:den:web",
     "dev:den": "node scripts/dev-local.mjs",

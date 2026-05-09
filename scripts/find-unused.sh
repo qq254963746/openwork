@@ -44,7 +44,6 @@ INFRA_GLOBS=(
   "apps/app/vite.config.ts"
   "apps/app/tailwind.config.ts"
   "apps/story-book/vite.config.ts"
-  "apps/ui-demo/vite.config.ts"
   "apps/share/next.config.ts"
   "apps/share/playwright.config.ts"
   "ee/apps/den-web/next.config.js"
