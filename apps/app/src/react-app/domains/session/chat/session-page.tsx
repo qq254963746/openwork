@@ -758,13 +758,13 @@ export function SessionPage(props: SessionPageProps) {
                                 done
                                   ? "border-green-6 bg-green-2 text-green-11"
                                   : active
-                                    ? "border-amber-6 bg-amber-2 text-amber-11"
+                                    ? "border-blue-6 bg-blue-2 text-blue-11"
                                     : cancelled
                                       ? "border-gray-6 bg-gray-2 text-gray-8"
                                       : "border-gray-6 bg-gray-1 text-gray-8"
                               }`}
                             >
-                              {done ? <Check size={10} /> : active ? <span className="h-1.5 w-1.5 rounded-full bg-amber-9" /> : null}
+                              {done ? <Check size={10} /> : active ? <span className="h-1.5 w-1.5 rounded-full bg-blue-9" /> : null}
                             </div>
                           </div>
                           <div className={`flex-1 text-sm leading-relaxed ${cancelled ? "text-gray-9 line-through" : "text-gray-12"}`}>
