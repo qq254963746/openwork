@@ -749,7 +749,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
 
   return (
     <aside
-      className="relative flex min-h-0 h-full shrink-0 flex-col border-l border-dls-divider bg-dls-sidebar/60"
+      className="relative flex min-h-0 h-full shrink-0 flex-col border-l border-dls-divider bg-dls-sidebar"
       style={{ width: panelWidth, minWidth: MIN_WORKSPACE_PANEL_WIDTH, maxWidth: "100%" }}
     >
       <div
@@ -760,7 +760,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
         onPointerDown={startPanelResize}
       />
       {markdownPreviewOpen ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar/60">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <WorkspacePanelFileGlyph
@@ -806,7 +806,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
           </div>
         </div>
       ) : webPreviewOpen ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar/60">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <WorkspacePanelFileGlyph
@@ -858,7 +858,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
           </div>
         </div>
       ) : codeDocumentPreviewOpen ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar/60">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <WorkspacePanelFileGlyph
