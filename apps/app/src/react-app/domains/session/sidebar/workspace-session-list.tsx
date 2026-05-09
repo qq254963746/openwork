@@ -10,6 +10,7 @@ import {
   PanelLeftClose,
   Plus,
   RefreshCw,
+  SquarePen,
   RotateCcw,
   Settings2,
 } from "lucide-react";
@@ -54,7 +55,7 @@ type Props = {
   onOpenCreateWorkspace: () => void;
   /** Session shell only: collapse the entire workspace sidebar (icon in top strip). */
   onCollapseWorkspaceSidebar?: () => void;
-  /** Rendered below “Add workspace” (e.g. connection status + settings). */
+  /** Sidebar footer below the workspace list (e.g. connection status + settings). */
   sessionStatusFooter?: ReactNode;
   /**
    * Called when a workspace section becomes expanded (including auto-expand for
@@ -186,6 +187,23 @@ const workspaceKindLabel = (workspace: WorkspaceInfo) =>
     : t("workspace.local_badge");
 
 const OPENWORK_MARK_SRC = `${import.meta.env.BASE_URL}openwork-mark.svg`;
+
+function AddWorkspaceShortcutGlyph(props: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 29 14"
+      fill="none"
+      className={props.className}
+      aria-hidden
+    >
+      <path
+        fill="currentColor"
+        d="M2.3 13.797q-1.03 0-1.563-.524-.522-.523-.523-1.554V2.664q0-1.031.523-1.555Q1.27.586 2.3.586h9.031q1.04 0 1.563.531.531.525.531 1.547v9.055q0 1.016-.531 1.547-.524.53-1.563.53zm.016-.742h9q.648 0 1.007-.352.36-.343.36-1.023V2.703q0-.68-.36-1.023-.36-.352-1.007-.352h-9q-.665 0-1.016.352-.344.344-.344 1.023v8.977q0 .68.344 1.023.351.352 1.016.352m2.922-6.766h-.766q-.586 0-1.016-.422a1.4 1.4 0 0 1-.422-1.015q0-.594.422-1.016t1.016-.422 1.015.422.422 1.016v.773h1.782v-.773q0-.594.414-1.016.421-.422 1.015-.422t1.016.422q.43.422.43 1.016 0 .586-.43 1.015-.422.422-1.016.422h-.765V8.07h.765q.594 0 1.016.422.43.422.43 1.008 0 .594-.43 1.016-.422.421-1.016.422-.594 0-1.015-.422A1.4 1.4 0 0 1 7.69 9.5v-.773H5.909V9.5q0 .594-.421 1.016-.423.421-1.016.422-.594 0-1.016-.422A1.38 1.38 0 0 1 3.034 9.5q0-.586.422-1.008a1.4 1.4 0 0 1 1.016-.422h.765zm.671 1.781h1.782V6.281H5.909zM4.472 5.633h.765v-.781a.74.74 0 0 0-.226-.54.7.7 0 0 0-.54-.234.75.75 0 0 0-.546.227.75.75 0 0 0-.227.547q0 .32.227.554a.75.75 0 0 0 .547.227m4.648 0a.75.75 0 0 0 .547-.227.76.76 0 0 0 .235-.554.73.73 0 0 0-.235-.547.75.75 0 0 0-.547-.227.72.72 0 0 0-.539.234.74.74 0 0 0-.226.54v.78zM4.472 8.719a.73.73 0 0 0-.547.234.75.75 0 0 0-.227.547q0 .32.227.547a.75.75 0 0 0 .547.226.72.72 0 0 0 .539-.226.76.76 0 0 0 .226-.547v-.781zm4.648 0h-.765V9.5q0 .312.226.547.226.226.54.226a.75.75 0 0 0 .546-.226.73.73 0 0 0 .235-.547.73.73 0 0 0-.235-.547.73.73 0 0 0-.547-.234m8.549 5.078q-1.032 0-1.563-.524-.523-.523-.523-1.554V2.664q0-1.031.523-1.555.531-.523 1.563-.523H26.7q1.039 0 1.563.531.53.525.53 1.547v9.055q0 1.016-.53 1.547-.524.53-1.563.53zm.015-.742h9q.65 0 1.008-.352.36-.343.36-1.023V2.703q0-.68-.36-1.023-.36-.352-1.008-.352h-9q-.663 0-1.015.352-.344.344-.344 1.023v8.977q0 .68.344 1.023.352.352 1.015.352m2.578-2.547a.35.35 0 0 1-.265-.11.42.42 0 0 1-.102-.296V4.195a.42.42 0 0 1 .102-.297.35.35 0 0 1 .265-.109q.18 0 .282.11a.42.42 0 0 1 .101.296v2.977h.032l3.195-3.227a.6.6 0 0 1 .148-.117.35.35 0 0 1 .172-.039q.141 0 .242.094a.3.3 0 0 1 .102.226q0 .078-.031.149a.4.4 0 0 1-.086.125l-2.274 2.305 2.47 3.156a1 1 0 0 1 .077.148.3.3 0 0 1 .04.156q0 .157-.11.258a.35.35 0 0 1-.258.102.36.36 0 0 1-.187-.047.6.6 0 0 1-.165-.156l-2.414-3.117-.953.976v1.938a.42.42 0 0 1-.101.296.36.36 0 0 1-.282.11"
+      />
+    </svg>
+  );
+}
 
 /** Workspace row glyph (grid / tiling mark). */
 function WorkspaceSidebarGlyph(props: { className?: string }) {
@@ -651,6 +669,19 @@ export function WorkspaceSessionList(props: Props) {
             {t("workspace_list.sidebar_brand")}
           </span>
         </div>
+        <button
+          type="button"
+          className="mt-[17px] flex w-full items-center justify-between gap-2 rounded-[12px] border border-blue-6/70 bg-blue-2 px-3.5 py-2 text-left text-[12px] font-medium leading-none text-blue-11 transition-colors hover:border-blue-7 hover:bg-blue-3 dark:border-blue-7/55 dark:bg-blue-a3/25 dark:text-blue-11 dark:hover:bg-blue-a4/35"
+          onClick={props.onOpenCreateWorkspace}
+        >
+          <span className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="inline-flex size-[15px] shrink-0 items-center justify-center" aria-hidden>
+              <SquarePen className="size-[15px] text-blue-10 dark:text-blue-11" strokeWidth={2} />
+            </span>
+            <span className="truncate leading-none">{t("workspace_list.add_workspace")}</span>
+          </span>
+          <AddWorkspaceShortcutGlyph className="h-3.5 w-[29px] shrink-0 text-blue-11/55 dark:text-blue-11/45" />
+        </button>
       </div>
       <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pr-1">
         <div className="space-y-1 pb-2">
@@ -1032,21 +1063,9 @@ export function WorkspaceSessionList(props: Props) {
         </div>
       </div>
 
-      <div className="relative mt-auto flex shrink-0 flex-col bg-dls-sidebar">
-        <div className="border-t border-dls-divider px-3 pb-4 pt-4">
-          <div className="flex w-full items-center justify-center py-1">
-            <button
-              type="button"
-              className="flex w-full items-center justify-center gap-2 rounded-[18px] border border-dls-border bg-dls-surface px-3.5 py-2 text-[12px] font-medium text-gray-11 shadow-[var(--dls-card-shadow)] transition-colors hover:bg-gray-2"
-              onClick={props.onOpenCreateWorkspace}
-            >
-              <Plus size={14} />
-              {t("workspace_list.add_workspace")}
-            </button>
-          </div>
-        </div>
-        {props.sessionStatusFooter ?? null}
-      </div>
+      {props.sessionStatusFooter ? (
+        <div className="relative mt-auto shrink-0 bg-dls-sidebar">{props.sessionStatusFooter}</div>
+      ) : null}
     </div>
   );
 }

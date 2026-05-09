@@ -158,7 +158,7 @@ export function StatusBar(props: StatusBarProps) {
       <div
         className={`flex items-center justify-between text-[12px] text-dls-secondary ${
           sidebar
-            ? "min-h-9 gap-2 px-2 py-1.5"
+            ? "min-h-11 gap-2 px-2.5 py-2"
             : "h-12 gap-3 px-4 md:px-6"
         }`}
       >

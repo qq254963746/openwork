@@ -21,6 +21,9 @@ export const LANGUAGE_OPTIONS = [
   { value: "zh" as Language, label: "Chinese (Simplified)", nativeName: "简体中文" },
 ] as const;
 
+/** Used before/localStorage miss — product default UI language */
+const DEFAULT_LANGUAGE: Language = "zh";
+
 const PLURAL_SUFFIX_EMPTY_LANGUAGES = new Set<Language>(["zh"]);
 
 /**
@@ -52,7 +55,7 @@ export const isLanguage = (value: unknown): value is Language => {
   return typeof value === "string" && LANGUAGES.includes(value as Language);
 };
 
-let localeValue: Language = "en";
+let localeValue: Language = DEFAULT_LANGUAGE;
 
 const localeListeners = new Set<() => void>();
 
@@ -93,8 +96,8 @@ export const getLocaleSnapshot = (): Language => localeValue;
  */
 export const setLocale = (newLocale: Language) => {
   if (!isLanguage(newLocale)) {
-    console.warn(`Invalid locale: ${newLocale}, falling back to "en"`);
-    newLocale = "en";
+    console.warn(`Invalid locale: ${newLocale}, falling back to "${DEFAULT_LANGUAGE}"`);
+    newLocale = DEFAULT_LANGUAGE;
   }
 
   if (localeValue === newLocale) return;
@@ -200,7 +203,7 @@ export const t = (
  */
 export const initLocale = (): Language => {
   if (typeof window === "undefined") {
-    return "en";
+    return DEFAULT_LANGUAGE;
   }
 
   try {
@@ -219,9 +222,13 @@ export const initLocale = (): Language => {
     console.warn("Failed to read language preference:", e);
   }
 
+  localeValue = DEFAULT_LANGUAGE;
   if (typeof document !== "undefined") {
-    document.documentElement.setAttribute("lang", "en");
+    document.documentElement.setAttribute(
+      "lang",
+      DEFAULT_LANGUAGE === "zh" ? "zh-CN" : DEFAULT_LANGUAGE,
+    );
   }
 
-  return "en";
+  return DEFAULT_LANGUAGE;
 };

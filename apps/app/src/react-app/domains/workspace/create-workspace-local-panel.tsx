@@ -121,7 +121,7 @@ export function CreateWorkspaceLocalPanel(
                 </span>
               ) : (
                 <span className="text-[14px] text-dls-secondary">
-                  No folder selected yet.
+                  {t("dashboard.no_folder_selected_yet")}
                 </span>
               )}
             </div>
@@ -137,9 +137,7 @@ export function CreateWorkspaceLocalPanel(
                 ) : (
                   <FolderPlus size={14} />
                 )}
-                {props.hasSelectedFolder
-                  ? t("dashboard.change")
-                  : "Select folder"}
+                {props.hasSelectedFolder ? t("dashboard.change") : t("dashboard.select_folder")}
               </button>
             </div>
           </div>

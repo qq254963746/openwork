@@ -1590,11 +1590,6 @@ export function SettingsRoute() {
             onRepairOpencodeCache={() => {
               setRouteError("Cache repair is not wired into the React settings route yet.");
             }}
-            dockerCleanupBusy={false}
-            dockerCleanupResult={null}
-            onCleanupOpenworkDockerContainers={() => {
-              setRouteError("Docker cleanup is not wired into the React settings route yet.");
-            }}
           />
         );
       case "environment":

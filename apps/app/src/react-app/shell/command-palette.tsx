@@ -39,8 +39,8 @@ export type CommandPaletteProps = {
   onCreateNewSession: () => void;
   /** Called when "Open settings" is chosen. Accepts an optional route to jump straight to a tab. */
   onOpenSettings: (route?: string) => void;
-  /** Optional — open a URL in the user's browser. Falls back to window.open. */
-  onOpenUrl?: (url: string) => void;
+  /** Called when "Add workspace" is chosen. */
+  onOpenCreateWorkspace: () => void;
   /** Optional: sessions for the second mode. */
   sessions: SessionOption[];
 };
@@ -48,7 +48,7 @@ export type CommandPaletteProps = {
 /**
  * React command palette (Cmd/Ctrl+K).
  *
- * - Root mode: "New session", "Open settings", and a link into the Sessions submode.
+ * - Root mode: "Add workspace", "New session", settings shortcuts, and Sessions submode.
  * - Sessions submode: fuzzy list of every session across workspaces.
  */
 export function CommandPalette(props: CommandPaletteProps) {
@@ -71,16 +71,18 @@ export function CommandPalette(props: CommandPaletteProps) {
     return () => window.clearTimeout(id);
   }, [props.open]);
 
-  const openUrl = (url: string) => {
-    if (props.onOpenUrl) {
-      props.onOpenUrl(url);
-    } else if (typeof window !== "undefined") {
-      window.open(url, "_blank", "noopener");
-    }
-  };
-
   const rootItems = useMemo<PaletteItem[]>(() => {
     const items: PaletteItem[] = [
+      {
+        id: "add-workspace",
+        title: t("workspace_list.add_workspace"),
+        detail: t("dashboard.create_workspace_subtitle"),
+        meta: t("session.cmd_settings_meta"),
+        action: () => {
+          props.onClose();
+          props.onOpenCreateWorkspace();
+        },
+      },
       {
         id: "new-session",
         title: t("session.cmd_new_session_title"),
@@ -115,28 +117,7 @@ export function CommandPalette(props: CommandPaletteProps) {
           props.onOpenSettings();
         },
       },
-      // Top-bar shortcuts — these used to be selectable via Cmd+K and were
-      // missing after the React port. Each one mirrors one of the icons at
-      // the bottom-right of the session surface (documentation / feedback)
-      // plus every settings tab the user is likely to reach for.
-      {
-        id: "open-docs",
-        title: t("session.support_docs"),
-        meta: t("session.cmd_settings_meta"),
-        action: () => {
-          props.onClose();
-          openUrl("https://openwork.dev/docs");
-        },
-      },
-      {
-        id: "open-feedback",
-        title: t("session.support_feedback"),
-        meta: t("session.cmd_settings_meta"),
-        action: () => {
-          props.onClose();
-          openUrl("https://openwork.dev/feedback");
-        },
-      },
+      // Settings tab shortcuts for quick navigation from the palette.
       {
         id: "settings-skills",
         title: t("settings.tab_skills"),
@@ -175,16 +156,6 @@ export function CommandPalette(props: CommandPaletteProps) {
         action: () => {
           props.onClose();
           props.onOpenSettings("/settings/recovery");
-        },
-      },
-      {
-        id: "settings-updates",
-        title: t("settings.tab_updates"),
-        detail: t("settings.tab_description_updates"),
-        meta: t("session.cmd_settings_meta"),
-        action: () => {
-          props.onClose();
-          props.onOpenSettings("/settings/updates");
         },
       },
     ];

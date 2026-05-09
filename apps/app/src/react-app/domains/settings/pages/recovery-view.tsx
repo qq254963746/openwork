@@ -18,9 +18,6 @@ export type RecoveryViewProps = {
   cacheRepairBusy: boolean;
   cacheRepairResult: string | null;
   onRepairOpencodeCache: () => void | Promise<void>;
-  dockerCleanupBusy: boolean;
-  dockerCleanupResult: string | null;
-  onCleanupOpenworkDockerContainers: () => void | Promise<void>;
 };
 
 export function RecoveryView(props: RecoveryViewProps) {
@@ -74,33 +71,6 @@ export function RecoveryView(props: RecoveryViewProps) {
           title={isDesktopRuntime() ? "" : t("settings.cache_repair_requires_desktop")}
         >
           {props.cacheRepairBusy ? t("settings.repairing_cache") : t("settings.repair_cache")}
-        </Button>
-      </div>
-
-      <div className="flex flex-col gap-4 rounded-2xl border border-gray-6/50 bg-gray-2/30 p-4 md:flex-row md:items-center md:justify-between">
-        <div className="min-w-0">
-          <div className="text-sm text-gray-12">{t("settings.docker_containers_title")}</div>
-          <div className="text-xs text-gray-7">{t("settings.docker_containers_desc")}</div>
-          {props.dockerCleanupResult ? (
-            <div className="mt-2 text-xs text-gray-11">{props.dockerCleanupResult}</div>
-          ) : null}
-        </div>
-        <Button
-          variant="danger"
-          className="h-8 shrink-0 px-3 py-0 text-xs"
-          onClick={() => void props.onCleanupOpenworkDockerContainers()}
-          disabled={props.dockerCleanupBusy || props.anyActiveRuns || !isDesktopRuntime()}
-          title={
-            !isDesktopRuntime()
-              ? t("settings.docker_requires_desktop")
-              : props.anyActiveRuns
-                ? t("settings.stop_runs_before_cleanup")
-                : ""
-          }
-        >
-          {props.dockerCleanupBusy
-            ? t("settings.removing_containers")
-            : t("settings.delete_containers")}
         </Button>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FolderPlus, Loader2, Rocket, X } from "lucide-react";
 
 import { Button } from "../../design-system/button";
+import { t } from "../../../i18n";
 
 export type BundleStartModalProps = {
   open: boolean;
@@ -133,9 +134,7 @@ export function BundleStartModal(props: BundleStartModalProps) {
                   {selectedFolder}
                 </span>
               ) : (
-                <span className="text-dls-secondary">
-                  No folder selected yet.
-                </span>
+                <span className="text-dls-secondary">{t("dashboard.no_folder_selected_yet")}</span>
               )}
             </div>
             <div className="mt-4">
@@ -151,7 +150,7 @@ export function BundleStartModal(props: BundleStartModalProps) {
                 ) : (
                   <FolderPlus size={14} />
                 )}
-                {selectedFolder?.trim() ? "Change folder" : "Select folder"}
+                {selectedFolder?.trim() ? t("dashboard.change_folder") : t("dashboard.select_folder")}
               </button>
             </div>
           </div>
