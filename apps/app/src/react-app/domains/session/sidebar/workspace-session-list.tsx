@@ -512,7 +512,7 @@ export function WorkspaceSessionList(props: Props) {
           role="button"
           tabIndex={0}
           className={`group flex h-[36px] w-full items-center justify-between rounded-[10px] px-3 text-left text-[13px] font-normal transition-colors ${
-            isSelected ? "bg-white dark:bg-gray-3" : "hover:bg-gray-1/70"
+            isSelected ? "bg-white dark:bg-gray-3" : "hover:bg-[#0000000a]"
           }`}
           style={isSelected ? { boxShadow: SESSION_ROW_SELECTED_BOX_SHADOW } : undefined}
           onPointerEnter={prefetchSession}
@@ -755,7 +755,7 @@ export function WorkspaceSessionList(props: Props) {
             return (
               <div
                 key={workspace.id}
-                className={`space-y-1 rounded-xl ${
+                className={`space-y-1 ${
                   dropTargetWorkspaceIndex === workspaceIndex ? "ring-1 ring-inset ring-gray-8/45" : ""
                 }`}
                 onDragOver={(event) => {
@@ -796,10 +796,10 @@ export function WorkspaceSessionList(props: Props) {
                     role="button"
                     tabIndex={0}
                     aria-expanded={expandedWorkspaceIds.has(workspace.id)}
-                    className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2 text-left text-[13px] transition-colors ${
+                    className={`flex w-full min-w-0 items-center justify-between px-3.5 py-2 text-left text-[13px] transition-colors ${
                       props.selectedWorkspaceId === workspace.id
-                        ? "bg-gray-2/70 text-gray-12"
-                        : "text-gray-10 hover:bg-gray-1/70 hover:text-gray-12"
+                        ? "bg-gray-2/70 dark:bg-gray-3"
+                        : ""
                     } ${isConnecting ? "opacity-75" : ""}`}
                     onClick={(event) => {
                       const target = event.target as HTMLElement | null;
@@ -817,7 +817,27 @@ export function WorkspaceSessionList(props: Props) {
                       toggleWorkspaceExpanded(workspace.id);
                     }}
                   >
-                    <div className="flex min-w-0 flex-1 items-center py-0 text-left">
+                    <div className="flex min-w-0 flex-1 items-center gap-0.5 py-0 text-left">
+                      <button
+                        type="button"
+                        className="-ml-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-gray-9 transition-colors hover:bg-gray-3/80 hover:text-gray-11 group-hover:text-[#000000] dark:group-hover:text-gray-12"
+                        aria-expanded={expandedWorkspaceIds.has(workspace.id)}
+                        aria-label={
+                          expandedWorkspaceIds.has(workspace.id)
+                            ? t("workspace_list.collapse_workspace")
+                            : t("workspace_list.expand_workspace")
+                        }
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleWorkspaceExpanded(workspace.id);
+                        }}
+                      >
+                        {expandedWorkspaceIds.has(workspace.id) ? (
+                          <ChevronDown size={12} />
+                        ) : (
+                          <ChevronRight size={12} />
+                        )}
+                      </button>
                       <div
                         draggable={canReorder}
                         className={`min-w-0 flex-1 ${
@@ -839,7 +859,7 @@ export function WorkspaceSessionList(props: Props) {
                           setDropTargetWorkspaceIndex(null);
                         }}
                       >
-                        <div className="min-w-0 truncate text-[12px] font-normal text-[#00000059] dark:text-gray-11">
+                        <div className="min-w-0 truncate text-[12px] font-normal text-[#00000059] transition-colors group-hover:text-[#000000] dark:text-gray-11 dark:group-hover:text-gray-12">
                           {workspaceLabel(workspace)}
                         </div>
                         {statusLabel ? (

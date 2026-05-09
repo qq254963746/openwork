@@ -3,13 +3,26 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { UIMessage } from "ai";
+import type { LucideIcon } from "lucide-react";
 import {
+  Archive,
+  Braces,
   ChevronRight,
+  Database,
   File as FileIcon,
+  FileAudio,
+  FileCode,
+  FileImage,
+  FileSpreadsheet,
+  FileText,
+  FileVideo,
   Folder,
   FolderOpen,
+  Globe,
   Loader2,
+  Package,
   RefreshCw,
+  Settings,
   X,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -71,6 +84,162 @@ function joinRelativePath(dir: string, name: string): string {
   const d = dir.trim();
   if (!d) return name;
   return `${d.replace(/\/+$/, "")}/${name}`;
+}
+
+function workspacePanelEntryBasename(filename: string): string {
+  const trimmed = filename.trim();
+  const parts = trimmed.split(/[/\\]/);
+  return (parts[parts.length - 1] ?? trimmed).toLowerCase();
+}
+
+function workspacePanelEntryExtension(filename: string): string {
+  const base = workspacePanelEntryBasename(filename);
+  const dot = base.lastIndexOf(".");
+  if (dot <= 0) return "";
+  return base.slice(dot);
+}
+
+/** Icon + tint for workspace file list rows (right panel). */
+function workspacePanelFileIcon(filename: string): { Icon: LucideIcon; className: string } {
+  const base = workspacePanelEntryBasename(filename);
+  const ext = workspacePanelEntryExtension(filename);
+
+  if (base === "dockerfile" || base.startsWith("dockerfile.")) {
+    return { Icon: Package, className: "shrink-0 text-blue-11" };
+  }
+  if (
+    base === "makefile" ||
+    base === "gnumakefile" ||
+    base === "rakefile" ||
+    base === "gemfile" ||
+    base === "podfile" ||
+    base === "vagrantfile" ||
+    base === "jenkinsfile"
+  ) {
+    return { Icon: FileCode, className: "shrink-0 text-orange-11" };
+  }
+  if (base.startsWith(".env")) {
+    return { Icon: Settings, className: "shrink-0 text-green-11" };
+  }
+
+  switch (ext) {
+    case ".png":
+    case ".jpg":
+    case ".jpeg":
+    case ".gif":
+    case ".webp":
+    case ".bmp":
+    case ".ico":
+    case ".heic":
+      return { Icon: FileImage, className: "shrink-0 text-pink-11" };
+
+    case ".svg":
+      return { Icon: FileImage, className: "shrink-0 text-fuchsia-11" };
+
+    case ".mp4":
+    case ".webm":
+    case ".mov":
+    case ".avi":
+    case ".mkv":
+    case ".m4v":
+      return { Icon: FileVideo, className: "shrink-0 text-red-11" };
+
+    case ".mp3":
+    case ".wav":
+    case ".flac":
+    case ".aac":
+    case ".ogg":
+    case ".m4a":
+      return { Icon: FileAudio, className: "shrink-0 text-violet-11" };
+
+    case ".zip":
+    case ".rar":
+    case ".7z":
+    case ".tar":
+    case ".gz":
+    case ".tgz":
+    case ".bz2":
+    case ".xz":
+      return { Icon: Archive, className: "shrink-0 text-amber-11" };
+
+    case ".json":
+    case ".jsonc":
+      return { Icon: Braces, className: "shrink-0 text-yellow-11" };
+
+    case ".yaml":
+    case ".yml":
+    case ".toml":
+      return { Icon: Settings, className: "shrink-0 text-teal-11" };
+
+    case ".sql":
+    case ".sqlite":
+    case ".db":
+      return { Icon: Database, className: "shrink-0 text-cyan-11" };
+
+    case ".csv":
+    case ".tsv":
+    case ".xlsx":
+    case ".xls":
+    case ".ods":
+      return { Icon: FileSpreadsheet, className: "shrink-0 text-green-11" };
+
+    case ".html":
+    case ".htm":
+    case ".htmlx":
+      return { Icon: Globe, className: "shrink-0 text-orange-11" };
+
+    case ".md":
+    case ".mdx":
+    case ".markdown":
+    case ".txt":
+    case ".rst":
+    case ".log":
+      return { Icon: FileText, className: "shrink-0 text-sky-11" };
+
+    case ".pdf":
+      return { Icon: FileText, className: "shrink-0 text-red-11" };
+
+    case ".ts":
+    case ".tsx":
+    case ".mts":
+    case ".cts":
+      return { Icon: FileCode, className: "shrink-0 text-blue-11" };
+
+    case ".js":
+    case ".jsx":
+    case ".mjs":
+    case ".cjs":
+      return { Icon: FileCode, className: "shrink-0 text-amber-11" };
+
+    case ".py":
+    case ".rb":
+    case ".php":
+    case ".java":
+    case ".go":
+    case ".rs":
+    case ".swift":
+    case ".kt":
+    case ".c":
+    case ".h":
+    case ".cc":
+    case ".cpp":
+    case ".cs":
+    case ".vue":
+    case ".svelte":
+    case ".css":
+    case ".scss":
+    case ".sass":
+    case ".less":
+      return { Icon: FileCode, className: "shrink-0 text-indigo-11" };
+
+    default:
+      return { Icon: FileIcon, className: "shrink-0 text-dls-secondary" };
+  }
+}
+
+function WorkspacePanelFileGlyph(props: { filename: string }) {
+  const { Icon, className } = workspacePanelFileIcon(props.filename);
+  return <Icon size={14} className={className} aria-hidden />;
 }
 
 /** Matches server `isSupportedWorkspaceTextFilePath` — UTF-8 workspace file previews. */
@@ -897,9 +1066,9 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
                     onClick={() => handleEntryClick(entry.name, entry.kind)}
                   >
                     {entry.kind === "directory" ? (
-                      <Folder size={14} className="shrink-0 text-amber-11" />
+                      <Folder size={14} className="shrink-0 text-amber-11" aria-hidden />
                     ) : (
-                      <FileIcon size={14} className="shrink-0 text-dls-secondary" />
+                      <WorkspacePanelFileGlyph filename={entry.name} />
                     )}
                     <span className="min-w-0 flex-1 truncate font-mono">{entry.name}</span>
                   </button>

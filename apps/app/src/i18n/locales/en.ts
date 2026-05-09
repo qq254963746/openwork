@@ -1501,4 +1501,6 @@ export default {
   "workspace_list.workspace_fallback": "Workspace",
   "workspace_list.workspace_options": "Workspace options",
   "workspace_list.drag_reorder": "Drag to reorder workspaces",
+  "workspace_list.expand_workspace": "Expand workspace",
+  "workspace_list.collapse_workspace": "Collapse workspace",
 } as const;

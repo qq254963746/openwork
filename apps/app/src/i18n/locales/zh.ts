@@ -1399,4 +1399,6 @@ export default {
   "workspace_list.workspace_fallback": "工作区",
   "workspace_list.workspace_options": "工作区选项",
   "workspace_list.drag_reorder": "拖动排序",
+  "workspace_list.expand_workspace": "展开工作区",
+  "workspace_list.collapse_workspace": "收起工作区",
 } as const;
