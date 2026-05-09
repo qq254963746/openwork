@@ -1200,8 +1200,8 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
             className={`${
               block.isUser
                 ? isNestedVariant
-                  ? "relative max-w-[92%] rounded-[20px] border border-dls-border bg-dls-sidebar px-4 py-3 text-[14px] leading-relaxed text-dls-text"
-                  : "relative max-w-[85%] rounded-[24px] border border-dls-border bg-dls-sidebar px-6 py-4 text-[15px] leading-relaxed text-dls-text"
+                  ? "relative max-w-[92%] rounded-[12px] bg-[rgba(0,0,0,0.04)] px-4 py-[9px] text-[14px] leading-relaxed text-[rgba(0,0,0,0.85)] dark:bg-white/[0.08] dark:text-gray-12"
+                  : "relative max-w-[85%] rounded-[12px] bg-[rgba(0,0,0,0.04)] px-4 py-[9px] text-[15px] leading-relaxed text-[rgba(0,0,0,0.85)] dark:bg-white/[0.08] dark:text-gray-12"
                 : isNestedVariant
                   ? "w-full relative text-[14px] leading-[1.65] text-dls-text group"
                   : "w-full relative max-w-[760px] text-[15px] leading-[1.7] text-dls-text group"
@@ -1269,8 +1269,8 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
           className={`${
             block.isUser
               ? isNestedVariant
-                ? "relative max-w-[92%] rounded-[20px] border border-dls-border bg-dls-sidebar px-4 py-3 text-[14px] leading-relaxed text-dls-text"
-                : "relative max-w-[85%] rounded-[24px] border border-dls-border bg-dls-sidebar px-6 py-4 text-[15px] leading-relaxed text-dls-text"
+                ? "relative max-w-[92%] rounded-[12px] bg-[rgba(0,0,0,0.04)] px-4 py-[9px] text-[14px] leading-relaxed text-[rgba(0,0,0,0.85)] dark:bg-white/[0.08] dark:text-gray-12"
+                : "relative max-w-[85%] rounded-[12px] bg-[rgba(0,0,0,0.04)] px-4 py-[9px] text-[15px] leading-relaxed text-[rgba(0,0,0,0.85)] dark:bg-white/[0.08] dark:text-gray-12"
               : isNestedVariant
                 ? "w-full relative text-[14px] leading-[1.65] text-dls-text antialiased group"
                 : "w-full relative max-w-[760px] text-[15px] leading-[1.72] text-dls-text antialiased group"
@@ -1323,7 +1323,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                     return (
                       <HighlightedPlainText
                         text={text}
-                        className="whitespace-pre-wrap break-words text-gray-12"
+                        className="whitespace-pre-wrap break-words text-[rgba(0,0,0,0.85)] dark:text-gray-12"
                         highlightQuery={highlightQuery}
                       />
                     );
