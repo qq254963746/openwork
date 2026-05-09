@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Agent } from "@opencode-ai/sdk/v2/client";
-import { ArrowUp, Check, ChevronDown, ChevronRight, FileText, Paperclip, Plug, Settings, Square, Terminal, X, Zap } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, FileText, Paperclip, Plug, Settings, Square, Terminal, X, Zap } from "lucide-react";
 import fuzzysort from "fuzzysort";
 import type { CloudImportedPlugin, CloudImportedPluginFile } from "../../../../../app/cloud/import-state";
 import type { ComposerAttachment, McpServerEntry, McpStatusMap, SkillCard, SlashCommandOption } from "../../../../../app/types";
@@ -67,6 +67,23 @@ type ComposerProps = {
   onUploadInboxFiles?: ((files: File[]) => void | Promise<unknown>) | null;
   draftScopeKey?: string;
 };
+
+/** Play-in-circle glyph for the composer Run task control (matches provided asset, uses currentColor). */
+function ComposerRunTaskIcon(props: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 1024 1024"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`block ${props.className ?? ""}`.trim()}
+      aria-hidden
+    >
+      <path
+        d="M512 0a512 512 0 1 0 512 512A512 512 0 0 0 512 0z m202.24 567.954286l-266.605714 153.965714a64.548571 64.548571 0 0 1-96.914286-55.954286V358.034286a64.548571 64.548571 0 0 1 96.914286-55.954286l266.605714 153.965714a64.731429 64.731429 0 0 1 0 111.908572z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
 
 const FLUSH_PROMPT_EVENT = "openwork:flushPromptDraft";
 const FOCUS_PROMPT_EVENT = "openwork:focusPrompt";
@@ -1312,8 +1329,10 @@ export function ReactSessionComposer(props: ComposerProps) {
                     }`}
                     title={t("composer.run_task")}
                   >
-                    <ArrowUp size={15} />
-                    <span>{t("composer.run_task")}</span>
+                    <span className="inline-flex size-[15px] shrink-0 items-center justify-center" aria-hidden>
+                      <ComposerRunTaskIcon className="size-full max-h-full max-w-full" />
+                    </span>
+                    <span className="leading-none">{t("composer.run_task")}</span>
                   </button>
                 )}
               </div>

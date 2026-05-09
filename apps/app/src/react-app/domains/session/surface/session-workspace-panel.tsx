@@ -52,6 +52,9 @@ const WORKSPACE_FILE_LIST_MTIME_VISIBLE_MIN_WIDTH = 280;
 // Keep the chat transcript usable when the right panel grows.
 const MIN_CHAT_COLUMN_WIDTH = 440;
 
+/** Matches Tailwind `animate-spin` default (one full rotation per second). */
+const REFRESH_ICON_SPIN_MIN_MS = 1000;
+
 /** Upper bound for the workspace panel so the chat column can keep `MIN_CHAT_COLUMN_WIDTH` (see session-surface). */
 function maxWorkspacePanelWidthForContainer(containerWidthPx: number): number {
   return Math.max(MIN_WORKSPACE_PANEL_WIDTH, containerWidthPx - MIN_CHAT_COLUMN_WIDTH);
@@ -611,18 +614,65 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
     refetchInterval: pollRichPreviewWhileSessionBusy ? 800 : false,
   });
 
+  const [listRefreshIconSpin, setListRefreshIconSpin] = useState(false);
+  const [previewRefreshIconSpin, setPreviewRefreshIconSpin] = useState(false);
+  const listRefreshSpinTimerRef = useRef<number | null>(null);
+  const previewRefreshSpinTimerRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (listRefreshSpinTimerRef.current) clearTimeout(listRefreshSpinTimerRef.current);
+      if (previewRefreshSpinTimerRef.current) clearTimeout(previewRefreshSpinTimerRef.current);
+    },
+    [],
+  );
+
+  const scheduleListRefreshSpinStop = useCallback((startedAtMs: number) => {
+    if (listRefreshSpinTimerRef.current) clearTimeout(listRefreshSpinTimerRef.current);
+    const elapsed = Date.now() - startedAtMs;
+    const remaining = Math.max(0, REFRESH_ICON_SPIN_MIN_MS - elapsed);
+    listRefreshSpinTimerRef.current = window.setTimeout(() => {
+      listRefreshSpinTimerRef.current = null;
+      setListRefreshIconSpin(false);
+    }, remaining);
+  }, []);
+
+  const schedulePreviewRefreshSpinStop = useCallback((startedAtMs: number) => {
+    if (previewRefreshSpinTimerRef.current) clearTimeout(previewRefreshSpinTimerRef.current);
+    const elapsed = Date.now() - startedAtMs;
+    const remaining = Math.max(0, REFRESH_ICON_SPIN_MIN_MS - elapsed);
+    previewRefreshSpinTimerRef.current = window.setTimeout(() => {
+      previewRefreshSpinTimerRef.current = null;
+      setPreviewRefreshIconSpin(false);
+    }, remaining);
+  }, []);
+
   /** Only rebuild iframe document when raw file bytes change — avoids remount/flash on identical poll results. */
   const webPreviewSrcDoc = useMemo(
     () => buildWebPreviewSrcDoc(previewQuery.data?.content ?? ""),
     [previewQuery.data?.content],
   );
 
-  const refreshWorkspaceFiles = () => {
-    void listQuery.refetch();
+  const refreshWorkspaceFiles = useCallback(() => {
+    if (listRefreshSpinTimerRef.current) clearTimeout(listRefreshSpinTimerRef.current);
+    const listStartedAt = Date.now();
+    setListRefreshIconSpin(true);
+    void listQuery.refetch().finally(() => scheduleListRefreshSpinStop(listStartedAt));
+
     if (selectedFile && isWorkspacePreviewablePath(selectedFile)) {
-      void previewQuery.refetch();
+      if (previewRefreshSpinTimerRef.current) clearTimeout(previewRefreshSpinTimerRef.current);
+      const previewStartedAt = Date.now();
+      setPreviewRefreshIconSpin(true);
+      void previewQuery.refetch().finally(() => schedulePreviewRefreshSpinStop(previewStartedAt));
     }
-  };
+  }, [listQuery.refetch, previewQuery.refetch, scheduleListRefreshSpinStop, schedulePreviewRefreshSpinStop, selectedFile]);
+
+  const refreshPreviewOnly = useCallback(() => {
+    if (previewRefreshSpinTimerRef.current) clearTimeout(previewRefreshSpinTimerRef.current);
+    const previewStartedAt = Date.now();
+    setPreviewRefreshIconSpin(true);
+    void previewQuery.refetch().finally(() => schedulePreviewRefreshSpinStop(previewStartedAt));
+  }, [previewQuery.refetch, schedulePreviewRefreshSpinStop]);
 
   const openCurrentFolderOnDesktop = () => {
     if (!workspaceRoot || !isDesktopRuntime()) return;
@@ -740,12 +790,18 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
-                onClick={() => void previewQuery.refetch()}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] disabled:pointer-events-none disabled:opacity-40"
+                onClick={refreshPreviewOnly}
+                disabled={previewQuery.isFetching || previewRefreshIconSpin}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
               >
-                <RefreshCw size={14} strokeWidth={1.75} aria-hidden />
+                <RefreshCw
+                  size={14}
+                  strokeWidth={1.75}
+                  aria-hidden
+                  className={previewRefreshIconSpin ? "animate-spin" : undefined}
+                />
               </button>
               <button
                 type="button"
@@ -794,12 +850,18 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
-                onClick={() => void previewQuery.refetch()}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] disabled:pointer-events-none disabled:opacity-40"
+                onClick={refreshPreviewOnly}
+                disabled={previewQuery.isFetching || previewRefreshIconSpin}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
               >
-                <RefreshCw size={14} strokeWidth={1.75} aria-hidden />
+                <RefreshCw
+                  size={14}
+                  strokeWidth={1.75}
+                  aria-hidden
+                  className={previewRefreshIconSpin ? "animate-spin" : undefined}
+                />
               </button>
               <button
                 type="button"
@@ -854,12 +916,18 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
-                onClick={() => void previewQuery.refetch()}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] disabled:pointer-events-none disabled:opacity-40"
+                onClick={refreshPreviewOnly}
+                disabled={previewQuery.isFetching || previewRefreshIconSpin}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
               >
-                <RefreshCw size={14} strokeWidth={1.75} aria-hidden />
+                <RefreshCw
+                  size={14}
+                  strokeWidth={1.75}
+                  aria-hidden
+                  className={previewRefreshIconSpin ? "animate-spin" : undefined}
+                />
               </button>
               <button
                 type="button"
@@ -985,11 +1053,11 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
                 type="button"
                 className="inline-flex items-center justify-center rounded-md p-1 text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] disabled:pointer-events-none disabled:opacity-40"
                 onClick={refreshWorkspaceFiles}
-                disabled={!props.workspaceId || listQuery.isFetching}
+                disabled={!props.workspaceId || listQuery.isFetching || listRefreshIconSpin}
                 title={t("session.workspace_panel_refresh")}
                 aria-label={t("session.workspace_panel_refresh")}
               >
-                <RefreshCw size={14} className={listQuery.isFetching ? "animate-spin" : undefined} />
+                <RefreshCw size={14} className={listRefreshIconSpin ? "animate-spin" : undefined} aria-hidden />
               </button>
             </div>
           </div>
