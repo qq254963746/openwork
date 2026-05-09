@@ -814,6 +814,10 @@ export default {
   "session.empty_transcript_hint":
     "OpenWork connects you to agents on your device or remotely—chat and run tasks in your workspace, use skills and tools to work with code and files, manage workspaces and sessions.",
   "session.jump_to_latest": "Jump to latest",
+  "session.written_files_list_aria": "Files created or updated in this reply",
+  "session.written_file_badge_new": "New",
+  "session.written_file_badge_modified": "Modified",
+  "session.written_file_view": "View",
   "session.delete": "Delete",
   "session.delete_named_session_message": "This will permanently delete \"{title}\" and its messages.",
   "session.delete_session_generic": "This will permanently delete the selected session and its messages.",

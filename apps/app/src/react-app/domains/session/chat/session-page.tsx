@@ -106,7 +106,13 @@ export type SessionPageSidebarProps = {
 
 export type SessionPageSurfaceProps = Omit<
   SessionSurfaceProps,
-  "client" | "workspaceId" | "sessionId" | "opencodeBaseUrl" | "openworkToken" | "workspaceSidePanelOpen"
+  | "client"
+  | "workspaceId"
+  | "sessionId"
+  | "opencodeBaseUrl"
+  | "openworkToken"
+  | "workspaceSidePanelOpen"
+  | "requestWorkspaceSidePanelOpen"
 >;
 
 export type SessionPageProps = {
@@ -683,8 +689,9 @@ export function SessionPage(props: SessionPageProps) {
                   sessionId={props.selectedSessionId!}
                   opencodeBaseUrl={reactSessionBaseUrl}
                   openworkToken={reactSessionToken}
-                  workspaceSidePanelOpen={workspaceSidePanelOpen}
                   {...props.surface!}
+                  workspaceSidePanelOpen={workspaceSidePanelOpen}
+                  requestWorkspaceSidePanelOpen={() => setWorkspaceSidePanelOpen(true)}
                 />
               ) : null}
 

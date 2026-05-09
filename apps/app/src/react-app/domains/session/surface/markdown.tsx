@@ -37,11 +37,11 @@ function MarkdownCodeBlock(props: { className?: string; children: React.ReactNod
   const [copied, setCopied] = useState(false);
 
   return (
-    <div className="my-4 overflow-hidden rounded-[18px] border border-dls-border/70 bg-dls-surface">
-      <div className="flex items-center justify-end border-b border-dls-border/70 bg-dls-surface px-3 py-2">
+    <div className="my-4 overflow-hidden rounded-[18px] border border-dls-border/70 bg-[rgb(249,250,251)]">
+      <div className="flex items-center justify-end border-b border-dls-border/70 bg-[rgb(249,250,251)] px-3 py-2">
         <button
           type="button"
-          className="rounded-full border border-dls-border bg-dls-surface px-3 py-1 text-[11px] font-medium text-dls-text transition-colors hover:bg-dls-hover"
+          className="rounded-full border border-dls-border bg-[rgb(249,250,251)] px-3 py-1 text-[11px] font-medium text-dls-text transition-colors hover:bg-dls-hover"
           onClick={async () => {
             await navigator.clipboard.writeText(text);
             setCopied(true);
@@ -200,7 +200,7 @@ function createMarkdownComponents(): Components {
     h6: createHeading("h6"),
     pre({ children }) {
       return (
-        <pre className="my-4 overflow-x-auto rounded-[18px] border border-dls-border/70 bg-dls-surface px-4 py-3 text-[12px] leading-6 text-gray-12 !bg-transparent">
+        <pre className="my-4 overflow-x-auto rounded-[18px] border border-dls-border/70 bg-[rgb(249,250,251)] px-4 py-3 text-[12px] leading-6 text-gray-12">
           {children}
         </pre>
       );
@@ -222,7 +222,13 @@ function createMarkdownComponents(): Components {
       );
     },
     table({ children }) {
-      return <table className="my-4 w-full border-collapse">{children}</table>;
+      return (
+        <div className="my-4 overflow-hidden rounded-[20px] border border-dls-border">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">{children}</table>
+          </div>
+        </div>
+      );
     },
     th({ children }) {
       return <th className="border border-dls-border bg-dls-hover p-2 text-left">{children}</th>;
@@ -247,9 +253,9 @@ const markdownClassName = `markdown-content max-w-none text-gray-12
   [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6
   [&_li]:my-1
   [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto
-  [&_pre]:!bg-transparent
+  [&_pre]:!bg-[rgb(249,250,251)]
   [&_pre_code]:!bg-transparent
-  [&_.hljs]:!bg-transparent
+  [&_.hljs]:!bg-[rgb(249,250,251)]
 `.trim();
 
 function MarkdownBlockInner(props: {

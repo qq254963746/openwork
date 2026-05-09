@@ -1,28 +1,14 @@
 /** @jsxImportSource react */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { UIMessage } from "ai";
-import type { LucideIcon } from "lucide-react";
 import {
-  Archive,
-  Braces,
   ChevronRight,
-  Database,
-  File as FileIcon,
-  FileAudio,
-  FileCode,
-  FileImage,
-  FileSpreadsheet,
-  FileText,
-  FileVideo,
   Folder,
   FolderOpen,
-  Globe,
   Loader2,
-  Package,
   RefreshCw,
-  Settings,
   X,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -40,6 +26,7 @@ import {
 } from "../../../../app/utils";
 import { MarkdownBlock } from "./markdown";
 import { WorkspaceCodePreview } from "./workspace-code-preview";
+import { WorkspacePanelFileGlyph } from "./workspace-panel-file-glyph";
 
 /** Inline styles so drag chrome avoids text I‑beam / selection in Tauri & Electron WebViews. */
 const WORKSPACE_PANEL_HEADER_DRAG_STYLE: CSSProperties = {
@@ -86,162 +73,64 @@ function joinRelativePath(dir: string, name: string): string {
   return `${d.replace(/\/+$/, "")}/${name}`;
 }
 
-function workspacePanelEntryBasename(filename: string): string {
-  const trimmed = filename.trim();
-  const parts = trimmed.split(/[/\\]/);
-  return (parts[parts.length - 1] ?? trimmed).toLowerCase();
+/**
+ * Mirror server `normalizeWorkspaceRelativePath` shaping so tool/transcript paths (`workspace/…`, `/…`,
+ * `./…`, duplicate slashes, trailing slashes) match paths produced by the file list.
+ */
+function normalizeWorkspaceRelativeSelectionPath(raw: string): string {
+  let s = String(raw ?? "").trim().replace(/\\/g, "/");
+  if (!s) return "";
+  s = s.replace(/^\/+/, "");
+  s = s.replace(/^\.\//, "");
+  s = s.replace(/^workspace\//i, "");
+  s = s.replace(/^\/+/, "");
+  const parts = s.split("/").filter(Boolean);
+  return parts.join("/");
 }
 
-function workspacePanelEntryExtension(filename: string): string {
-  const base = workspacePanelEntryBasename(filename);
-  const dot = base.lastIndexOf(".");
-  if (dot <= 0) return "";
-  return base.slice(dot);
+/** Strip `file://` and Windows UNC quirks so two paths can be compared. */
+function toComparableFsPath(p: string): string {
+  let s = p.trim().replace(/\\/g, "/");
+  if (!s) return "";
+  if (/^file:\/\//i.test(s)) {
+    try {
+      const u = new URL(s);
+      s = decodeURIComponent(u.pathname);
+      if (/^\/[a-zA-Z]:/.test(s)) s = s.slice(1);
+    } catch {
+      s = s.replace(/^file:\/\//i, "");
+    }
+  }
+  return s.replace(/\/+$/, "");
 }
 
-/** Icon + tint for workspace file list rows (right panel). */
-function workspacePanelFileIcon(filename: string): { Icon: LucideIcon; className: string } {
-  const base = workspacePanelEntryBasename(filename);
-  const ext = workspacePanelEntryExtension(filename);
+/**
+ * Tool/transcript paths are sometimes absolute host paths inside the workspace root.
+ * Without this, stripping "/" turns `/Users/…/ws/a.ts` into `Users/…/a.ts`, which breaks previews.
+ */
+function tryRelativePathUnderWorkspace(raw: string, workspaceRoot: string): string {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) return "";
 
-  if (base === "dockerfile" || base.startsWith("dockerfile.")) {
-    return { Icon: Package, className: "shrink-0 text-blue-11" };
-  }
-  if (
-    base === "makefile" ||
-    base === "gnumakefile" ||
-    base === "rakefile" ||
-    base === "gemfile" ||
-    base === "podfile" ||
-    base === "vagrantfile" ||
-    base === "jenkinsfile"
-  ) {
-    return { Icon: FileCode, className: "shrink-0 text-orange-11" };
-  }
-  if (base.startsWith(".env")) {
-    return { Icon: Settings, className: "shrink-0 text-green-11" };
+  const rootRaw = workspaceRoot.trim();
+  if (!rootRaw) return normalizeWorkspaceRelativeSelectionPath(trimmed);
+
+  let candidate = trimmed.replace(/\\/g, "/");
+  let rootComparable = toComparableFsPath(rootRaw);
+
+  if (/^file:\/\//i.test(candidate)) {
+    candidate = toComparableFsPath(candidate);
   }
 
-  switch (ext) {
-    case ".png":
-    case ".jpg":
-    case ".jpeg":
-    case ".gif":
-    case ".webp":
-    case ".bmp":
-    case ".ico":
-    case ".heic":
-      return { Icon: FileImage, className: "shrink-0 text-pink-11" };
+  const candLower = candidate.toLowerCase();
+  const rootLower = rootComparable.toLowerCase();
 
-    case ".svg":
-      return { Icon: FileImage, className: "shrink-0 text-fuchsia-11" };
-
-    case ".mp4":
-    case ".webm":
-    case ".mov":
-    case ".avi":
-    case ".mkv":
-    case ".m4v":
-      return { Icon: FileVideo, className: "shrink-0 text-red-11" };
-
-    case ".mp3":
-    case ".wav":
-    case ".flac":
-    case ".aac":
-    case ".ogg":
-    case ".m4a":
-      return { Icon: FileAudio, className: "shrink-0 text-violet-11" };
-
-    case ".zip":
-    case ".rar":
-    case ".7z":
-    case ".tar":
-    case ".gz":
-    case ".tgz":
-    case ".bz2":
-    case ".xz":
-      return { Icon: Archive, className: "shrink-0 text-amber-11" };
-
-    case ".json":
-    case ".jsonc":
-      return { Icon: Braces, className: "shrink-0 text-yellow-11" };
-
-    case ".yaml":
-    case ".yml":
-    case ".toml":
-      return { Icon: Settings, className: "shrink-0 text-teal-11" };
-
-    case ".sql":
-    case ".sqlite":
-    case ".db":
-      return { Icon: Database, className: "shrink-0 text-cyan-11" };
-
-    case ".csv":
-    case ".tsv":
-    case ".xlsx":
-    case ".xls":
-    case ".ods":
-      return { Icon: FileSpreadsheet, className: "shrink-0 text-green-11" };
-
-    case ".html":
-    case ".htm":
-    case ".htmlx":
-      return { Icon: Globe, className: "shrink-0 text-orange-11" };
-
-    case ".md":
-    case ".mdx":
-    case ".markdown":
-    case ".txt":
-    case ".rst":
-    case ".log":
-      return { Icon: FileText, className: "shrink-0 text-sky-11" };
-
-    case ".pdf":
-      return { Icon: FileText, className: "shrink-0 text-red-11" };
-
-    case ".ts":
-    case ".tsx":
-    case ".mts":
-    case ".cts":
-      return { Icon: FileCode, className: "shrink-0 text-blue-11" };
-
-    case ".js":
-    case ".jsx":
-    case ".mjs":
-    case ".cjs":
-      return { Icon: FileCode, className: "shrink-0 text-amber-11" };
-
-    case ".py":
-    case ".rb":
-    case ".php":
-    case ".java":
-    case ".go":
-    case ".rs":
-    case ".swift":
-    case ".kt":
-    case ".c":
-    case ".h":
-    case ".cc":
-    case ".cpp":
-    case ".cs":
-    case ".vue":
-    case ".svelte":
-    case ".css":
-    case ".scss":
-    case ".sass":
-    case ".less":
-      return { Icon: FileCode, className: "shrink-0 text-indigo-11" };
-
-    default:
-      return { Icon: FileIcon, className: "shrink-0 text-dls-secondary" };
+  if (rootLower && (candLower === rootLower || candLower.startsWith(`${rootLower}/`))) {
+    const rest = candidate.slice(rootComparable.length).replace(/^\/+/, "");
+    return normalizeWorkspaceRelativeSelectionPath(rest);
   }
-}
 
-function WorkspacePanelFileGlyph(props: { filename: string; size?: number; className?: string }) {
-  const { Icon, className: tintClass } = workspacePanelFileIcon(props.filename);
-  return (
-    <Icon size={props.size ?? 14} className={props.className ?? tintClass} aria-hidden />
-  );
+  return normalizeWorkspaceRelativeSelectionPath(trimmed);
 }
 
 /** Matches server `isSupportedWorkspaceTextFilePath` — UTF-8 workspace file previews. */
@@ -474,7 +363,13 @@ export type SessionWorkspacePanelProps = {
   liveWorkspacePreview?: boolean;
 };
 
-export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
+export type SessionWorkspacePanelHandle = {
+  /** Same behavior as clicking a file row in the workspace file list (preview vs open on disk). */
+  selectWorkspaceRelativePath: (relativePath: string) => void;
+};
+
+export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, SessionWorkspacePanelProps>(
+  function SessionWorkspacePanel(props, ref) {
   const [dirPath, setDirPath] = useState("");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [panelWidth, setPanelWidth] = useState(readStoredWorkspacePanelWidth);
@@ -713,6 +608,37 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
     setSelectedFile(null);
   };
 
+  const selectWorkspaceRelativePath = useCallback(
+    (relativePath: string) => {
+      const rel = tryRelativePathUnderWorkspace(relativePath, props.workspaceRoot);
+      if (!rel) return;
+      if (isMarkdownDocumentPath(rel)) {
+        setSelectedFile(rel);
+        return;
+      }
+      if (isWebPreviewDocumentPath(rel)) {
+        setSelectedFile(rel);
+        return;
+      }
+      if (isWorkspacePreviewablePath(rel)) {
+        setSelectedFile(rel);
+        return;
+      }
+      const root = props.workspaceRoot.trim();
+      if (isDesktopRuntime() && root) {
+        const abs = absoluteWorkspaceFilePath(root, rel);
+        if (abs) {
+          void openDesktopPath(abs).catch(() => undefined);
+          return;
+        }
+      }
+      setSelectedFile(rel);
+    },
+    [props.workspaceRoot],
+  );
+
+  useImperativeHandle(ref, () => ({ selectWorkspaceRelativePath }), [selectWorkspaceRelativePath]);
+
   const handleEntryClick = (name: string, kind: "file" | "directory") => {
     const rel = joinRelativePath(dirPath, name);
     if (kind === "directory") {
@@ -720,27 +646,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       setSelectedFile(null);
       return;
     }
-    if (isMarkdownDocumentPath(rel)) {
-      setSelectedFile(rel);
-      return;
-    }
-    if (isWebPreviewDocumentPath(rel)) {
-      setSelectedFile(rel);
-      return;
-    }
-    if (isWorkspacePreviewablePath(rel)) {
-      setSelectedFile(rel);
-      return;
-    }
-    const root = props.workspaceRoot.trim();
-    if (isDesktopRuntime() && root) {
-      const abs = absoluteWorkspaceFilePath(root, rel);
-      if (abs) {
-        void openDesktopPath(abs).catch(() => undefined);
-        return;
-      }
-    }
-    setSelectedFile(rel);
+    selectWorkspaceRelativePath(rel);
   };
 
   const selectedFileTitle = selectedFile
@@ -761,11 +667,11 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       />
       {markdownPreviewOpen ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-1.5">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <WorkspacePanelFileGlyph
                 filename={selectedFile ?? ""}
-                size={16}
+                size={14}
                 className="shrink-0 text-[#000000]"
               />
               <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
@@ -775,21 +681,21 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => void previewQuery.refetch()}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
               >
-                <RefreshCw size={16} strokeWidth={1.75} aria-hidden />
+                <RefreshCw size={14} strokeWidth={1.75} aria-hidden />
               </button>
               <button
                 type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => setSelectedFile(null)}
                 aria-label={t("session.workspace_panel_close_preview")}
                 title={t("session.workspace_panel_close_preview")}
               >
-                <X size={16} strokeWidth={1.75} aria-hidden />
+                <X size={14} strokeWidth={1.75} aria-hidden />
               </button>
             </div>
           </div>
@@ -807,11 +713,11 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
         </div>
       ) : webPreviewOpen ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-1.5">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <WorkspacePanelFileGlyph
                 filename={selectedFile ?? ""}
-                size={16}
+                size={14}
                 className="shrink-0 text-[#000000]"
               />
               <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
@@ -821,21 +727,21 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => void previewQuery.refetch()}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
               >
-                <RefreshCw size={16} strokeWidth={1.75} aria-hidden />
+                <RefreshCw size={14} strokeWidth={1.75} aria-hidden />
               </button>
               <button
                 type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => setSelectedFile(null)}
                 aria-label={t("session.workspace_panel_close_preview")}
                 title={t("session.workspace_panel_close_preview")}
               >
-                <X size={16} strokeWidth={1.75} aria-hidden />
+                <X size={14} strokeWidth={1.75} aria-hidden />
               </button>
             </div>
           </div>
@@ -859,11 +765,11 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
         </div>
       ) : codeDocumentPreviewOpen ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-1.5">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <WorkspacePanelFileGlyph
                 filename={selectedFile ?? ""}
-                size={16}
+                size={14}
                 className="shrink-0 text-[#000000]"
               />
               <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
@@ -873,21 +779,21 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => void previewQuery.refetch()}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
               >
-                <RefreshCw size={16} strokeWidth={1.75} aria-hidden />
+                <RefreshCw size={14} strokeWidth={1.75} aria-hidden />
               </button>
               <button
                 type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => setSelectedFile(null)}
                 aria-label={t("session.workspace_panel_close_preview")}
                 title={t("session.workspace_panel_close_preview")}
               >
-                <X size={16} strokeWidth={1.75} aria-hidden />
+                <X size={14} strokeWidth={1.75} aria-hidden />
               </button>
             </div>
           </div>
@@ -1131,4 +1037,5 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       )}
     </aside>
   );
-}
+});
+SessionWorkspacePanel.displayName = "SessionWorkspacePanel";

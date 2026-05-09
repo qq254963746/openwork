@@ -14,13 +14,16 @@ import type { Part } from "@opencode-ai/sdk/v2/client";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Atom, Check, ChevronDown, CircleAlert, Copy, File as FileIcon } from "lucide-react";
 
-import { openDesktopPath, revealDesktopItemInDir } from "../../../../app/lib/desktop";
+import { joinDesktopPath, openDesktopPath, revealDesktopItemInDir } from "../../../../app/lib/desktop";
+import { WorkspacePanelFileGlyph } from "./workspace-panel-file-glyph";
 import {
   SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX,
   type MessageGroup,
   type StepGroupMode,
   type TodoItem,
+  type WorkspaceWriteTouch,
 } from "../../../../app/types";
+import { deriveWorkspaceWriteTouchesFromUIMessage } from "../../../../app/utils/workspace-write-touches";
 import { groupMessageParts, isDesktopRuntime, summarizeStep } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import { MarkdownBlock } from "./markdown";
@@ -156,6 +159,10 @@ export type SessionTranscriptProps = {
   ) => void;
   footer?: ReactNode;
   variant?: "default" | "nested";
+  /** Resolves relative tool paths when opening files from the transcript footer */
+  workspaceRoot?: string;
+  /** Routes “View” into the workspace side panel (same rules as clicking a file there). */
+  onOpenWorkspaceRelativePath?: (relativePath: string) => void;
 };
 
 // 500 was too high for real-world OpenWork sessions: a handful of giant
@@ -649,6 +656,111 @@ function FileCard(props: {
   );
 }
 
+function looksAbsoluteWorkspacePath(p: string): boolean {
+  const n = p.trim().replace(/\\/g, "/");
+  return n.startsWith("/") || /^[a-zA-Z]:\//.test(n);
+}
+
+function WrittenFileRow(props: {
+  touch: WorkspaceWriteTouch;
+  workspaceRoot: string;
+  desktop: boolean;
+  onOpenWorkspaceRelativePath?: (relativePath: string) => void;
+}) {
+  const badge =
+    props.touch.kind === "created"
+      ? t("session.written_file_badge_new")
+      : t("session.written_file_badge_modified");
+  const metaLine = props.touch.extLabel ? `${badge} · ${props.touch.extLabel}` : badge;
+
+  const canTryOpen =
+    Boolean(props.onOpenWorkspaceRelativePath) ||
+    (props.desktop &&
+      (looksAbsoluteWorkspacePath(props.touch.displayPath) || Boolean(props.workspaceRoot.trim())));
+
+  const handleView = () => {
+    if (props.onOpenWorkspaceRelativePath) {
+      props.onOpenWorkspaceRelativePath(props.touch.displayPath);
+      return;
+    }
+    void (async () => {
+      try {
+        const raw = props.touch.displayPath.trim();
+        let absolute: string;
+        if (looksAbsoluteWorkspacePath(raw)) {
+          absolute = raw;
+        } else {
+          const root = props.workspaceRoot.trim();
+          if (!root) return;
+          absolute = await joinDesktopPath(root, props.touch.displayPath);
+        }
+        await openDesktopPath(absolute);
+      } catch {
+        // Desktop-only or permission
+      }
+    })();
+  };
+
+  return (
+    <div
+      role="listitem"
+      className="flex w-full min-w-0 items-center gap-3 rounded-2xl border border-gray-6/40 bg-dls-surface px-4 py-3 dark:bg-gray-1/30"
+    >
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center" aria-hidden>
+        <WorkspacePanelFileGlyph filename={props.touch.displayPath} size={18} className="shrink-0 text-[#000000]" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[13px] font-medium leading-snug text-gray-12">{props.touch.filename}</div>
+        <div className="mt-0.5 text-[12px] leading-snug text-gray-9">{metaLine}</div>
+      </div>
+      {canTryOpen ? (
+        <button
+          type="button"
+          className="shrink-0 rounded-xl border border-gray-6/60 bg-dls-surface px-3 py-1.5 text-[13px] font-medium text-gray-12 transition-colors hover:bg-gray-3/40 dark:border-gray-6/50"
+          onClick={handleView}
+        >
+          {t("session.written_file_view")}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+const AssistantWrittenFiles = memo(function AssistantWrittenFiles(props: {
+  message: UIMessage;
+  workspaceRoot: string;
+  onOpenWorkspaceRelativePath?: (relativePath: string) => void;
+  /** Reserve space when a floating copy control sits at the bottom-right of the bubble */
+  clearFloatingCopySlot?: boolean;
+}) {
+  const touches = useMemo(
+    () => deriveWorkspaceWriteTouchesFromUIMessage(props.message),
+    [props.message],
+  );
+  const desktop = isDesktopRuntime();
+
+  if (touches.length === 0) return null;
+
+  return (
+    <div
+      className={`mt-4 w-full space-y-2 ${props.clearFloatingCopySlot ? "pb-11 pr-14" : ""}`.trim()}
+      role="list"
+      aria-label={t("session.written_files_list_aria")}
+    >
+      {touches.map((touch) => (
+        <WrittenFileRow
+          key={touch.displayPath}
+          touch={touch}
+          workspaceRoot={props.workspaceRoot}
+          desktop={desktop}
+          onOpenWorkspaceRelativePath={props.onOpenWorkspaceRelativePath}
+        />
+      ))}
+    </div>
+  );
+});
+AssistantWrittenFiles.displayName = "AssistantWrittenFiles";
+
 type ReasoningStreamContext = {
   isStreaming: boolean;
   messageId: string;
@@ -765,7 +877,7 @@ function StepRow(props: {
           ) : null}
 
           <div
-            className={`w-full rounded-[20px] border border-dls-border bg-dls-surface shadow-[var(--dls-card-shadow)] ${
+            className={`w-full rounded-[20px] border border-dls-border bg-dls-surface ${
               props.expanded ? "mt-3" : ""
             }`}
           >
@@ -1197,6 +1309,11 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
         : "";
 
     if (block.kind === "steps-cluster") {
+      const clusterMessage =
+        !block.isUser && block.messageIds[0]
+          ? props.messages.find((m) => m.id === block.messageIds[0])
+          : undefined;
+
       return (
         <div
           key={`steps-${block.id}`}
@@ -1228,6 +1345,13 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                 latestAssistantMessageId,
               }}
             />
+            {clusterMessage ? (
+              <AssistantWrittenFiles
+                message={clusterMessage}
+                workspaceRoot={props.workspaceRoot ?? ""}
+                onOpenWorkspaceRelativePath={props.onOpenWorkspaceRelativePath}
+              />
+            ) : null}
           </div>
         </div>
       );
@@ -1369,6 +1493,15 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
               </div>
             );
           })}
+
+          {!block.isUser ? (
+            <AssistantWrittenFiles
+              message={block.message}
+              workspaceRoot={props.workspaceRoot ?? ""}
+              onOpenWorkspaceRelativePath={props.onOpenWorkspaceRelativePath}
+              clearFloatingCopySlot={!isNestedVariant}
+            />
+          ) : null}
 
           {!isNestedVariant ? (
             <div className="absolute bottom-2 right-2 flex justify-end opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto md:group-focus-within:opacity-100 md:group-focus-within:pointer-events-auto transition-opacity select-none">

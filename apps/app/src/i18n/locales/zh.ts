@@ -766,6 +766,10 @@ export default {
   "session.empty_transcript_hint":
     "OpenWork 帮你连接本地或远程智能体：在工作区里对话与执行任务、使用技能与工具读写代码与文件，管理工作区与会话。",
   "session.jump_to_latest": "跳到最新",
+  "session.written_files_list_aria": "此回复中新建或修改的文件",
+  "session.written_file_badge_new": "新建",
+  "session.written_file_badge_modified": "修改",
+  "session.written_file_view": "查看",
   "session.delete": "删除",
   "session.delete_named_session_message": "这将永久删除「{title}」及其消息。",
   "session.delete_session_generic": "这将永久删除所选会话及其消息。",

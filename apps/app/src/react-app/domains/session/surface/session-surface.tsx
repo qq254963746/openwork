@@ -1,5 +1,13 @@
 /** @jsxImportSource react */
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { UIMessage } from "ai";
 import { useQuery } from "@tanstack/react-query";
 import type { SessionStatus } from "@opencode-ai/sdk/v2/client";
@@ -33,7 +41,10 @@ import { Loader2 } from "lucide-react";
 import { t } from "../../../../i18n";
 import { useReactRenderWatchdog } from "../../../shell/react-render-watchdog";
 import type { ReactComposerNotice } from "./composer/notice";
-import { SessionWorkspacePanel } from "./session-workspace-panel";
+import {
+  SessionWorkspacePanel,
+  type SessionWorkspacePanelHandle,
+} from "./session-workspace-panel";
 import { SessionDebugPanel } from "./debug-panel";
 import { deriveRenderedSessionMessages, resolveRenderedSessionSnapshot } from "./session-render-state";
 import { SessionTranscript } from "./message-list";
@@ -124,6 +135,8 @@ export type SessionSurfaceProps = {
   onOpenSettingsSection?: ((section: "commands" | "skills" | "mcps" | "plugins") => void) | undefined;
   /** Right column (workspace files / context): visibility is controlled only via SessionPage toggle, not breakpoints. */
   workspaceSidePanelOpen: boolean;
+  /** Opens the workspace side panel (e.g. before routing a transcript “View file” action into {@link SessionWorkspacePanel}). */
+  requestWorkspaceSidePanelOpen?: () => void;
   /** Pending inline question prompt (AskQuestion). */
   activeQuestion?: { id: string; questions: QuestionInfo[] } | null;
   questionReplyBusy?: boolean;
@@ -477,6 +490,8 @@ export function SessionSurface(props: SessionSurfaceProps) {
   const [toolMcpStatuses, setToolMcpStatuses] = useState<McpStatusMap>({});
   const [toolImportedPlugins, setToolImportedPlugins] = useState<CloudImportedPlugin[]>([]);
   const composerShellRef = useRef<HTMLDivElement>(null);
+  const workspacePanelRef = useRef<SessionWorkspacePanelHandle>(null);
+  const pendingWorkspaceRelativePathRef = useRef<string | null>(null);
   const hydratedKeyRef = useRef<string | null>(null);
   const attachmentsRef = useRef<ComposerAttachment[]>([]);
   attachmentsRef.current = attachments;
@@ -484,6 +499,28 @@ export function SessionSurface(props: SessionSurfaceProps) {
     () => createClient(props.opencodeBaseUrl, undefined, { token: props.openworkToken, mode: "openwork" }),
     [props.opencodeBaseUrl, props.openworkToken],
   );
+
+  const openWorkspaceRelativePath = useCallback(
+    (relativePath: string) => {
+      const normalized = relativePath.trim().replace(/\\/g, "/");
+      if (!normalized) return;
+      if (props.workspaceSidePanelOpen) {
+        workspacePanelRef.current?.selectWorkspaceRelativePath(normalized);
+        return;
+      }
+      pendingWorkspaceRelativePathRef.current = normalized;
+      props.requestWorkspaceSidePanelOpen?.();
+    },
+    [props.workspaceSidePanelOpen, props.requestWorkspaceSidePanelOpen],
+  );
+
+  useLayoutEffect(() => {
+    if (!props.workspaceSidePanelOpen) return;
+    const pending = pendingWorkspaceRelativePathRef.current;
+    if (!pending) return;
+    pendingWorkspaceRelativePathRef.current = null;
+    workspacePanelRef.current?.selectWorkspaceRelativePath(pending);
+  }, [props.workspaceSidePanelOpen]);
 
   const snapshotQueryKey = useMemo(
     () => ["react-session-snapshot", props.workspaceId, props.sessionId],
@@ -1136,6 +1173,8 @@ export function SessionSurface(props: SessionSurfaceProps) {
                     showThinking={props.showThinking}
                     todos={todos}
                     scrollElement={() => scrollRef.current}
+                    workspaceRoot={props.workspaceRoot}
+                    onOpenWorkspaceRelativePath={openWorkspaceRelativePath}
                   />
                   {error ? (
                     <SessionErrorCard
@@ -1236,6 +1275,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
       </div>
       {props.workspaceSidePanelOpen ? (
         <SessionWorkspacePanel
+          ref={workspacePanelRef}
           client={props.client}
           workspaceId={props.workspaceId}
           workspaceRoot={props.workspaceRoot}

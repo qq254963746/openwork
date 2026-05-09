@@ -137,6 +137,18 @@ export type ArtifactItem = {
   messageId?: string;
 };
 
+/** Files created or modified by write/edit/patch tools in a single assistant turn */
+export type WorkspaceWriteTouchKind = "created" | "modified";
+
+export type WorkspaceWriteTouch = {
+  /** Workspace-relative or normalized path for display */
+  displayPath: string;
+  filename: string;
+  kind: WorkspaceWriteTouchKind;
+  /** Uppercase extension label for subtitle, e.g. "MD", "TS" */
+  extLabel: string;
+};
+
 export type OpencodeEvent = {
   type: string;
   properties?: unknown;
