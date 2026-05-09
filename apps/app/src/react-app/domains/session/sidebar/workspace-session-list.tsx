@@ -8,7 +8,6 @@ import {
   Loader2,
   MoreHorizontal,
   PanelLeftClose,
-  Plus,
   RefreshCw,
   SquarePen,
   RotateCcw,
@@ -205,47 +204,43 @@ function AddWorkspaceShortcutGlyph(props: { className?: string }) {
   );
 }
 
-/** Workspace row glyph (grid / tiling mark). */
-function WorkspaceSidebarGlyph(props: { className?: string }) {
+/** Workspace row control: new session in this workspace (viewBox 24×24). */
+function WorkspaceAddSessionGlyph(props: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 1024 1024"
+      viewBox="0 0 24 24"
+      fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
       className={props.className}
       aria-hidden
     >
+      <path d="M11.9995 1.9314C12.4494 1.93151 12.8148 2.29678 12.8148 2.74666C12.8145 3.19632 12.4492 3.56087 11.9995 3.56098C10.1902 3.56099 8.52242 3.70673 7.17162 3.88109C5.43247 4.1056 4.10513 5.43294 3.88062 7.17209C3.70627 8.52283 3.56052 10.1908 3.56051 12C3.56054 13.8093 3.70625 15.4781 3.88062 16.8288C4.10549 18.5675 5.43278 19.8954 7.17162 20.1198C8.52238 20.2942 10.1903 20.439 11.9995 20.439C13.8089 20.439 15.4775 20.2942 16.8284 20.1198C18.567 19.8952 19.8946 18.5674 20.1194 16.8288C20.2937 15.4781 20.4385 13.8093 20.4385 12C20.4387 11.5503 20.8032 11.1859 21.2529 11.1857C21.7027 11.1858 22.068 11.5502 22.0681 12C22.0681 13.8936 21.9161 15.6331 21.7349 17.0366C21.4154 19.51 19.5095 21.416 17.0362 21.7354C15.6325 21.9166 13.8932 22.0686 11.9995 22.0686C10.1058 22.0686 8.36656 21.9166 6.96289 21.7354C4.48948 21.4161 2.58364 19.51 2.26414 17.0366C2.08297 15.6331 1.93189 13.8936 1.93186 12C1.93187 10.1063 2.08297 8.36699 2.26414 6.96336C2.58346 4.48977 4.4893 2.58393 6.96289 2.26461C8.36657 2.08342 10.1057 1.93141 11.9995 1.9314Z" />
       <path
-        fill="currentColor"
-        d="M380.043636 118.923636H173.149091a82.618182 82.618182 0 0 0-82.618182 82.850909v206.894546a82.618182 82.618182 0 0 0 82.618182 82.618182h206.894545a82.618182 82.618182 0 0 0 82.850909-82.618182V201.774545a82.850909 82.850909 0 0 0-82.850909-82.850909zm13.032728 289.745455a13.032727 13.032727 0 0 1-13.032728 12.8H173.149091a12.8 12.8 0 0 1-12.8-12.8V201.774545a13.032727 13.032727 0 0 1 12.8-13.032727h206.894545a13.032727 13.032727 0 0 1 13.032728 13.032727zM910.894545 250.414545l-137.30909-137.30909a77.730909 77.730909 0 0 0-109.614546 0l-137.076364 137.30909a77.498182 77.498182 0 0 0 0 109.614546l137.076364 137.076364a77.265455 77.265455 0 0 0 109.614546 0l137.30909-137.076364a77.498182 77.498182 0 0 0 0-109.614546zM861.090909 310.690909l-137.309091 137.076364a6.749091 6.749091 0 0 1-5.352727 2.327272 7.68 7.68 0 0 1-5.585455-2.327272l-137.076363-137.076364a7.68 7.68 0 0 1 0-10.938182L713.309091 162.909091a8.378182 8.378182 0 0 1 5.585454-2.094546 7.447273 7.447273 0 0 1 5.352728 2.094546l137.309091 137.309091a7.68 7.68 0 0 1-.465455 10.472727zM822.225455 561.105455h-206.894546a82.618182 82.618182 0 0 0-82.618182 82.850909v206.894545a82.618182 82.618182 0 0 0 82.618182 82.618182h206.894546a82.618182 82.618182 0 0 0 82.850909-82.618182v-206.894545a82.850909 82.850909 0 0 0-82.850909-82.850909zm13.032727 289.745454a13.032727 13.032727 0 0 1-13.032727 12.8h-206.894546a12.8 12.8 0 0 1-12.8-12.8v-206.894545a13.032727 13.032727 0 0 1 12.8-13.032728h206.894546a13.032727 13.032727 0 0 1 13.032727 13.032728zM380.043636 561.105455H173.149091a82.618182 82.618182 0 0 0-82.618182 82.850909v206.894545a82.618182 82.618182 0 0 0 82.618182 82.618182h206.894545a82.618182 82.618182 0 0 0 82.850909-82.618182v-206.894545a82.850909 82.850909 0 0 0-82.850909-82.850909zm13.032728 289.745454a13.032727 13.032727 0 0 1-13.032728 12.8H173.149091a12.8 12.8 0 0 1-12.8-12.8v-206.894545a13.032727 13.032727 0 0 1 12.8-13.032728h206.894545a13.032727 13.032727 0 0 1 13.032728 13.032728z"
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M16.1011 3.40373C17.3529 2.27275 19.2863 2.31078 20.4928 3.51699L20.607 3.6368C21.7011 4.84834 21.7005 6.69736 20.6061 7.90872L20.4938 8.0276L14.157 14.3634L14.0279 14.487C13.7632 14.728 13.4661 14.9311 13.1452 15.0898L12.9833 15.1646L10.1154 16.4198C8.56697 17.0974 6.99293 15.593 7.53198 14.0452L7.59095 13.8954L8.84519 11.0266C9.01288 10.6435 9.24184 10.2905 9.52286 9.98197L9.64735 9.85374L15.9832 3.51699L16.1011 3.40373ZM19.3406 4.66921C18.7316 4.06057 17.7445 4.06071 17.1354 4.66921L10.7996 11.006C10.6053 11.2003 10.4483 11.4291 10.3381 11.6808L9.08294 14.5487C9.04688 14.6313 9.05012 14.684 9.05767 14.7191C9.06736 14.7637 9.09391 14.8189 9.14284 14.8679C9.19192 14.9169 9.24701 14.9435 9.29167 14.9531C9.32682 14.9606 9.3794 14.963 9.46202 14.9269L12.3299 13.6726C12.5816 13.5625 12.8105 13.4055 13.0048 13.2112L19.3416 6.87537C19.9502 6.26617 19.9496 5.27819 19.3406 4.66921Z"
       />
     </svg>
   );
 }
 
-/** Session row glyph (speech bubble outline + typing dots). */
+/** Session row glyph (speech bubble + typing dots), viewBox 24×24. */
 function SessionSidebarGlyph(props: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 1024 1024"
+      viewBox="0 0 24 24"
+      fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
       className={props.className}
       aria-hidden
     >
+      <path d="M7.25 9.75C7.94036 9.75 8.5 10.3096 8.5 11C8.5 11.6904 7.94036 12.25 7.25 12.25C6.55964 12.25 6 11.6904 6 11C6 10.3096 6.55964 9.75 7.25 9.75Z" />
+      <path d="M12 9.75C12.6904 9.75 13.25 10.3096 13.25 11C13.25 11.6904 12.6904 12.25 12 12.25C11.3096 12.25 10.75 11.6904 10.75 11C10.75 10.3096 11.3096 9.75 12 9.75Z" />
+      <path d="M16.75 9.75C17.4404 9.75 18 10.3096 18 11C18 11.6904 17.4404 12.25 16.75 12.25C16.0596 12.25 15.5 11.6904 15.5 11C15.5 10.3096 16.0596 9.75 16.75 9.75Z" />
       <path
-        fill="currentColor"
-        d="M509.83822222 942.64888889c-132.89244445 0-258.16177778-44.032-352.71111111-123.904C110.36444445 779.37777778 73.61422222 733.184 47.78666667 681.64266667c-27.07911111-54.04444445-40.73244445-111.38844445-40.73244445-170.66666667S20.70755555 394.24 47.78666667 340.19555555c25.82755555-51.54133333 62.57777778-97.73511111 109.34044444-137.10222222 94.54933333-79.872 219.81866667-123.904 352.71111111-123.904s258.16177778 44.032 352.71111111 123.904c46.76266667 39.48088889 83.51288889 85.67466667 109.34044445 137.10222222C998.96888889 394.24 1012.62222222 451.584 1012.62222222 510.86222222c0 80.09955555-25.37244445 157.58222222-73.61422222 225.16622223 8.30577778 23.43822222 26.73777778 62.00888889 48.128 99.89688888 8.41955555 15.01866667 7.96444445 33.33688889-1.25155555 47.78666667s-25.6 22.75555555-42.66666667 21.504c-17.74933333-1.25155555-106.60977778-7.96444445-186.02666667-18.31822222-75.09333333 36.52266667-160.31288889 55.75111111-247.35288889 55.75111111zM743.424 885.19111111h0.22755555-0.22755555zM509.83822222 170.21155555c-227.10044445 0-411.87555555 152.80355555-411.87555555 340.76444445 0 187.84711111 184.77511111 340.76444445 411.87555555 340.76444445 77.48266667 0 152.91733333-17.97688889 218.22577778-51.88266667 8.64711111-4.43733333 18.31822222-6.144 27.87555555-4.77866667 37.54666667 5.12 79.18933333 9.55733333 114.46044445 12.85688889-12.17422222-26.624-22.86933333-54.272-25.82755555-74.63822222-1.82044445-12.62933333 1.70666667-25.6 9.6711111-35.61244445 44.14577778-55.52355555 67.47022222-120.03555555 67.47022223-186.70933333 0-187.96088889-184.77511111-340.76444445-411.87555556-340.76444445z m439.97866667 644.32355556c0.11377778 0 0.11377778 0 0 0 0.11377778 0 0.11377778 0 0 0z"
-      />
-      <path
-        fill="currentColor"
-        d="M274.77333333 516.55111111m-61.78133333 0a61.78133333 61.78133333 0 1 0 123.56266667 0 61.78133333 61.78133333 0 1 0-123.56266667 0Z"
-      />
-      <path
-        fill="currentColor"
-        d="M510.06577778 516.55111111m-61.78133333 0a61.78133333 61.78133333 0 1 0 123.56266666 0 61.78133333 61.78133333 0 1 0-123.56266666 0Z"
-      />
-      <path
-        fill="currentColor"
-        d="M745.472 516.55111111m-61.78133333 0a61.78133333 61.78133333 0 1 0 123.56266666 0 61.78133333 61.78133333 0 1 0-123.56266666 0Z"
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M12 1.73633C14.1692 1.73633 16.1557 1.89992 17.7285 2.08887C19.9229 2.35249 21.6506 3.98709 21.958 6.17578C22.1467 7.51917 22.2998 9.15932 22.2998 10.9365C22.2998 12.7137 22.1467 14.3539 21.958 15.6973C21.6505 17.8858 19.9228 19.5206 17.7285 19.7842C16.1557 19.9731 14.1692 20.1367 12 20.1367C11.9668 20.1367 11.9335 20.1358 11.9004 20.1357L6.76465 23.0117C6.04212 23.4163 5.16911 22.8178 5.28613 21.998L5.61914 19.6621C3.74132 19.1829 2.31832 17.6639 2.04199 15.6973C1.8533 14.3539 1.70021 12.7137 1.7002 10.9365C1.7002 9.15932 1.8533 7.51917 2.04199 6.17578C2.34942 3.98709 4.07709 2.35249 6.27148 2.08887C7.84432 1.89992 9.83077 1.73633 12 1.73633ZM12 3.33594C9.90868 3.33594 7.98719 3.4945 6.46191 3.67773C4.96094 3.85824 3.82865 4.95557 3.62598 6.39844C3.46792 7.52375 3.33698 8.86201 3.30664 10.3096L3.2998 10.9365C3.29982 12.6242 3.44534 14.1885 3.62598 15.4746C3.80878 16.7756 4.7432 17.7868 6.01465 18.1113L7.40527 18.4668L7.04102 21.0215L11.1182 18.7393L11.4844 18.5352L11.9043 18.5361C11.9321 18.5362 11.9586 18.5359 11.9727 18.5361C11.9902 18.5364 11.9962 18.5371 12 18.5371C14.0913 18.5371 16.0128 18.3785 17.5381 18.1953C19.0389 18.0148 20.1713 16.9175 20.374 15.4746C20.5321 14.3493 20.663 13.011 20.6934 11.5635L20.7002 10.9365C20.7002 9.24882 20.5547 7.68455 20.374 6.39844C20.1714 4.95557 19.0391 3.85824 17.5381 3.67773C16.2034 3.51739 14.5651 3.37646 12.7754 3.34375L12 3.33594Z"
       />
     </svg>
   );
@@ -513,12 +508,11 @@ export function WorkspaceSessionList(props: Props) {
         <div
           role="button"
           tabIndex={0}
-          className={`group flex min-h-8 w-full items-center justify-between rounded-xl px-3 py-1 text-left text-[13px] font-normal transition-colors ${
+          className={`group flex h-[36px] w-full items-center justify-between rounded-[10px] px-3 text-left text-[13px] font-normal transition-colors ${
             isSelected
-              ? "bg-gray-3 text-gray-12"
-              : "text-gray-10 hover:bg-gray-1/70 hover:text-gray-11"
+              ? "bg-white shadow-[0_1px_2px_rgba(15,23,42,0.06)] dark:bg-gray-3 dark:shadow-none"
+              : "hover:bg-gray-1/70"
           }`}
-          style={{ marginLeft: `${Math.min(row.depth, 4) * 16}px` }}
           onPointerEnter={prefetchSession}
           onFocus={prefetchSession}
           onClick={openSession}
@@ -544,18 +538,29 @@ export function WorkspaceSessionList(props: Props) {
                 {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
               </button>
             ) : row.depth > 0 ? (
-              <span className="h-[1px] w-3 shrink-0 rounded-full bg-dls-border" />
+              <span className="w-5 shrink-0" aria-hidden />
             ) : null}
 
-            <div className="flex min-w-0 flex-1 items-center gap-0.5">
-              <SessionSidebarGlyph
-                className={`h-3.5 w-3.5 shrink-0 ${isSelected ? "text-gray-10" : "text-gray-9 group-hover:text-gray-10"}`}
-              />
+            <div className="flex min-w-0 flex-1 items-center gap-1">
+              <span
+                className={`flex size-5 shrink-0 items-center justify-center rounded-full bg-white ring-1 ring-black/[0.08] dark:bg-gray-2 dark:ring-white/12 ${
+                  isSelected ? "" : "group-hover:ring-black/[0.12] dark:group-hover:ring-white/18"
+                }`}
+                aria-hidden
+              >
+                <SessionSidebarGlyph className="size-3 shrink-0 text-[#00000059] dark:text-gray-11" />
+              </span>
 
-              <span className="flex h-1.5 w-1.5 shrink-0 items-center justify-center" aria-hidden>
+              <span
+                className={`flex h-1.5 shrink-0 items-center justify-center ${isSessionActive ? "w-1.5" : "w-0 overflow-hidden"}`}
+                aria-hidden
+              >
                 {isSessionActive ? <span className="h-1.5 w-1.5 rounded-full bg-amber-9" /> : null}
               </span>
-              <span className="block min-w-0 flex-1 truncate text-current" title={displayTitle}>
+              <span
+                className="block min-w-0 flex-1 truncate text-[#000000] dark:text-gray-12"
+                title={displayTitle}
+              >
                 {displayTitle}
               </span>
             </div>
@@ -567,7 +572,9 @@ export function WorkspaceSessionList(props: Props) {
               {canManageSession ? (
                 <button
                   type="button"
-                  className="flex h-6 w-6 items-center justify-center rounded-md text-gray-9 transition-colors hover:bg-gray-3/80 hover:text-gray-11"
+                  className={`flex h-6 w-6 items-center justify-center rounded-md text-gray-9 transition-[opacity,colors] duration-150 hover:bg-gray-3/80 hover:text-gray-11 ${
+                    sessionMenuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                  }`}
                   aria-label={t("workspace_list.session_actions")}
                   onClick={(event) => {
                     event.preventDefault();
@@ -671,7 +678,7 @@ export function WorkspaceSessionList(props: Props) {
         </div>
         <button
           type="button"
-          className="mt-[17px] flex w-full items-center justify-between gap-2 rounded-[12px] border border-blue-6/70 bg-blue-2 px-3.5 py-2 text-left text-[12px] font-medium leading-none text-blue-11 transition-colors hover:border-blue-7 hover:bg-blue-3 dark:border-blue-7/55 dark:bg-blue-a3/25 dark:text-blue-11 dark:hover:bg-blue-a4/35"
+          className="mt-[17px] flex h-[36px] w-full items-center justify-between gap-2 rounded-[12px] border border-blue-6/70 bg-blue-2 px-3.5 text-left text-[12px] font-medium leading-none text-blue-11 transition-colors hover:border-blue-7 hover:bg-blue-3 dark:border-blue-7/55 dark:bg-blue-a3/25 dark:text-blue-11 dark:hover:bg-blue-a4/35"
           onClick={props.onOpenCreateWorkspace}
         >
           <span className="flex min-w-0 flex-1 items-center gap-2">
@@ -806,10 +813,10 @@ export function WorkspaceSessionList(props: Props) {
                       toggleWorkspaceExpanded(workspace.id);
                     }}
                   >
-                    <div className="flex min-w-0 flex-1 items-center gap-3 py-0 text-left">
+                    <div className="flex min-w-0 flex-1 items-center py-0 text-left">
                       <div
                         draggable={canReorder}
-                        className={`flex h-5 w-5 shrink-0 items-center justify-center text-[#3e3e3e] ${
+                        className={`min-w-0 flex-1 ${
                           canReorder ? "cursor-grab active:cursor-grabbing" : ""
                         }`}
                         title={canReorder ? t("workspace_list.drag_reorder") : undefined}
@@ -828,10 +835,7 @@ export function WorkspaceSessionList(props: Props) {
                           setDropTargetWorkspaceIndex(null);
                         }}
                       >
-                        <WorkspaceSidebarGlyph className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="min-w-0 truncate text-[14px] font-normal text-dls-text">
+                        <div className="min-w-0 truncate text-[12px] font-normal text-[#00000059] dark:text-gray-11">
                           {workspaceLabel(workspace)}
                         </div>
                         {statusLabel ? (
@@ -864,7 +868,7 @@ export function WorkspaceSessionList(props: Props) {
                           disabled={props.newTaskDisabled}
                           aria-label={t("session.new_task")}
                         >
-                          <Plus size={14} />
+                          <WorkspaceAddSessionGlyph className="size-[14px] shrink-0" />
                         </button>
 
                         <button
@@ -965,7 +969,7 @@ export function WorkspaceSessionList(props: Props) {
 
                 {expandedWorkspaceIds.has(workspace.id) ? (
                   <div className="px-1 pb-1">
-                    <div className="relative flex flex-col gap-1 pl-2.5 before:absolute before:bottom-2 before:left-0 before:top-2 before:w-[2px] before:bg-gray-3 before:content-['']">
+                    <div className="flex flex-col gap-1 px-0.5">
                       {showRemoteConnectionIssue ? (
                         <RemoteConnectionIssueCard
                           message={connectionIssueMessage}
