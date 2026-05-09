@@ -15,6 +15,7 @@ safelist: [
         canvas: "var(--dls-canvas)",
         "surface-muted": "var(--dls-surface-muted)",
         sidebar: "var(--dls-sidebar)",
+        divider: "var(--dls-panel-divider)",
         border: "var(--dls-border)",
         accent: "var(--dls-accent)",
         text: "var(--dls-text-primary)",

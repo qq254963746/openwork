@@ -151,7 +151,7 @@ export function StatusBar(props: StatusBarProps) {
     <div
       className={
         sidebar
-          ? "border-t border-dls-border/80 bg-dls-sidebar"
+          ? "border-t border-dls-divider bg-dls-sidebar"
           : "border-t border-dls-border bg-dls-surface"
       }
     >

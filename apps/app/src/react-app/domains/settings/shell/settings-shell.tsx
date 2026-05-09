@@ -72,7 +72,7 @@ export function SettingsShell(props: SettingsShellProps) {
       <div className="flex min-h-0 flex-1 gap-0">
         {!overlayPanel ? (
           <aside
-            className="relative hidden min-h-0 shrink-0 flex-col overflow-hidden border-0 border-r border-dls-border bg-dls-sidebar lg:flex lg:flex-col"
+            className="relative hidden min-h-0 shrink-0 flex-col overflow-hidden border-0 border-r border-dls-divider bg-dls-sidebar lg:flex lg:flex-col"
             style={props.sidebarWidth ? { width: `${props.sidebarWidth}px`, minWidth: `${props.sidebarWidth}px` } : undefined}
           >
             {props.sidebarTopSlot ? <div className="shrink-0">{props.sidebarTopSlot}</div> : null}

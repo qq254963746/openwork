@@ -578,7 +578,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
 
   return (
     <aside
-      className="relative flex min-h-0 h-full shrink-0 flex-col border-l border-dls-border bg-dls-sidebar/60"
+      className="relative flex min-h-0 h-full shrink-0 flex-col border-l border-dls-divider bg-dls-sidebar/60"
       style={{ width: panelWidth, minWidth: MIN_WORKSPACE_PANEL_WIDTH, maxWidth: "100%" }}
     >
       <div
@@ -590,7 +590,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       />
       {markdownPreviewOpen ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar/60">
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-border bg-dls-surface/95 px-3 py-2.5">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
             <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
               {selectedFileTitle}
             </span>
@@ -629,7 +629,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
         </div>
       ) : webPreviewOpen ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar/60">
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-border bg-dls-surface/95 px-3 py-2.5">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
             <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
               {selectedFileTitle}
             </span>
@@ -674,7 +674,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
         </div>
       ) : codeDocumentPreviewOpen ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar/60">
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-border bg-dls-surface/95 px-3 py-2.5">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
             <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
               {selectedFileTitle}
             </span>
@@ -717,7 +717,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
         </div>
       ) : (
         <>
-          <div className="shrink-0 border-b border-dls-border px-3 py-2.5">
+          <div className="shrink-0 border-b border-dls-divider px-3 py-2.5">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-dls-secondary">
           {t("session.workspace_panel_context")}
         </div>
@@ -773,7 +773,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
 
       <div className="flex min-h-0 flex-1 flex-col">
         {/* Drag region must not wrap toolbar buttons (WKWebView hit-testing); mirror workspace-session-list. */}
-        <div className="shrink-0 border-b border-dls-border px-3 py-2">
+        <div className="shrink-0 border-b border-dls-divider px-3 py-2">
           <div
             className={`flex min-h-[28px] items-center gap-2 ${isDesktopRuntime() ? "cursor-default" : ""}`}
           >

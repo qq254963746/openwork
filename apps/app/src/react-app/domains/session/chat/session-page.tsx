@@ -376,7 +376,7 @@ export function SessionPage(props: SessionPageProps) {
           />
         ) : null}
         <aside
-          className={`min-h-0 shrink-0 overflow-hidden border-0 border-r border-dls-border bg-dls-sidebar ${
+          className={`min-h-0 shrink-0 overflow-hidden border-0 border-r border-dls-divider bg-dls-sidebar ${
             !leftWorkspaceSidebarVisible
               ? "hidden"
               : layoutLg
@@ -437,7 +437,7 @@ export function SessionPage(props: SessionPageProps) {
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-dls-surface">
           <header
-            className={`relative z-10 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-dls-border bg-dls-surface pr-1.5 md:pr-2 ${
+            className={`relative z-10 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-dls-divider bg-dls-surface pr-1.5 md:pr-2 ${
               macHeaderTrafficInset ? "pl-[76px]" : "pl-4 md:pl-6"
             } ${isDesktopRuntime() ? "select-none" : ""}`}
             {...(!mainHeaderDragPassThrough && isTauriRuntime()
