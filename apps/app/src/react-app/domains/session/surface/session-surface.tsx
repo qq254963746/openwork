@@ -493,6 +493,8 @@ export function SessionSurface(props: SessionSurfaceProps) {
   const workspacePanelRef = useRef<SessionWorkspacePanelHandle>(null);
   const pendingWorkspaceRelativePathRef = useRef<string | null>(null);
   const hydratedKeyRef = useRef<string | null>(null);
+  /** Wired after {@link useSessionScrollController} so {@link handleSend} can snap to latest without reordering hooks. */
+  const scrollToLatestAfterSendRef = useRef<(() => void) | null>(null);
   const attachmentsRef = useRef<ComposerAttachment[]>([]);
   attachmentsRef.current = attachments;
   const opencodeClient = useMemo(
@@ -762,6 +764,8 @@ export function SessionSurface(props: SessionSurfaceProps) {
   const handleSend = useCallback(async () => {
     const text = draft.trim();
     if (!text && attachments.length === 0) return;
+    // User explicitly sent a new turn — resume follow-latest so streaming deltas scroll into view.
+    scrollToLatestAfterSendRef.current?.();
     // Intentionally allow sending while the assistant is still streaming.
     // OpenCode accepts follow-up user turns mid-run and queues them; if the
     // backend can't accept the follow-up it'll surface an error via the
@@ -1006,6 +1010,9 @@ export function SessionSurface(props: SessionSurfaceProps) {
     containerRef: scrollRef,
     contentRef,
   });
+  scrollToLatestAfterSendRef.current = () => {
+    sessionScroll.jumpToLatest("auto");
+  };
 
   const todos = useSharedQueryState<TodoItem[]>(
     reactTodoKey(props.workspaceId, props.sessionId),
