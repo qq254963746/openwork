@@ -194,7 +194,7 @@ export function StatusBar(props: StatusBarProps) {
             <button
               ref={appLogsButtonRef}
               type="button"
-              className={`flex shrink-0 items-center justify-center rounded-md text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text ${
+              className={`flex shrink-0 items-center justify-center rounded-md text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12 ${
                 sidebar ? "h-7 w-7" : "h-8 w-8"
               }`}
               onClick={props.onOpenAppLogs}
@@ -208,7 +208,7 @@ export function StatusBar(props: StatusBarProps) {
             <button
               ref={settingsButtonRef}
               type="button"
-              className={`flex shrink-0 items-center justify-center rounded-md text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text ${
+              className={`flex shrink-0 items-center justify-center rounded-md text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12 ${
                 sidebar ? "h-7 w-7" : "h-8 w-8"
               }`}
               onClick={props.onOpenSettings}

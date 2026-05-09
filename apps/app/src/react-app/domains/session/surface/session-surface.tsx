@@ -52,6 +52,30 @@ import type { TodoItem } from "../../../../app/types";
 const EMPTY_TRANSCRIPT: UIMessage[] = [];
 const IDLE_STATUS: SessionStatus = { type: "idle" };
 const DEFAULT_COMPOSER_CONTROL_TEXT = "Help me outline the next OpenWork task.";
+const JUMP_TO_LATEST_BOX_SHADOW =
+  "0 2px 4px 0 rgba(0,0,0,0.03), 0 4px 10px 0 rgba(0,0,0,0.05), 0 4px 16px 0 rgba(0,0,0,0.05)";
+
+function JumpToLatestGlyph(props: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="currentColor"
+      stroke="currentColor"
+      className={`box-border inline-block size-6 p-[3px] text-[18px] leading-none ${props.className ?? ""}`.trim()}
+      style={{ fontSize: "18px" }}
+      aria-hidden
+    >
+      <path
+        d="M18.5651 13.9344C18.8775 14.2468 18.8775 14.7528 18.5651 15.0652L13.274 20.3562C12.5731 21.0571 11.4321 21.063 10.7272 20.3582L5.4342 15.0652C5.1219 14.7528 5.1219 14.2468 5.4342 13.9344C5.74659 13.622 6.25264 13.622 6.56506 13.9344L11.1998 18.5691L11.1998 2.9998C11.1998 2.55803 11.5579 2.2001 11.9996 2.2C12.4415 2.2 12.7994 2.55797 12.7994 2.9998L12.7994 18.5691L17.4342 13.9344C17.7466 13.622 18.2526 13.622 18.5651 13.9344Z"
+        fill="currentColor"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        vectorEffect="nonScalingStroke"
+      />
+    </svg>
+  );
+}
 
 type SessionError = {
   message: string;
@@ -603,6 +627,14 @@ export function SessionSurface(props: SessionSurfaceProps) {
       .some(messageHasVisibleAssistantOutput);
   }, [awaitingAssistantBaseline, renderedMessages]);
   const showAssistantWaitState = awaitingAssistantBaseline !== null && !assistantOutputAfterAwaitStart;
+  /** Full-height layout so the empty-session prompt + hint vertically center in the chat viewport. */
+  const showEmptyTranscriptWelcome =
+    renderedMessages.length === 0 &&
+    snapshot != null &&
+    snapshot.messages.length === 0 &&
+    !error &&
+    !showAssistantWaitState &&
+    !(showDelayedLoading && pendingSessionLoad);
   useReactRenderWatchdog("SessionSurface", {
     sessionId: props.sessionId,
     workspaceId: props.workspaceId,
@@ -1032,11 +1064,18 @@ export function SessionSurface(props: SessionSurfaceProps) {
             sessionScroll.markScrollGesture(event.currentTarget);
           }}
           onScroll={sessionScroll.handleScroll}
-          className="absolute inset-0 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-4 sm:px-5"
+          className={`absolute inset-0 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-4 sm:px-5${
+            showEmptyTranscriptWelcome ? " flex min-h-0 flex-col" : ""
+          }`}
         >
           {/* Chat column: tighter than the composer (800px) so messages
                keep a comfortable reading width and don't feel "too big". */}
-          <div ref={contentRef} className="mx-auto w-full max-w-[720px]">
+          <div
+            ref={contentRef}
+            className={`mx-auto w-full max-w-[720px]${
+              showEmptyTranscriptWelcome ? " flex min-h-0 flex-1 flex-col" : ""
+            }`}
+          >
             {showDelayedLoading && pendingSessionLoad ? (
               <div className="px-6 py-16">
                 <div className="mx-auto max-w-sm rounded-3xl border border-dls-border bg-dls-hover/60 px-8 py-10 text-center">
@@ -1072,12 +1111,15 @@ export function SessionSurface(props: SessionSurfaceProps) {
                 />
               ) : (
                 <div
-                  className="flex min-h-[min(50vh,560px)] flex-col items-center justify-center px-6 py-16"
+                  className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6 py-16"
                   role="status"
                   aria-live="polite"
                 >
                   <p className="text-center text-2xl font-medium leading-relaxed text-dls-text">
                     {t("session.empty_transcript_prompt")}
+                  </p>
+                  <p className="max-w-lg text-center text-[15px] leading-relaxed text-dls-secondary">
+                    {t("session.empty_transcript_hint")}
                   </p>
                 </div>
               )
@@ -1108,35 +1150,25 @@ export function SessionSurface(props: SessionSurfaceProps) {
         </div>
         {!sessionScroll.isAtBottom || sessionScroll.topClippedMessageId ? (
           <div className="pointer-events-none absolute bottom-2 left-1/2 z-30 flex -translate-x-1/2 justify-center">
-            <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-dls-border bg-dls-surface/95 p-1 shadow-[var(--dls-card-shadow)] backdrop-blur-md">
-              {sessionScroll.topClippedMessageId ? (
-                <button
-                  type="button"
-                  className="rounded-full px-3 py-1.5 text-xs text-dls-text transition-colors hover:bg-dls-hover"
-                  onClick={() => {
-                    sessionScroll.jumpToStartOfMessage("smooth");
-                  }}
-                >
-                  Jump to start
-                </button>
-              ) : null}
-              {!sessionScroll.isAtBottom ? (
-                <button
-                  type="button"
-                  className="rounded-full px-3 py-1.5 text-xs text-dls-text transition-colors hover:bg-dls-hover"
-                  onClick={() => {
-                    sessionScroll.jumpToLatest("smooth");
-                  }}
-                >
-                  Jump to latest
-                </button>
-              ) : null}
-            </div>
+            {!sessionScroll.isAtBottom ? (
+              <button
+                type="button"
+                className="pointer-events-auto flex size-9 shrink-0 items-center justify-center rounded-full bg-dls-surface text-dls-text transition-colors hover:bg-dls-hover"
+                style={{ boxShadow: JUMP_TO_LATEST_BOX_SHADOW }}
+                title={t("session.jump_to_latest")}
+                aria-label={t("session.jump_to_latest")}
+                onClick={() => {
+                  sessionScroll.jumpToLatest("smooth");
+                }}
+              >
+                <JumpToLatestGlyph />
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
 
-      <div ref={composerShellRef} className="shrink-0 border-t border-dls-border/70 px-0 pb-1 pt-3">
+      <div ref={composerShellRef} className="shrink-0 px-0 pb-1 pt-0">
         {props.activeQuestion && props.respondQuestion ? (
           <InlineQuestionPrompt
             active={{ id: props.activeQuestion.id, questions: props.activeQuestion.questions ?? [] }}

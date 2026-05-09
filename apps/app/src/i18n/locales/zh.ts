@@ -93,7 +93,7 @@ export default {
   "composer.no_commands": "未找到命令。",
   "composer.placeholder": "描述你的任务…",
   "composer.remote_worker_paste_warning": "这是远程工作区。沙箱也是远程的。要共享文件，请上传到侧边栏的共享文件夹。",
-  "composer.run_task": "运行任务",
+  "composer.run_task": "执行",
   "composer.skill_source": "Skill",
   "composer.stop": "停止",
   "composer.tools_label": "命令、技能和MCP",
@@ -763,6 +763,9 @@ export default {
   "session.default_agent": "默认智能体",
   "session.default_title": "新建会话",
   "session.empty_transcript_prompt": "有什么我能帮你的吗？",
+  "session.empty_transcript_hint":
+    "OpenWork 帮你连接本地或远程智能体：在工作区里对话与执行任务、使用技能与工具读写代码与文件，管理工作区与会话。",
+  "session.jump_to_latest": "跳到最新",
   "session.delete": "删除",
   "session.delete_named_session_message": "这将永久删除「{title}」及其消息。",
   "session.delete_session_generic": "这将永久删除所选会话及其消息。",

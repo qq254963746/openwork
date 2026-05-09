@@ -40,6 +40,28 @@ const SESSION_MAIN_HEADER_DRAG_CHROME_STYLE: CSSProperties = {
   WebkitUserSelect: "none",
 };
 
+/** Session glyph for main header (speech bubble + dots; matches sidebar session row; viewBox 24×24). */
+function SessionTitleGlyph(props: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+      className={props.className}
+      aria-hidden
+    >
+      <path d="M7.25 9.75C7.94036 9.75 8.5 10.3096 8.5 11C8.5 11.6904 7.94036 12.25 7.25 12.25C6.55964 12.25 6 11.6904 6 11C6 10.3096 6.55964 9.75 7.25 9.75Z" />
+      <path d="M12 9.75C12.6904 9.75 13.25 10.3096 13.25 11C13.25 11.6904 12.6904 12.25 12 12.25C11.3096 12.25 10.75 11.6904 10.75 11C10.75 10.3096 11.3096 9.75 12 9.75Z" />
+      <path d="M16.75 9.75C17.4404 9.75 18 10.3096 18 11C18 11.6904 17.4404 12.25 16.75 12.25C16.0596 12.25 15.5 11.6904 15.5 11C15.5 10.3096 16.0596 9.75 16.75 9.75Z" />
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M12 1.73633C14.1692 1.73633 16.1557 1.89992 17.7285 2.08887C19.9229 2.35249 21.6506 3.98709 21.958 6.17578C22.1467 7.51917 22.2998 9.15932 22.2998 10.9365C22.2998 12.7137 22.1467 14.3539 21.958 15.6973C21.6505 17.8858 19.9228 19.5206 17.7285 19.7842C16.1557 19.9731 14.1692 20.1367 12 20.1367C11.9668 20.1367 11.9335 20.1358 11.9004 20.1357L6.76465 23.0117C6.04212 23.4163 5.16911 22.8178 5.28613 21.998L5.61914 19.6621C3.74132 19.1829 2.31832 17.6639 2.04199 15.6973C1.8533 14.3539 1.70021 12.7137 1.7002 10.9365C1.7002 9.15932 1.8533 7.51917 2.04199 6.17578C2.34942 3.98709 4.07709 2.35249 6.27148 2.08887C7.84432 1.89992 9.83077 1.73633 12 1.73633ZM12 3.33594C9.90868 3.33594 7.98719 3.4945 6.46191 3.67773C4.96094 3.85824 3.82865 4.95557 3.62598 6.39844C3.46792 7.52375 3.33698 8.86201 3.30664 10.3096L3.2998 10.9365C3.29982 12.6242 3.44534 14.1885 3.62598 15.4746C3.80878 16.7756 4.7432 17.7868 6.01465 18.1113L7.40527 18.4668L7.04102 21.0215L11.1182 18.7393L11.4844 18.5352L11.9043 18.5361C11.9321 18.5362 11.9586 18.5359 11.9727 18.5361C11.9902 18.5364 11.9962 18.5371 12 18.5371C14.0913 18.5371 16.0128 18.3785 17.5381 18.1953C19.0389 18.0148 20.1713 16.9175 20.374 15.4746C20.5321 14.3493 20.663 13.011 20.6934 11.5635L20.7002 10.9365C20.7002 9.24882 20.5547 7.68455 20.374 6.39844C20.1714 4.95557 19.0391 3.85824 17.5381 3.67773C16.2034 3.51739 14.5651 3.37646 12.7754 3.34375L12 3.33594Z"
+      />
+    </svg>
+  );
+}
+
 /** Full-window-drag hits fail on nested title text in WKWebView (incl. release); use an underlay + pointer-events pass-through. */
 function sessionMainHeaderUsesDragPassThrough(): boolean {
   return isTauriRuntime() || (isElectronRuntime() && isMacPlatform());
@@ -486,7 +508,7 @@ export function SessionPage(props: SessionPageProps) {
                 >
                   <button
                     type="button"
-                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                    className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12"
                     onClick={expandWorkspaceSidebar}
                     title={t("session.sidebar_expand")}
                     aria-label={t("session.sidebar_expand")}
@@ -496,13 +518,16 @@ export function SessionPage(props: SessionPageProps) {
                 </div>
               ) : null}
               <div className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1">
-                <h1
-                  className={`max-w-full min-w-0 truncate text-[15px] font-semibold text-dls-text ${isDesktopRuntime() ? "cursor-default" : ""}`}
-                >
-                  {showWorkspaceSetupEmptyState
-                    ? t("session.create_or_connect_workspace")
-                    : selectedSessionTitle || t("session.default_title")}
-                </h1>
+                <div className="flex min-w-0 max-w-full items-center gap-2">
+                  <SessionTitleGlyph className="h-[18px] w-[18px] shrink-0 text-dls-text opacity-90" />
+                  <h1
+                    className={`max-w-full min-w-0 truncate text-[15px] font-semibold text-dls-text ${isDesktopRuntime() ? "cursor-default" : ""}`}
+                  >
+                    {showWorkspaceSetupEmptyState
+                      ? t("session.create_or_connect_workspace")
+                      : selectedSessionTitle || t("session.default_title")}
+                  </h1>
+                </div>
                 <span
                   className={`hidden max-w-full min-w-0 truncate text-[13px] text-dls-secondary lg:inline ${isDesktopRuntime() ? "cursor-default" : ""}`}
                 >
@@ -538,7 +563,7 @@ export function SessionPage(props: SessionPageProps) {
               <div className={mainHeaderDragPassThrough ? "pointer-events-auto" : undefined}>
                 <button
                   type="button"
-                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                  className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12"
                   onClick={toggleWorkspaceSidePanel}
                   title={
                     workspaceSidePanelOpen

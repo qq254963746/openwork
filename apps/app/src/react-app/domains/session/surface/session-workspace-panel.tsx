@@ -237,9 +237,11 @@ function workspacePanelFileIcon(filename: string): { Icon: LucideIcon; className
   }
 }
 
-function WorkspacePanelFileGlyph(props: { filename: string }) {
-  const { Icon, className } = workspacePanelFileIcon(props.filename);
-  return <Icon size={14} className={className} aria-hidden />;
+function WorkspacePanelFileGlyph(props: { filename: string; size?: number; className?: string }) {
+  const { Icon, className: tintClass } = workspacePanelFileIcon(props.filename);
+  return (
+    <Icon size={props.size ?? 14} className={props.className ?? tintClass} aria-hidden />
+  );
 }
 
 /** Matches server `isSupportedWorkspaceTextFilePath` — UTF-8 workspace file previews. */
@@ -760,13 +762,20 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       {markdownPreviewOpen ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar/60">
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
-            <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
-              {selectedFileTitle}
-            </span>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <WorkspacePanelFileGlyph
+                filename={selectedFile ?? ""}
+                size={16}
+                className="shrink-0 text-[#000000]"
+              />
+              <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
+                {selectedFileTitle}
+              </span>
+            </div>
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => void previewQuery.refetch()}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
@@ -775,7 +784,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
               </button>
               <button
                 type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => setSelectedFile(null)}
                 aria-label={t("session.workspace_panel_close_preview")}
                 title={t("session.workspace_panel_close_preview")}
@@ -799,13 +808,20 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       ) : webPreviewOpen ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar/60">
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
-            <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
-              {selectedFileTitle}
-            </span>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <WorkspacePanelFileGlyph
+                filename={selectedFile ?? ""}
+                size={16}
+                className="shrink-0 text-[#000000]"
+              />
+              <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
+                {selectedFileTitle}
+              </span>
+            </div>
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => void previewQuery.refetch()}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
@@ -814,7 +830,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
               </button>
               <button
                 type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => setSelectedFile(null)}
                 aria-label={t("session.workspace_panel_close_preview")}
                 title={t("session.workspace_panel_close_preview")}
@@ -844,13 +860,20 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       ) : codeDocumentPreviewOpen ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar/60">
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
-            <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
-              {selectedFileTitle}
-            </span>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <WorkspacePanelFileGlyph
+                filename={selectedFile ?? ""}
+                size={16}
+                className="shrink-0 text-[#000000]"
+              />
+              <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
+                {selectedFileTitle}
+              </span>
+            </div>
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => void previewQuery.refetch()}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
@@ -859,7 +882,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
               </button>
               <button
                 type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => setSelectedFile(null)}
                 aria-label={t("session.workspace_panel_close_preview")}
                 title={t("session.workspace_panel_close_preview")}
@@ -887,7 +910,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
       ) : (
         <>
           <div className="shrink-0 border-b border-dls-divider px-3 py-2.5">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-dls-secondary">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-[#000000]">
           {t("session.workspace_panel_context")}
         </div>
         <div className="mt-2 space-y-2 text-[12px] text-dls-text">
@@ -947,7 +970,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
             className={`flex min-h-[28px] items-center gap-2 ${isDesktopRuntime() ? "cursor-default" : ""}`}
           >
             <div
-              className={`flex min-w-0 flex-1 items-center select-none text-[11px] font-semibold uppercase tracking-wide text-dls-secondary ${isDesktopRuntime() ? "cursor-default" : ""}`}
+              className={`flex min-w-0 flex-1 items-center select-none text-[11px] font-semibold uppercase tracking-wide text-[#000000] ${isDesktopRuntime() ? "cursor-default" : ""}`}
               {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
               style={{
                 ...WORKSPACE_PANEL_HEADER_DRAG_STYLE,
@@ -969,7 +992,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
             >
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-md p-1 text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text disabled:pointer-events-none disabled:opacity-40"
+                className="inline-flex items-center justify-center rounded-md p-1 text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] disabled:pointer-events-none disabled:opacity-40"
                 onClick={openCurrentFolderOnDesktop}
                 disabled={!canOpenCurrentFolderOnDesktop}
                 title={openFolderTitle}
@@ -979,7 +1002,7 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
               </button>
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-md p-1 text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text disabled:pointer-events-none disabled:opacity-40"
+                className="inline-flex items-center justify-center rounded-md p-1 text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] disabled:pointer-events-none disabled:opacity-40"
                 onClick={refreshWorkspaceFiles}
                 disabled={!props.workspaceId || listQuery.isFetching}
                 title={t("session.workspace_panel_refresh")}
@@ -1066,9 +1089,9 @@ export function SessionWorkspacePanel(props: SessionWorkspacePanelProps) {
                     onClick={() => handleEntryClick(entry.name, entry.kind)}
                   >
                     {entry.kind === "directory" ? (
-                      <Folder size={14} className="shrink-0 text-amber-11" aria-hidden />
+                      <Folder size={14} className="shrink-0 text-[#000000]" aria-hidden />
                     ) : (
-                      <WorkspacePanelFileGlyph filename={entry.name} />
+                      <WorkspacePanelFileGlyph filename={entry.name} className="shrink-0 text-[#000000]" />
                     )}
                     <span className="min-w-0 flex-1 truncate font-mono">{entry.name}</span>
                   </button>

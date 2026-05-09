@@ -92,7 +92,7 @@ export default {
   "composer.no_commands": "No commands found.",
   "composer.placeholder": "Describe your task...",
   "composer.remote_worker_paste_warning": "This is a remote worker. Sandboxes are remote too. To share files with it, upload them to the Shared folder in the sidebar.",
-  "composer.run_task": "Run task",
+  "composer.run_task": "Run",
   "composer.skill_source": "Skill",
   "composer.stop": "Stop",
   "composer.tools_label": "Commands, skills, and MCPs",
@@ -811,6 +811,9 @@ export default {
   "session.default_model": "Pick a model",
   "session.default_title": "New session",
   "session.empty_transcript_prompt": "What can I help you with?",
+  "session.empty_transcript_hint":
+    "OpenWork connects you to agents on your device or remotely—chat and run tasks in your workspace, use skills and tools to work with code and files, manage workspaces and sessions.",
+  "session.jump_to_latest": "Jump to latest",
   "session.delete": "Delete",
   "session.delete_named_session_message": "This will permanently delete \"{title}\" and its messages.",
   "session.delete_session_generic": "This will permanently delete the selected session and its messages.",

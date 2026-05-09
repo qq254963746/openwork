@@ -66,7 +66,6 @@ type ComposerProps = {
   isSandboxWorkspace: boolean;
   onUploadInboxFiles?: ((files: File[]) => void | Promise<unknown>) | null;
   draftScopeKey?: string;
-  compactTopSpacing?: boolean;
 };
 
 const FLUSH_PROMPT_EVENT = "openwork:flushPromptDraft";
@@ -79,6 +78,9 @@ const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/web
 const ACCEPTED_FILE_TYPES = [...ACCEPTED_IMAGE_TYPES, "application/pdf"];
 const FILE_URL_RE = /^file:\/\//i;
 const HTTP_URL_RE = /^https?:\/\//i;
+
+const COMPOSER_PANEL_BOX_SHADOW =
+  "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.02) 0px 2px 4px 0px, rgba(0, 0, 0, 0.04) 0px 4px 16px 0px, rgba(0, 0, 0, 0.08) 0px 8px 32px 0px";
 
 /**
  * Extract external file/URL drops from a clipboard. Only used when the user
@@ -829,9 +831,7 @@ export function ReactSessionComposer(props: ComposerProps) {
   }));
 
   const panelRoundedClass =
-    mentionOpen || slashOpen
-      ? "rounded-t-[18px] border-t-transparent"
-      : "shadow-[var(--dls-shell-shadow)]";
+    mentionOpen || slashOpen ? "rounded-t-[18px] border-t-transparent" : "";
 
   const renderSlashMenu = () => {
     if (!slashOpen) return null;
@@ -937,7 +937,7 @@ export function ReactSessionComposer(props: ComposerProps) {
   return (
     <div
       ref={rootRef}
-      className={`sticky bottom-0 ${toolMenuOpen ? "z-50" : "z-20"} bg-gradient-to-t from-dls-surface via-dls-surface/95 to-transparent px-4 md:px-8 pb-3 ${props.compactTopSpacing ? "pt-0" : "pt-3"}`}
+      className={`sticky bottom-0 ${toolMenuOpen ? "z-50" : "z-20"} bg-gradient-to-t from-dls-surface via-dls-surface/95 to-transparent px-4 md:px-8 pb-3 pt-0`}
       style={{ contain: "layout style" }}
       onKeyDownCapture={handleKeyDownCapture}
       onCompositionStart={() => {
@@ -950,7 +950,8 @@ export function ReactSessionComposer(props: ComposerProps) {
       <div className="max-w-[800px] mx-auto">
         {/* Main composer panel */}
         <div
-          className={`relative overflow-visible rounded-[24px] border border-dls-border bg-dls-surface transition-all ${panelRoundedClass}`}
+          className={`relative overflow-visible rounded-[24px] border border-solid border-[rgba(0,0,0,0.12)] bg-dls-surface transition-all ${panelRoundedClass}`}
+          style={{ boxShadow: COMPOSER_PANEL_BOX_SHADOW }}
         >
           <ReactComposerNotice notice={props.notice} />
 
@@ -1099,7 +1100,7 @@ export function ReactSessionComposer(props: ComposerProps) {
                 />
                 <button
                   type="button"
-                  className={`inline-flex h-9 max-h-9 w-9 items-center justify-center rounded-md text-gray-10 transition-colors hover:bg-gray-3 ${
+                  className={`inline-flex h-9 max-h-9 w-9 items-center justify-center rounded-md text-[#000000] transition-colors hover:bg-gray-3 dark:text-gray-12 ${
                     !props.attachmentsEnabled ? "cursor-not-allowed opacity-60" : ""
                   }`}
                   onClick={() => {
@@ -1114,7 +1115,7 @@ export function ReactSessionComposer(props: ComposerProps) {
                 <div ref={toolMenuRef} className="relative">
                   <button
                     type="button"
-                    className={`inline-flex h-9 max-h-9 w-9 items-center justify-center rounded-md transition-colors ${toolMenuOpen ? "bg-gray-3 text-gray-12" : "text-gray-10 hover:bg-gray-3"}`}
+                    className={`inline-flex h-9 max-h-9 w-9 items-center justify-center rounded-md transition-colors ${toolMenuOpen ? "bg-gray-3 text-[#000000] dark:text-gray-12" : "text-[#000000] hover:bg-gray-3 dark:text-gray-12"}`}
                     onClick={() => {
                       setMentionOpen(false);
                       setMentionItems([]);
@@ -1307,7 +1308,7 @@ export function ReactSessionComposer(props: ComposerProps) {
                     className={`inline-flex h-9 max-h-9 items-center gap-2 rounded-full px-4 text-[13px] font-medium transition-colors ${
                       !canSend || props.disabled
                         ? "bg-gray-4 text-gray-10"
-                        : "bg-[var(--dls-accent)] text-white hover:bg-[var(--dls-accent-hover)]"
+                        : "bg-[#000000] text-white hover:bg-gray-12"
                     }`}
                     title={t("composer.run_task")}
                   >
@@ -1322,11 +1323,11 @@ export function ReactSessionComposer(props: ComposerProps) {
 
         {/* Below-panel control strip: agent + model + behavior variant */}
         <div className="mt-1 flex items-center justify-between px-1">
-          <div className="flex flex-wrap items-center gap-1.5 text-gray-10 sm:gap-2.5">
+          <div className="flex flex-wrap items-center gap-1.5 text-[#000000] dark:text-gray-12 sm:gap-2.5">
             <div ref={agentMenuRef} className="relative">
               <button
                 type="button"
-                className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-gray-10 transition-colors hover:bg-gray-3 hover:text-gray-12"
+                className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-[#000000] transition-colors hover:bg-gray-3 hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12"
                 onClick={() => setAgentMenuOpen((value) => !value)}
                 disabled={props.busy}
                 aria-expanded={agentMenuOpen}
@@ -1389,7 +1390,7 @@ export function ReactSessionComposer(props: ComposerProps) {
 
             <button
               type="button"
-              className="flex min-w-0 items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-gray-10 transition-colors hover:bg-gray-3 hover:text-gray-12"
+              className="flex min-w-0 items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-[#000000] transition-colors hover:bg-gray-3 hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12"
               onClick={props.onModelClick}
               disabled={props.busy}
             >
@@ -1401,7 +1402,7 @@ export function ReactSessionComposer(props: ComposerProps) {
               <div ref={variantMenuRef} className="relative">
                 <button
                   type="button"
-                  className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-gray-10 transition-colors hover:bg-gray-3 hover:text-gray-12"
+                  className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-[#000000] transition-colors hover:bg-gray-3 hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12"
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();

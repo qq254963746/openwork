@@ -654,7 +654,7 @@ export function WorkspaceSessionList(props: Props) {
           >
             <button
               type="button"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-10 transition-colors hover:bg-gray-3/70 hover:text-gray-12"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[#000000] transition-colors hover:bg-gray-3/70 hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12"
               onClick={props.onCollapseWorkspaceSidebar}
               title={t("session.sidebar_collapse")}
               aria-label={t("session.sidebar_collapse")}
