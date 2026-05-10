@@ -1,14 +1,5 @@
 /** @jsxImportSource react */
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { UIMessage } from "ai";
@@ -23,8 +14,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { t } from "../../../../i18n";
 import { openDesktopPath, workspaceAddAuthorizedRoot } from "../../../../app/lib/desktop";
-import type { AiWorkServerClient } from "../../../../app/lib/aiwork-server";
-import { AiWorkServerError } from "../../../../app/lib/aiwork-server";
+import type { OpenworkServerClient } from "../../../../app/lib/openwork-server";
+import { OpenworkServerError } from "../../../../app/lib/openwork-server";
 import type { ComposerAttachment } from "../../../../app/types";
 import {
   isDesktopRuntime,
@@ -36,7 +27,6 @@ import {
 import { MarkdownBlock } from "./markdown";
 import { WorkspaceCodePreview } from "./workspace-code-preview";
 import { WorkspacePanelFileGlyph } from "./workspace-panel-file-glyph";
-import { buildWebPreviewSrcDoc } from "./web-preview-srcdoc";
 
 /** Inline styles so drag chrome avoids text I‑beam / selection in Tauri & Electron WebViews. */
 const WORKSPACE_PANEL_HEADER_DRAG_STYLE: CSSProperties = {
@@ -45,33 +35,11 @@ const WORKSPACE_PANEL_HEADER_DRAG_STYLE: CSSProperties = {
   WebkitUserSelect: "none",
 };
 
-const WORKSPACE_PANEL_WIDTH_KEY = "aiwork.session.workspacePanelWidth.v1";
+const WORKSPACE_PANEL_WIDTH_KEY = "openwork.session.workspacePanelWidth.v1";
 const DEFAULT_WORKSPACE_PANEL_WIDTH = 300;
 const MIN_WORKSPACE_PANEL_WIDTH = 240;
-/** Hide file list “modified” column when the panel is narrower than this (px). */
-const WORKSPACE_FILE_LIST_MTIME_VISIBLE_MIN_WIDTH = 280;
 // Keep the chat transcript usable when the right panel grows.
-const MIN_CHAT_COLUMN_WIDTH = 440;
-
-/** Matches Tailwind `animate-spin` default (one full rotation per second). */
-const REFRESH_ICON_SPIN_MIN_MS = 1000;
-
-/** Upper bound for the workspace panel so the chat column can keep `MIN_CHAT_COLUMN_WIDTH` (see session-surface). */
-function maxWorkspacePanelWidthForContainer(containerWidthPx: number): number {
-  return Math.max(MIN_WORKSPACE_PANEL_WIDTH, containerWidthPx - MIN_CHAT_COLUMN_WIDTH);
-}
-
-/** Absolute date + time (includes seconds) for file list mtime; follows browser locale. */
-function formatWorkspaceFileListMtime(timestampMs: number): string {
-  return new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).format(new Date(timestampMs));
-}
+const MIN_CHAT_COLUMN_WIDTH = 420;
 
 function readStoredWorkspacePanelWidth(): number {
   if (typeof window === "undefined") return DEFAULT_WORKSPACE_PANEL_WIDTH;
@@ -80,7 +48,7 @@ function readStoredWorkspacePanelWidth(): number {
     const n = Number(raw);
     if (!Number.isFinite(n)) return DEFAULT_WORKSPACE_PANEL_WIDTH;
     const viewportWidth = document.documentElement?.clientWidth || window.innerWidth;
-    const maxAllowed = maxWorkspacePanelWidthForContainer(viewportWidth);
+    const maxAllowed = Math.max(MIN_WORKSPACE_PANEL_WIDTH, viewportWidth - MIN_CHAT_COLUMN_WIDTH);
     return Math.min(maxAllowed, Math.max(MIN_WORKSPACE_PANEL_WIDTH, n));
   } catch {
     return DEFAULT_WORKSPACE_PANEL_WIDTH;
@@ -103,66 +71,6 @@ function joinRelativePath(dir: string, name: string): string {
   const d = dir.trim();
   if (!d) return name;
   return `${d.replace(/\/+$/, "")}/${name}`;
-}
-
-/**
- * Mirror server `normalizeWorkspaceRelativePath` shaping so tool/transcript paths (`workspace/…`, `/…`,
- * `./…`, duplicate slashes, trailing slashes) match paths produced by the file list.
- */
-function normalizeWorkspaceRelativeSelectionPath(raw: string): string {
-  let s = String(raw ?? "").trim().replace(/\\/g, "/");
-  if (!s) return "";
-  s = s.replace(/^\/+/, "");
-  s = s.replace(/^\.\//, "");
-  s = s.replace(/^workspace\//i, "");
-  s = s.replace(/^\/+/, "");
-  const parts = s.split("/").filter(Boolean);
-  return parts.join("/");
-}
-
-/** Strip `file://` and Windows UNC quirks so two paths can be compared. */
-function toComparableFsPath(p: string): string {
-  let s = p.trim().replace(/\\/g, "/");
-  if (!s) return "";
-  if (/^file:\/\//i.test(s)) {
-    try {
-      const u = new URL(s);
-      s = decodeURIComponent(u.pathname);
-      if (/^\/[a-zA-Z]:/.test(s)) s = s.slice(1);
-    } catch {
-      s = s.replace(/^file:\/\//i, "");
-    }
-  }
-  return s.replace(/\/+$/, "");
-}
-
-/**
- * Tool/transcript paths are sometimes absolute host paths inside the workspace root.
- * Without this, stripping "/" turns `/Users/…/ws/a.ts` into `Users/…/a.ts`, which breaks previews.
- */
-function tryRelativePathUnderWorkspace(raw: string, workspaceRoot: string): string {
-  const trimmed = String(raw ?? "").trim();
-  if (!trimmed) return "";
-
-  const rootRaw = workspaceRoot.trim();
-  if (!rootRaw) return normalizeWorkspaceRelativeSelectionPath(trimmed);
-
-  let candidate = trimmed.replace(/\\/g, "/");
-  let rootComparable = toComparableFsPath(rootRaw);
-
-  if (/^file:\/\//i.test(candidate)) {
-    candidate = toComparableFsPath(candidate);
-  }
-
-  const candLower = candidate.toLowerCase();
-  const rootLower = rootComparable.toLowerCase();
-
-  if (rootLower && (candLower === rootLower || candLower.startsWith(`${rootLower}/`))) {
-    const rest = candidate.slice(rootComparable.length).replace(/^\/+/, "");
-    return normalizeWorkspaceRelativeSelectionPath(rest);
-  }
-
-  return normalizeWorkspaceRelativeSelectionPath(trimmed);
 }
 
 /** Matches server `isSupportedWorkspaceTextFilePath` — UTF-8 workspace file previews. */
@@ -253,6 +161,93 @@ function isWebPreviewDocumentPath(relativePosix: string): boolean {
   return [".svg", ".html", ".htm", ".htmlx"].some((ext) => lowered.endsWith(ext));
 }
 
+/**
+ * Injected into iframe srcDoc: matches app scrollbars (index.css + ScrollbarOnScrollReveal),
+ * slightly narrower (6px) thumbs, hidden until scroll then fade like the shell.
+ */
+const WEB_PREVIEW_SCROLLBAR_HEAD_INJECTION = `<meta charset="utf-8" />
+<style>
+  :root {
+    --ow-scrollbar-thumb: rgba(140, 148, 158, 0.42);
+    --ow-scrollbar-thumb-hover: rgba(120, 128, 138, 0.58);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ow-scrollbar-thumb: rgba(170, 178, 188, 0.38);
+      --ow-scrollbar-thumb-hover: rgba(190, 198, 208, 0.52);
+    }
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  *.ow-scrollbar-scrolling {
+    scrollbar-color: var(--ow-scrollbar-thumb) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 100px;
+  }
+  *.ow-scrollbar-scrolling::-webkit-scrollbar-thumb {
+    background-color: var(--ow-scrollbar-thumb);
+  }
+  *.ow-scrollbar-scrolling::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ow-scrollbar-thumb-hover);
+  }
+</style>
+<script>
+(function () {
+  var HIDE_MS = 900;
+  var CLASS = "ow-scrollbar-scrolling";
+  var timers = new WeakMap();
+  function pulse(el) {
+    if (!el || !el.classList) return;
+    el.classList.add(CLASS);
+    var p = timers.get(el);
+    if (p !== undefined) clearTimeout(p);
+    var id = setTimeout(function () {
+      el.classList.remove(CLASS);
+      timers.delete(el);
+    }, HIDE_MS);
+    timers.set(el, id);
+  }
+  function onScroll(e) {
+    var t = e.target;
+    if (t === document || t === document.documentElement) {
+      pulse(document.documentElement);
+      return;
+    }
+    if (t && t.classList) pulse(t);
+  }
+  document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+})();
+</script>`;
+
+function buildWebPreviewSrcDoc(raw: string): string {
+  const inject = WEB_PREVIEW_SCROLLBAR_HEAD_INJECTION;
+  const t = raw.trim();
+  if (!t) {
+    return `<!DOCTYPE html><html><head>${inject}</head><body></body></html>`;
+  }
+  if (/^<\?xml/i.test(t) || /^<svg/i.test(t)) {
+    return `<!DOCTYPE html><html><head>${inject}</head><body style="margin:0;min-height:100vh;overflow:auto">${t}</body></html>`;
+  }
+  if (/<head[\s>]/i.test(t)) {
+    return t.replace(/<head([^>]*)>/i, `<head$1>${inject}`);
+  }
+  if (/<html[\s>]/i.test(t)) {
+    return t.replace(/<html([^>]*)>/i, `<html$1><head>${inject}</head>`);
+  }
+  return `<!DOCTYPE html><html><head>${inject}</head><body style="margin:0;min-height:100vh;overflow:auto">${t}</body></html>`;
+}
+
 /** Join workspace root (host path) with POSIX relative segments from the file tree. */
 function absoluteWorkspaceFilePath(workspaceRoot: string, relativePosix: string): string | null {
   let root = workspaceRoot.trim();
@@ -298,7 +293,7 @@ function collectSessionToolNames(messages: UIMessage[]): string[] {
 }
 
 export type SessionWorkspacePanelProps = {
-  client: AiWorkServerClient;
+  client: OpenworkServerClient;
   workspaceId: string;
   workspaceRoot: string;
   attachments: ComposerAttachment[];
@@ -319,7 +314,6 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [panelWidth, setPanelWidth] = useState(readStoredWorkspacePanelWidth);
   const panelWidthRef = useRef(panelWidth);
-  const asideRef = useRef<HTMLElement>(null);
   const dragCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -362,7 +356,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         const delta = moveEvent.clientX - initialX;
         const container = (grip.parentElement?.parentElement as HTMLElement | null) ?? null;
         const containerWidth = container?.getBoundingClientRect().width ?? (document.documentElement?.clientWidth || window.innerWidth);
-        const maxAllowed = maxWorkspacePanelWidthForContainer(containerWidth);
+        const maxAllowed = Math.max(MIN_WORKSPACE_PANEL_WIDTH, containerWidth - MIN_CHAT_COLUMN_WIDTH);
         const next = Math.min(maxAllowed, Math.max(MIN_WORKSPACE_PANEL_WIDTH, initialW - delta));
         panelWidthRef.current = next;
         setPanelWidth(next);
@@ -394,23 +388,6 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
   );
 
   useEffect(() => () => stopPanelResize(), [stopPanelResize]);
-
-  /** When the window or flex row shrinks, clamp stored width so the panel does not overflow (matches drag-resize cap). */
-  useLayoutEffect(() => {
-    const parent = asideRef.current?.parentElement;
-    if (!parent) return;
-
-    const clampToParent = () => {
-      const containerWidth = parent.getBoundingClientRect().width;
-      const maxAllowed = maxWorkspacePanelWidthForContainer(containerWidth);
-      setPanelWidth((prev) => Math.min(prev, maxAllowed));
-    };
-
-    clampToParent();
-    const ro = new ResizeObserver(clampToParent);
-    ro.observe(parent);
-    return () => ro.disconnect();
-  }, []);
 
   /** While the session is busy, re-render periodically so prompt-context props stay fresh even if parents memoize aggressively. */
   const [, setContextSyncTick] = useState(0);
@@ -458,7 +435,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         return await props.client.listWorkspaceDirectory(props.workspaceId, dirPath || undefined);
       } catch (error) {
         const looksUnauthorized =
-          error instanceof AiWorkServerError
+          error instanceof OpenworkServerError
             ? error.status === 403 && (error.code === "workspace_unauthorized" || error.code === "forbidden")
             : (() => {
                 const message = error instanceof Error ? error.message : String(error ?? "");
@@ -470,7 +447,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
                 );
               })();
 
-        if (error instanceof AiWorkServerError) {
+        if (error instanceof OpenworkServerError) {
           // Always keep a terse summary visible (safe for prod); detailed messages remain dev-only.
           let location = "";
           const url = (error.details &&
@@ -528,65 +505,18 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
     refetchInterval: pollRichPreviewWhileSessionBusy ? 800 : false,
   });
 
-  const [listRefreshIconSpin, setListRefreshIconSpin] = useState(false);
-  const [previewRefreshIconSpin, setPreviewRefreshIconSpin] = useState(false);
-  const listRefreshSpinTimerRef = useRef<number | null>(null);
-  const previewRefreshSpinTimerRef = useRef<number | null>(null);
-
-  useEffect(
-    () => () => {
-      if (listRefreshSpinTimerRef.current) clearTimeout(listRefreshSpinTimerRef.current);
-      if (previewRefreshSpinTimerRef.current) clearTimeout(previewRefreshSpinTimerRef.current);
-    },
-    [],
-  );
-
-  const scheduleListRefreshSpinStop = useCallback((startedAtMs: number) => {
-    if (listRefreshSpinTimerRef.current) clearTimeout(listRefreshSpinTimerRef.current);
-    const elapsed = Date.now() - startedAtMs;
-    const remaining = Math.max(0, REFRESH_ICON_SPIN_MIN_MS - elapsed);
-    listRefreshSpinTimerRef.current = window.setTimeout(() => {
-      listRefreshSpinTimerRef.current = null;
-      setListRefreshIconSpin(false);
-    }, remaining);
-  }, []);
-
-  const schedulePreviewRefreshSpinStop = useCallback((startedAtMs: number) => {
-    if (previewRefreshSpinTimerRef.current) clearTimeout(previewRefreshSpinTimerRef.current);
-    const elapsed = Date.now() - startedAtMs;
-    const remaining = Math.max(0, REFRESH_ICON_SPIN_MIN_MS - elapsed);
-    previewRefreshSpinTimerRef.current = window.setTimeout(() => {
-      previewRefreshSpinTimerRef.current = null;
-      setPreviewRefreshIconSpin(false);
-    }, remaining);
-  }, []);
-
   /** Only rebuild iframe document when raw file bytes change — avoids remount/flash on identical poll results. */
   const webPreviewSrcDoc = useMemo(
     () => buildWebPreviewSrcDoc(previewQuery.data?.content ?? ""),
     [previewQuery.data?.content],
   );
 
-  const refreshWorkspaceFiles = useCallback(() => {
-    if (listRefreshSpinTimerRef.current) clearTimeout(listRefreshSpinTimerRef.current);
-    const listStartedAt = Date.now();
-    setListRefreshIconSpin(true);
-    void listQuery.refetch().finally(() => scheduleListRefreshSpinStop(listStartedAt));
-
+  const refreshWorkspaceFiles = () => {
+    void listQuery.refetch();
     if (selectedFile && isWorkspacePreviewablePath(selectedFile)) {
-      if (previewRefreshSpinTimerRef.current) clearTimeout(previewRefreshSpinTimerRef.current);
-      const previewStartedAt = Date.now();
-      setPreviewRefreshIconSpin(true);
-      void previewQuery.refetch().finally(() => schedulePreviewRefreshSpinStop(previewStartedAt));
+      void previewQuery.refetch();
     }
-  }, [listQuery.refetch, previewQuery.refetch, scheduleListRefreshSpinStop, schedulePreviewRefreshSpinStop, selectedFile]);
-
-  const refreshPreviewOnly = useCallback(() => {
-    if (previewRefreshSpinTimerRef.current) clearTimeout(previewRefreshSpinTimerRef.current);
-    const previewStartedAt = Date.now();
-    setPreviewRefreshIconSpin(true);
-    void previewQuery.refetch().finally(() => schedulePreviewRefreshSpinStop(previewStartedAt));
-  }, [previewQuery.refetch, schedulePreviewRefreshSpinStop]);
+  };
 
   const openCurrentFolderOnDesktop = () => {
     if (!workspaceRoot || !isDesktopRuntime()) return;
@@ -620,7 +550,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
 
   const selectWorkspaceRelativePath = useCallback(
     (relativePath: string) => {
-      const rel = tryRelativePathUnderWorkspace(relativePath, props.workspaceRoot);
+      const rel = relativePath.trim().replace(/\\/g, "/");
       if (!rel) return;
       if (isMarkdownDocumentPath(rel)) {
         setSelectedFile(rel);
@@ -663,14 +593,9 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
     ? selectedFile.split("/").filter(Boolean).pop() ?? selectedFile
     : "";
 
-  const previewUpdatedAtMs = previewQuery.data?.updatedAt;
-  const previewUpdatedAtLabel =
-    typeof previewUpdatedAtMs === "number" ? formatWorkspaceFileListMtime(previewUpdatedAtMs) : null;
-
   return (
     <aside
-      ref={asideRef}
-      className="relative flex min-h-0 h-full min-w-0 shrink flex-col border-l border-dls-divider bg-dls-sidebar"
+      className="relative flex min-h-0 h-full shrink-0 flex-col border-l border-dls-divider bg-dls-sidebar"
       style={{ width: panelWidth, minWidth: MIN_WORKSPACE_PANEL_WIDTH, maxWidth: "100%" }}
     >
       <div
@@ -682,49 +607,35 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
       />
       {markdownPreviewOpen ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-1.5">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <WorkspacePanelFileGlyph
                 filename={selectedFile ?? ""}
-                size={14}
+                size={16}
                 className="shrink-0 text-[#000000]"
               />
               <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
                 {selectedFileTitle}
               </span>
             </div>
-            {previewUpdatedAtLabel ? (
-              <span
-                className="max-w-[min(11rem,38%)] shrink-0 truncate text-right text-[10px] tabular-nums text-dls-secondary"
-                title={previewUpdatedAtLabel}
-              >
-                {previewUpdatedAtLabel}
-              </span>
-            ) : null}
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] disabled:pointer-events-none disabled:opacity-40"
-                onClick={refreshPreviewOnly}
-                disabled={previewQuery.isFetching || previewRefreshIconSpin}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+                onClick={() => void previewQuery.refetch()}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
               >
-                <RefreshCw
-                  size={14}
-                  strokeWidth={1.75}
-                  aria-hidden
-                  className={previewRefreshIconSpin ? "animate-spin" : undefined}
-                />
+                <RefreshCw size={16} strokeWidth={1.75} aria-hidden />
               </button>
               <button
                 type="button"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => setSelectedFile(null)}
                 aria-label={t("session.workspace_panel_close_preview")}
                 title={t("session.workspace_panel_close_preview")}
               >
-                <X size={14} strokeWidth={1.75} aria-hidden />
+                <X size={16} strokeWidth={1.75} aria-hidden />
               </button>
             </div>
           </div>
@@ -742,49 +653,35 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         </div>
       ) : webPreviewOpen ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-1.5">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <WorkspacePanelFileGlyph
                 filename={selectedFile ?? ""}
-                size={14}
+                size={16}
                 className="shrink-0 text-[#000000]"
               />
               <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
                 {selectedFileTitle}
               </span>
             </div>
-            {previewUpdatedAtLabel ? (
-              <span
-                className="max-w-[min(11rem,38%)] shrink-0 truncate text-right text-[10px] tabular-nums text-dls-secondary"
-                title={previewUpdatedAtLabel}
-              >
-                {previewUpdatedAtLabel}
-              </span>
-            ) : null}
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] disabled:pointer-events-none disabled:opacity-40"
-                onClick={refreshPreviewOnly}
-                disabled={previewQuery.isFetching || previewRefreshIconSpin}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+                onClick={() => void previewQuery.refetch()}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
               >
-                <RefreshCw
-                  size={14}
-                  strokeWidth={1.75}
-                  aria-hidden
-                  className={previewRefreshIconSpin ? "animate-spin" : undefined}
-                />
+                <RefreshCw size={16} strokeWidth={1.75} aria-hidden />
               </button>
               <button
                 type="button"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => setSelectedFile(null)}
                 aria-label={t("session.workspace_panel_close_preview")}
                 title={t("session.workspace_panel_close_preview")}
               >
-                <X size={14} strokeWidth={1.75} aria-hidden />
+                <X size={16} strokeWidth={1.75} aria-hidden />
               </button>
             </div>
           </div>
@@ -808,49 +705,35 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         </div>
       ) : codeDocumentPreviewOpen ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-1.5">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <WorkspacePanelFileGlyph
                 filename={selectedFile ?? ""}
-                size={14}
+                size={16}
                 className="shrink-0 text-[#000000]"
               />
               <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
                 {selectedFileTitle}
               </span>
             </div>
-            {previewUpdatedAtLabel ? (
-              <span
-                className="max-w-[min(11rem,38%)] shrink-0 truncate text-right text-[10px] tabular-nums text-dls-secondary"
-                title={previewUpdatedAtLabel}
-              >
-                {previewUpdatedAtLabel}
-              </span>
-            ) : null}
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] disabled:pointer-events-none disabled:opacity-40"
-                onClick={refreshPreviewOnly}
-                disabled={previewQuery.isFetching || previewRefreshIconSpin}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+                onClick={() => void previewQuery.refetch()}
                 aria-label={t("session.workspace_panel_refresh")}
                 title={t("session.workspace_panel_refresh")}
               >
-                <RefreshCw
-                  size={14}
-                  strokeWidth={1.75}
-                  aria-hidden
-                  className={previewRefreshIconSpin ? "animate-spin" : undefined}
-                />
+                <RefreshCw size={16} strokeWidth={1.75} aria-hidden />
               </button>
               <button
                 type="button"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
                 onClick={() => setSelectedFile(null)}
                 aria-label={t("session.workspace_panel_close_preview")}
                 title={t("session.workspace_panel_close_preview")}
               >
-                <X size={14} strokeWidth={1.75} aria-hidden />
+                <X size={16} strokeWidth={1.75} aria-hidden />
               </button>
             </div>
           </div>
@@ -967,11 +850,11 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
                 type="button"
                 className="inline-flex items-center justify-center rounded-md p-1 text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] disabled:pointer-events-none disabled:opacity-40"
                 onClick={refreshWorkspaceFiles}
-                disabled={!props.workspaceId || listQuery.isFetching || listRefreshIconSpin}
+                disabled={!props.workspaceId || listQuery.isFetching}
                 title={t("session.workspace_panel_refresh")}
                 aria-label={t("session.workspace_panel_refresh")}
               >
-                <RefreshCw size={14} className={listRefreshIconSpin ? "animate-spin" : undefined} aria-hidden />
+                <RefreshCw size={14} className={listQuery.isFetching ? "animate-spin" : undefined} />
               </button>
             </div>
           </div>
@@ -1057,16 +940,6 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
                       <WorkspacePanelFileGlyph filename={entry.name} className="shrink-0 text-[#000000]" />
                     )}
                     <span className="min-w-0 flex-1 truncate font-mono">{entry.name}</span>
-                    {entry.kind === "file" &&
-                    typeof entry.updatedAt === "number" &&
-                    panelWidth >= WORKSPACE_FILE_LIST_MTIME_VISIBLE_MIN_WIDTH ? (
-                      <span
-                        className="max-w-[42%] shrink-0 truncate text-right text-[10px] tabular-nums text-dls-secondary"
-                        title={formatWorkspaceFileListMtime(entry.updatedAt)}
-                      >
-                        {formatWorkspaceFileListMtime(entry.updatedAt)}
-                      </span>
-                    ) : null}
                   </button>
                 </li>
               ))}

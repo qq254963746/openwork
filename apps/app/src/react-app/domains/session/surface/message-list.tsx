@@ -1043,7 +1043,7 @@ function WrittenFileRow(props: {
         </div>
         {previewKind === "svg" && svgMarkup ? (
           <div
-            className="max-h-[min(75vh,1200px)] w-full min-w-0 overflow-x-hidden overflow-y-auto leading-none [&_svg]:block [&_svg]:h-auto [&_svg]:max-w-none [&_svg]:w-full"
+            className="w-full min-w-0 overflow-x-hidden leading-none [&_svg]:block [&_svg]:h-auto [&_svg]:max-w-none [&_svg]:w-full"
             dangerouslySetInnerHTML={{ __html: svgMarkup }}
           />
         ) : previewKind === "html" && htmlSrcDoc ? (
