@@ -41,7 +41,7 @@ export type ModelProviderPreset = {
   providerType: ModelProviderType;
 };
 
-export const AIWORK_CUSTOM_PROVIDER_ENTRY_KEY = "__aiwork_custom__";
+export const AIWORK_CUSTOM_PROVIDER_ENTRY_KEY = "custom";
 
 export const MODEL_PROVIDER_PRESETS: Record<string, ModelProviderPreset> = {
   openai: {
