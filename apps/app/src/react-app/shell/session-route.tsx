@@ -3,18 +3,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type {
   AgentPartInput,
-  ConfigProvidersResponse,
   FilePartInput,
   ProviderListResponse,
   TextPartInput,
 } from "@opencode-ai/sdk/v2/client";
 
-import {
-  readGlobalDisabledProviderIds,
-  type ReadGlobalOpencodeConfigInput,
-} from "../../app/lib/global-opencode-disabled-providers";
+import type { ReadGlobalOpencodeConfigInput } from "../../app/lib/global-opencode-disabled-providers";
 import { createClient, unwrap } from "../../app/lib/opencode";
-import { mergeAuthMetadataBaseUrlIntoProviderList } from "../../app/lib/provider-list-merge";
 import { listCommands, shellInSession } from "../../app/lib/opencode-session";
 import {
   buildAiWorkWorkspaceBaseUrl,
@@ -92,7 +87,7 @@ import {
 import { useControlAction, type AiWorkControlAction } from "./control/control-provider";
 import { useReactRenderWatchdog } from "./react-render-watchdog";
 import { getModelBehaviorSummary } from "../../app/lib/model-behavior";
-import { filterProviderList, mapConfigProvidersToList } from "../../app/utils/providers";
+import { fetchFinallyProviderList } from "../domains/connections/provider-auth/fetch-finally-provider-list";
 import { ensureDesktopLocalAiWorkConnection } from "./desktop-local-aiwork";
 import { resolveAiWorkConnection } from "./aiwork-connection";
 import { useReloadCoordinator } from "./reload-coordinator";
@@ -1175,59 +1170,36 @@ export function SessionRoute() {
     };
 
     void (async () => {
-      let disabledProviders: string[] = [];
-      try {
-        let caps: AiWorkServerCapabilities | null = null;
-        if (client) {
-          try {
-            caps = await client.capabilities();
-          } catch {
-            caps = null;
-          }
-        }
-        const globalInput: ReadGlobalOpencodeConfigInput = {
-          workspaceRoot: selectedWorkspaceRoot,
-          selectedWorkspaceId: selectedWorkspaceId.trim(),
-          runtimeWorkspaceId: selectedWorkspaceId.trim() || null,
-          aiworkServerStatus: client ? "connected" : "disconnected",
-          aiworkServerClient: client,
-          aiworkServerCapabilities: caps,
-        };
-        disabledProviders = await readGlobalDisabledProviderIds(globalInput);
-      } catch {
-        // ignore config read failures and continue with provider discovery
-      }
-
-      try {
-        const listed = unwrap(await opencodeClient.provider.list());
-        const merged = await mergeAuthMetadataBaseUrlIntoProviderList(
-          opencodeClient as Client,
-          listed,
-        );
-        applyProviderState(filterProviderList(merged, disabledProviders));
-      } catch {
+      let caps: AiWorkServerCapabilities | null = null;
+      if (client) {
         try {
-          const fallback = unwrap(
-            await opencodeClient.config.providers({
-              directory: selectedWorkspaceRoot || undefined,
-            }),
-          ) as ConfigProvidersResponse;
-          const fallbackList: ProviderListResponse = {
-            all: mapConfigProvidersToList(fallback.providers) as ProviderListResponse["all"],
-            connected: [],
-            default: fallback.default,
-          };
-          const mergedFallback = await mergeAuthMetadataBaseUrlIntoProviderList(
-            opencodeClient as Client,
-            fallbackList,
-          );
-          applyProviderState(filterProviderList(mergedFallback, disabledProviders));
+          caps = await client.capabilities();
         } catch {
-          if (cancelled) return;
-          setProviders([]);
-          setProviderConnectedIds([]);
+          caps = null;
         }
       }
+      const globalInput: ReadGlobalOpencodeConfigInput = {
+        workspaceRoot: selectedWorkspaceRoot,
+        selectedWorkspaceId: selectedWorkspaceId.trim(),
+        runtimeWorkspaceId: selectedWorkspaceId.trim() || null,
+        aiworkServerStatus: client ? "connected" : "disconnected",
+        aiworkServerClient: client,
+        aiworkServerCapabilities: caps,
+      };
+
+      const filtered = await fetchFinallyProviderList({
+        listClient: opencodeClient as Client,
+        globalInput,
+        workspaceConfigDirectory: selectedWorkspaceRoot || undefined,
+        providerConnectedIds: [],
+      });
+      if (cancelled) return;
+      if (!filtered) {
+        setProviders([]);
+        setProviderConnectedIds([]);
+        return;
+      }
+      applyProviderState(filtered);
     })();
 
     return () => {
@@ -1272,25 +1244,43 @@ export function SessionRoute() {
     if (!opencodeClient) return;
     let cancelled = false;
     void (async () => {
-      try {
-        const res = await opencodeClient.config.providers({
-          directory: selectedWorkspaceRoot || undefined,
-        });
-        const data = (res as { data?: { providers?: Array<{ id: string; models: Record<string, any> }> } }).data;
-        if (cancelled || !data?.providers) return;
-        const next: Record<string, Record<string, any>> = {};
-        for (const provider of data.providers) {
-          next[provider.id] = { ...(provider.models ?? {}) };
+      let caps: AiWorkServerCapabilities | null = null;
+      if (client) {
+        try {
+          caps = await client.capabilities();
+        } catch {
+          caps = null;
         }
-        setProviderCatalog(next);
-      } catch {
-        // best-effort cache; UI will fall back to empty variant options.
       }
+      const globalInput: ReadGlobalOpencodeConfigInput = {
+        workspaceRoot: selectedWorkspaceRoot,
+        selectedWorkspaceId: selectedWorkspaceId.trim(),
+        runtimeWorkspaceId: selectedWorkspaceId.trim() || null,
+        aiworkServerStatus: client ? "connected" : "disconnected",
+        aiworkServerClient: client,
+        aiworkServerCapabilities: caps,
+      };
+
+      const filtered = await fetchFinallyProviderList({
+        listClient: opencodeClient as Client,
+        globalInput,
+        workspaceConfigDirectory: selectedWorkspaceRoot || undefined,
+        providerConnectedIds: [],
+      });
+      if (cancelled || !filtered) return;
+
+      const next: Record<string, Record<string, any>> = {};
+      for (const provider of filtered.all) {
+        const id = provider.id?.trim();
+        if (!id) continue;
+        next[id] = { ...(provider.models ?? {}) };
+      }
+      setProviderCatalog(next);
     })();
     return () => {
       cancelled = true;
     };
-  }, [opencodeClient, selectedWorkspaceRoot]);
+  }, [client, opencodeClient, selectedWorkspaceId, selectedWorkspaceRoot]);
 
   // Compute behavior (reasoning/thinking variant) options for the current
   // default model. This is what the composer renders as its variant pill.
@@ -1314,31 +1304,44 @@ export function SessionRoute() {
     if (!modelPickerOpen || !opencodeClient) return;
     let cancelled = false;
     void (async () => {
-      try {
-        const res = await opencodeClient.config.providers({
-          directory: selectedWorkspaceRoot || undefined,
-        });
-        const data = (res as {
-          data?: {
-            providers?: Array<{
-              id: string;
-              name: string;
-              models: Record<string, { id: string; name: string }>;
-            }>;
-          };
-        }).data;
-        if (cancelled || !data?.providers) return;
+      let caps: AiWorkServerCapabilities | null = null;
+      if (client) {
+        try {
+          caps = await client.capabilities();
+        } catch {
+          caps = null;
+        }
+      }
+      const globalInput: ReadGlobalOpencodeConfigInput = {
+        workspaceRoot: selectedWorkspaceRoot,
+        selectedWorkspaceId: selectedWorkspaceId.trim(),
+        runtimeWorkspaceId: selectedWorkspaceId.trim() || null,
+        aiworkServerStatus: client ? "connected" : "disconnected",
+        aiworkServerClient: client,
+        aiworkServerCapabilities: caps,
+      };
+
+      const buildOptionsFromProviders = (providersList: ProviderListItem[]) => {
         const options: ModelOption[] = [];
-        for (const provider of data.providers) {
-          const modelIds = Object.keys(provider.models);
+        for (const provider of providersList) {
+          const models = provider.models;
+          if (!models || typeof models !== "object") continue;
+          const modelIds = Object.keys(models);
           const hasModels = modelIds.length > 0;
           for (const id of modelIds) {
-            const model = provider.models[id];
+            const model = models[id];
+            const title =
+              model &&
+              typeof model === "object" &&
+              "name" in model &&
+              typeof (model as { name?: unknown }).name === "string"
+                ? (model as { name: string }).name
+                : id;
             options.push({
               providerID: provider.id,
               modelID: id,
-              title: model.name || id,
-              description: provider.name,
+              title: title || id,
+              description: provider.name ?? provider.id,
               behaviorTitle: "Reasoning",
               behaviorLabel: "Default",
               behaviorDescription: "",
@@ -1348,15 +1351,28 @@ export function SessionRoute() {
             });
           }
         }
-        setModelOptions(options);
-      } catch {
-        // Silent: the picker surfaces an empty list rather than blocking the UI.
-      }
+        return options;
+      };
+
+      const filtered = await fetchFinallyProviderList({
+        listClient: opencodeClient as Client,
+        globalInput,
+        workspaceConfigDirectory: selectedWorkspaceRoot || undefined,
+        providerConnectedIds: [],
+      });
+      if (cancelled || !filtered) return;
+      setModelOptions(buildOptionsFromProviders(filtered.all));
     })();
     return () => {
       cancelled = true;
     };
-  }, [modelPickerOpen, opencodeClient, selectedWorkspaceRoot]);
+  }, [
+    client,
+    modelPickerOpen,
+    opencodeClient,
+    selectedWorkspaceId,
+    selectedWorkspaceRoot,
+  ]);
 
   const listSlashCommands = useCallback(async (): Promise<SlashCommandOption[]> => {
     // engineReloadVersion is included so the callback identity changes after

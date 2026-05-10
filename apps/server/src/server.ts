@@ -43,6 +43,7 @@ import {
   type WorkspaceImportPlan,
   workspaceImportPreviewApprovalPaths,
 } from "./workspace-import-preview.js";
+import { listModelsByProviderType, parseModelProviderType } from "./ai-model-service/list-models.js";
 import { buildSession, buildSessionList, buildSessionMessages, buildSessionSnapshot, buildSessionStatuses, buildSessionTodos } from "./session-read-model.js";
 import {
   collectWorkspaceExportWarnings,
@@ -1685,6 +1686,35 @@ function createRoutes(
       stdout: `Wrote ${configPath}`,
       stderr: "",
     });
+  });
+
+  /**
+   * Browser-safe upstream model-list proxy (avoids CORS when the UI runs on localhost).
+   * Body: `{ baseURL, apiKey, providerType }`. Always responds with 200 and `{ ok, ids?, message? }`.
+   */
+  addRoute(routes, "POST", "/workspace/:id/model-provider/models", "client", async (ctx) => {
+    requireClientScope(ctx, "collaborator");
+    await resolveWorkspace(config, ctx.params.id);
+    const body = await readJsonBody(ctx.request);
+    const baseURL = typeof body.baseURL === "string" ? body.baseURL.trim() : "";
+    const apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
+    const providerType = parseModelProviderType(body.providerType);
+    if (!baseURL || !apiKey) {
+      return jsonResponse({ ok: false, message: "baseURL and apiKey are required" });
+    }
+    if (!providerType) {
+      return jsonResponse({ ok: false, message: "providerType must be openai | openai-compatible | anthropic | google" });
+    }
+
+    const result = await listModelsByProviderType(providerType, { baseURL, apiKey });
+    if (!result.ok) {
+      return jsonResponse({
+        ok: false,
+        message: result.message,
+        httpStatus: result.httpStatus,
+      });
+    }
+    return jsonResponse({ ok: true, ids: result.ids });
   });
 
   addRoute(routes, "GET", "/workspace/:id/audit", "client", async (ctx) => {

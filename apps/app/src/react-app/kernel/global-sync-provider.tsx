@@ -25,7 +25,10 @@ import type {
 } from "@opencode-ai/sdk/v2/client";
 
 import { t } from "../../i18n";
-import { readGlobalDisabledProviderIds } from "../../app/lib/global-opencode-disabled-providers";
+import {
+  readGlobalDisabledProviderIds,
+  type ReadGlobalOpencodeConfigInput,
+} from "../../app/lib/global-opencode-disabled-providers";
 import { mergeAuthMetadataBaseUrlIntoProviderList } from "../../app/lib/provider-list-merge";
 import { unwrap } from "../../app/lib/opencode";
 import type { Client, McpStatusMap, TodoItem } from "../../app/types";
@@ -158,16 +161,17 @@ export function GlobalSyncProvider({ children }: GlobalSyncProviderProps) {
   }, [globalSDK.client, setField]);
 
   const refreshProviders = useCallback(async () => {
+    const globalInput: ReadGlobalOpencodeConfigInput = {
+      workspaceRoot: "",
+      selectedWorkspaceId: "",
+      runtimeWorkspaceId: null,
+      aiworkServerStatus: "disconnected",
+      aiworkServerClient: null,
+      aiworkServerCapabilities: null,
+    };
     let disabledProviders: string[] = [];
     try {
-      disabledProviders = await readGlobalDisabledProviderIds({
-        workspaceRoot: "",
-        selectedWorkspaceId: "",
-        runtimeWorkspaceId: null,
-        aiworkServerStatus: "disconnected",
-        aiworkServerClient: null,
-        aiworkServerCapabilities: null,
-      });
+      disabledProviders = await readGlobalDisabledProviderIds(globalInput);
     } catch {
       disabledProviders = [];
     }
@@ -176,6 +180,7 @@ export function GlobalSyncProvider({ children }: GlobalSyncProviderProps) {
       const merged = await mergeAuthMetadataBaseUrlIntoProviderList(
         globalSDK.client as Client,
         listed,
+        globalInput,
       );
       const result = filterProviderList(merged, disabledProviders);
       setField("provider", result);
@@ -191,6 +196,7 @@ export function GlobalSyncProvider({ children }: GlobalSyncProviderProps) {
       const mergedFallback = await mergeAuthMetadataBaseUrlIntoProviderList(
         globalSDK.client as Client,
         fallbackList,
+        globalInput,
       );
       setField("provider", filterProviderList(mergedFallback, disabledProviders));
     }

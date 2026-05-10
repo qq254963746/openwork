@@ -2,6 +2,7 @@ import type { Message, Part, Session, Todo } from "@opencode-ai/sdk/v2/client";
 import { desktopFetch } from "./desktop";
 import { isDesktopRuntime } from "../utils";
 import type { ExecResult, OpencodeConfigFile, WorkspaceInfo, WorkspaceList } from "./desktop";
+import type { ModelProviderType } from "../utils/model-providers-catalog";
 
 export type AiWorkServerCapabilities = {
   skills: { read: boolean; write: boolean; source: "aiwork" | "opencode" };
@@ -887,6 +888,7 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
     workspaceImport: 30_000,
     shareBundle: 20_000,
     binary: 60_000,
+    openAiCompatibleModels: 65_000,
   };
 
   return {
@@ -1088,6 +1090,25 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
         hostToken,
         method: "POST",
         body: { scope, content },
+      }),
+    /**
+     * Server-side model listing proxy (avoids browser CORS). Dispatches by `providerType` on the server.
+     */
+    proxyModelProviderModels: (
+      workspaceId: string,
+      body: { baseURL: string; apiKey: string; providerType: ModelProviderType },
+    ) =>
+      requestJson<{
+        ok: boolean;
+        ids?: string[];
+        message?: string;
+        httpStatus?: number;
+      }>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/model-provider/models`, {
+        token,
+        hostToken,
+        method: "POST",
+        body,
+        timeoutMs: timeouts.openAiCompatibleModels,
       }),
     listReloadEvents: (workspaceId: string, options?: { since?: number }) => {
       const query = typeof options?.since === "number" ? `?since=${options.since}` : "";

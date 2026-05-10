@@ -13,29 +13,29 @@ import {
   type ReadGlobalOpencodeConfigInput,
 } from "../../../../app/lib/global-opencode-disabled-providers";
 import { unwrap, waitForHealthy } from "../../../../app/lib/opencode";
-import {
-  fetchProviderAuthForEdit,
-  mergeAuthMetadataBaseUrlIntoProviderList,
-} from "../../../../app/lib/provider-list-merge";
+import { fetchProviderAuthForEdit } from "../../../../app/lib/provider-list-merge";
 import type {
   Client,
   ProviderListItem,
   WorkspaceDisplay,
 } from "../../../../app/types";
 import { isDesktopRuntime, safeStringify } from "../../../../app/utils";
-import {
-  compareProviders,
-  filterProviderList,
-  mapConfigProvidersToList,
-  resolveProviderInitialApiBaseUrl,
-} from "../../../../app/utils/providers";
+import { compareProviders, filterProviderList, resolveProviderInitialApiBaseUrl } from "../../../../app/utils/providers";
+import { fetchFinallyProviderList } from "./fetch-finally-provider-list";
 import type { AiWorkServerStore } from "../aiwork-server-store";
+import { upsertGlobalProviderOpencodeEntry } from "../../../../app/lib/global-opencode-provider-upsert";
+import {
+  fetchOpenAiCompatibleModelIds,
+  modelsIdsToOpenCodeModelsMap,
+} from "../../../../app/lib/openai-compatible-models";
+import { ConsoleLog } from "../../../../app/lib/console-log";
+import {
+  AIWORK_CUSTOM_PROVIDER_ENTRY_KEY,
+  resolveModelProviderTypeForConnect,
+  type ModelProviderType,
+} from "../../../../app/utils/model-providers-catalog";
 
-function devLog(...args: unknown[]) {
-  if (import.meta.env.DEV) {
-    console.log("[provider-auth]", ...args);
-  }
-}
+const PROVIDER_AUTH_LOG_SCOPE = "provider-auth";
 
 type ProviderReturnFocusTarget = "none" | "composer";
 
@@ -45,6 +45,7 @@ export type ProviderAuthEditSession = {
   baseUrl: string;
   apiKeyHint: string;
   presetCode: string;
+  providerType: ModelProviderType;
 };
 
 export type ProviderAuthMethod = {
@@ -476,7 +477,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     let c = options.client();
     if (!c) return null;
 
-    devLog("refreshProviders:start", {
+    ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "refreshProviders:start", {
       dispose: Boolean(optionsArg?.dispose),
       workspaceKeyAtStart,
     });
@@ -496,7 +497,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     }
 
     if (isStale()) {
-      devLog("refreshProviders: aborted (workspace changed during dispose/wait)");
+      ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "refreshProviders: aborted (workspace changed during dispose/wait)");
       return null;
     }
 
@@ -507,7 +508,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     try {
       const globalInput = globalDisabledConfigInput();
       disabledProviders = await readGlobalDisabledProviderIds(globalInput);
-      devLog("refreshProviders: disabled_providers from global opencode.json", {
+      ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "refreshProviders: disabled_providers from global opencode.json", {
         disabled_providers: disabledProviders,
       });
       options.setDisabledProviders(disabledProviders);
@@ -518,65 +519,29 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     }
 
     if (isStale()) {
-      devLog("refreshProviders: aborted after global disabled read (workspace changed)");
+      ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "refreshProviders: aborted after global disabled read (workspace changed)");
       return null;
     }
 
     const listClient = options.client();
     if (!listClient) return null;
 
-    try {
-      const listed = unwrap(await listClient.provider.list());
-      devLog("refreshProviders:provider.list", listed);
-      const withGlobal = await mergeAuthMetadataBaseUrlIntoProviderList(listClient, listed);
-      devLog("refreshProviders:after mergeAuthMetadataBaseUrl", {
-        all: withGlobal.all?.length,
-        connected: withGlobal.connected?.length,
-        defaultCount: Object.keys(withGlobal.default ?? {}).length,
-      });
-      const updated = filterProviderList(withGlobal, disabledProviders);
-      devLog("refreshProviders:after filterProviderList", {
-        all: updated.all?.length,
-        connected: updated.connected?.length,
-        disabledProviders,
-      });
-      if (isStale()) {
-        devLog("refreshProviders: skip apply (stale run after provider.list)");
-        return null;
-      }
-      applyProviderListState(updated);
-      return updated;
-    } catch {
-      devLog("refreshProviders:provider.list failed, fallback config.providers");
-      try {
-        const directory = workspaceConfigDirectory();
-        const fallback = unwrap(
-          await listClient.config.providers({ directory }),
-        );
-        const mapped = mapConfigProvidersToList(fallback.providers);
-        const mergedList = await mergeAuthMetadataBaseUrlIntoProviderList(listClient, {
-          all: mapped,
-          connected: options
-            .providerConnectedIds()
-            .filter((id) => mapped.some((provider) => provider.id === id)),
-          default: fallback.default,
-        });
-        const next = filterProviderList(mergedList, disabledProviders);
-        devLog("refreshProviders:fallback applied", {
-          all: next.all?.length,
-          connected: next.connected?.length,
-        });
-        if (isStale()) {
-          devLog("refreshProviders: skip apply (stale run after fallback merge)");
-          return null;
-        }
-        applyProviderListState(next);
-        return next;
-      } catch {
-        devLog("refreshProviders:fallback failed");
-        return null;
-      }
+    const updated = await fetchFinallyProviderList({
+      listClient,
+      globalInput: globalDisabledConfigInput(),
+      disabledProviders,
+      workspaceConfigDirectory: workspaceConfigDirectory(),
+      providerConnectedIds: options.providerConnectedIds(),
+    });
+    if (updated === null) {
+      return null;
     }
+    if (isStale()) {
+      ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "refreshProviders: skip apply (stale run after merged list)");
+      return null;
+    }
+    applyProviderListState(updated);
+    return updated;
   }
 
   async function completeProviderAuthOAuth(
@@ -668,7 +633,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     providerId: string,
     apiKey: string,
     baseUrl = "",
-    ctx?: { displayName: string; presetCode: string },
+    ctx?: { displayName: string; presetCode: string; providerType?: ModelProviderType },
   ) {
     setStateField("providerAuthError", null);
     const c = options.client();
@@ -685,6 +650,110 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       const trimmedBase = baseUrl.trim();
       const displayName = ctx?.displayName?.trim() || providerId.trim();
       const presetCode = ctx?.presetCode?.trim() ?? "";
+      const resolvedProviderType = resolveModelProviderTypeForConnect({
+        providerId,
+        presetCode,
+        explicit: ctx?.providerType,
+      });
+
+      ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "submitProviderApiKey:start", {
+        providerId,
+        presetCode: presetCode || "(preset)",
+        displayName,
+        baseUrlInput: trimmedBase || "(default from catalog)",
+        apiKeyChars: trimmed.length,
+      });
+
+      if (presetCode === AIWORK_CUSTOM_PROVIDER_ENTRY_KEY && !trimmedBase) {
+        throw new Error(t("providers.custom_provider_api_base_required"));
+      }
+
+      const baseForModels = trimmedBase || resolveProviderInitialApiBaseUrl(providerId);
+
+      const snap = options.aiworkServer.getSnapshot();
+      const workspaceId =
+        options.runtimeWorkspaceId()?.trim() || options.selectedWorkspaceId().trim() || "";
+      const aiworkClient = snap.aiworkServerClient;
+      const useAiWorkModelsProxy =
+        Boolean(workspaceId) &&
+        snap.aiworkServerStatus === "connected" &&
+        aiworkClient &&
+        typeof aiworkClient.proxyModelProviderModels === "function";
+
+      const modelsFetch = await fetchOpenAiCompatibleModelIds(baseForModels, trimmed, {
+        aiworkProxy: useAiWorkModelsProxy
+          ? async () => {
+              const res = await aiworkClient!.proxyModelProviderModels(workspaceId, {
+                baseURL: baseForModels,
+                apiKey: trimmed,
+                providerType: resolvedProviderType,
+              });
+              if (res.ok && Array.isArray(res.ids)) {
+                return { ok: true as const, ids: res.ids };
+              }
+              return {
+                ok: false as const,
+                message:
+                  typeof res.message === "string" ? res.message : "Could not list models via AiWork server",
+              };
+            }
+          : undefined,
+      });
+      let modelsMap: Record<string, { name: string }> = {};
+      if (modelsFetch.ok && modelsFetch.ids.length > 0) {
+        modelsMap = modelsIdsToOpenCodeModelsMap(modelsFetch.ids);
+        ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "submitProviderApiKey:models", {
+          baseForModels,
+          modelCount: modelsFetch.ids.length,
+          storedModelKeys: Object.keys(modelsMap).length,
+        });
+      } else if (presetCode === AIWORK_CUSTOM_PROVIDER_ENTRY_KEY) {
+        throw new Error(
+          t("providers.models_list_failed", {
+            detail: modelsFetch.ok ? "empty model list" : modelsFetch.message,
+          }),
+        );
+      } else {
+        ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "submitProviderApiKey:modelsSkippedOrEmpty", {
+          providerId,
+          ok: modelsFetch.ok,
+          message: modelsFetch.ok ? undefined : modelsFetch.message,
+        });
+      }
+
+      ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "submitProviderApiKey:globalUpsert:calling", {
+        providerId,
+        baseURL: baseForModels,
+        presetCode: presetCode || "(preset)",
+      });
+
+      const upsert = await upsertGlobalProviderOpencodeEntry({
+        workspaceRoot: options.selectedWorkspaceRoot().trim(),
+        selectedWorkspaceId: options.selectedWorkspaceId().trim(),
+        runtimeWorkspaceId: options.runtimeWorkspaceId(),
+        aiworkServerStatus: snap.aiworkServerStatus,
+        aiworkServerClient: snap.aiworkServerClient,
+        aiworkServerCapabilities: snap.aiworkServerCapabilities,
+        providerId,
+        displayName,
+        baseURL: baseForModels,
+        apiKey: trimmed,
+        presetCode,
+        providerType: resolvedProviderType,
+        modelsMap,
+      });
+      if (!upsert.ok) {
+        ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "submitProviderApiKey:globalUpsert:failed", { reason: upsert.reason });
+        const message =
+          upsert.reason === "parse_failed"
+            ? t("providers.global_opencode_json_invalid")
+            : t("providers.global_opencode_json_failed");
+        throw new Error(message);
+      }
+
+      ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "submitProviderApiKey:globalUpsert:ok", { providerId });
+
+      ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "submitProviderApiKey:auth.set:calling", { providerId });
 
       await c.auth.set({
         providerID: providerId,
@@ -696,13 +765,14 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
             name: displayName,
             code: presetCode,
             apiKey: trimmed,
+            providerType: resolvedProviderType,
           },
         },
       });
 
-      devLog("submitProviderApiKey:auth.set ok", {
+      ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "submitProviderApiKey:auth.set:ok", {
         providerId,
-        hasBaseUrl: Boolean(trimmedBase),
+        baseUrl: trimmedBase,
         presetCode: presetCode || undefined,
       });
 
@@ -719,6 +789,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       }
       return `${t("status.connected")} ${providerId}`;
     } catch (error) {
+      ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "submitProviderApiKey:error", error);
       const message = describeProviderError(error, t("providers.save_api_key_failed"));
       setStateField("providerAuthError", message);
       throw error instanceof Error ? error : new Error(message);
@@ -737,7 +808,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       throw new Error(t("providers.provider_id_required"));
     }
 
-    devLog("disconnectProvider", { providerId: resolved });
+    ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "disconnectProvider", { providerId: resolved });
 
     const provider = options.providers().find((entry) => entry.id === resolved) as
       | (ProviderListItem & { source?: string })
@@ -747,7 +818,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     const disableProvider = async () => {
       const globalInput = globalDisabledConfigInput();
       const disabledProviders = await readGlobalDisabledProviderIds(globalInput);
-      devLog("disconnectProvider global disabled_providers (before)", {
+      ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "disconnectProvider global disabled_providers (before)", {
         disabled_providers: disabledProviders,
       });
       if (disabledProviders.includes(resolved)) {
@@ -762,7 +833,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
           options.setDisabledProviders(disabledProviders);
           throw new Error(t("providers.request_failed"));
         }
-        devLog("disconnectProvider: disabled_providers written to global opencode.json", {
+        ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "disconnectProvider: disabled_providers written to global opencode.json", {
           disabled_providers: next,
         });
         options.markOpencodeConfigReloadRequired();
@@ -846,7 +917,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       const details = await fetchProviderAuthForEdit(c, resolved, {
         fallbackFromList: fromList,
       });
-      devLog("openProviderAuthModalForEdit:loaded", {
+      ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "openProviderAuthModalForEdit:loaded", {
         providerId: resolved,
         baseUrl: details.baseUrl,
         presetCode: details.presetCode || undefined,
@@ -859,6 +930,11 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
           baseUrl: details.baseUrl,
           apiKeyHint: details.apiKeyHint,
           presetCode: details.presetCode,
+          providerType: resolveModelProviderTypeForConnect({
+            providerId: resolved,
+            presetCode: details.presetCode,
+            explicit: details.providerType,
+          }),
         },
         providerAuthMethods: {},
         providerAuthModalOpen: true,

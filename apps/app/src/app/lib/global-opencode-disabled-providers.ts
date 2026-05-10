@@ -4,6 +4,7 @@ import type { AiWorkServerClient } from "./aiwork-server";
 import type { OpencodeConfigFile } from "./desktop-tauri";
 import { readOpencodeConfig, writeOpencodeConfig } from "./desktop";
 import { isDesktopRuntime } from "../utils";
+import { ConsoleLog } from "./console-log";
 
 const DEFAULT_GLOBAL_CONFIG_HEADER =
   '{\n  "$schema": "https://opencode.ai/config.json"\n}\n';
@@ -67,14 +68,26 @@ export async function writeGlobalOpencodeConfigContent(
       "global",
       content,
     );
+    ConsoleLog.log("global-opencode-disabled-providers", "writeGlobalOpencodeConfigContent:done via aiwork-server", {
+      ok: result.ok,
+      content: content,
+    });
     return result.ok;
   }
 
   if (isDesktopRuntime()) {
     const result = await writeOpencodeConfig("global", input.workspaceRoot, content);
+    ConsoleLog.log("global-opencode-disabled-providers", "writeGlobalOpencodeConfigContent:done via desktop", {
+      ok: result.ok,
+      content: content,
+    });
     return result.ok;
   }
 
+  ConsoleLog.log("global-opencode-disabled-providers", "writeGlobalOpencodeConfigContent:done via fallback", {
+    ok: false,
+    content: content,
+  });
   return false;
 }
 

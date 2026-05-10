@@ -309,12 +309,36 @@ export function redactTokenLikeText(value: string): string {
     .replace(/\bowt_[a-z0-9_-]+\b/gi, "owt_[redacted]");
 }
 
+export type WorkspaceTaskLoadErrorTone = "error" | "offline";
+
+function inferWorkspaceTaskLoadTone(message: string): WorkspaceTaskLoadErrorTone {
+  const lower = message.toLowerCase();
+  const offlineSignals = [
+    "offline",
+    "failed to fetch",
+    "fetch failed",
+    "networkerror",
+    "network request failed",
+    "econnrefused",
+    "enotfound",
+    "etimedout",
+    "econnreset",
+    "socket hang up",
+    "connection refused",
+    "could not connect",
+    "net::err_",
+    "network error",
+  ];
+  return offlineSignals.some((s) => lower.includes(s)) ? "offline" : "error";
+}
+
 export function getWorkspaceTaskLoadErrorDisplay(_workspace: WorkspaceInfo, error?: string | null) {
   const raw = redactTokenLikeText(error?.trim() ?? "");
   const fallbackTitle = raw || "Failed to load tasks";
+  const tone = raw.length > 0 ? inferWorkspaceTaskLoadTone(raw) : "error";
   return {
-    tone: "error" as const,
-    label: "Error",
+    tone,
+    label: tone === "offline" ? t("config.host_offline") : "Error",
     message: raw || "Failed to load tasks",
     title: fallbackTitle,
   };

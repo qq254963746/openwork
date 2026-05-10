@@ -584,6 +584,34 @@ export default {
   "providers.auth_failed": "Authentication failed",
   "providers.connect_failed": "Failed to connect provider",
   "providers.custom_provider": "Custom provider",
+  "providers.custom_provider_api_base_required": "Enter an API base URL for this custom provider.",
+  "providers.custom_provider_workspace_required":
+    "Select a workspace folder before connecting a custom provider (project opencode.json must be updated).",
+  "providers.custom_provider_opencode_json_failed":
+    "Could not write the provider entry to project opencode.json. Check workspace access or AiWork server config permissions.",
+  "providers.custom_provider_opencode_json_invalid":
+    "Project opencode.json is invalid; fix it before connecting a custom provider.",
+  "providers.models_list_failed":
+    "Could not fetch models from the provider API ({detail}). Check the API base URL and key.",
+  "providers.global_opencode_json_failed":
+    "Could not write global OpenCode config (~/.config/opencode/opencode.json). Check permissions or AiWork server config access.",
+  "providers.global_opencode_json_invalid": "Global opencode.json is invalid JSON; fix it before saving provider settings.",
+  "providers.custom_provider_id_label": "Provider ID",
+  "providers.custom_provider_id_placeholder": "e.g. my-openai-proxy",
+  "providers.custom_provider_id_hint":
+    "Used as `provider.<id>` in project opencode.json and when saving credentials. Letters, digits, `_`, and `-` only; max 64 characters.",
+  "providers.custom_provider_id_required": "Enter a provider ID for this custom connection.",
+  "providers.custom_provider_id_invalid":
+    "Provider ID must start with a letter or digit, contain only letters, digits, underscores, and hyphens, and be at most 64 characters.",
+  "providers.custom_provider_id_reserved":
+    "This provider ID is reserved. Pick another id or use the matching preset in the list.",
+  "providers.provider_type_label": "Provider type",
+  "providers.provider_type_hint":
+    "Chooses which SDK adapter AiWork writes to global opencode.json and how the server lists models.",
+  "providers.provider_type_openai": "OpenAI",
+  "providers.provider_type_openai_compatible": "OpenAI-compatible",
+  "providers.provider_type_anthropic": "Anthropic",
+  "providers.provider_type_google": "Google",
   "providers.edit_provider_title": "Edit provider",
   "providers.disabled_in_config_suffix": "and disabled it in OpenCode config.",
   "providers.disconnect_failed": "Failed to disconnect provider",
@@ -1217,7 +1245,7 @@ export default {
   "workspace.rename_placeholder": "Design team workspace",
   "workspace.rename_title": "Edit workspace name",
   "workspace.selected": "Selected",
-  "workspace_list.sidebar_brand": "AiWork",
+  "workspace_list.sidebar_brand": "AIWORK",
   "workspace_list.add_workspace": "Add workspace",
   "workspace_list.connecting": "Connecting...",
   "workspace_list.delete_session": "Delete session",

@@ -12,8 +12,11 @@ import { openDesktopUrl } from "../../../../app/lib/desktop";
 import { isDesktopRuntime } from "../../../../app/utils";
 import {
   AIWORK_CUSTOM_PROVIDER_ENTRY_KEY,
+  DEFAULT_CUSTOM_MODEL_PROVIDER_TYPE,
+  DEFAULT_MODEL_PROVIDER_TYPES,
   MODEL_PROVIDER_PRESETS,
   listModelProviderPresetKeys,
+  type ModelProviderType,
 } from "../../../../app/utils/model-providers-catalog";
 import { compareProviders } from "../../../../app/utils/providers";
 import { t } from "../../../../i18n";
@@ -39,6 +42,16 @@ type ProviderOAuthSession = ProviderOAuthStartResult & {
   methodLabel: string;
 };
 
+/** OpenCode `provider.<id>` key: letters/digits start, then letters, digits, `_`, `-`. */
+const CUSTOM_PROVIDER_ID_MAX_LEN = 64;
+const CUSTOM_PROVIDER_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
+
+function isValidCustomProviderId(value: string): boolean {
+  const id = value.trim();
+  if (!id || id.length > CUSTOM_PROVIDER_ID_MAX_LEN) return false;
+  return CUSTOM_PROVIDER_ID_PATTERN.test(id);
+}
+
 const PROVIDER_LABELS: Record<string, string> = {
   opencode: "OpenCode",
   openai: "OpenAI",
@@ -63,7 +76,7 @@ export type ProviderAuthModalProps = {
     providerId: string,
     apiKey: string,
     baseUrl: string,
-    ctx?: { displayName: string; presetCode: string },
+    ctx?: { displayName: string; presetCode: string; providerType?: ModelProviderType },
   ) => Promise<string | void>;
   onSubmitOAuth: (
     providerId: string,
@@ -95,6 +108,9 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   const [oauthBrowserOpened, setOauthBrowserOpened] = useState(false);
   const [autoOpenedPreferredProviderId, setAutoOpenedPreferredProviderId] = useState<string | null>(null);
   const [displayNameInput, setDisplayNameInput] = useState("");
+  const [customProviderIdInput, setCustomProviderIdInput] = useState("");
+  const [providerTypeInput, setProviderTypeInput] =
+    useState<ModelProviderType>(DEFAULT_CUSTOM_MODEL_PROVIDER_TYPE);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const providerPollRef = useRef<number | null>(null);
@@ -229,7 +245,35 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   const methodLabel = (method: ProviderAuthMethod) =>
     method.label || (method.type === "oauth" ? "OAuth" : "API key");
 
+  const providerTypeOptionLabel = (type: ModelProviderType) => {
+    switch (type) {
+      case "openai":
+        return t("providers.provider_type_openai");
+      case "openai-compatible":
+        return t("providers.provider_type_openai_compatible");
+      case "anthropic":
+        return t("providers.provider_type_anthropic");
+      case "google":
+        return t("providers.provider_type_google");
+      default:
+        return type;
+    }
+  };
+
   const actionDisabled = props.loading || props.submitting;
+
+  const customNewProviderForm =
+    Boolean(selectedEntry?.id === AIWORK_CUSTOM_PROVIDER_ENTRY_KEY && !props.editSession);
+  const showProviderTypeSelect = Boolean(
+    customNewProviderForm ||
+      (props.editSession?.presetCode === AIWORK_CUSTOM_PROVIDER_ENTRY_KEY),
+  );
+  const saveApiKeyBlocked =
+    !apiKeyInput.trim() ||
+    (customNewProviderForm &&
+      (!displayNameInput.trim() ||
+        !customProviderIdInput.trim() ||
+        !baseUrlInput.trim()));
 
   const resetState = () => {
     if (oauthCodeCopiedResetRef.current !== null && typeof window !== "undefined") {
@@ -248,6 +292,8 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     setOauthCodeCopied(false);
     setOauthBrowserOpened(false);
     setDisplayNameInput("");
+    setCustomProviderIdInput("");
+    setProviderTypeInput(DEFAULT_CUSTOM_MODEL_PROVIDER_TYPE);
   };
 
   const stopProviderPolling = () => {
@@ -301,6 +347,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     setBaseUrlInput(props.editSession.baseUrl);
     setApiKeyInput(props.editSession.apiKeyHint ?? "");
     setDisplayNameInput(props.editSession.name);
+    setProviderTypeInput(props.editSession.providerType);
     setLocalError(null);
   }, [props.editSession, props.open]);
 
@@ -509,6 +556,10 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     setBaseUrlInput(preset?.baseUrl ?? "");
     setApiKeyInput("");
     setDisplayNameInput(entry.id === AIWORK_CUSTOM_PROVIDER_ENTRY_KEY ? "" : entry.name);
+    if (entry.id === AIWORK_CUSTOM_PROVIDER_ENTRY_KEY) {
+      setCustomProviderIdInput("");
+      setProviderTypeInput(DEFAULT_CUSTOM_MODEL_PROVIDER_TYPE);
+    }
     setView("api");
   };
 
@@ -542,9 +593,18 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     setLocalError(null);
     try {
       if (props.editSession) {
+        const sid = props.editSession.providerId.trim();
+        const fromSession = props.editSession.presetCode.trim();
+        const catalogIds = new Set(Object.keys(MODEL_PROVIDER_PRESETS));
+        const presetCode =
+          fromSession || (catalogIds.has(sid) ? sid : AIWORK_CUSTOM_PROVIDER_ENTRY_KEY);
+
         await props.onSubmitApiKey(props.editSession.providerId, trimmed, baseUrlInput, {
           displayName: displayNameInput.trim() || props.editSession.name,
-          presetCode: props.editSession.presetCode,
+          presetCode,
+          ...(presetCode === AIWORK_CUSTOM_PROVIDER_ENTRY_KEY
+            ? { providerType: providerTypeInput }
+            : {}),
         });
         return;
       }
@@ -558,11 +618,23 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
           setLocalError(t("providers.provider_display_name_required"));
           return;
         }
-        providerId =
-          typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `custom_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`;
-        presetCode = "";
+        const typedId = customProviderIdInput.trim();
+        if (!typedId) {
+          setLocalError(t("providers.custom_provider_id_required"));
+          return;
+        }
+        if (!isValidCustomProviderId(typedId)) {
+          setLocalError(t("providers.custom_provider_id_invalid"));
+          return;
+        }
+        const presetKeys = new Set(Object.keys(MODEL_PROVIDER_PRESETS).map((key) => key.toLowerCase()));
+        const lower = typedId.toLowerCase();
+        if (presetKeys.has(lower) || lower === AIWORK_CUSTOM_PROVIDER_ENTRY_KEY.toLowerCase()) {
+          setLocalError(t("providers.custom_provider_id_reserved"));
+          return;
+        }
+        providerId = typedId;
+        presetCode = AIWORK_CUSTOM_PROVIDER_ENTRY_KEY;
       } else {
         const preset = MODEL_PROVIDER_PRESETS[selectedEntry.id];
         displayName = preset?.name ?? selectedEntry.name;
@@ -572,6 +644,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
       await props.onSubmitApiKey(providerId, trimmed, baseUrlInput, {
         displayName,
         presetCode,
+        ...(presetCode === AIWORK_CUSTOM_PROVIDER_ENTRY_KEY ? { providerType: providerTypeInput } : {}),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to save API key";
@@ -614,6 +687,8 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
       setView("method");
       setApiKeyInput("");
       setBaseUrlInput("");
+      setCustomProviderIdInput("");
+      setProviderTypeInput(DEFAULT_CUSTOM_MODEL_PROVIDER_TYPE);
       setLocalError(null);
       return;
     }
@@ -871,6 +946,48 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                       disabled={actionDisabled}
                     />
                   ) : null}
+                  {selectedEntry.id === AIWORK_CUSTOM_PROVIDER_ENTRY_KEY && !props.editSession ? (
+                    <>
+                      <TextInput
+                        label={t("providers.custom_provider_id_label")}
+                        placeholder={t("providers.custom_provider_id_placeholder")}
+                        value={customProviderIdInput}
+                        onChange={(event) => {
+                          setCustomProviderIdInput(event.currentTarget.value);
+                          if (localError) setLocalError(null);
+                        }}
+                        autoComplete="off"
+                        autoCapitalize="off"
+                        spellCheck={false}
+                        disabled={actionDisabled}
+                      />
+                      <div className="text-[11px] text-gray-9 -mt-2">{t("providers.custom_provider_id_hint")}</div>
+                    </>
+                  ) : null}
+                  {showProviderTypeSelect ? (
+                    <div className="grid gap-2">
+                      <label className="text-xs font-medium text-gray-11" htmlFor="provider-type-select">
+                        {t("providers.provider_type_label")}
+                      </label>
+                      <select
+                        id="provider-type-select"
+                        className="w-full rounded-xl border border-gray-6/50 bg-gray-1 px-3 py-2.5 text-sm text-gray-12 outline-none focus-visible:ring-2 focus-visible:ring-indigo-9/40 disabled:opacity-60"
+                        value={providerTypeInput}
+                        onChange={(event) => {
+                          setProviderTypeInput(event.currentTarget.value as ModelProviderType);
+                          if (localError) setLocalError(null);
+                        }}
+                        disabled={actionDisabled}
+                      >
+                        {DEFAULT_MODEL_PROVIDER_TYPES.map((pt) => (
+                          <option key={pt} value={pt}>
+                            {providerTypeOptionLabel(pt)}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="text-[11px] text-gray-9 -mt-1">{t("providers.provider_type_hint")}</div>
+                    </div>
+                  ) : null}
                   <TextInput
                     label={t("providers.api_base_url_label")}
                     placeholder="https://api.example.com/v1"
@@ -909,7 +1026,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                     <Button
                       variant="secondary"
                       onClick={handleApiSubmit}
-                      disabled={actionDisabled || !apiKeyInput.trim()}
+                      disabled={actionDisabled || saveApiKeyBlocked}
                     >
                       {props.submitting ? t("providers.saving_key") : t("providers.save_key_button")}
                     </Button>

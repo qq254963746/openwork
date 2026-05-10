@@ -1,8 +1,8 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
-
 import { SUGGESTED_PLUGINS } from "../../app/constants";
+import type { ReadGlobalOpencodeConfigInput } from "../../app/lib/global-opencode-disabled-providers";
 import { createClient, unwrap } from "../../app/lib/opencode";
 import {
   buildAiWorkWorkspaceBaseUrl,
@@ -70,6 +70,7 @@ import {
   revealDesktopItemInDir,
 } from "../../app/lib/desktop";
 import { isDesktopRuntime, normalizeDirectoryPath, safeStringify } from "../../app/utils";
+import { fetchFinallyProviderList } from "../domains/connections/provider-auth/fetch-finally-provider-list";
 import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-modal";
 import { RenameWorkspaceModal } from "../domains/workspace/rename-workspace-modal";
 import { ModelPickerModal } from "../domains/session/modals/model-picker-modal";
@@ -77,18 +78,12 @@ import type { ModelOption, ModelRef } from "../../app/types";
 import { recordInspectorEvent } from "./app-inspector";
 import { ensureDesktopLocalAiWorkConnection } from "./desktop-local-aiwork";
 import { resolveAiWorkConnection } from "./aiwork-connection";
+import { ConsoleLog } from "../../app/lib/console-log";
 import { abortSessionSafe } from "../../app/lib/opencode-session";
 import { useReloadCoordinator } from "./reload-coordinator";
 import { readActiveWorkspaceId, writeActiveWorkspaceId } from "./session-memory";
 import { workspaceSessionRoute, workspaceSettingsRoute } from "./workspace-routes";
 import { toSessionTransportDirectory } from "../../app/lib/session-scope";
-
-
-function devLog(...args: unknown[]) {
-  if (import.meta.env.DEV) {
-    console.log("[settings-route]", ...args);
-  }
-}
 
 type RouteWorkspace = AiWorkWorkspaceInfo & {
   displayNameResolved: string;
@@ -722,25 +717,44 @@ export function SettingsRoute() {
     let cancelled = false;
     void providerAuthStore.refreshProviders();
     void (async () => {
-      try {
-        const res = await opencodeClient.config.providers({
-          directory: selectedWorkspaceRoot || undefined,
-        });
-        devLog("modelPickerModal:config.providers", { res });
-        const data = (res as { data?: { providers?: Array<{ id: string; name: string; source?: string; models: Record<string, { id: string; name: string }> }> } }).data;
-        devLog("modelPickerModal:config.providers data", { data });
-        if (cancelled || !data?.providers) return;
+      let caps: AiWorkServerCapabilities | null = null;
+      if (aiworkClient) {
+        try {
+          caps = await aiworkClient.capabilities();
+        } catch {
+          caps = null;
+        }
+      }
+      const globalInput: ReadGlobalOpencodeConfigInput = {
+        workspaceRoot: selectedWorkspaceRoot,
+        selectedWorkspaceId: selectedWorkspaceId.trim(),
+        runtimeWorkspaceId: selectedWorkspaceId.trim() || null,
+        aiworkServerStatus: aiworkClient ? "connected" : "disconnected",
+        aiworkServerClient: aiworkClient,
+        aiworkServerCapabilities: caps,
+      };
+
+      const buildOptionsFromProviders = (providersList: ProviderListItem[]) => {
         const options: ModelOption[] = [];
-        for (const provider of data.providers) {
-          const modelIds = Object.keys(provider.models);
+        for (const provider of providersList) {
+          const models = provider.models;
+          if (!models || typeof models !== "object") continue;
+          const modelIds = Object.keys(models);
           const hasModels = modelIds.length > 0;
           for (const id of modelIds) {
-            const model = provider.models[id];
+            const model = models[id];
+            const title =
+              model &&
+              typeof model === "object" &&
+              "name" in model &&
+              typeof (model as { name?: unknown }).name === "string"
+                ? (model as { name: string }).name
+                : id;
             options.push({
               providerID: provider.id,
               modelID: id,
-              title: model.name || id,
-              description: provider.name,
+              title: title || id,
+              description: provider.name ?? provider.id,
               behaviorTitle: "Reasoning",
               behaviorLabel: "Default",
               behaviorDescription: "",
@@ -750,19 +764,30 @@ export function SettingsRoute() {
             });
           }
         }
-        setModelOptions(options);
-      } catch (error) {
-        setRouteError(
-          error instanceof Error
-            ? error.message
-            : t("app.unknown_error"),
-        );
+        return options;
+      };
+
+      const filtered = await fetchFinallyProviderList({
+        listClient: opencodeClient as Client,
+        globalInput,
+        workspaceConfigDirectory: selectedWorkspaceRoot || undefined,
+        providerConnectedIds: [],
+      });
+      ConsoleLog.log("settings-route", "modelPickerModal:fetchFinallyProviderList", {
+        allCount: filtered?.all?.length,
+        defaultKeys: filtered?.default ? Object.keys(filtered.default) : [],
+      });
+      if (cancelled) return;
+      if (!filtered) {
+        setRouteError(t("app.unknown_error"));
+        return;
       }
+      setModelOptions(buildOptionsFromProviders(filtered.all));
     })();
     return () => {
       cancelled = true;
     };
-  }, [modelPickerOpen, opencodeClient, selectedWorkspaceRoot]);
+  }, [modelPickerOpen, opencodeClient, selectedWorkspaceRoot, selectedWorkspaceId, aiworkClient]);
 
   useEffect(() => {
     local.setUi((previous) => ({ ...previous, view: "settings", tab: route.tab }));

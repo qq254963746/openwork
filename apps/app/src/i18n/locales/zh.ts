@@ -559,6 +559,33 @@ export default {
   "providers.auth_failed": "认证失败",
   "providers.connect_failed": "添加提供商失败",
   "providers.custom_provider": "自定义提供商",
+  "providers.custom_provider_api_base_required": "请填写该自定义提供商的 API 基础地址。",
+  "providers.custom_provider_workspace_required":
+    "连接自定义提供商前请先选择工作区目录（需更新项目 opencode.json）。",
+  "providers.custom_provider_opencode_json_failed":
+    "无法将提供商条目写入项目 opencode.json。请检查工作区权限或 AiWork 服务器的配置写入能力。",
+  "providers.custom_provider_opencode_json_invalid": "项目 opencode.json 无效，请先修复后再连接自定义提供商。",
+  "providers.models_list_failed":
+    "无法从提供商接口获取模型列表（{detail}）。请检查 API 基础 URL 与密钥。",
+  "providers.global_opencode_json_failed":
+    "无法写入全局 OpenCode 配置（~/.config/opencode/opencode.json）。请检查权限或 AiWork 服务器的配置写入能力。",
+  "providers.global_opencode_json_invalid": "全局 opencode.json 无效，请先修复后再保存提供商设置。",
+  "providers.custom_provider_id_label": "模型提供商 ID",
+  "providers.custom_provider_id_placeholder": "例如 my-openai-proxy",
+  "providers.custom_provider_id_hint":
+    "将写入项目 opencode.json 的 `provider.<id>`，并与保存的凭据对应。仅可使用字母、数字、下划线与连字符，最长 64 个字符。",
+  "providers.custom_provider_id_required": "请填写自定义连接的模型提供商 ID。",
+  "providers.custom_provider_id_invalid":
+    "模型提供商 ID 须以字母或数字开头，只能包含字母、数字、下划线和连字符，且不超过 64 个字符。",
+  "providers.custom_provider_id_reserved":
+    "该 ID 已保留。请更换 ID，或使用列表中对应的预设提供商。",
+  "providers.provider_type_label": "提供商类型",
+  "providers.provider_type_hint":
+    "决定写入全局 opencode.json 的 SDK 适配方式，以及服务端如何拉取模型列表。",
+  "providers.provider_type_openai": "OpenAI",
+  "providers.provider_type_openai_compatible": "OpenAI 兼容",
+  "providers.provider_type_anthropic": "Anthropic",
+  "providers.provider_type_google": "Google",
   "providers.edit_provider_title": "编辑提供商",
   "providers.disabled_in_config_suffix": "并已在OpenCode配置中禁用。",
   "providers.disconnect_failed": "断开提供商失败",
@@ -1139,7 +1166,7 @@ export default {
   "workspace.rename_placeholder": "设计团队工作区",
   "workspace.rename_title": "编辑工作区名称",
   "workspace.selected": "已选择",
-  "workspace_list.sidebar_brand": "AiWork",
+  "workspace_list.sidebar_brand": "AIWORK",
   "workspace_list.add_workspace": "添加工作区",
   "workspace_list.connecting": "正在连接…",
   "workspace_list.delete_session": "删除会话",
