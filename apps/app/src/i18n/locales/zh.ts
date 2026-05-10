@@ -730,6 +730,8 @@ export default {
   "providers.disconnect_failed": "断开提供商失败",
   "providers.disconnected_prefix": "已断开",
   "providers.load_failed": "加载提供商失败",
+  "providers.modal_description": "使用 OAuth 登录，或在本设备粘贴 API 密钥。",
+  "providers.modal_title": "连接提供商",
   "providers.no_oauth_prefix": "没有可用的OAuth流程：",
   "providers.no_providers_available": "没有可用的提供商",
   "providers.not_connected": "未连接到服务器",

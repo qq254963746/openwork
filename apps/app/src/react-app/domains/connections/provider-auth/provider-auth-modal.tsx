@@ -639,10 +639,8 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
       <div className="bg-gray-2 border border-gray-6/70 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden max-h-[calc(100vh-2rem)] flex flex-col">
         <div className="px-6 pt-6 pb-4 border-b border-gray-6/50 flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-12">Connect providers</h3>
-            <p className="text-sm text-gray-11 mt-1">
-              Sign in with OAuth or paste an API key for this device.
-            </p>
+            <h3 className="text-lg font-semibold text-gray-12">{t("providers.modal_title")}</h3>
+            <p className="text-sm text-gray-11 mt-1">{t("providers.modal_description")}</p>
           </div>
           <Button variant="ghost" className="!p-2 rounded-full" onClick={handleClose} aria-label="Close">
             <X size={16} />

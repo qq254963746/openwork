@@ -776,6 +776,9 @@ export default {
   "providers.disconnect_failed": "Failed to disconnect provider",
   "providers.disconnected_prefix": "Disconnected",
   "providers.load_failed": "Failed to load providers",
+  "providers.modal_description":
+    "Sign in with OAuth or paste an API key for this device.",
+  "providers.modal_title": "Connect providers",
   "providers.no_oauth_prefix": "No OAuth flow available for",
   "providers.no_providers_available": "No providers available",
   "providers.not_connected": "Not connected to a server",
