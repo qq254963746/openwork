@@ -592,6 +592,7 @@ export default {
   "providers.modal_description":
     "Sign in with OAuth or paste an API key for this device.",
   "providers.modal_title": "Connect providers",
+  "providers.list_filter_placeholder": "Filter by name",
   "providers.no_oauth_prefix": "No OAuth flow available for",
   "providers.no_providers_available": "No providers available",
   "providers.not_connected": "Not connected to a server",
@@ -606,6 +607,8 @@ export default {
   "providers.removal_unsupported": "Provider auth removal is not supported by this client.",
   "providers.request_failed": "Request failed",
   "providers.save_api_key_failed": "Failed to save API key",
+  "providers.save_key_button": "Save key",
+  "providers.saving_key": "Saving…",
   "providers.still_connected_suffix": ", but the worker still reports it as connected. Clear any remaining API key or OAuth credentials and restart the worker to fully disconnect.",
   "providers.unknown_provider": "Unknown provider",
   "providers.use_api_key_suffix": "Use an API key instead.",

@@ -94,7 +94,12 @@ export function GeneralSettingsView(props: GeneralSettingsViewProps) {
                 className={`${settingsPanelSoftClass} flex flex-wrap items-center justify-between gap-3 px-3 py-2`}
               >
                 <div className="min-w-0 flex items-center gap-3">
-                  <ProviderIcon providerId={provider.id} size={18} className="text-gray-12" />
+                  <ProviderIcon
+                    providerId={provider.id}
+                    providerSource={provider.source}
+                    size={18}
+                    className="text-gray-12"
+                  />
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium text-gray-12">{provider.name}</div>
                     <div className="truncate font-mono text-[11px] text-gray-8">{provider.id}</div>

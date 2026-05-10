@@ -1,11 +1,5 @@
 /** @jsxImportSource react */
-import {
-  CheckCircle2,
-  ChevronRight,
-  Loader2,
-  Search,
-  X,
-} from "lucide-react";
+import { ChevronRight, Loader2, Search, X } from "lucide-react";
 import {
   useEffect,
   useMemo,
@@ -37,7 +31,6 @@ type ProviderAuthEntry = {
   id: string;
   name: string;
   methods: ProviderAuthMethod[];
-  connected: boolean;
   env: string[];
 };
 
@@ -160,7 +153,6 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
       label: t("providers.api_key_label"),
       methodIndex: 0,
     };
-    const connected = new Set(props.connectedProviderIds ?? []);
     const presetIds = listModelProviderPresetKeys();
     const presetEntries: ProviderAuthEntry[] = presetIds.map((key) => {
       const preset = MODEL_PROVIDER_PRESETS[key];
@@ -168,7 +160,6 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
         id: key,
         name: preset?.name ?? formatProviderName(key),
         methods: [apiMethod],
-        connected: connected.has(key),
         env: [],
       };
     });
@@ -176,11 +167,10 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
       id: AIWORK_CUSTOM_PROVIDER_ENTRY_KEY,
       name: t("providers.custom_provider"),
       methods: [apiMethod],
-      connected: false,
       env: [],
     };
     return [...[...presetEntries].sort(compareProviders), customEntry];
-  }, [props.connectedProviderIds]);
+  }, []);
 
   const editSyntheticEntry = useMemo((): ProviderAuthEntry | null => {
     const session = props.editSession;
@@ -194,7 +184,6 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
       id: session.providerId,
       name: session.name,
       methods: [apiMethod],
-      connected: true,
       env: [],
     };
   }, [props.editSession]);
@@ -239,13 +228,6 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
 
   const methodLabel = (method: ProviderAuthMethod) =>
     method.label || (method.type === "oauth" ? "OAuth" : "API key");
-
-  const apiPrefillSignature = useMemo(() => {
-    if (!selectedProviderId) return "";
-    const meta = props.providers.find((item) => item.id === selectedProviderId);
-    if (!meta) return "";
-    return `${meta.initialApiBaseUrl ?? ""}\u0000${meta.existingApiKeyHint ?? ""}`;
-  }, [props.providers, selectedProviderId]);
 
   const actionDisabled = props.loading || props.submitting;
 
@@ -311,23 +293,6 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     if (!props.open || effectiveView !== "list") return;
     queueMicrotask(() => searchInputRef.current?.focus());
   }, [effectiveView, props.open]);
-
-  /** Backfill base URL / API key hint when provider list updates after opening the API form. */
-  useEffect(() => {
-    if (!props.open || effectiveView !== "api" || !selectedProviderId || props.editSession) return;
-    if (!apiPrefillSignature) return;
-    const meta = props.providers.find((item) => item.id === selectedProviderId);
-    if (!meta) return;
-    setBaseUrlInput((prev) => (prev.trim() ? prev : meta.initialApiBaseUrl ?? ""));
-    setApiKeyInput((prev) => (prev.trim() ? prev : meta.existingApiKeyHint ?? ""));
-  }, [
-    apiPrefillSignature,
-    effectiveView,
-    props.editSession,
-    props.open,
-    props.providers,
-    selectedProviderId,
-  ]);
 
   useEffect(() => {
     if (!props.open || !props.editSession) return;
@@ -541,9 +506,8 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     }
 
     const preset = MODEL_PROVIDER_PRESETS[entry.id];
-    const providerMeta = props.providers.find((item) => item.id === entry.id);
-    setBaseUrlInput(preset?.baseUrl ?? providerMeta?.initialApiBaseUrl ?? "");
-    setApiKeyInput(providerMeta?.existingApiKeyHint ?? "");
+    setBaseUrlInput(preset?.baseUrl ?? "");
+    setApiKeyInput("");
     setDisplayNameInput(entry.id === AIWORK_CUSTOM_PROVIDER_ENTRY_KEY ? "" : entry.name);
     setView("api");
   };
@@ -735,42 +699,47 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
           </Button>
         </div>
 
-        <div className="px-6 py-4 flex flex-col gap-4 min-h-0">
-          <div className="min-h-[36px]">
-            {errorMessage ? (
-              <div className="rounded-xl border border-red-7/30 bg-red-1/40 px-3 py-2 text-xs text-red-11">
-                {errorMessage}
-              </div>
-            ) : props.loading ? (
-              <div className="rounded-xl border border-gray-6 bg-gray-1/60 px-4 py-3 text-sm text-gray-10 animate-pulse">
-                Loading providers...
-              </div>
-            ) : null}
-          </div>
+        <div className="px-6 pt-2 pb-3 flex flex-1 flex-col gap-3 min-h-0 overflow-hidden">
+          {errorMessage || props.loading ? (
+            <div className="shrink-0">
+              {errorMessage ? (
+                <div className="rounded-xl border border-red-7/30 bg-red-1/40 px-3 py-2 text-xs text-red-11">
+                  {errorMessage}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-gray-6 bg-gray-1/60 px-4 py-3 text-sm text-gray-10 animate-pulse">
+                  Loading providers...
+                </div>
+              )}
+            </div>
+          ) : null}
 
           {!props.loading ? (
-            <div className="flex-1 space-y-2 overflow-y-auto pr-1 -mr-1">
-              {effectiveView === "list" ? (
-                <div className="space-y-3" onKeyDown={handleListKeyDown}>
-                  <div className="relative flex items-center mb-1">
-                    <Search size={16} className="absolute left-3 text-gray-9" />
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      placeholder="Filter providers by name or ID"
-                      value={searchQuery}
-                      onChange={(event) => {
-                        setSearchQuery(event.currentTarget.value);
-                        setActiveEntryIndex(0);
-                      }}
-                      autoComplete="off"
-                      autoCapitalize="off"
-                      spellCheck={false}
-                      disabled={actionDisabled}
-                      className="w-full rounded-xl bg-gray-2 px-9 py-2.5 text-[13px] text-gray-12 placeholder:text-gray-9 border border-gray-6/60 focus:border-gray-8 focus:bg-gray-1 focus:outline-none transition-colors shadow-sm"
-                    />
-                  </div>
+            effectiveView === "list" ? (
+              <div className="flex flex-1 flex-col min-h-0 gap-3">
+                <div className="relative shrink-0 flex items-center">
+                  <Search size={16} className="absolute left-3 text-gray-9 pointer-events-none" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder={t("providers.list_filter_placeholder")}
+                    value={searchQuery}
+                    onChange={(event) => {
+                      setSearchQuery(event.currentTarget.value);
+                      setActiveEntryIndex(0);
+                    }}
+                    autoComplete="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    disabled={actionDisabled}
+                    className="w-full rounded-xl bg-gray-2 px-9 py-2.5 text-[13px] text-gray-12 placeholder:text-gray-9 border border-gray-6/60 focus:border-gray-8 focus:bg-gray-1 focus:outline-none transition-colors shadow-sm"
+                  />
+                </div>
 
+                <div
+                  className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 -mr-1 space-y-3"
+                  onKeyDown={handleListKeyDown}
+                >
                   {filteredEntries.length ? (
                     filteredEntries.map((entry, index) => (
                       <button
@@ -804,18 +773,8 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                                 {entry.name}
                               </div>
                             </div>
-                            <div className="flex items-center justify-end shrink-0">
-                              {entry.connected ? (
-                                <div className="flex items-center gap-1 text-[11px] font-medium text-green-11 bg-green-4/20 border border-green-5/30 px-1.5 py-0.5 rounded-md">
-                                  <CheckCircle2 size={12} strokeWidth={2.5} />
-                                  Connected
-                                </div>
-                              ) : (
-                                <div className="text-[12px] font-medium text-gray-9 group-hover:text-gray-12 transition-colors flex items-center gap-0.5 opacity-80 group-hover:opacity-100">
-                                  Connect
-                                  <ChevronRight size={14} className="opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all duration-200" />
-                                </div>
-                              )}
+                            <div className="flex items-center justify-end shrink-0 text-gray-9 opacity-50 group-hover:opacity-100 transition-opacity">
+                              <ChevronRight size={14} />
                             </div>
                           </div>
                           <div className="text-[11px] text-gray-9 font-mono truncate mt-0.5 opacity-60 group-hover:opacity-80 transition-opacity">
@@ -845,10 +804,10 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                     </div>
                   )}
 
-                  <div className="text-[11px] text-gray-9">Arrow keys to navigate, Enter to select.</div>
                 </div>
-              ) : null}
-
+              </div>
+            ) : (
+              <div className="flex-1 min-h-0 overflow-y-auto pr-1 -mr-1 space-y-2">
               {resolvedView === "method" && selectedEntry ? (
                 <div className="rounded-xl border border-gray-6/40 bg-gray-2/50 shadow-sm p-5 space-y-4">
                   <div className="flex items-center justify-between gap-4">
@@ -952,7 +911,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                       onClick={handleApiSubmit}
                       disabled={actionDisabled || !apiKeyInput.trim()}
                     >
-                      {props.submitting ? "Saving..." : "Save key"}
+                      {props.submitting ? t("providers.saving_key") : t("providers.save_key_button")}
                     </Button>
                   </div>
                 </div>
@@ -1079,11 +1038,12 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                   </div>
                 </div>
               ) : null}
-            </div>
+              </div>
+            )
           ) : null}
         </div>
 
-        <div className="px-6 pt-4 pb-6 border-t border-gray-6/50 flex flex-col gap-3">
+        <div className="px-6 pt-2 pb-4 border-t border-gray-6/50 flex flex-col gap-2">
           <div className="min-h-[16px] text-xs text-gray-10">
             {props.submitting ? submittingLabel() : null}
           </div>

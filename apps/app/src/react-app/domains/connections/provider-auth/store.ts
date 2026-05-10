@@ -841,7 +841,11 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       providerAuthPreferredProviderId: null,
     }));
     try {
-      const details = await fetchProviderAuthForEdit(c, resolved);
+      const fromList =
+        options.providers().find((p) => p.id?.trim() === resolved) ?? null;
+      const details = await fetchProviderAuthForEdit(c, resolved, {
+        fallbackFromList: fromList,
+      });
       devLog("openProviderAuthModalForEdit:loaded", {
         providerId: resolved,
         baseUrl: details.baseUrl,
