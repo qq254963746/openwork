@@ -404,6 +404,8 @@ export function SettingsRoute() {
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
   const [modelPickerQuery, setModelPickerQuery] = useState("");
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
+  const [autoCompactContext, setAutoCompactContext] = useState(true);
+  const [autoCompactContextBusy, setAutoCompactContextBusy] = useState(false);
   const emptyWorkspaceDisplay = useMemo<WorkspaceDisplay>(
     () => ({
       id: "",
@@ -1149,7 +1151,6 @@ export function SettingsRoute() {
   const defaultModelRef = local.prefs.defaultModel
     ? `${local.prefs.defaultModel.providerID}/${local.prefs.defaultModel.modelID}`
     : t("settings.default_label");
-  const defaultModelVariantLabel = local.prefs.modelVariant ?? t("settings.default_label");
   const providerStatusLabel = providerConnectedIds.length > 0 ? t("status.connected") : t("status.disconnected_label");
   const providerStatusStyle = providerConnectedIds.length > 0
     ? "bg-green-7/10 text-green-11 border-green-7/20"
@@ -1365,6 +1366,80 @@ export function SettingsRoute() {
     selectedWorkspaceRoot,
   });
 
+  const autoCompactWorkspaceId = selectedWorkspace?.id ?? "";
+  useEffect(() => {
+    if (!openworkClient || !autoCompactWorkspaceId) {
+      setAutoCompactContext(true);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const config = await openworkClient.getConfig(autoCompactWorkspaceId);
+        if (cancelled) return;
+        const opencodeConfig =
+          config.opencode && typeof config.opencode === "object"
+            ? (config.opencode as Record<string, unknown>)
+            : {};
+        const compaction =
+          opencodeConfig.compaction && typeof opencodeConfig.compaction === "object"
+            ? (opencodeConfig.compaction as Record<string, unknown>)
+            : null;
+        // OpenCode treats compaction.auto as true when unset.
+        const auto = compaction && typeof compaction.auto === "boolean" ? compaction.auto : true;
+        setAutoCompactContext(auto);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("[settings-route] failed to read compaction.auto", error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [openworkClient, autoCompactWorkspaceId]);
+
+  const handleToggleAutoCompactContext = useCallback(async () => {
+    if (!openworkClient || !autoCompactWorkspaceId) {
+      setRouteError(t("app.error_connect_first"));
+      return;
+    }
+    setAutoCompactContextBusy(true);
+    setRouteError(null);
+    try {
+      const config = await openworkClient.getConfig(autoCompactWorkspaceId);
+      const opencodeConfig =
+        config.opencode && typeof config.opencode === "object"
+          ? (config.opencode as Record<string, unknown>)
+          : {};
+      const currentCompaction =
+        opencodeConfig.compaction && typeof opencodeConfig.compaction === "object"
+          ? (opencodeConfig.compaction as Record<string, unknown>)
+          : {};
+      const currentAuto =
+        typeof currentCompaction.auto === "boolean" ? currentCompaction.auto : true;
+      const nextAuto = !currentAuto;
+      const nextCompaction = { ...currentCompaction, auto: nextAuto };
+
+      await openworkClient.patchConfig(autoCompactWorkspaceId, {
+        opencode: { compaction: nextCompaction },
+      });
+      setAutoCompactContext(nextAuto);
+      setConfigActionStatus(t("settings.config_updated"));
+      reloadCoordinator.markReloadRequired("config", {
+        type: "config",
+        name: "opencode.json",
+        action: "updated",
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : safeStringify(error);
+      setRouteError(message);
+    } finally {
+      setAutoCompactContextBusy(false);
+    }
+  }, [autoCompactWorkspaceId, openworkClient, reloadCoordinator]);
+
   if (route.redirectPath) {
     const target = selectedWorkspaceId
       ? workspaceSettingsRoute(selectedWorkspaceId, route.redirectPath)
@@ -1419,14 +1494,10 @@ export function SettingsRoute() {
             onToggleShowThinking={() => {
               local.setPrefs((previous) => ({ ...previous, showThinking: !previous.showThinking }));
             }}
-            defaultModelVariantLabel={defaultModelVariantLabel}
-            onConfigureModelBehavior={() => {
-              setRouteError("Model behavior picker is not wired into the React settings route yet.");
-            }}
-            autoCompactContext={false}
-            autoCompactContextBusy={false}
+            autoCompactContext={autoCompactContext}
+            autoCompactContextBusy={autoCompactContextBusy}
             onToggleAutoCompactContext={() => {
-              setRouteError("Auto-compact controls are not wired into the React settings route yet.");
+              void handleToggleAutoCompactContext();
             }}
           />
         );

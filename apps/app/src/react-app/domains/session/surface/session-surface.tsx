@@ -667,6 +667,16 @@ export function SessionSurface(props: SessionSurfaceProps) {
     [snapshot, renderedMessages],
   );
 
+  /** Reply footer meta comes from {@link snapshot}; transcript updates live first — refresh snapshot when streaming ends so tokens/time appear without reloading. */
+  const chatStreamingPrevRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    const prev = chatStreamingPrevRef.current;
+    if (prev === true && chatStreaming === false) {
+      void snapshotQuery.refetch();
+    }
+    chatStreamingPrevRef.current = chatStreaming;
+  }, [chatStreaming, snapshotQuery]);
+
   const workspacePanelRefreshPrevStreamingRef = useRef<boolean | null>(null);
   useEffect(() => {
     if (!props.workspaceSidePanelOpen) {

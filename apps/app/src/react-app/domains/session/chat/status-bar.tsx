@@ -166,6 +166,12 @@ export function StatusBar(props: StatusBarProps) {
           sidebar
             ? "min-h-11 gap-2 px-2 py-2"
             : "h-12 gap-3 px-4 md:px-6"
+        } ${
+          sidebar &&
+          typeof props.onOpenAppLogs === "function" &&
+          props.showSettingsButton !== false
+            ? "group/sidebar-actions"
+            : ""
         }`}
       >
         <div className={`flex min-w-0 items-center ${sidebar ? "gap-2" : "gap-2.5"}`}>
@@ -189,15 +195,36 @@ export function StatusBar(props: StatusBarProps) {
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div
+          className={
+            sidebar &&
+            typeof props.onOpenAppLogs === "function" &&
+            props.showSettingsButton !== false
+              ? "flex shrink-0 items-center gap-0 group-hover/sidebar-actions:gap-1.5"
+              : "flex items-center gap-1.5"
+          }
+        >
           {typeof props.onOpenAppLogs === "function" ? (
             <button
               ref={appLogsButtonRef}
               type="button"
               className={`flex shrink-0 items-center justify-center rounded-md text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12 ${
                 sidebar ? "h-7 w-7 translate-x-[5px]" : "h-8 w-8"
+              } ${
+                sidebar && props.showSettingsButton !== false
+                  ? "max-w-0 min-w-0 translate-x-[5px] overflow-hidden opacity-0 transition-[max-width,opacity] duration-150 ease-out pointer-events-none group-hover/sidebar-actions:pointer-events-auto group-hover/sidebar-actions:max-w-7 group-hover/sidebar-actions:opacity-100 group-hover/sidebar-actions:translate-x-[5px] focus-visible:pointer-events-auto focus-visible:max-w-7 focus-visible:opacity-100"
+                  : ""
               }`}
-              onClick={props.onOpenAppLogs}
+              onClick={() => {
+                props.onOpenAppLogs?.();
+                // Clear click focus so closing the detached log window does not restore focus here and leave the icon expanded.
+                if (sidebar && props.showSettingsButton !== false) {
+                  queueMicrotask(() => {
+                    const ae = document.activeElement;
+                    if (ae instanceof HTMLElement) ae.blur();
+                  });
+                }
+              }}
               title={t("status.app_logs")}
               aria-label={t("status.app_logs")}
             >

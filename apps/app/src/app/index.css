@@ -391,7 +391,7 @@ select:disabled {
   animation: progress-shimmer 2s infinite linear;
 }
 
-/* Session "Thinking" row: highlight sweeps left → right while reasoning streams. */
+/* Session step titles (Thinking + tools in flight): gray → black sweep, left → right. */
 @keyframes thinking-title-shimmer {
   0% {
     background-position: 100% 50%;
@@ -404,26 +404,26 @@ select:disabled {
 .thinking-title-shimmer {
   background-image: linear-gradient(
     90deg,
-    var(--slate-11) 0%,
-    var(--slate-11) 38%,
+    var(--slate-10) 0%,
+    var(--slate-10) 30%,
     var(--slate-12) 50%,
-    var(--slate-11) 62%,
-    var(--slate-11) 100%
+    var(--slate-10) 70%,
+    var(--slate-10) 100%
   );
-  background-size: 200% 100%;
+  background-size: 220% 100%;
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  animation: thinking-title-shimmer 1.75s ease-in-out infinite;
+  animation: thinking-title-shimmer 2s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .thinking-title-shimmer {
     animation: none;
     background-image: none;
-    color: var(--slate-11);
-    -webkit-text-fill-color: var(--slate-11);
+    color: var(--slate-12);
+    -webkit-text-fill-color: var(--slate-12);
   }
 }
 

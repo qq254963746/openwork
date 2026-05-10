@@ -1167,6 +1167,9 @@ function StepRow(props: {
     : undefined;
   const toolOutput = toolState.output;
   const toolError = typeof toolState.error === "string" ? toolState.error : null;
+  /** Tool call still in flight until transcript carries output or error (matches UI part → legacy mapping). */
+  const toolExecuting =
+    props.part.type === "tool" && toolOutput === undefined && toolError === null;
   const expandable =
     props.part.type === "tool" &&
     (hasStructuredValue(toolInput) || hasStructuredValue(toolOutput) || Boolean(toolError));
@@ -1208,7 +1211,11 @@ function StepRow(props: {
           <span className="flex w-full max-w-[800px] items-center gap-2 leading-relaxed">
             <ToolStepTitleGlyph className="size-[14px] shrink-0 text-gray-10" />
             <span className="flex min-w-0 flex-1 items-center gap-1.5">
-              <span className="min-w-0 break-words">{headline}</span>
+              <span
+                className={`min-w-0 break-words ${toolExecuting ? "font-medium thinking-title-shimmer" : ""}`}
+              >
+                {headline}
+              </span>
               <ChevronDown
                 size={14}
                 className={`shrink-0 text-gray-8 transition-transform ${
@@ -1332,7 +1339,11 @@ function StepRow(props: {
             <ToolStepTitleGlyph className="size-[14px] shrink-0 text-gray-10" />
           ) : null}
           <span className="flex min-w-0 flex-1 items-center gap-1.5">
-            <span className="min-w-0 break-words">{headline}</span>
+            <span
+              className={`min-w-0 break-words ${toolExecuting ? "font-medium thinking-title-shimmer" : ""}`}
+            >
+              {headline}
+            </span>
             {expandable ? (
               <ChevronDown
                 size={14}
@@ -1700,6 +1711,9 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
       const clusterMsgId = block.messageIds[0] ?? "";
       const showClusterQaFooter =
         !isNestedVariant && !block.isUser && assistantQaCopyByLastId.has(clusterMsgId);
+      /** Hide copy/meta hover chrome while the latest assistant message is still streaming. */
+      const showClusterQaFooterChrome =
+        showClusterQaFooter && !(props.isStreaming && clusterMsgId === latestAssistantMessageId);
       const clusterFooterMeta = showClusterQaFooter
         ? props.assistantReplyMetaById?.get(clusterMsgId)
         : undefined;
@@ -1721,7 +1735,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                 : isNestedVariant
                   ? "w-full relative text-[14px] leading-[1.65] text-dls-text group"
                   : `w-full relative max-w-[800px] text-[15px] leading-[1.7] text-dls-text group${
-                      showClusterQaFooter ? " pb-7" : ""
+                      showClusterQaFooterChrome ? " pb-7" : ""
                     }`
             } ${searchOutlineClass}`}
           >
@@ -1744,10 +1758,10 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                 onOpenWorkspaceRelativePath={props.onOpenWorkspaceRelativePath}
                 fetchWorkspaceFileText={props.fetchWorkspaceFileText}
                 writtenFileSvgQueryKey={props.writtenFileSvgQueryKey}
-                clearFloatingCopySlot={showClusterQaFooter}
+                clearFloatingCopySlot={showClusterQaFooterChrome}
               />
             ) : null}
-            {showClusterQaFooter ? (
+            {showClusterQaFooterChrome ? (
               <div className="absolute bottom-px left-0 right-2 flex items-center gap-3 opacity-0 pointer-events-none transition-opacity select-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto">
                 <div className="pointer-events-auto min-w-0 flex-1">
                   {clusterFooterMeta ? (
@@ -1814,6 +1828,10 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
 
     const showAssistantQaFooter =
       !block.isUser && assistantQaCopyByLastId.has(block.messageId);
+    /** Hide copy/meta hover chrome while the latest assistant message is still streaming. */
+    const showAssistantQaFooterChrome =
+      showAssistantQaFooter &&
+      !(props.isStreaming && block.messageId === latestAssistantMessageId);
     const assistantFooterMeta = showAssistantQaFooter
       ? props.assistantReplyMetaById?.get(block.messageId)
       : undefined;
@@ -1835,7 +1853,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
               : isNestedVariant
                 ? "w-full relative text-[14px] leading-[1.65] text-dls-text antialiased group"
                 : `w-full relative max-w-[800px] text-[15px] leading-[1.72] text-dls-text antialiased group${
-                    showAssistantQaFooter ? " pb-7" : ""
+                    showAssistantQaFooterChrome ? " pb-7" : ""
                   }`
           } ${searchOutlineClass}`}
         >
@@ -1931,7 +1949,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
               onOpenWorkspaceRelativePath={props.onOpenWorkspaceRelativePath}
               fetchWorkspaceFileText={props.fetchWorkspaceFileText}
               writtenFileSvgQueryKey={props.writtenFileSvgQueryKey}
-              clearFloatingCopySlot={!isNestedVariant && showAssistantQaFooter}
+              clearFloatingCopySlot={!isNestedVariant && showAssistantQaFooterChrome}
             />
           ) : null}
 
@@ -1940,7 +1958,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
               <div className="absolute bottom-2 right-2 flex justify-end opacity-0 pointer-events-none transition-opacity select-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto">
                 <CopyButton getText={() => messageToText(block.message)} />
               </div>
-            ) : showAssistantQaFooter ? (
+            ) : showAssistantQaFooterChrome ? (
               <div className="absolute bottom-px left-0 right-2 flex items-center gap-3 opacity-0 pointer-events-none transition-opacity select-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto">
                 <div className="pointer-events-auto min-w-0 flex-1">
                   {assistantFooterMeta ? (
