@@ -2,6 +2,7 @@
 import { AlertTriangle, RefreshCcw, X } from "lucide-react";
 
 import type { ReloadTrigger } from "../../../app/types";
+import { dlsPrimarySolidClass } from "../workspace/modal-styles";
 
 export type ReloadWorkspaceToastProps = {
   open: boolean;
@@ -22,7 +23,7 @@ export type ReloadWorkspaceToastProps = {
 
 const buttonBaseClass =
   "inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[rgba(var(--dls-accent-rgb),0.18)] disabled:cursor-not-allowed disabled:opacity-60";
-const primaryButtonClass = `${buttonBaseClass} bg-[var(--dls-accent)] text-white hover:bg-[var(--dls-accent-hover)]`;
+const primaryButtonClass = `${buttonBaseClass} ${dlsPrimarySolidClass} focus:ring-black/25 dark:focus:ring-white/25`;
 const dangerButtonClass = `${buttonBaseClass} bg-red-9 text-white hover:bg-red-10`;
 const ghostButtonClass = `${buttonBaseClass} border border-transparent bg-transparent text-dls-text hover:bg-[var(--dls-hover)]`;
 

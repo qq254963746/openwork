@@ -1,6 +1,8 @@
 /** @jsxImportSource react */
 import { AlertTriangle, CheckCircle2, CircleAlert, Info, X } from "lucide-react";
 
+import { dlsPrimarySolidClass } from "../workspace/modal-styles";
+
 export type StatusToastProps = {
   open: boolean;
   title: string;
@@ -70,7 +72,7 @@ export function StatusToast(props: StatusToastProps) {
             <div className="mt-3 flex items-center gap-2">
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-full bg-[var(--dls-accent)] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[var(--dls-accent-hover)]"
+                className={`inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${dlsPrimarySolidClass}`}
                 onClick={() => props.onAction?.()}
               >
                 {props.actionLabel}

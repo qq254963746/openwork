@@ -37,6 +37,7 @@ import { getReactQueryClient } from "../../../infra/query-client";
 import { ReactSessionComposer } from "./composer/composer";
 import { DevProfiler } from "../../../shell/dev-profiler";
 import { Loader2 } from "lucide-react";
+import { dlsPrimarySolidClass } from "../../workspace/modal-styles";
 
 import { t } from "../../../../i18n";
 import { useReactRenderWatchdog } from "../../../shell/react-render-watchdog";
@@ -463,7 +464,7 @@ function InlineQuestionPrompt(props: {
             <div className="mt-3 flex justify-end">
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-full bg-dls-accent px-4 py-2 text-[12px] font-semibold text-white transition-opacity disabled:opacity-60"
+                className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-[12px] font-semibold transition-colors disabled:opacity-60 ${dlsPrimarySolidClass}`}
                 onClick={handleNext}
                 disabled={!canProceed || props.busy}
               >

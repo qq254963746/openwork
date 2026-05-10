@@ -31,6 +31,7 @@ import {
   modalShellClass,
   modalSubtitleClass,
   modalTitleClass,
+  dlsPrimarySolidClass,
   pillGhostClass,
   pillPrimaryClass,
   pillSecondaryClass,
@@ -570,7 +571,7 @@ export function SkillsView(props: SkillsViewProps) {
                       type="button"
                       onClick={() => selectHubRepo(repo)}
                       className={`px-3 py-1.5 text-[12px] font-medium transition-colors ${
-                        active ? "bg-dls-accent text-white" : "text-dls-secondary hover:bg-dls-hover hover:text-dls-text"
+                        active ? dlsPrimarySolidClass : "text-dls-secondary hover:bg-dls-hover hover:text-dls-text"
                       }`}
                       disabled={props.busy}
                     >

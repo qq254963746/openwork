@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
 import { FileSpreadsheet, Globe, FolderOpen, Bot, FileText, Plug } from "lucide-react";
 import { t } from "../../../i18n";
+import { dlsPrimarySolidClass } from "../workspace/modal-styles";
 
 type CapabilityCardProps = {
   icon: React.ReactNode;
@@ -82,7 +83,7 @@ export function WelcomePage({ onGetStarted }: WelcomePageProps) {
           <button
             type="button"
             onClick={onGetStarted}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-dls-accent px-8 py-3 text-[15px] font-medium text-white transition-colors hover:bg-[var(--dls-accent-hover)] focus:outline-none focus:ring-2 focus:ring-[rgba(var(--dls-accent-rgb),0.18)]"
+            className={`inline-flex items-center justify-center gap-2 rounded-full px-8 py-3 text-[15px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-black/25 dark:focus:ring-white/25 ${dlsPrimarySolidClass}`}
           >
             {t("welcome.get_started")}
           </button>
