@@ -26,12 +26,15 @@ let _resolvedBundledCommand: string[] | null | undefined;
 export async function resolveChromeDevtoolsMcpCommand(): Promise<string[]> {
   if (isElectronRuntime() && _resolvedBundledCommand === undefined) {
     try {
-      const resolved = await (window as Window).__AIWORK_ELECTRON__!.invokeDesktop(
-        "resolveChromeDevtoolsMcpBin",
-      );
-      _resolvedBundledCommand = Array.isArray(resolved) && resolved.length > 0
-        ? (resolved as string[])
-        : null;
+      const invokeDesktop = (window as Window).__AIWORK_ELECTRON__?.invokeDesktop;
+      if (!invokeDesktop) {
+        _resolvedBundledCommand = null;
+      } else {
+        const resolved = await invokeDesktop("resolveChromeDevtoolsMcpBin");
+        _resolvedBundledCommand = Array.isArray(resolved) && resolved.length > 0
+          ? (resolved as string[])
+          : null;
+      }
     } catch {
       _resolvedBundledCommand = null;
     }

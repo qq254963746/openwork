@@ -1,12 +1,6 @@
-export type WorkspaceType = "local" | "remote";
-
-export type RemoteType = "opencode" | "aiwork";
-
 export type ApprovalMode = "manual" | "auto";
 
 export type TokenScope = "owner" | "collaborator" | "viewer";
-
-export type SandboxBackend = "none" | "docker" | "container";
 
 export type ProviderPlacement = "in-sandbox" | "host-machine" | "client-machine" | "external";
 
@@ -17,20 +11,15 @@ export interface WorkspaceConfig {
   path: string;
   name?: string;
   preset?: string;
-  workspaceType?: WorkspaceType;
-  remoteType?: RemoteType;
-  baseUrl?: string;
-  directory?: string;
   displayName?: string;
-  aiworkHostUrl?: string;
-  aiworkToken?: string;
-  aiworkWorkspaceId?: string;
-  aiworkWorkspaceName?: string;
-  sandboxBackend?: string;
-  sandboxRunId?: string;
-  sandboxContainerName?: string;
   opencodeUsername?: string;
   opencodePassword?: string;
+  opencode?: {
+    baseUrl?: string;
+    directory?: string;
+    username?: string;
+    password?: string;
+  };
 }
 
 export interface WorkspaceInfo {
@@ -38,18 +27,7 @@ export interface WorkspaceInfo {
   name: string;
   path: string;
   preset: string;
-  workspaceType: WorkspaceType;
-  remoteType?: RemoteType;
-  baseUrl?: string;
-  directory?: string;
   displayName?: string;
-  aiworkHostUrl?: string;
-  aiworkToken?: string;
-  aiworkWorkspaceId?: string;
-  aiworkWorkspaceName?: string;
-  sandboxBackend?: string;
-  sandboxRunId?: string;
-  sandboxContainerName?: string;
   opencodeUsername?: string;
   opencodePassword?: string;
   opencode?: {
@@ -111,7 +89,6 @@ export interface Capabilities {
   config: { read: boolean; write: boolean };
 
   approvals: { mode: ApprovalMode; timeoutMs: number };
-  sandbox: { enabled: boolean; backend: SandboxBackend };
   ui: { toy: boolean };
   tokens: { scoped: boolean; scopes: TokenScope[] };
   proxy: {

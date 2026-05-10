@@ -13,7 +13,6 @@ pub struct AiWorkServerManager {
 pub struct AiWorkServerState {
     pub child: Option<CommandChild>,
     pub child_exited: bool,
-    pub remote_access_enabled: bool,
     pub host: Option<String>,
     pub port: Option<u16>,
     pub base_url: Option<String>,
@@ -42,7 +41,6 @@ impl AiWorkServerManager {
 
         AiWorkServerInfo {
             running,
-            remote_access_enabled: state.remote_access_enabled,
             host: state.host.clone(),
             port: state.port,
             base_url: state.base_url.clone(),
@@ -65,7 +63,6 @@ impl AiWorkServerManager {
             let _ = child.kill();
         }
         state.child_exited = true;
-        state.remote_access_enabled = false;
         state.host = None;
         state.port = None;
         state.base_url = None;

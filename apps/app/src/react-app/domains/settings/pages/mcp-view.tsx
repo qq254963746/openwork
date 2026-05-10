@@ -54,7 +54,6 @@ export type ReactMcpStatus =
 export type McpViewProps = {
   busy: boolean;
   selectedWorkspaceRoot: string;
-  isRemoteWorkspace: boolean;
   readConfigFile?: (scope: "project" | "global") => Promise<OpencodeConfigFile | null>;
   showHeader?: boolean;
   mcpServers: McpServerEntry[];
@@ -810,7 +809,6 @@ export function McpView(props: McpViewProps) {
         onClose={() => setAddMcpModalOpen(false)}
         onAdd={(entry) => props.connectMcp(entry)}
         busy={props.busy}
-        isRemoteWorkspace={props.isRemoteWorkspace}
       />
 
       <ControlChromeSetupModal

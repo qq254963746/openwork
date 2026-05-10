@@ -133,8 +133,6 @@ export type SessionSurfaceProps = {
   listCommands: () => Promise<import("../../../../app/types").SlashCommandOption[]>;
   recentFiles: string[];
   searchFiles: (query: string) => Promise<string[]>;
-  isRemoteWorkspace: boolean;
-  isSandboxWorkspace: boolean;
   onChangeModel?: (model: { providerID: string; modelID: string }) => void;
   onUploadInboxFiles?: ((files: File[], options?: { notify?: boolean }) => void | Promise<unknown>) | null;
   onOpenSettingsSection?: ((section: "commands" | "skills" | "mcps" | "plugins") => void) | undefined;
@@ -1308,8 +1306,6 @@ export function SessionSurface(props: SessionSurfaceProps) {
         notice={notice}
         onNotice={setNotice}
         onUnsupportedFileLinks={handleUnsupportedFileLinks}
-        isRemoteWorkspace={props.isRemoteWorkspace}
-          isSandboxWorkspace={props.isSandboxWorkspace}
           onUploadInboxFiles={props.onUploadInboxFiles ?? handleUploadInboxFiles}
         />
         </DevProfiler>

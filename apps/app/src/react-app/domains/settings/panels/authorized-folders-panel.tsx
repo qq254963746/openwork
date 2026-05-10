@@ -22,7 +22,6 @@ export type AuthorizedFoldersPanelProps = {
   aiworkServerCapabilities: AiWorkServerCapabilities | null;
   runtimeWorkspaceId: string | null;
   selectedWorkspaceRoot: string;
-  activeWorkspaceType: "local" | "remote";
   onConfigUpdated: () => void;
 };
 
@@ -128,8 +127,7 @@ export function AuthorizedFoldersPanel(props: AuthorizedFoldersPanelProps) {
     return null;
   }, [canReadConfig, canWriteConfig, aiworkServerReady, aiworkServerWorkspaceReady]);
 
-  const canPickAuthorizedFolder =
-    isDesktopRuntime() && canWriteConfig && props.activeWorkspaceType === "local";
+  const canPickAuthorizedFolder = isDesktopRuntime() && canWriteConfig;
   const workspaceRootFolder = props.selectedWorkspaceRoot.trim();
   const visibleAuthorizedFolders = useMemo(() => {
     const root = workspaceRootFolder;

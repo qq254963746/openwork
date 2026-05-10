@@ -23,7 +23,6 @@ import type {
   WorkspacePreset,
   WorkspaceSessionGroup,
 } from "../../app/types";
-import { getWorkspaceTaskLoadErrorDisplay, isSandboxWorkspace } from "../../app/utils";
 import { currentLocale, t, setLocale, type Language } from "../../i18n";
 import { createConnectionsStore, useConnectionsStoreSnapshot } from "../domains/connections/store";
 import { createAiWorkServerStore, useAiWorkServerStoreSnapshot } from "../domains/connections/aiwork-server-store";
@@ -71,15 +70,8 @@ import {
   revealDesktopItemInDir,
 } from "../../app/lib/desktop";
 import { isDesktopRuntime, normalizeDirectoryPath, safeStringify } from "../../app/utils";
-import { CreateRemoteWorkspaceModal } from "../domains/workspace/create-remote-workspace-modal";
 import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-modal";
 import { RenameWorkspaceModal } from "../domains/workspace/rename-workspace-modal";
-import { useRemoteWorkspaceConnectionEditor } from "../domains/workspace/use-remote-workspace-connection-editor";
-import {
-  diagnoseRemoteWorkspaceTaskLoadFailure,
-  getRemoteWorkspaceConnectionKey,
-  testRemoteWorkspaceConnection,
-} from "../domains/workspace/remote-workspace-diagnostics";
 import { ModelPickerModal } from "../domains/session/modals/model-picker-modal";
 import type { ModelOption, ModelRef } from "../../app/types";
 import { recordInspectorEvent } from "./app-inspector";
@@ -90,6 +82,13 @@ import { useReloadCoordinator } from "./reload-coordinator";
 import { readActiveWorkspaceId, writeActiveWorkspaceId } from "./session-memory";
 import { workspaceSessionRoute, workspaceSettingsRoute } from "./workspace-routes";
 import { toSessionTransportDirectory } from "../../app/lib/session-scope";
+
+
+function devLog(...args: unknown[]) {
+  if (import.meta.env.DEV) {
+    console.log("[settings-route]", ...args);
+  }
+}
 
 type RouteWorkspace = AiWorkWorkspaceInfo & {
   displayNameResolved: string;
@@ -223,7 +222,6 @@ const SETTINGS_THEME_KEY = "aiwork.react.settings.theme-mode";
 function workspaceLabel(workspace: AiWorkWorkspaceInfo) {
   return (
     workspace.displayName?.trim() ||
-    workspace.aiworkWorkspaceName?.trim() ||
     workspace.name?.trim() ||
     workspace.path?.trim() ||
     t("session.workspace_fallback")
@@ -384,8 +382,6 @@ export function SettingsRoute() {
   const refreshMcpServersRef = useRef<(() => void | Promise<void>) | null>(null);
   const notifyMcpReloadingRef = useRef<(() => void) | null>(null);
   const pollMcpServersAfterReloadRef = useRef<(() => void | Promise<void>) | null>(null);
-  const remoteWorkspaceCheckRunRef = useRef<Record<string, string>>({});
-  const remoteWorkspaceCheckRunCounterRef = useRef(0);
   const [providers, setProviders] = useState<ProviderListItem[]>([]);
   const [providerDefaults, setProviderDefaults] = useState<Record<string, string>>({});
   const [providerConnectedIds, setProviderConnectedIds] = useState<string[]>([]);
@@ -412,7 +408,6 @@ export function SettingsRoute() {
       name: t("session.workspace_fallback"),
       path: "",
       preset: "starter",
-      workspaceType: "local",
     }),
     [],
   );
@@ -421,7 +416,6 @@ export function SettingsRoute() {
     activeClient: null as Client | null,
     selectedWorkspaceId: "",
     selectedWorkspaceRoot: "",
-    selectedWorkspaceType: "local" as "local" | "remote",
     runtimeWorkspaceId: null as string | null,
     aiworkServerClient: null as AiWorkServerClient | null,
     aiworkServerStatus: "disconnected" as "connected" | "disconnected",
@@ -438,20 +432,10 @@ export function SettingsRoute() {
     () => workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ?? (selectedWorkspaceId ? null : workspaces[0] ?? null),
     [selectedWorkspaceId, workspaces],
   );
-  const workspaceConnectionStateById = useMemo(() => {
-    const next: Record<string, WorkspaceConnectionState> = { ...workspaceConnectionOverrides };
-    for (const workspace of workspaces) {
-      if (workspace.workspaceType !== "remote") continue;
-      const error = errorsByWorkspaceId[workspace.id]?.trim();
-      if (!error || next[workspace.id]?.status === "connecting") continue;
-      next[workspace.id] ??= {
-        status: "error",
-        message: getWorkspaceTaskLoadErrorDisplay(workspace, error).message || error,
-        checkedAt: null,
-      };
-    }
-    return next;
-  }, [errorsByWorkspaceId, workspaceConnectionOverrides, workspaces]);
+  const workspaceConnectionStateById = useMemo(
+    () => ({ ...workspaceConnectionOverrides }),
+    [workspaceConnectionOverrides],
+  );
   const selectedWorkspaceRoot = selectedWorkspace?.path?.trim() || "";
   const selectedWorkspaceDisplay = useMemo<WorkspaceDisplay>(
     () =>
@@ -461,9 +445,7 @@ export function SettingsRoute() {
             name: selectedWorkspace.name ?? selectedWorkspace.displayNameResolved,
             path: selectedWorkspace.path ?? "",
             preset: "starter",
-            workspaceType: selectedWorkspace.workspaceType ?? "local",
             displayName: selectedWorkspace.displayNameResolved,
-            aiworkWorkspaceName: selectedWorkspace.aiworkWorkspaceName,
           }
         : emptyWorkspaceDisplay,
     [emptyWorkspaceDisplay, selectedWorkspace],
@@ -473,7 +455,6 @@ export function SettingsRoute() {
     activeClient,
     selectedWorkspaceId,
     selectedWorkspaceRoot,
-    selectedWorkspaceType: selectedWorkspace?.workspaceType ?? "local",
     runtimeWorkspaceId: selectedWorkspace?.id ?? null,
     aiworkServerClient: aiworkClient,
     aiworkServerStatus: aiworkClient ? "connected" : "disconnected",
@@ -593,16 +574,12 @@ export function SettingsRoute() {
         restartLocalServer: async () => {
           if (!isDesktopRuntime()) return false;
           try {
-            await aiworkServerRestart({
-              remoteAccessEnabled:
-                readAiWorkServerSettings().remoteAccessEnabled === true,
-            });
+            await aiworkServerRestart();
             return true;
           } catch {
             return false;
           }
         },
-        createRemoteWorkspaceFlow: async () => false,
       }),
     [],
   );
@@ -614,7 +591,6 @@ export function SettingsRoute() {
         projectDir: () => routeStateRef.current.selectedWorkspaceRoot,
         selectedWorkspaceId: () => routeStateRef.current.selectedWorkspaceId,
         selectedWorkspaceRoot: () => routeStateRef.current.selectedWorkspaceRoot,
-        workspaceType: () => routeStateRef.current.selectedWorkspaceType,
         aiworkServer: aiworkServerStore,
         runtimeWorkspaceId: () => routeStateRef.current.runtimeWorkspaceId,
         developerMode: () => routeStateRef.current.developerMode,
@@ -661,7 +637,6 @@ export function SettingsRoute() {
         projectDir: () => routeStateRef.current.selectedWorkspaceRoot,
         selectedWorkspaceId: () => routeStateRef.current.selectedWorkspaceId,
         selectedWorkspaceRoot: () => routeStateRef.current.selectedWorkspaceRoot,
-        workspaceType: () => routeStateRef.current.selectedWorkspaceType,
         aiworkServer: aiworkServerStore,
         aiworkServerConnection: () => ({
           aiworkServerClient: routeStateRef.current.aiworkServerClient,
@@ -751,7 +726,9 @@ export function SettingsRoute() {
         const res = await opencodeClient.config.providers({
           directory: selectedWorkspaceRoot || undefined,
         });
+        devLog("modelPickerModal:config.providers", { res });
         const data = (res as { data?: { providers?: Array<{ id: string; name: string; source?: string; models: Record<string, { id: string; name: string }> }> } }).data;
+        devLog("modelPickerModal:config.providers data", { data });
         if (cancelled || !data?.providers) return;
         const options: ModelOption[] = [];
         for (const provider of data.providers) {
@@ -869,15 +846,6 @@ export function SettingsRoute() {
             };
           } catch (error) {
             const fallback = error instanceof Error ? error.message : t("app.unknown_error");
-            if (workspace.workspaceType === "remote") {
-              const connectionState = await diagnoseRemoteWorkspaceTaskLoadFailure(workspace, fallback);
-              return {
-                workspaceId: workspace.id,
-                sessions: [],
-                error: connectionState.message ?? "Remote worker connection failed.",
-                connectionState,
-              };
-            }
             return {
               workspaceId: workspace.id,
               sessions: [],
@@ -982,83 +950,6 @@ export function SettingsRoute() {
     });
   }, [workspaces]);
 
-  const handleRemoteWorkspaceConnectionSaved = useCallback(
-    async (workspaceId: string) => {
-      delete remoteWorkspaceCheckRunRef.current[workspaceId];
-      setWorkspaceConnectionOverrides((current) => {
-        const next = { ...current };
-        delete next[workspaceId];
-        return next;
-      });
-      setErrorsByWorkspaceId((current) => ({ ...current, [workspaceId]: null }));
-      await refreshRouteState();
-    },
-    [refreshRouteState],
-  );
-
-  const remoteWorkspaceConnectionEditor = useRemoteWorkspaceConnectionEditor({
-    workspaces,
-    onSaved: handleRemoteWorkspaceConnectionSaved,
-  });
-
-  const runRemoteWorkspaceConnectionCheck = useCallback(
-    async (workspaceId: string, mode: "test" | "recover") => {
-      const workspace = workspacesRef.current.find((item) => item.id === workspaceId);
-      if (!workspace || workspace.workspaceType !== "remote") return false;
-      const connectionKey = getRemoteWorkspaceConnectionKey(workspace);
-      remoteWorkspaceCheckRunCounterRef.current += 1;
-      const runId = String(remoteWorkspaceCheckRunCounterRef.current);
-      remoteWorkspaceCheckRunRef.current[workspaceId] = runId;
-
-      setWorkspaceConnectionOverrides((current) => ({
-        ...current,
-        [workspaceId]: {
-          status: "connecting",
-          message: t("config.testing_connection"),
-          checkedAt: null,
-        },
-      }));
-
-      const result = await testRemoteWorkspaceConnection(workspace);
-      const currentWorkspace = workspacesRef.current.find((item) => item.id === workspaceId);
-      if (
-        remoteWorkspaceCheckRunRef.current[workspaceId] !== runId ||
-        !currentWorkspace ||
-        getRemoteWorkspaceConnectionKey(currentWorkspace) !== connectionKey
-      ) {
-        if (remoteWorkspaceCheckRunRef.current[workspaceId] === runId) {
-          delete remoteWorkspaceCheckRunRef.current[workspaceId];
-        }
-        return false;
-      }
-      setWorkspaceConnectionOverrides((current) => ({
-        ...current,
-        [workspaceId]: result.state,
-      }));
-
-      if (!result.ok) {
-        setErrorsByWorkspaceId((current) => ({
-          ...current,
-          [workspaceId]: result.state.message ?? "Remote worker connection failed.",
-        }));
-        if (remoteWorkspaceCheckRunRef.current[workspaceId] === runId) {
-          delete remoteWorkspaceCheckRunRef.current[workspaceId];
-        }
-        return false;
-      }
-
-      setErrorsByWorkspaceId((current) => ({ ...current, [workspaceId]: null }));
-      if (mode === "recover") {
-        await refreshRouteState();
-      }
-      if (remoteWorkspaceCheckRunRef.current[workspaceId] === runId) {
-        delete remoteWorkspaceCheckRunRef.current[workspaceId];
-      }
-      return true;
-    },
-    [refreshRouteState],
-  );
-
   useEffect(() => {
     if (!isDesktopRuntime()) return;
     if (loading) return;
@@ -1066,7 +957,7 @@ export function SettingsRoute() {
       reconnectAttemptedWorkspaceIdRef.current = "";
       return;
     }
-    if (!selectedWorkspace || selectedWorkspace.workspaceType !== "local") return;
+    if (!selectedWorkspace) return;
     const workspaceId = selectedWorkspace.id?.trim() ?? "";
     if (!workspaceId || reconnectAttemptedWorkspaceIdRef.current === workspaceId) return;
     reconnectAttemptedWorkspaceIdRef.current = workspaceId;
@@ -1118,7 +1009,6 @@ export function SettingsRoute() {
     aiworkServerStore,
     providerAuthStore,
     selectedWorkspace?.id,
-    selectedWorkspace?.workspaceType,
     selectedWorkspaceRoot,
   ]);
 
@@ -1132,19 +1022,19 @@ export function SettingsRoute() {
     }
     void providerAuthStore.refreshProviders();
     void connectionsStore.refreshMcpServers();
-  }, [activeClient, connectionsStore, providerAuthStore, selectedWorkspace?.id]);
+  }, [
+    activeClient,
+    connectionsStore,
+    providerAuthStore,
+    selectedWorkspace?.id,
+    selectedWorkspaceRoot,
+  ]);
 
   const selectedWorkspaceName = selectedWorkspace?.displayNameResolved ?? t("session.workspace_fallback");
-  const workspaceType = selectedWorkspace?.workspaceType ?? "local";
-  const isRemoteWorkspace = workspaceType === "remote";
-  const canWriteWorkspaceSkills =
-    !isRemoteWorkspace || aiworkServerSnapshot.aiworkServerCanWriteSkills;
-  const canWriteWorkspacePlugins =
-    !isRemoteWorkspace || aiworkServerSnapshot.aiworkServerCanWritePlugins;
-  const skillsAccessHint =
-    isRemoteWorkspace && !canWriteWorkspaceSkills ? t("app.skills_hint_readonly") : null;
-  const pluginsAccessHint =
-    isRemoteWorkspace && !canWriteWorkspacePlugins ? t("app.plugins_hint_readonly") : null;
+  const canWriteWorkspaceSkills = true;
+  const canWriteWorkspacePlugins = true;
+  const skillsAccessHint = null;
+  const pluginsAccessHint = null;
   const defaultModelLabel = local.prefs.defaultModel
     ? `${local.prefs.defaultModel.providerID}/${local.prefs.defaultModel.modelID}`
     : t("session.default_model");
@@ -1191,7 +1081,6 @@ export function SettingsRoute() {
     const workspacePaths = Array.from(
       new Set(
         workspaces
-          .filter((workspace) => workspace.workspaceType !== "remote")
           .map((workspace) => workspace.path?.trim() ?? "")
           .filter((path) => path.length > 0),
       ),
@@ -1203,7 +1092,6 @@ export function SettingsRoute() {
       preferSidecar: true,
       runtime: "direct",
       workspacePaths,
-      aiworkRemoteAccess: aiworkServerSnapshot.aiworkServerSettings.remoteAccessEnabled === true,
     });
     const reconnected = await aiworkServerStore.reconnectAiWorkServer();
     if (!reconnected) {
@@ -1325,10 +1213,7 @@ export function SettingsRoute() {
   const handleRestartLocalServer = useCallback(async () => {
     if (!isDesktopRuntime()) return false;
     try {
-      await aiworkServerRestart({
-        remoteAccessEnabled:
-          readAiWorkServerSettings().remoteAccessEnabled === true,
-      });
+      await aiworkServerRestart();
       await aiworkServerStore.reconnectAiWorkServer();
       await refreshRouteState();
       return true;
@@ -1341,10 +1226,7 @@ export function SettingsRoute() {
     if (!isDesktopRuntime()) return false;
 
     try {
-      await aiworkServerRestart({
-        remoteAccessEnabled:
-          readAiWorkServerSettings().remoteAccessEnabled === true,
-      });
+      await aiworkServerRestart();
       await aiworkServerStore.reconnectAiWorkServer();
       await refreshRouteState();
       return true;
@@ -1462,7 +1344,6 @@ export function SettingsRoute() {
               aiworkServerCapabilities: routeAiWorkCapabilities,
               runtimeWorkspaceId: selectedWorkspace?.id ?? null,
               selectedWorkspaceRoot,
-              activeWorkspaceType: workspaceType,
               onConfigUpdated: () => {
                 setConfigActionStatus(t("settings.config_updated"));
                 void providerAuthStore.refreshProviders();
@@ -1480,6 +1361,7 @@ export function SettingsRoute() {
             providerDisconnectStatus={configActionStatus}
             providerDisconnectError={null}
             onOpenProviderAuth={() => providerAuthStore.openProviderAuthModal()}
+            onEditProvider={(providerId) => void providerAuthStore.openProviderAuthModalForEdit(providerId)}
             onDisconnectProvider={async (providerId) => {
               await providerAuthStore.disconnectProvider(providerId);
             }}
@@ -1507,7 +1389,7 @@ export function SettingsRoute() {
             workspaceName={selectedWorkspaceName}
             busy={busy}
             canInstallSkillCreator={canWriteWorkspaceSkills}
-            canUseDesktopTools={!isRemoteWorkspace}
+            canUseDesktopTools
             accessHint={skillsAccessHint}
             extensions={extensionsStore}
             onOpenLink={(url) => platform.openLink(url)}
@@ -1522,9 +1404,8 @@ export function SettingsRoute() {
           <ExtensionsView
             busy={busy}
             selectedWorkspaceRoot={selectedWorkspaceRoot}
-            isRemoteWorkspace={isRemoteWorkspace}
             canEditPlugins={canWriteWorkspacePlugins}
-            canUseGlobalScope={!isRemoteWorkspace}
+            canUseGlobalScope
             accessHint={pluginsAccessHint}
             suggestedPlugins={SUGGESTED_PLUGINS}
             extensions={extensionsStore}
@@ -1545,7 +1426,6 @@ export function SettingsRoute() {
               <McpView
                 busy={busy}
                 selectedWorkspaceRoot={selectedWorkspaceRoot}
-                isRemoteWorkspace={isRemoteWorkspace}
                 mcpServers={connectionsSnapshot.mcpServers}
                 mcpStatus={connectionsSnapshot.mcpStatus}
                 mcpLastUpdatedAt={connectionsSnapshot.mcpLastUpdatedAt}
@@ -1657,9 +1537,8 @@ export function SettingsRoute() {
         return (
           <EnvironmentView
             client={aiworkServerSnapshot.aiworkServerClient}
-            isRemoteWorkspace={isRemoteWorkspace}
             onStatusMessage={setConfigActionStatus}
-            onApplyChanges={isDesktopRuntime() && !isRemoteWorkspace ? handleApplyEnvironmentChanges : undefined}
+            onApplyChanges={isDesktopRuntime() ? handleApplyEnvironmentChanges : undefined}
             applyBlocked={activeReloadBlockingSessions.length > 0}
             applyBlockedReason={
               activeReloadBlockingSessions.length > 0
@@ -1712,9 +1591,6 @@ export function SettingsRoute() {
         onCreateTaskInWorkspace: handleCreateTaskInWorkspace,
         onOpenRenameWorkspace: handleOpenRenameWorkspace,
         onRevealWorkspace: (id) => void handleRevealWorkspace(id),
-        onRecoverWorkspace: (workspaceId) => runRemoteWorkspaceConnectionCheck(workspaceId, "recover"),
-        onTestWorkspaceConnection: (workspaceId) => runRemoteWorkspaceConnectionCheck(workspaceId, "test"),
-        onEditWorkspaceConnection: remoteWorkspaceConnectionEditor.open,
         onForgetWorkspace: (id) => void handleForgetWorkspace(id),
         onOpenCreateWorkspace: handleOpenCreateWorkspace,
       }}
@@ -1742,11 +1618,14 @@ export function SettingsRoute() {
 
       <ProviderAuthModal
         open={providerAuthSnapshot.providerAuthModalOpen}
-        loading={false}
+        loading={
+          providerAuthSnapshot.providerAuthBusy && !providerAuthSnapshot.providerAuthEditSession
+        }
         submitting={providerAuthSnapshot.providerAuthBusy}
         error={providerAuthSnapshot.providerAuthError}
         preferredProviderId={providerAuthSnapshot.providerAuthPreferredProviderId}
         workerType={providerAuthSnapshot.providerAuthWorkerType}
+        editSession={providerAuthSnapshot.providerAuthEditSession}
         providers={providerAuthSnapshot.providerAuthProviders}
         connectedProviderIds={providerConnectedIds}
         authMethods={providerAuthSnapshot.providerAuthMethods}
@@ -1780,23 +1659,11 @@ export function SettingsRoute() {
         onSave={() => void handleSaveRenameWorkspace()}
         onTitleChange={setRenameWorkspaceTitle}
       />
-      <CreateRemoteWorkspaceModal
-        open={remoteWorkspaceConnectionEditor.workspace !== null}
-        onClose={remoteWorkspaceConnectionEditor.close}
-        onConfirm={(input) => void remoteWorkspaceConnectionEditor.save(input)}
-        initialValues={remoteWorkspaceConnectionEditor.initialValues}
-        submitting={remoteWorkspaceConnectionEditor.busy}
-        error={remoteWorkspaceConnectionEditor.error}
-        title={t("dashboard.edit_remote_workspace_title")}
-        subtitle={t("dashboard.edit_remote_workspace_subtitle")}
-        confirmLabel={t("dashboard.edit_remote_workspace_confirm")}
-      />
       <ConnectionsModals
         client={activeClient}
         projectDir={selectedWorkspaceRoot}
         reloadBlocked={activeReloadBlockingSessions.length > 0}
         activeSessions={activeReloadBlockingSessions}
-        isRemoteWorkspace={selectedWorkspace?.workspaceType === "remote"}
         onForceStopSession={(sessionId) => {
           if (!activeClient) return undefined;
           return abortSessionSafe(activeClient, sessionId);

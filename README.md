@@ -106,7 +106,7 @@ curl -fsSL https://opencode.ai/install | bash -s -- --version "$(node -e "const 
   - Fallback runtime: `direct`, where the desktop app spawns `opencode serve --hostname 127.0.0.1 --port <free-port>` directly.
 
 When you select a project folder, AiWork runs the host stack locally using that folder and connects the desktop UI.
-This lets you run agentic workflows, send prompts, and see progress entirely on your machine without a remote server.
+This lets you run agentic workflows, send prompts, and see progress entirely on your machine
 
 - The UI uses `@opencode-ai/sdk/v2/client` to:
   - connect to the server

@@ -29,10 +29,7 @@ use commands::misc::{
     read_opencode_engine_disk_logs, reset_opencode_cache, reset_aiwork_state,
 };
 use commands::aiwork_server::{aiwork_server_info, aiwork_server_restart};
-use commands::orchestrator::{
-    orchestrator_start_detached, sandbox_cleanup_aiwork_containers, sandbox_debug_probe,
-    sandbox_doctor, sandbox_stop,
-};
+use commands::orchestrator::orchestrator_start_detached;
 use commands::skills::{
     import_skill, install_skill_template, list_local_skills, read_local_skill, uninstall_skill,
     write_local_skill,
@@ -44,10 +41,10 @@ use commands::shell_events_bridge::{
 };
 use commands::window::set_window_decorations;
 use commands::workspace::{
-    workspace_add_authorized_root, workspace_bootstrap, workspace_create, workspace_create_remote,
+    workspace_add_authorized_root, workspace_bootstrap, workspace_create,
     workspace_export_config, workspace_forget, workspace_import_config, workspace_aiwork_read,
     workspace_aiwork_write, workspace_reorder, workspace_set_active, workspace_set_runtime_active,
-    workspace_set_selected, workspace_update_display_name, workspace_update_remote,
+    workspace_set_selected, workspace_update_display_name,
 };
 use engine::manager::EngineManager;
 use aiwork_server::manager::AiWorkServerManager;
@@ -159,10 +156,6 @@ pub fn run() {
             engine_install,
             engine_restart,
             orchestrator_start_detached,
-            sandbox_doctor,
-            sandbox_debug_probe,
-            sandbox_stop,
-            sandbox_cleanup_aiwork_containers,
             aiwork_server_info,
             aiwork_server_restart,
             workspace_bootstrap,
@@ -171,9 +164,7 @@ pub fn run() {
             workspace_set_runtime_active,
             workspace_set_active,
             workspace_create,
-            workspace_create_remote,
             workspace_update_display_name,
-            workspace_update_remote,
             workspace_forget,
             workspace_add_authorized_root,
             workspace_export_config,

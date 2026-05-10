@@ -13,9 +13,11 @@ export function resolveWorkspaceOpencodeConnection(
   config: Pick<ServerConfig, "opencodeBaseUrl" | "opencodeUsername" | "opencodePassword">,
   workspace: WorkspaceInfo,
 ): OpencodeConnection {
-  const baseUrl = trim(workspace.baseUrl) || trim(config.opencodeBaseUrl) || undefined;
-  const username = trim(workspace.opencodeUsername) || trim(config.opencodeUsername);
-  const password = trim(workspace.opencodePassword) || trim(config.opencodePassword);
+  const baseUrl = trim(workspace.opencode?.baseUrl) || trim(config.opencodeBaseUrl) || undefined;
+  const username =
+    trim(workspace.opencode?.username) || trim(workspace.opencodeUsername) || trim(config.opencodeUsername);
+  const password =
+    trim(workspace.opencode?.password) || trim(workspace.opencodePassword) || trim(config.opencodePassword);
 
   return {
     ...(baseUrl ? { baseUrl } : {}),
@@ -29,13 +31,21 @@ export function resolveWorkspaceOpencodeConnection(
 
 export function inheritWorkspaceOpencodeConnection(
   config: Pick<ServerConfig, "opencodeBaseUrl" | "opencodeUsername" | "opencodePassword">,
-): Pick<WorkspaceInfo, "baseUrl" | "opencodeUsername" | "opencodePassword"> {
+): Partial<WorkspaceInfo> {
   const baseUrl = trim(config.opencodeBaseUrl);
   const username = trim(config.opencodeUsername);
   const password = trim(config.opencodePassword);
 
   return {
-    ...(baseUrl ? { baseUrl } : {}),
+    ...(baseUrl || username || password
+      ? {
+          opencode: {
+            ...(baseUrl ? { baseUrl } : {}),
+            ...(username ? { username } : {}),
+            ...(password ? { password } : {}),
+          },
+        }
+      : {}),
     ...(username ? { opencodeUsername: username } : {}),
     ...(password ? { opencodePassword: password } : {}),
   };

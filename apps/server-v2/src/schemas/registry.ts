@@ -88,8 +88,6 @@ export const capabilitiesDataSchema = z.object({
   }),
   registry: z.object({
     backendResolution: z.literal(true),
-    remoteServerConnections: z.literal(true),
-    remoteWorkspaceSync: z.literal(true),
     hiddenWorkspaceFiltering: z.literal(true),
     serverInventory: z.literal(true),
     workspaceDetail: z.literal(true),
@@ -131,7 +129,7 @@ export const capabilitiesDataSchema = z.object({
 }).meta({ ref: "AiWorkServerV2CapabilitiesData" });
 
 const workspaceBackendSchema = z.object({
-  kind: z.enum(["local_opencode", "remote_aiwork"]),
+  kind: z.enum(["local_opencode"]),
   local: z.object({
     configDir: z.string().nullable(),
     dataDir: z.string().nullable(),
@@ -140,15 +138,13 @@ const workspaceBackendSchema = z.object({
   remote: z.object({
     directory: z.string().nullable(),
     hostUrl: z.string().nullable(),
-    remoteType: z.enum(["aiwork", "opencode"]),
-    remoteWorkspaceId: z.string().nullable(),
     workspaceName: z.string().nullable(),
   }).nullable(),
   serverId: identifierSchema,
 }).meta({ ref: "AiWorkServerV2WorkspaceBackend" });
 
 const workspaceRuntimeSummarySchema = z.object({
-  backendKind: z.enum(["local_opencode", "remote_aiwork"]),
+  backendKind: z.enum(["local_opencode"]),
   health: jsonObjectSchema.nullable(),
   lastError: jsonObjectSchema.nullable(),
   lastSessionRefreshAt: isoTimestampSchema.nullable(),
@@ -182,26 +178,6 @@ export const workspaceListDataSchema = z.object({
 export const serverInventoryListDataSchema = z.object({
   items: z.array(serverInventoryItemSchema),
 }).meta({ ref: "AiWorkServerV2ServerInventoryListData" });
-
-export const remoteServerConnectRequestSchema = z.object({
-  baseUrl: z.string().min(1),
-  directory: z.string().nullable().optional(),
-  hostToken: z.string().nullable().optional(),
-  label: z.string().nullable().optional(),
-  token: z.string().nullable().optional(),
-  workspaceId: z.string().nullable().optional(),
-}).meta({ ref: "AiWorkServerV2RemoteServerConnectRequest" });
-
-export const remoteServerSyncRequestSchema = z.object({
-  directory: z.string().nullable().optional(),
-  workspaceId: z.string().nullable().optional(),
-}).meta({ ref: "AiWorkServerV2RemoteServerSyncRequest" });
-
-export const remoteServerConnectDataSchema = z.object({
-  selectedWorkspaceId: identifierSchema.nullable(),
-  server: serverInventoryItemSchema,
-  workspaces: z.array(workspaceSummaryDataSchema),
-}).meta({ ref: "AiWorkServerV2RemoteServerConnectData" });
 
 export const systemStatusDataSchema = z.object({
   auth: authSummarySchema,
@@ -251,10 +227,6 @@ export const capabilitiesResponseSchema = successResponseSchema("AiWorkServerV2C
 export const serverInventoryListResponseSchema = successResponseSchema(
   "AiWorkServerV2ServerInventoryListResponse",
   serverInventoryListDataSchema,
-);
-export const remoteServerConnectResponseSchema = successResponseSchema(
-  "AiWorkServerV2RemoteServerConnectResponse",
-  remoteServerConnectDataSchema,
 );
 export const systemStatusResponseSchema = successResponseSchema("AiWorkServerV2SystemStatusResponse", systemStatusDataSchema);
 export const workspaceDetailResponseSchema = successResponseSchema("AiWorkServerV2WorkspaceDetailResponse", workspaceDetailDataSchema);

@@ -233,11 +233,14 @@ export async function resolveServerConfig(cli: CliArgs): Promise<ServerConfig> {
     const allowDirectoryOverride = workspaceConfigs.length === 1 && opencodeDirectory;
     workspaceConfigs = workspaceConfigs.map((workspace, index) => {
       const nextDirectory =
-        workspace.directory ?? (allowDirectoryOverride && index === 0 ? opencodeDirectory : undefined);
+        workspace.opencode?.directory ?? (allowDirectoryOverride && index === 0 ? opencodeDirectory : undefined);
       return {
         ...workspace,
-        baseUrl: workspace.baseUrl ?? opencodeBaseUrl,
-        directory: nextDirectory,
+        opencode: {
+          ...workspace.opencode,
+          baseUrl: workspace.opencode?.baseUrl ?? opencodeBaseUrl,
+          ...(nextDirectory ? { directory: nextDirectory } : {}),
+        },
         opencodeUsername: workspace.opencodeUsername ?? opencodeUsername,
         opencodePassword: workspace.opencodePassword ?? opencodePassword,
       };

@@ -272,7 +272,7 @@ export function startServer(config: ServerConfig) {
           assertOpencodeProxyAllowed(actor, request.method, mount.restPath);
           const workspace = await resolveWorkspace(config, mount.workspaceId);
           proxyService = "opencode";
-          proxyBaseUrl = workspace.baseUrl?.trim() || undefined;
+          proxyBaseUrl = workspace.opencode?.baseUrl?.trim() || undefined;
           const response = await proxyOpencodeRequest({ config, request, url, workspace, proxyPath: mount.restPath });
           return finalize(response);
         } catch (error) {
@@ -303,7 +303,7 @@ export function startServer(config: ServerConfig) {
 
       if (url.pathname === "/opencode" || url.pathname.startsWith("/opencode/")) {
         authMode = "client";
-        proxyBaseUrl = config.workspaces[0]?.baseUrl?.trim() || undefined;
+        proxyBaseUrl = config.workspaces[0]?.opencode?.baseUrl?.trim() || undefined;
         try {
           const actor = await requireClient(request, config, tokens);
           assertOpencodeProxyAllowed(actor, request.method, url.pathname);
@@ -617,14 +617,12 @@ async function requireHost(request: Request, config: ServerConfig, tokens: Token
 function buildCapabilities(config: ServerConfig): Capabilities {
   const writeEnabled = !config.readOnly;
   const schemaVersion = 1;
-  const sandboxBackend = resolveSandboxBackend();
-  const sandboxEnabled = resolveSandboxEnabled(sandboxBackend);
   const inboxEnabled = resolveInboxEnabled();
   const outboxEnabled = resolveOutboxEnabled();
   const maxBytes = resolveInboxMaxBytes();
   const toyUiEnabled = resolveToyUiEnabled();
   const browserProvider = resolveBrowserProvider();
-  const opencodeConfigured = config.workspaces.some((workspace) => Boolean(workspace.baseUrl?.trim()));
+  const opencodeConfigured = config.workspaces.some((workspace) => Boolean(workspace.opencode?.baseUrl?.trim()));
   return {
     schemaVersion,
     serverVersion: SERVER_VERSION,
@@ -643,7 +641,6 @@ function buildCapabilities(config: ServerConfig): Capabilities {
     config: { read: true, write: writeEnabled },
 
     approvals: { mode: config.approval.mode, timeoutMs: config.approval.timeoutMs },
-    sandbox: { enabled: sandboxEnabled, backend: sandboxBackend },
     ui: { toy: toyUiEnabled },
     tokens: { scoped: true, scopes: ["owner", "collaborator", "viewer"] },
     proxy: {
@@ -660,20 +657,6 @@ function buildCapabilities(config: ServerConfig): Capabilities {
       },
     },
   };
-}
-
-function resolveSandboxBackend(): Capabilities["sandbox"]["backend"] {
-  const raw = (process.env.AIWORK_SANDBOX_BACKEND ?? "").trim().toLowerCase();
-  if (raw === "docker") return "docker";
-  if (raw === "container") return "container";
-  return "none";
-}
-
-function resolveSandboxEnabled(backend: Capabilities["sandbox"]["backend"]): boolean {
-  const raw = (process.env.AIWORK_SANDBOX_ENABLED ?? "").trim().toLowerCase();
-  if (["1", "true", "yes", "on"].includes(raw)) return true;
-  if (["0", "false", "no", "off"].includes(raw)) return false;
-  return backend !== "none";
 }
 
 function resolveInboxEnabled(): boolean {
@@ -1102,12 +1085,13 @@ function serializeWorkspace(workspace: ServerConfig["workspaces"][number]) {
   const { opencodeUsername, opencodePassword, ...rest } = workspace;
   const opencodeDirectory = resolveOpencodeDirectory(workspace);
   const opencode =
-    workspace.baseUrl || opencodeDirectory || opencodeUsername || opencodePassword
+    workspace.opencode?.baseUrl || opencodeDirectory || opencodeUsername || opencodePassword
       ? {
-          baseUrl: workspace.baseUrl,
-          directory: opencodeDirectory ?? undefined,
-          username: opencodeUsername,
-          password: opencodePassword,
+          ...workspace.opencode,
+          baseUrl: workspace.opencode?.baseUrl,
+          directory: opencodeDirectory ?? workspace.opencode?.directory ?? undefined,
+          username: workspace.opencode?.username ?? opencodeUsername,
+          password: workspace.opencode?.password ?? opencodePassword,
         }
       : undefined;
   return {
@@ -1478,7 +1462,6 @@ function createRoutes(
       name,
       path: workspacePath,
       preset,
-      workspaceType: "local",
       ...inheritWorkspaceOpencodeConnection(config),
     };
 
@@ -1862,7 +1845,7 @@ function createRoutes(
       workspaceId: workspace.id,
       actor: ctx.actor ?? { type: "remote" },
       action: "engine.reload",
-      target: workspace.baseUrl ?? "opencode",
+      target: workspace.opencode?.baseUrl ?? "opencode",
       summary: "Reloaded workspace engine",
       timestamp: Date.now(),
     });
@@ -2413,6 +2396,8 @@ function createRoutes(
   addRoute(routes, "GET", "/workspace/:id/files/content", "client", async (ctx) => {
     const workspace = await resolveWorkspace(config, ctx.params.id);
     const requested = (ctx.url.searchParams.get("path") ?? "").trim();
+    const optionalRaw = ctx.url.searchParams.get("optional");
+    const optional = optionalRaw === "1" || optionalRaw === "true";
     const relativePath = normalizeWorkspaceRelativePath(requested, { allowSubdirs: true });
     if (!isSupportedWorkspaceTextFilePath(relativePath)) {
       throw new ApiError(400, "invalid_path", "Only Markdown and OpenCode plugin text files are supported");
@@ -2420,10 +2405,16 @@ function createRoutes(
 
     const absPath = resolveSafeChildPath(workspace.path, relativePath);
     if (!(await exists(absPath))) {
+      if (optional) {
+        return jsonResponse({ path: relativePath, content: "", bytes: 0, missing: true });
+      }
       throw new ApiError(404, "file_not_found", "File not found");
     }
     const info = await stat(absPath);
     if (!info.isFile()) {
+      if (optional) {
+        return jsonResponse({ path: relativePath, content: "", bytes: 0, missing: true });
+      }
       throw new ApiError(404, "file_not_found", "File not found");
     }
 
@@ -3370,18 +3361,7 @@ function serializeWorkspaceConfigEntry(workspace: WorkspaceInfo): Record<string,
     path: workspace.path,
     name: workspace.name,
     preset: workspace.preset,
-    workspaceType: workspace.workspaceType,
-    ...(workspace.remoteType ? { remoteType: workspace.remoteType } : {}),
-    ...(workspace.baseUrl ? { baseUrl: workspace.baseUrl } : {}),
-    ...(workspace.directory ? { directory: workspace.directory } : {}),
     ...(workspace.displayName ? { displayName: workspace.displayName } : {}),
-    ...(workspace.aiworkHostUrl ? { aiworkHostUrl: workspace.aiworkHostUrl } : {}),
-    ...(workspace.aiworkToken ? { aiworkToken: workspace.aiworkToken } : {}),
-    ...(workspace.aiworkWorkspaceId ? { aiworkWorkspaceId: workspace.aiworkWorkspaceId } : {}),
-    ...(workspace.aiworkWorkspaceName ? { aiworkWorkspaceName: workspace.aiworkWorkspaceName } : {}),
-    ...(workspace.sandboxBackend ? { sandboxBackend: workspace.sandboxBackend } : {}),
-    ...(workspace.sandboxRunId ? { sandboxRunId: workspace.sandboxRunId } : {}),
-    ...(workspace.sandboxContainerName ? { sandboxContainerName: workspace.sandboxContainerName } : {}),
     ...(workspace.opencodeUsername ? { opencodeUsername: workspace.opencodeUsername } : {}),
     ...(workspace.opencodePassword ? { opencodePassword: workspace.opencodePassword } : {}),
   };
@@ -3492,10 +3472,10 @@ async function readAiWorkConfig(workspaceRoot: string): Promise<Record<string, u
 }
 
 function resolveOpencodeDirectory(workspace: WorkspaceInfo): string | null {
-  const explicit = workspace.directory?.trim() ?? "";
+  const explicit = workspace.opencode?.directory?.trim() ?? "";
   if (explicit) return explicit;
-  if (workspace.workspaceType === "local") return workspace.path;
-  return null;
+  const root = workspace.path?.trim() ?? "";
+  return root || null;
 }
 
 function buildOpencodeReloadUrl(baseUrl: string, directory?: string | null): string {

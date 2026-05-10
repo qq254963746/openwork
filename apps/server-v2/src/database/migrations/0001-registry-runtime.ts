@@ -23,13 +23,12 @@ export const phase2RegistryRuntimeMigration = {
     CREATE TABLE IF NOT EXISTS workspaces (
       id TEXT PRIMARY KEY,
       server_id TEXT NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
-      kind TEXT NOT NULL CHECK (kind IN ('local', 'remote', 'control', 'help')),
+      kind TEXT NOT NULL CHECK (kind IN ('local', 'control', 'help')),
       display_name TEXT NOT NULL,
       slug TEXT NOT NULL,
       is_hidden INTEGER NOT NULL DEFAULT 0,
       status TEXT NOT NULL CHECK (status IN ('ready', 'imported', 'attention')),
       opencode_project_id TEXT,
-      remote_workspace_id TEXT,
       data_dir TEXT,
       config_dir TEXT,
       notes_json TEXT,
@@ -58,7 +57,7 @@ export const phase2RegistryRuntimeMigration = {
 
     CREATE TABLE IF NOT EXISTS workspace_runtime_state (
       workspace_id TEXT PRIMARY KEY REFERENCES workspaces(id) ON DELETE CASCADE,
-      backend_kind TEXT NOT NULL CHECK (backend_kind IN ('local_opencode', 'remote_aiwork')),
+      backend_kind TEXT NOT NULL CHECK (backend_kind IN ('local_opencode')),
       last_sync_at TEXT,
       last_session_refresh_at TEXT,
       last_error_json TEXT,

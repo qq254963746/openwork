@@ -486,7 +486,7 @@ export function createClient(baseUrl: string, directory?: string, auth?: Opencod
     readWorkspaceFile: (
       workspaceId: string,
       path: string,
-      options?: { throwOnError?: boolean },
+      options?: { throwOnError?: boolean; optional?: boolean },
     ) => Promise<FieldsResult<unknown>>;
   };
 
@@ -514,15 +514,19 @@ export function createClient(baseUrl: string, directory?: string, auth?: Opencod
     workspaceFileOverrides.readWorkspaceFile = (
       workspaceId: string,
       path: string,
-      options?: { throwOnError?: boolean },
+      options?: { throwOnError?: boolean; optional?: boolean },
     ) => {
       if (!aiworkMount || !aiworkSessionClient || workspaceId !== aiworkMount.workspaceId) {
         return readWorkspaceFileOriginal(workspaceId, path, options);
       }
-      const url = `${aiworkMount.baseUrl}/workspace/${encodeURIComponent(aiworkMount.workspaceId)}/files/content?path=${encodeURIComponent(path)}`;
+      const optionalSuffix = options?.optional ? "&optional=1" : "";
+      const url = `${aiworkMount.baseUrl}/workspace/${encodeURIComponent(aiworkMount.workspaceId)}/files/content?path=${encodeURIComponent(path)}${optionalSuffix}`;
       return wrapAiWorkRead(
         url,
-        () => aiworkSessionClient.readWorkspaceFile(aiworkMount.workspaceId, path),
+        () =>
+          aiworkSessionClient.readWorkspaceFile(aiworkMount.workspaceId, path, {
+            optional: options?.optional,
+          }),
         options,
       );
     };

@@ -25,7 +25,6 @@
     "test:todos": "pnpm --filter @aiwork/app test:todos",
     "test:permissions": "pnpm --filter @aiwork/app test:permissions",
     "test:session-error-recovery": "pnpm --filter @aiwork/app test:session-error-recovery",
-    "test:session-scope": "pnpm --filter @aiwork/app test:session-scope",
     "test:session-switch": "pnpm --filter @aiwork/app test:session-switch",
     "test:fs-engine": "pnpm --filter @aiwork/app test:fs-engine",
     "test:e2e": "pnpm --filter @aiwork/app test:e2e",

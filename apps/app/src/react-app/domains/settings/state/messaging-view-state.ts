@@ -201,10 +201,16 @@ export function useMessagingViewProps(
     setAgentLoading(true);
     setAgentError(null);
     try {
-      const result = (await client.readWorkspaceFile(
-        id,
-        OPENCODE_ROUTER_AGENT_FILE_PATH,
-      )) as AiWorkWorkspaceFileContent;
+      const result = (await client.readWorkspaceFile(id, OPENCODE_ROUTER_AGENT_FILE_PATH, {
+        optional: true,
+      })) as AiWorkWorkspaceFileContent;
+      if (result.missing) {
+        setAgentExists(false);
+        setAgentContent("");
+        setAgentDraft("");
+        setAgentBaseUpdatedAt(null);
+        return;
+      }
       const nextContent = result.content ?? "";
       setAgentExists(true);
       setAgentContent(nextContent);

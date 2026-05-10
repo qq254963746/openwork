@@ -23,12 +23,8 @@ const legacyWorkspaceSchema = z.object({
   aiworkWorkspaceName: z.string().optional().nullable(),
   path: z.string().default(""),
   preset: z.string().optional().nullable(),
-  remoteType: z.enum(["aiwork", "opencode"]).optional().nullable(),
-  sandboxBackend: z.string().optional().nullable(),
-  sandboxContainerName: z.string().optional().nullable(),
-  sandboxRunId: z.string().optional().nullable(),
-  workspaceType: z.enum(["local", "remote"]),
 });
+
 
 const legacyWorkspaceStateSchema = z.object({
   activeId: z.string().optional().nullable(),
@@ -69,7 +65,6 @@ const orchestratorStateSchema = z.object({
     lastUsedAt: z.number().optional().nullable(),
     name: z.string().optional().default(""),
     path: z.string(),
-    workspaceType: z.string(),
   })).default([]),
 });
 
@@ -175,42 +170,6 @@ function stripWorkspaceMount(value: string | null | undefined) {
     url.pathname = `/${segments.slice(0, -2).join("/")}`;
   }
   return url.toString().replace(/\/+$/, "");
-}
-
-function parseWorkspaceIdFromUrl(value: string | null | undefined) {
-  const normalized = normalizeUrl(value);
-  if (!normalized) {
-    return null;
-  }
-
-  try {
-    const url = new URL(normalized);
-    const segments = url.pathname.split("/").filter(Boolean);
-    const last = segments[segments.length - 1] ?? "";
-    const prev = segments[segments.length - 2] ?? "";
-    return prev === "w" && last ? decodeURIComponent(last) : null;
-  } catch {
-    return null;
-  }
-}
-
-function detectRemoteHostingKind(value: string) {
-  const normalized = normalizeUrl(value);
-  if (!normalized) {
-    return "self_hosted" as const;
-  }
-
-  const hostname = new URL(normalized).hostname.toLowerCase();
-  if (
-    hostname === "app.aiworklabs.com" ||
-    hostname === "app.aiwork.software" ||
-    hostname.endsWith(".aiworklabs.com") ||
-    hostname.endsWith(".aiwork.software")
-  ) {
-    return "cloud" as const;
-  }
-
-  return "self_hosted" as const;
 }
 
 function legacyDesktopDataDirCandidates(explicitDir?: string) {
@@ -354,8 +313,8 @@ export function createServerPersistence(options: CreateServerPersistenceOptions)
       fileRoutes: true,
       managedConfigTables: true,
       phase: 9,
-      remoteServerConnections: true,
-      remoteWorkspaceDiscovery: true,
+      remoteServerConnections: false,
+      remoteWorkspaceDiscovery: false,
       reloadOwnership: true,
       rootMounted: true,
       runtimeRoutes: true,
@@ -402,86 +361,20 @@ export function createServerPersistence(options: CreateServerPersistenceOptions)
     try {
       const parsed = legacyWorkspaceStateSchema.parse(JSON.parse(readTextIfExists(desktopWorkspaceFile) ?? "{}"));
       let localImported = 0;
-      let remoteImported = 0;
+      let skippedRemoteStyle = 0;
       const importedWorkspaceIds: string[] = [];
       for (const workspace of parsed.workspaces) {
-        if (workspace.workspaceType === "local") {
-          const dataDir = normalizeWorkspacePath(workspace.path);
-          if (!dataDir) {
-            desktopWorkspaceReport.warnings.push(`Skipped local workspace ${workspace.id} because its path was empty.`);
-            continue;
-          }
-          const record = registry.importLocalWorkspace({
-            dataDir,
-            displayName: (workspace.displayName?.trim() || workspace.name || path.basename(dataDir)).trim(),
-            legacyNotes: {
-              legacyDesktop: {
-                displayName: workspace.displayName ?? null,
-                legacyId: workspace.id,
-                name: workspace.name,
-                preset: workspace.preset ?? null,
-                source: "aiwork-workspaces.json",
-              },
-            },
-            status: "imported",
-          });
-          localImported += 1;
-          importedWorkspaceIds.push(record.id);
-          continue;
-        }
 
-        const remoteType = workspace.remoteType === "aiwork" ? "aiwork" : "opencode";
-        const aiworkServerBaseUrl = stripWorkspaceMount(workspace.aiworkHostUrl ?? workspace.baseUrl ?? "");
-        const remoteServerBaseUrl = aiworkServerBaseUrl ?? normalizeUrl(workspace.baseUrl) ?? "";
-        if (!remoteServerBaseUrl) {
-          desktopWorkspaceReport.warnings.push(`Skipped remote workspace ${workspace.id} because no valid base URL was found.`);
-          continue;
-        }
-
-        const auth: JsonObject = {};
-        if (workspace.aiworkToken?.trim()) auth.aiworkToken = workspace.aiworkToken.trim();
-        if (workspace.aiworkClientToken?.trim()) auth.aiworkClientToken = workspace.aiworkClientToken.trim();
-        if (workspace.aiworkHostToken?.trim()) auth.aiworkHostToken = workspace.aiworkHostToken.trim();
-
-        const record = registry.importRemoteWorkspace({
-          baseUrl: normalizeUrl(workspace.baseUrl) ?? remoteServerBaseUrl,
-          directory: workspace.directory?.trim() || null,
-          displayName:
-            workspace.aiworkWorkspaceName?.trim() ||
-            workspace.displayName?.trim() ||
-            workspace.name ||
-            remoteServerBaseUrl,
-          legacyNotes: {
-            legacyDesktop: {
-              baseUrl: workspace.baseUrl ?? null,
-              directory: workspace.directory ?? null,
-              displayName: workspace.displayName ?? null,
-              legacyId: workspace.id,
-              aiworkHostUrl: workspace.aiworkHostUrl ?? null,
-              sandboxBackend: workspace.sandboxBackend ?? null,
-              sandboxContainerName: workspace.sandboxContainerName ?? null,
-              sandboxRunId: workspace.sandboxRunId ?? null,
-            },
-          },
-          remoteType,
-          remoteWorkspaceId:
-            workspace.aiworkWorkspaceId?.trim() ||
-            parseWorkspaceIdFromUrl(workspace.aiworkHostUrl ?? null) ||
-            parseWorkspaceIdFromUrl(workspace.baseUrl ?? null),
-          serverAuth: Object.keys(auth).length > 0 ? auth : null,
-          serverBaseUrl: remoteServerBaseUrl,
-          serverHostingKind: detectRemoteHostingKind(remoteServerBaseUrl),
-          serverLabel: new URL(remoteServerBaseUrl).host,
-          workspaceStatus: "imported",
-        });
-        remoteImported += 1;
-        importedWorkspaceIds.push(record.id);
+        skippedRemoteStyle += 1;
+        desktopWorkspaceReport.warnings.push(
+          `Skipped legacy remote-style workspace ${workspace.id} (remote import removed).`,
+        );
       }
 
       desktopWorkspaceReport.details = {
         importedWorkspaceIds,
         localImported,
-        remoteImported,
+        skippedRemoteStyle,
         selectedWorkspaceId: parsed.selectedWorkspaceId?.trim() || parsed.activeId?.trim() || null,
         watchedWorkspaceId: parsed.watchedWorkspaceId?.trim() || null,
       };
@@ -512,10 +405,6 @@ export function createServerPersistence(options: CreateServerPersistenceOptions)
       let importedWorkspaceCount = 0;
       const importedWorkspaceIds: string[] = [];
       for (const workspace of parsed.workspaces) {
-        if (workspace.workspaceType !== "local") {
-          continue;
-        }
-
         const normalizedPath = normalizeWorkspacePath(workspace.path);
         if (!normalizedPath) {
           continue;

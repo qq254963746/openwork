@@ -74,16 +74,6 @@ But what you can do is:
 * Runs standalone via `aiwork-server` CLI.
 * Provides filesystem-backed config surfaces (skills, plugins, MCP, commands).
 * Sidecar lifecycle is described in `packages/app/pr/aiwork-server.md`.
-* Can also be consumed as a hosted AiWork Cloud control surface for remote worker lifecycle.
-
-### AiWork Cloud Control Plane
-
-* Hosted deployment of AiWork server capabilities for worker provisioning and remote connect.
-* Must preserve the same user-level contract as self-hosted paths:
-  - launch worker
-  - get connect credentials (URL + token)
-  - connect via `Add worker` -> `Connect remote`
-* Should not require a separate mental model for users moving between local and hosted modes.
 
 ### OpenCode Router
 

@@ -2,16 +2,12 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
-  AlertCircle,
   ChevronDown,
   ChevronRight,
   Loader2,
   MoreHorizontal,
   PanelLeftClose,
-  RefreshCw,
   SquarePen,
-  RotateCcw,
-  Settings2,
 } from "lucide-react";
 
 import { getDisplaySessionTitle } from "../../../../app/lib/session-title";
@@ -22,8 +18,8 @@ import type {
 } from "../../../../app/types";
 import {
   getWorkspaceTaskLoadErrorDisplay,
+  isDesktopRuntime,
   isElectronRuntime,
-  isSandboxWorkspace,
   isTauriRuntime,
   isWindowsPlatform,
 } from "../../../../app/utils";
@@ -50,9 +46,6 @@ type Props = {
   onOpenDeleteSession?: (workspaceId?: string, sessionId?: string) => void;
   onOpenRenameWorkspace: (workspaceId: string) => void;
   onRevealWorkspace: (workspaceId: string) => void;
-  onRecoverWorkspace: (workspaceId: string) => Promise<boolean> | boolean | void;
-  onTestWorkspaceConnection: (workspaceId: string) => Promise<boolean> | boolean | void;
-  onEditWorkspaceConnection: (workspaceId: string) => void;
   onForgetWorkspace: (workspaceId: string) => void;
   onOpenCreateWorkspace: () => void;
   /** Session shell only: collapse the entire workspace sidebar (icon in top strip). */
@@ -167,17 +160,11 @@ const flattenSessionRows = (
 
 const workspaceLabel = (workspace: WorkspaceInfo) =>
   workspace.displayName?.trim() ||
-  workspace.aiworkWorkspaceName?.trim() ||
   workspace.name?.trim() ||
   workspace.path?.trim() ||
   t("workspace_list.workspace_fallback");
 
-const workspaceKindLabel = (workspace: WorkspaceInfo) =>
-  workspace.workspaceType === "remote"
-    ? isSandboxWorkspace(workspace)
-      ? t("workspace.sandbox_badge")
-      : t("workspace.remote_badge")
-    : t("workspace.local_badge");
+const workspaceKindLabel = (_workspace: WorkspaceInfo) => t("workspace.local_badge");
 
 const AIWORK_MARK_SRC = `${import.meta.env.BASE_URL}aiwork-mark.svg`;
 
@@ -240,82 +227,6 @@ function SessionSidebarGlyph(props: { className?: string }) {
         d="M12 1.73633C14.1692 1.73633 16.1557 1.89992 17.7285 2.08887C19.9229 2.35249 21.6506 3.98709 21.958 6.17578C22.1467 7.51917 22.2998 9.15932 22.2998 10.9365C22.2998 12.7137 22.1467 14.3539 21.958 15.6973C21.6505 17.8858 19.9228 19.5206 17.7285 19.7842C16.1557 19.9731 14.1692 20.1367 12 20.1367C11.9668 20.1367 11.9335 20.1358 11.9004 20.1357L6.76465 23.0117C6.04212 23.4163 5.16911 22.8178 5.28613 21.998L5.61914 19.6621C3.74132 19.1829 2.31832 17.6639 2.04199 15.6973C1.8533 14.3539 1.70021 12.7137 1.7002 10.9365C1.7002 9.15932 1.8533 7.51917 2.04199 6.17578C2.34942 3.98709 4.07709 2.35249 6.27148 2.08887C7.84432 1.89992 9.83077 1.73633 12 1.73633ZM12 3.33594C9.90868 3.33594 7.98719 3.4945 6.46191 3.67773C4.96094 3.85824 3.82865 4.95557 3.62598 6.39844C3.46792 7.52375 3.33698 8.86201 3.30664 10.3096L3.2998 10.9365C3.29982 12.6242 3.44534 14.1885 3.62598 15.4746C3.80878 16.7756 4.7432 17.7868 6.01465 18.1113L7.40527 18.4668L7.04102 21.0215L11.1182 18.7393L11.4844 18.5352L11.9043 18.5361C11.9321 18.5362 11.9586 18.5359 11.9727 18.5361C11.9902 18.5364 11.9962 18.5371 12 18.5371C14.0913 18.5371 16.0128 18.3785 17.5381 18.1953C19.0389 18.0148 20.1713 16.9175 20.374 15.4746C20.5321 14.3493 20.663 13.011 20.6934 11.5635L20.7002 10.9365C20.7002 9.24882 20.5547 7.68455 20.374 6.39844C20.1714 4.95557 19.0391 3.85824 17.5381 3.67773C16.2034 3.51739 14.5651 3.37646 12.7754 3.34375L12 3.33594Z"
       />
     </svg>
-  );
-}
-
-function RemoteConnectionIssueCard(props: {
-  message: string;
-  tone: "error" | "offline";
-  canRecover: boolean;
-  busy: boolean;
-  onRecover: () => void;
-  onTest: () => void;
-  onEdit: () => void;
-}) {
-  const isOffline = props.tone === "offline";
-  const shellClass = isOffline
-    ? "border-amber-7/35 bg-amber-2/45"
-    : "border-red-7/35 bg-red-1/40";
-  const iconClass = isOffline
-    ? "bg-amber-3/60 text-amber-11"
-    : "bg-red-3/60 text-red-11";
-  const detailClass = isOffline
-    ? "border-amber-7/25 bg-amber-1/40 text-amber-11"
-    : "border-red-7/25 bg-red-1/40 text-red-11";
-
-  return (
-    <div className={`w-full rounded-[15px] border px-3 py-3 text-left ${shellClass}`}>
-      <div className="flex items-start gap-2.5">
-        <div className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${iconClass}`}>
-          <AlertCircle size={14} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-[12px] font-medium text-dls-text">
-            {t("workspace_list.remote_worker_unavailable")}
-          </div>
-          <div className="mt-1 text-[11px] leading-5 text-gray-10">
-            {t("workspace_list.remote_worker_unavailable_hint")}
-          </div>
-          <div
-            className={`mt-2 rounded-lg border px-2 py-1.5 text-[11px] leading-4 ${detailClass}`}
-            title={props.message}
-          >
-            {props.message}
-          </div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {props.canRecover ? (
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-dls-border bg-dls-surface px-2 py-1 text-[11px] font-medium text-gray-11 transition-colors hover:bg-gray-2 disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={props.onRecover}
-                disabled={props.busy}
-              >
-                <RotateCcw size={12} />
-                {t("workspace_list.recover")}
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-dls-border bg-dls-surface px-2 py-1 text-[11px] font-medium text-gray-11 transition-colors hover:bg-gray-2 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={props.onTest}
-              disabled={props.busy}
-            >
-              <RefreshCw size={12} />
-              {t("workspace_list.test_connection")}
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-dls-border bg-dls-surface px-2 py-1 text-[11px] font-medium text-gray-11 transition-colors hover:bg-gray-2 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={props.onEdit}
-              disabled={props.busy}
-            >
-              <Settings2 size={12} />
-              {t("common.edit")}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -730,21 +641,10 @@ export function WorkspaceSessionList(props: Props) {
             };
             const isConnectionActionBusy =
               isConnecting || connectionState.status === "connecting";
-            const canRecover =
-              workspace.workspaceType === "remote" && connectionState.status === "error";
             const isMenuOpen = workspaceMenuId === workspace.id;
             const taskLoadError = getWorkspaceTaskLoadErrorDisplay(workspace, group.error);
-            const connectionIssueMessage =
-              connectionState.status === "error"
-                ? connectionState.message?.trim() || taskLoadError.message
-                : taskLoadError.message;
-            const showRemoteConnectionIssue =
-              workspace.workspaceType === "remote" &&
-              Boolean(connectionIssueMessage) &&
-              (connectionState.status === "error" || group.status === "error");
             const statusLabel = (() => {
               const connectionMessage = connectionState.message?.trim() ?? "";
-              if (showRemoteConnectionIssue) return t("workspace_list.unavailable");
               if (connectionState.status === "error") return connectionMessage || taskLoadError.message;
               if (connectionState.status === "connected") return connectionMessage || t("status.connected");
               if (group.status === "error") return taskLoadError.label;
@@ -943,7 +843,7 @@ export function WorkspaceSessionList(props: Props) {
                       >
                         {t("workspace_list.edit_name")}
                       </button>
-                      {workspace.workspaceType === "local" ? (
+                      {isDesktopRuntime() ? (
                         <button
                           type="button"
                           className="w-full rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
@@ -954,45 +854,6 @@ export function WorkspaceSessionList(props: Props) {
                         >
                           {revealLabel}
                         </button>
-                      ) : null}
-                      {workspace.workspaceType === "remote" ? (
-                        <>
-                          {canRecover ? (
-                            <button
-                              type="button"
-                              className="w-full rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
-                              onClick={() => {
-                                void Promise.resolve(props.onRecoverWorkspace(workspace.id));
-                                setWorkspaceMenuId(null);
-                              }}
-                              disabled={isConnectionActionBusy}
-                            >
-                              {t("workspace_list.recover")}
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="w-full rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
-                            onClick={() => {
-                              void Promise.resolve(props.onTestWorkspaceConnection(workspace.id));
-                              setWorkspaceMenuId(null);
-                            }}
-                            disabled={isConnectionActionBusy}
-                          >
-                            {t("workspace_list.test_connection")}
-                          </button>
-                          <button
-                            type="button"
-                            className="w-full rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
-                            onClick={() => {
-                              props.onEditWorkspaceConnection(workspace.id);
-                              setWorkspaceMenuId(null);
-                            }}
-                            disabled={isConnectionActionBusy}
-                          >
-                            {t("workspace_list.edit_connection")}
-                          </button>
-                        </>
                       ) : null}
                       <button
                         type="button"
@@ -1011,23 +872,6 @@ export function WorkspaceSessionList(props: Props) {
                 {expandedWorkspaceIds.has(workspace.id) ? (
                   <div className="px-1 pb-1">
                     <div className="flex flex-col gap-1 px-0.5">
-                      {showRemoteConnectionIssue ? (
-                        <RemoteConnectionIssueCard
-                          message={connectionIssueMessage}
-                          tone={taskLoadError.tone}
-                          canRecover={canRecover}
-                          busy={isConnectionActionBusy}
-                          onRecover={() => {
-                            void Promise.resolve(props.onRecoverWorkspace(workspace.id));
-                          }}
-                          onTest={() => {
-                            void Promise.resolve(props.onTestWorkspaceConnection(workspace.id));
-                          }}
-                          onEdit={() => {
-                            props.onEditWorkspaceConnection(workspace.id);
-                          }}
-                        />
-                      ) : null}
                       {props.showInitialLoading ? (
                         <div className="space-y-2">
                           {[0, 1, 2].map((idx) => (
@@ -1075,7 +919,7 @@ export function WorkspaceSessionList(props: Props) {
                             </button>
                           ) : null}
                         </>
-                      ) : showRemoteConnectionIssue ? null : group.status === "error" ? (
+                      ) : group.status === "error" ? (
                         <div
                           className={`w-full rounded-[15px] border px-3 py-2.5 text-left text-[11px] ${
                             taskLoadError.tone === "offline"

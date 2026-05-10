@@ -95,7 +95,6 @@ pub struct EngineInfo {
 #[serde(rename_all = "camelCase")]
 pub struct AiWorkServerInfo {
     pub running: bool,
-    pub remote_access_enabled: bool,
     pub host: Option<String>,
     pub port: Option<u16>,
     pub base_url: Option<String>,
@@ -168,32 +167,6 @@ pub struct DesktopBootstrapConfig {
     pub require_signin: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum WorkspaceType {
-    Local,
-    Remote,
-}
-
-impl Default for WorkspaceType {
-    fn default() -> Self {
-        WorkspaceType::Local
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum RemoteType {
-    Opencode,
-    AiWork,
-}
-
-impl Default for RemoteType {
-    fn default() -> Self {
-        RemoteType::Opencode
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceInfo {
@@ -202,35 +175,7 @@ pub struct WorkspaceInfo {
     pub path: String,
     pub preset: String,
     #[serde(default)]
-    pub workspace_type: WorkspaceType,
-    #[serde(default)]
-    pub remote_type: Option<RemoteType>,
-    #[serde(default)]
-    pub base_url: Option<String>,
-    #[serde(default)]
-    pub directory: Option<String>,
-    #[serde(default)]
     pub display_name: Option<String>,
-    #[serde(default)]
-    pub aiwork_host_url: Option<String>,
-    #[serde(default)]
-    pub aiwork_token: Option<String>,
-    #[serde(default)]
-    pub aiwork_client_token: Option<String>,
-    #[serde(default)]
-    pub aiwork_host_token: Option<String>,
-    #[serde(default)]
-    pub aiwork_workspace_id: Option<String>,
-    #[serde(default)]
-    pub aiwork_workspace_name: Option<String>,
-
-    // Sandbox lifecycle metadata (desktop-managed)
-    #[serde(default)]
-    pub sandbox_backend: Option<String>,
-    #[serde(default)]
-    pub sandbox_run_id: Option<String>,
-    #[serde(default)]
-    pub sandbox_container_name: Option<String>,
 }
 
 #[derive(Debug, Serialize, Clone)]

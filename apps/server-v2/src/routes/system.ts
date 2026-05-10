@@ -1,15 +1,11 @@
 import type { Hono } from "hono";
 import { describeRoute, openAPIRouteHandler } from "hono-openapi";
-import { HTTPException } from "hono/http-exception";
 import type { AppDependencies } from "../context/app-dependencies.js";
 import { getRequestContext, type AppBindings } from "../context/request-context.js";
-import { buildErrorResponse, buildSuccessResponse, RouteError } from "../http.js";
+import { buildSuccessResponse } from "../http.js";
 import { buildOperationId, jsonResponse, withCommonErrorResponses } from "../openapi.js";
 import {
   capabilitiesResponseSchema,
-  remoteServerConnectRequestSchema,
-  remoteServerConnectResponseSchema,
-  remoteServerSyncRequestSchema,
   serverInventoryListResponseSchema,
   systemStatusResponseSchema,
 } from "../schemas/registry.js";
@@ -17,66 +13,6 @@ import { healthResponseSchema, metadataResponseSchema, openApiDocumentSchema, ro
 import { routePaths } from "./route-paths.js";
 
 type ServerV2App = Hono<AppBindings>;
-
-function toWorkspaceSummary(workspace: ReturnType<AppDependencies["services"]["workspaceRegistry"]["serializeWorkspace"]>) {
-  const { notes: _notes, ...summary } = workspace;
-  return summary;
-}
-
-async function parseJsonBody<T>(schema: { parse(input: unknown): T }, request: Request) {
-  const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
-  if (!contentType.includes("application/json")) {
-    return schema.parse({});
-  }
-  return schema.parse(await request.json());
-}
-
-function buildRouteErrorJson(requestId: string, error: unknown) {
-  if (error instanceof HTTPException) {
-    const status = error.status;
-    const code = status === 401
-      ? "unauthorized"
-      : status === 403
-        ? "forbidden"
-        : status === 404
-          ? "not_found"
-          : "invalid_request";
-    return {
-      body: buildErrorResponse({
-        code,
-        message: error.message || (code === "not_found" ? "Route not found." : "Request failed."),
-        requestId,
-      }),
-      status,
-    };
-  }
-  if (error instanceof RouteError) {
-    return {
-      body: buildErrorResponse({
-        code: error.code,
-        details: error.details,
-        message: error.message,
-        requestId,
-      }),
-      status: error.status,
-    };
-  }
-  const routeLike = error && typeof error === "object"
-    ? error as { code?: unknown; details?: unknown; message?: unknown; status?: unknown }
-    : null;
-  if (routeLike && typeof routeLike.status === "number" && typeof routeLike.code === "string" && typeof routeLike.message === "string") {
-    return {
-      body: buildErrorResponse({
-        code: routeLike.code as any,
-        details: Array.isArray(routeLike.details) ? routeLike.details as any : undefined,
-        message: routeLike.message,
-        requestId,
-      }),
-      status: routeLike.status,
-    };
-  }
-  return null;
-}
 
 function createOpenApiDocumentation(version: string) {
   return {
@@ -106,7 +42,7 @@ function createOpenApiDocumentation(version: string) {
       },
       {
         name: "Sessions",
-        description: "Workspace-first session and streaming primitives backed by OpenCode or remote AiWork servers.",
+        description: "Workspace-first session and streaming primitives backed by OpenCode.",
       },
       {
         name: "Messages",
@@ -226,71 +162,6 @@ export function registerSystemRoutes(app: ServerV2App, dependencies: AppDependen
       const requestContext = getRequestContext(c);
       requestContext.services.auth.requireHost(requestContext.actor);
       return c.json(buildSuccessResponse(requestContext.requestId, requestContext.services.system.listServers()));
-    },
-  );
-
-  app.post(
-    routePaths.system.serverConnect,
-    describeRoute({
-      tags: ["System"],
-      summary: "Connect a remote AiWork server",
-      description: "Validates a remote AiWork server through the local Server V2 process, stores the remote connection metadata, and syncs the discovered remote workspaces into the local canonical registry.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Remote AiWork server connected successfully.", remoteServerConnectResponseSchema),
-      }, { includeForbidden: true, includeInvalidRequest: true, includeUnauthorized: true }),
-    }),
-    async (c) => {
-      const requestContext = getRequestContext(c);
-      requestContext.services.auth.requireHost(requestContext.actor);
-      const body = await parseJsonBody(remoteServerConnectRequestSchema, c.req.raw);
-      let result;
-      try {
-        result = await requestContext.services.remoteServers.connect(body);
-      } catch (error) {
-        const resolved = buildRouteErrorJson(requestContext.requestId, error);
-        if (resolved) {
-          return c.json(resolved.body, resolved.status as any);
-        }
-        throw error;
-      }
-      return c.json(buildSuccessResponse(requestContext.requestId, {
-        selectedWorkspaceId: result.selectedWorkspaceId,
-        server: requestContext.services.serverRegistry.serialize(result.server, { includeBaseUrl: true }),
-        workspaces: result.workspaces.map((workspace) => toWorkspaceSummary(requestContext.services.workspaceRegistry.serializeWorkspace(workspace))),
-      }));
-    },
-  );
-
-  app.post(
-    routePaths.system.serverSync(),
-    describeRoute({
-      tags: ["System"],
-      summary: "Sync a remote AiWork server",
-      description: "Refreshes the remote workspace inventory for a stored remote AiWork server and updates the local canonical registry mapping.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Remote AiWork server synced successfully.", remoteServerConnectResponseSchema),
-      }, { includeForbidden: true, includeInvalidRequest: true, includeNotFound: true, includeUnauthorized: true }),
-    }),
-    async (c) => {
-      const requestContext = getRequestContext(c);
-      requestContext.services.auth.requireHost(requestContext.actor);
-      const body = await parseJsonBody(remoteServerSyncRequestSchema, c.req.raw);
-      const serverId = c.req.param("serverId") ?? "";
-      let result;
-      try {
-        result = await requestContext.services.remoteServers.sync(serverId, body);
-      } catch (error) {
-        const resolved = buildRouteErrorJson(requestContext.requestId, error);
-        if (resolved) {
-          return c.json(resolved.body, resolved.status as any);
-        }
-        throw error;
-      }
-      return c.json(buildSuccessResponse(requestContext.requestId, {
-        selectedWorkspaceId: result.selectedWorkspaceId,
-        server: requestContext.services.serverRegistry.serialize(result.server, { includeBaseUrl: true }),
-        workspaces: result.workspaces.map((workspace) => toWorkspaceSummary(requestContext.services.workspaceRegistry.serializeWorkspace(workspace))),
-      }));
     },
   );
 

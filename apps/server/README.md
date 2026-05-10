@@ -36,7 +36,6 @@ Defaults to `~/.config/aiwork/server.json` (override with `AIWORK_SERVER_CONFIG`
     {
       "path": "/Users/susan/Finance",
       "name": "Finance",
-      "workspaceType": "local",
       "baseUrl": "http://127.0.0.1:4096",
       "directory": "/Users/susan/Finance"
     }
@@ -69,11 +68,6 @@ File injection / artifacts:
 - `AIWORK_INBOX_ENABLED` (`1` | `0`)
 - `AIWORK_INBOX_MAX_BYTES` (default: 50MB, capped)
 - `AIWORK_OUTBOX_ENABLED` (`1` | `0`)
-
-Sandbox advertisement (for capability discovery):
-
-- `AIWORK_SANDBOX_ENABLED` (`1` | `0`)
-- `AIWORK_SANDBOX_BACKEND` (`docker` | `container` | `none`)
 
 ## Endpoints
 

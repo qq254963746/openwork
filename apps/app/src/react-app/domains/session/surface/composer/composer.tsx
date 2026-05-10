@@ -62,8 +62,6 @@ type ComposerProps = {
   notice: ReactComposerNoticeData | null;
   onNotice: (notice: ReactComposerNoticeData) => void;
   onUnsupportedFileLinks: (links: string[]) => void;
-  isRemoteWorkspace: boolean;
-  isSandboxWorkspace: boolean;
   onUploadInboxFiles?: ((files: File[]) => void | Promise<unknown>) | null;
   draftScopeKey?: string;
 };
@@ -1057,27 +1055,6 @@ export function ReactSessionComposer(props: ComposerProps) {
 
                 const text = event.clipboardData?.getData("text/plain") ?? "";
 
-                if (
-                  text.trim() &&
-                  (props.isRemoteWorkspace || props.isSandboxWorkspace) &&
-                  /file:\/\/|(^|\s)\/(Users|home|var|etc|opt|tmp|private|Volumes|Applications)\//.test(text)
-                ) {
-                  const attachedFiles = props.attachments.map((attachment) => attachment.file);
-                  props.onNotice({
-                    title: t("composer.remote_worker_paste_warning"),
-                    tone: "warning",
-                    actionLabel:
-                      props.onUploadInboxFiles && attachedFiles.length > 0
-                        ? t("composer.upload_to_shared_folder")
-                        : undefined,
-                    onAction:
-                      props.onUploadInboxFiles && attachedFiles.length > 0
-                        ? () => void props.onUploadInboxFiles?.(attachedFiles)
-                        : undefined,
-                  });
-                  // Intentionally no preventDefault — the notice is advisory,
-                  // the paste still goes through the editor.
-                }
               }}
               onDragOver={(event) => {
                 if (event.dataTransfer?.files?.length) {

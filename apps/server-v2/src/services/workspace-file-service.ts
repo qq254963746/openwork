@@ -8,7 +8,6 @@ import type { WorkspaceRecord } from "../database/types.js";
 import type { RuntimeService } from "./runtime-service.js";
 import type { ConfigMaterializationService } from "./config-materialization-service.js";
 import { RouteError } from "../http.js";
-import { requestRemoteAiWork, requestRemoteAiWorkRaw, resolveRemoteWorkspaceTarget } from "../adapters/remote-aiwork.js";
 
 const FILE_SESSION_DEFAULT_TTL_MS = 15 * 60 * 1000;
 const FILE_SESSION_MIN_TTL_MS = 30 * 1000;
@@ -385,23 +384,6 @@ export function createWorkspaceFileService(input: {
   const reloadEvents = new ReloadEventStore();
   const watcherClosers = new Map<string, () => void>();
 
-  function getRemoteServerOrThrow(workspace: WorkspaceRecord) {
-    const server = input.repositories.servers.getById(workspace.serverId);
-    if (!server) {
-      throw new RouteError(502, "bad_gateway", `Workspace ${workspace.id} points at missing remote server ${workspace.serverId}.`);
-    }
-    return server;
-  }
-
-  function getRemoteWorkspacePath(workspace: WorkspaceRecord, suffix: string) {
-    const server = getRemoteServerOrThrow(workspace);
-    const target = resolveRemoteWorkspaceTarget(server, workspace);
-    return {
-      path: `/workspaces/${encodeURIComponent(target.remoteWorkspaceId)}${suffix}`,
-      server,
-    };
-  }
-
   function updateRuntimeHealth(details: Record<string, unknown>) {
     const current = input.repositories.serverRuntimeState.getByServerId(input.serverId);
     const health = current?.health && typeof current.health === "object" ? { ...current.health } : {};
@@ -497,7 +479,7 @@ export function createWorkspaceFileService(input: {
       close();
     }
     watcherClosers.clear();
-    const workspaces = input.repositories.workspaces.list({ includeHidden: true }).filter((workspace) => workspace.kind !== "remote");
+    const workspaces = input.repositories.workspaces.list({ includeHidden: true });
     for (const workspace of workspaces) {
       startWorkspaceWatchers(workspace.id);
     }
@@ -621,16 +603,6 @@ export function createWorkspaceFileService(input: {
 
     async disposeWorkspaceInstance(workspaceId: string) {
       const workspace = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspace.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspace, "/engine/reload");
-        await requestRemoteAiWork<{ reloadedAt: number }>({
-          method: "POST",
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 20_000,
-        });
-        return { disposed: true, workspaceId };
-      }
 
       await input.runtime.dispose();
       await input.runtime.bootstrap();
@@ -665,24 +637,7 @@ export function createWorkspaceFileService(input: {
     },
 
     createWorkspaceFileSession(workspaceId: string, inputValue: { actorKey?: string; actorKind: "client" | "host"; ttlSeconds?: number; write?: boolean }) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, "/file-sessions");
-        return requestRemoteAiWork<{
-          canWrite: boolean;
-          createdAt: number;
-          expiresAt: number;
-          id: string;
-          ttlMs: number;
-          workspaceId: string;
-        }>({
-          body: { ttlSeconds: inputValue.ttlSeconds, write: inputValue.write },
-          method: "POST",
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 15_000,
-        });
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       const workspace = resolveWorkspaceOrThrow(input.repositories, workspaceId);
       const workspaceRoot = resolveWorkspaceRoot(workspace);
       const requestWrite = inputValue.write !== false;
@@ -713,29 +668,12 @@ export function createWorkspaceFileService(input: {
     },
 
     emitReloadEvent(workspaceId: string, reason: ReloadReason, trigger?: ReloadTrigger) {
-      const workspace = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspace.kind === "remote") {
-        return null;
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       return reloadEvents.record(workspaceId, reason, trigger, 0);
     },
 
     async downloadArtifact(workspaceId: string, artifactId: string) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, `/artifacts/${encodeURIComponent(artifactId)}`);
-        const response = await requestRemoteAiWorkRaw({
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 30_000,
-        });
-        const buffer = Buffer.from(await response.arrayBuffer());
-        return {
-          buffer,
-          filename: response.headers.get("content-disposition")?.match(/filename="?([^";]+)"?/)?.[1] ?? artifactId,
-          size: buffer.byteLength,
-        };
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       const workspace = resolveWorkspaceOrThrow(input.repositories, workspaceId);
       const rootDir = resolveOutboxDir(resolveWorkspaceRoot(workspace));
       const relativePath = decodeArtifactId(artifactId);
@@ -747,21 +685,7 @@ export function createWorkspaceFileService(input: {
     },
 
     async downloadInboxItem(workspaceId: string, inboxId: string) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, `/inbox/${encodeURIComponent(inboxId)}`);
-        const response = await requestRemoteAiWorkRaw({
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 30_000,
-        });
-        const buffer = Buffer.from(await response.arrayBuffer());
-        return {
-          buffer,
-          filename: response.headers.get("content-disposition")?.match(/filename="?([^";]+)"?/)?.[1] ?? inboxId,
-          size: buffer.byteLength,
-        };
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       const workspace = resolveWorkspaceOrThrow(input.repositories, workspaceId);
       const rootDir = resolveInboxDir(resolveWorkspaceRoot(workspace));
       const relativePath = decodeArtifactId(inboxId);
@@ -773,65 +697,24 @@ export function createWorkspaceFileService(input: {
     },
 
     getReloadEvents(workspaceId: string, since?: number) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, `/reload-events${typeof since === "number" ? `?since=${since}` : ""}`);
-        return requestRemoteAiWork<{ cursor: number; items: ReloadEvent[] }>({
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 10_000,
-        });
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       resolveWorkspaceOrThrow(input.repositories, workspaceId);
       return reloadEvents.list(workspaceId, since ?? 0);
     },
 
     async recordWorkspaceAudit(workspaceId: string, action: string, target: string, summary: string) {
       const workspace = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspace.kind === "remote") {
-        return null;
-      }
       await audit(workspace, action, target, summary);
     },
 
     async listArtifacts(workspaceId: string) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, "/artifacts");
-        return requestRemoteAiWork<{ items: Array<Record<string, unknown>> }>({
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 15_000,
-        });
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       const workspace = resolveWorkspaceOrThrow(input.repositories, workspaceId);
       return { items: await listArtifacts(resolveOutboxDir(resolveWorkspaceRoot(workspace))) };
     },
 
     async listFileSessionCatalogSnapshot(workspaceId: string, sessionId: string, actorKey: string, actorKind: "client" | "host", inputValue: { after?: string | null; includeDirs?: boolean; limit?: string | null; prefix?: string | null }) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const query = new URLSearchParams();
-        if (inputValue.after) query.set("after", inputValue.after);
-        if (inputValue.includeDirs === false) query.set("includeDirs", "false");
-        if (inputValue.limit) query.set("limit", inputValue.limit);
-        if (inputValue.prefix) query.set("prefix", inputValue.prefix);
-        const remote = getRemoteWorkspacePath(workspaceRecord, `/file-sessions/${encodeURIComponent(sessionId)}/catalog/snapshot${query.size ? `?${query.toString()}` : ""}`);
-        return requestRemoteAiWork<{
-          cursor: number;
-          generatedAt: number;
-          items: FileCatalogEntry[];
-          nextAfter?: string;
-          sessionId: string;
-          total: number;
-          truncated: boolean;
-          workspaceId: string;
-        }>({
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 20_000,
-        });
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       const { workspaceRoot } = resolveFileSession(workspaceId, sessionId, actorKey, actorKind);
       const prefix = parsePathFilter(inputValue.prefix ?? null);
       const after = parsePathFilter(inputValue.after ?? null);
@@ -858,29 +741,13 @@ export function createWorkspaceFileService(input: {
     },
 
     listFileSessionEvents(workspaceId: string, sessionId: string, actorKey: string, actorKind: "client" | "host", since?: string | null) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, `/file-sessions/${encodeURIComponent(sessionId)}/catalog/events${since?.trim() ? `?since=${encodeURIComponent(since.trim())}` : ""}`);
-        return requestRemoteAiWork<{ cursor: number; items: FileSessionEvent[] }>({
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 10_000,
-        });
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       resolveFileSession(workspaceId, sessionId, actorKey, actorKind);
       return fileSessions.listWorkspaceEvents(workspaceId, parseCursor(since ?? null));
     },
 
     async listInbox(workspaceId: string) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, "/inbox");
-        return requestRemoteAiWork<{ items: Array<Record<string, unknown>> }>({
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 15_000,
-        });
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       const workspace = resolveWorkspaceOrThrow(input.repositories, workspaceId);
       const items = await listArtifacts(resolveInboxDir(resolveWorkspaceRoot(workspace)));
       return {
@@ -888,16 +755,13 @@ export function createWorkspaceFileService(input: {
       };
     },
 
-    async readSimpleContent(workspaceId: string, relativePathInput: string) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, `/files/content?path=${encodeURIComponent(relativePathInput)}`);
-        return requestRemoteAiWork<{ bytes: number; content: string; path: string; updatedAt: number; revision?: string }>({
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 15_000,
-        });
-      }
+    async readSimpleContent(
+      workspaceId: string,
+      relativePathInput: string,
+      options?: { optional?: boolean },
+    ) {
+      const optional = options?.optional ?? false;
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       const workspace = resolveWorkspaceOrThrow(input.repositories, workspaceId);
       const relativePath = normalizeWorkspaceRelativePath(relativePathInput, { allowSubdirs: true });
       if (!/\.(md|mdx|markdown)$/i.test(relativePath)) {
@@ -905,6 +769,14 @@ export function createWorkspaceFileService(input: {
       }
       const absolutePath = resolveSafeChildPath(resolveWorkspaceRoot(workspace), relativePath);
       if (!fs.existsSync(absolutePath) || !fs.statSync(absolutePath).isFile()) {
+        if (optional) {
+          return {
+            bytes: 0,
+            content: "",
+            path: relativePath,
+            missing: true as const,
+          };
+        }
         throw new HTTPException(404, { message: "File not found." });
       }
       const info = fs.statSync(absolutePath);
@@ -920,17 +792,7 @@ export function createWorkspaceFileService(input: {
     },
 
     async readWorkspaceFiles(workspaceId: string, sessionId: string, actorKey: string, actorKind: "client" | "host", paths: unknown) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, `/file-sessions/${encodeURIComponent(sessionId)}/read-batch`);
-        return requestRemoteAiWork<{ items: Array<Record<string, unknown>> }>({
-          body: { paths },
-          method: "POST",
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 20_000,
-        });
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       const { workspaceRoot } = resolveFileSession(workspaceId, sessionId, actorKey, actorKind);
       const items = parseBatchPathList(paths).map((relativePath) => {
         try {
@@ -959,16 +821,7 @@ export function createWorkspaceFileService(input: {
     },
 
     async reloadWorkspaceEngine(workspaceId: string) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, "/engine/reload");
-        return requestRemoteAiWork<{ reloadedAt: number }>({
-          method: "POST",
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 20_000,
-        });
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       const workspace = resolveWorkspaceOrThrow(input.repositories, workspaceId);
       await input.runtime.dispose();
       await input.runtime.bootstrap();
@@ -991,24 +844,7 @@ export function createWorkspaceFileService(input: {
     },
 
     renewWorkspaceFileSession(workspaceId: string, sessionId: string, actorKey: string, actorKind: "client" | "host", ttlSeconds?: number) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, `/file-sessions/${encodeURIComponent(sessionId)}/renew`);
-        return requestRemoteAiWork<{
-          canWrite: boolean;
-          createdAt: number;
-          expiresAt: number;
-          id: string;
-          ttlMs: number;
-          workspaceId: string;
-        }>({
-          body: ttlSeconds === undefined ? {} : { ttlSeconds },
-          method: "POST",
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 10_000,
-        });
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       resolveFileSession(workspaceId, sessionId, actorKey, actorKind);
       const renewed = fileSessions.renew(sessionId, parseFileSessionTtlMs(ttlSeconds));
       if (!renewed) {
@@ -1025,40 +861,14 @@ export function createWorkspaceFileService(input: {
     },
 
     closeWorkspaceFileSession(workspaceId: string, sessionId: string, actorKey: string, actorKind: "client" | "host") {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, `/file-sessions/${encodeURIComponent(sessionId)}`);
-        return requestRemoteAiWork<{ closed?: boolean }>({
-          method: "DELETE",
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 10_000,
-        });
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       resolveFileSession(workspaceId, sessionId, actorKey, actorKind);
       fileSessions.close(sessionId);
       return { closed: true };
     },
 
     async uploadInboxItem(workspaceId: string, requestedPath: string, file: File) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const form = new FormData();
-        form.append("file", file);
-        if (requestedPath.trim()) {
-          form.append("path", requestedPath.trim());
-        }
-        const remote = getRemoteWorkspacePath(workspaceRecord, "/inbox");
-        const response = await requestRemoteAiWorkRaw({
-          body: form,
-          method: "POST",
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 30_000,
-        });
-        const text = await response.text();
-        return text.trim() ? JSON.parse(text) as { bytes: number; path: string } : { bytes: file.size, path: requestedPath || file.name };
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       const workspace = resolveWorkspaceOrThrow(input.repositories, workspaceId);
       const rootDir = resolveInboxDir(resolveWorkspaceRoot(workspace));
       const relativePath = normalizeWorkspaceRelativePath(requestedPath || file.name, { allowSubdirs: true });
@@ -1073,17 +883,7 @@ export function createWorkspaceFileService(input: {
     },
 
     async writeSimpleContent(workspaceId: string, inputValue: { baseUpdatedAt?: number | null; content: string; force?: boolean; path: string }) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, "/files/content");
-        return requestRemoteAiWork<{ bytes: number; path: string; revision?: string; updatedAt: number }>({
-          body: inputValue,
-          method: "POST",
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 20_000,
-        });
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       const workspace = resolveWorkspaceOrThrow(input.repositories, workspaceId);
       const relativePath = normalizeWorkspaceRelativePath(inputValue.path, { allowSubdirs: true });
       if (!/\.(md|mdx|markdown)$/i.test(relativePath)) {
@@ -1110,17 +910,7 @@ export function createWorkspaceFileService(input: {
     },
 
     async writeWorkspaceFiles(workspaceId: string, sessionId: string, actorKey: string, actorKind: "client" | "host", writes: unknown) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, `/file-sessions/${encodeURIComponent(sessionId)}/write-batch`);
-        return requestRemoteAiWork<{ cursor: number; items: Array<Record<string, unknown>> }>({
-          body: { writes },
-          method: "POST",
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 30_000,
-        });
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       const { session, workspace, workspaceRoot } = resolveFileSession(workspaceId, sessionId, actorKey, actorKind);
       if (!session.canWrite) {
         throw new HTTPException(403, { message: "File session is read-only." });
@@ -1156,17 +946,7 @@ export function createWorkspaceFileService(input: {
     },
 
     async workspaceFileOperations(workspaceId: string, sessionId: string, actorKey: string, actorKind: "client" | "host", operations: unknown) {
-      const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
-      if (workspaceRecord.kind === "remote") {
-        const remote = getRemoteWorkspacePath(workspaceRecord, `/file-sessions/${encodeURIComponent(sessionId)}/operations`);
-        return requestRemoteAiWork<{ cursor: number; items: Array<Record<string, unknown>> }>({
-          body: { operations },
-          method: "POST",
-          path: remote.path,
-          server: remote.server,
-          timeoutMs: 30_000,
-        });
-      }
+      resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       const { session, workspace, workspaceRoot } = resolveFileSession(workspaceId, sessionId, actorKey, actorKind);
       if (!session.canWrite) {
         throw new HTTPException(403, { message: "File session is read-only." });

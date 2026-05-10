@@ -12,7 +12,6 @@ type LocalWorkspaceLike = {
   name?: string | null;
   displayNameResolved?: string | null;
   path?: string | null;
-  workspaceType?: "local" | "remote" | string | null;
 };
 
 type EnsureDesktopLocalAiWorkOptions = {
@@ -40,14 +39,13 @@ export async function ensureDesktopLocalAiWorkConnection(
 ) {
   const workspace = options.workspace;
   const workspaceRoot = workspace?.path?.trim() ?? "";
-  if (!workspace || workspace.workspaceType !== "local" || !workspaceRoot) {
+  if (!workspace || !workspaceRoot) {
     return null;
   }
 
   const workspacePaths = Array.from(
     new Set(
       options.allWorkspaces
-        .filter((item) => item.workspaceType === "local")
         .map((item) => item.path?.trim() ?? "")
         .filter((path) => path.length > 0),
     ),
@@ -68,7 +66,6 @@ export async function ensureDesktopLocalAiWorkConnection(
       await engineStart(workspaceRoot, {
         runtime: "direct",
         workspacePaths,
-        aiworkRemoteAccess: readAiWorkServerSettings().remoteAccessEnabled === true,
       });
     }
 
@@ -82,7 +79,6 @@ export async function ensureDesktopLocalAiWorkConnection(
       token: info.ownerToken?.trim() || info.clientToken?.trim() || undefined,
       hostToken: info.hostToken?.trim() || undefined,
       portOverride: info.port ?? undefined,
-      remoteAccessEnabled: info.remoteAccessEnabled === true,
     });
     emitAiWorkSettingsChanged();
 

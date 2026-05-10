@@ -10,6 +10,7 @@ import type { ProviderAuthStore } from "./store";
 
 export { createProviderAuthStore, useProviderAuthStoreSnapshot } from "./store";
 export type {
+  ProviderAuthEditSession,
   ProviderAuthMethod,
   ProviderAuthProvider,
   ProviderAuthStoreSnapshot,

@@ -1,15 +1,5 @@
 import type { WorkspacePreset } from "../../../app/types";
 
-export type RemoteWorkspaceInput = {
-  aiworkHostUrl?: string | null;
-  aiworkToken?: string | null;
-  aiworkClientToken?: string | null;
-  aiworkHostToken?: string | null;
-  directory?: string | null;
-  displayName?: string | null;
-  closeModal?: boolean;
-};
-
 export type CreateWorkspaceProgress = {
   runId: string;
   startedAt: number;
@@ -54,28 +44,3 @@ export type CreateWorkspaceModalProps = {
   localDisabled?: boolean;
   localDisabledReason?: string | null;
 };
-
-export type CreateRemoteWorkspaceModalProps = {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: (input: {
-    aiworkHostUrl?: string | null;
-    aiworkToken?: string | null;
-    directory?: string | null;
-    displayName?: string | null;
-  }) => void;
-  initialValues?: {
-    aiworkHostUrl?: string | null;
-    aiworkToken?: string | null;
-    directory?: string | null;
-    displayName?: string | null;
-  };
-  submitting?: boolean;
-  error?: string | null;
-  inline?: boolean;
-  showClose?: boolean;
-  title?: string;
-  subtitle?: string;
-  confirmLabel?: string;
-};
-

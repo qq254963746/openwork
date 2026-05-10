@@ -44,8 +44,6 @@ export type CapabilitiesData = {
   registry: {
     backendResolution: true;
     hiddenWorkspaceFiltering: true;
-    remoteServerConnections: true;
-    remoteWorkspaceSync: true;
     serverInventory: true;
     workspaceDetail: true;
     workspaceList: true;
@@ -137,8 +135,6 @@ export function createCapabilitiesService(input: {
         registry: {
           backendResolution: true,
           hiddenWorkspaceFiltering: true,
-          remoteServerConnections: true,
-          remoteWorkspaceSync: true,
           serverInventory: true,
           workspaceDetail: true,
           workspaceList: true,

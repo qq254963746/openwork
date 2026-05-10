@@ -60,7 +60,6 @@ export function createConnectionsStore(options: {
   projectDir: () => string;
   selectedWorkspaceId: () => string;
   selectedWorkspaceRoot: () => string;
-  workspaceType: () => "local" | "remote";
   aiworkServer: AiWorkServerStore;
   runtimeWorkspaceId: () => string | null;
   ensureRuntimeWorkspaceId?: () => Promise<string | null | undefined>;
@@ -124,8 +123,7 @@ export function createConnectionsStore(options: {
     const workspaceId = options.selectedWorkspaceId().trim();
     const root = normalizeDirectoryPath(options.selectedWorkspaceRoot().trim());
     const runtimeWorkspaceId = (options.runtimeWorkspaceId() ?? "").trim();
-    const workspaceType = options.workspaceType();
-    return `${workspaceType}:${workspaceId}:${root}:${runtimeWorkspaceId}`;
+    return `local:${workspaceId}:${root}:${runtimeWorkspaceId}`;
   };
 
   const getAiWorkSnapshot = () => options.aiworkServer.getSnapshot();
@@ -237,7 +235,6 @@ export function createConnectionsStore(options: {
       aiworkSnapshot.aiworkServerCapabilities?.mcp?.read !== false;
 
     recordPerfLog(options.developerMode(), "mcp.refresh", "server-path-check", {
-      workspaceType: options.workspaceType(),
       projectDir: projectDir || null,
       aiworkStatus: aiworkSnapshot.aiworkServerStatus,
       hasAiWorkClient: Boolean(aiworkClient),
@@ -279,7 +276,6 @@ export function createConnectionsStore(options: {
     if (disposed) return;
 
     const projectDir = options.projectDir().trim();
-    const isRemoteWorkspace = options.workspaceType() === "remote";
 
     try {
       setStateField("mcpStatus", null);
@@ -298,25 +294,6 @@ export function createConnectionsStore(options: {
       recordPerfLog(options.developerMode(), "mcp.refresh", "server-path-error", {
         message: error instanceof Error ? error.message : String(error),
       });
-      if (isRemoteWorkspace) {
-        mutateState((current) => ({
-          ...current,
-          mcpServers: [],
-          mcpStatuses: {},
-          mcpStatus: error instanceof Error ? error.message : "Failed to load MCP servers",
-        }));
-        return;
-      }
-    }
-
-    if (isRemoteWorkspace) {
-      mutateState((current) => ({
-        ...current,
-        mcpStatus: "AiWork server unavailable. MCP config is read-only.",
-        mcpServers: [],
-        mcpStatuses: {},
-      }));
-      return;
     }
 
     if (!isDesktopRuntime()) {
@@ -412,23 +389,22 @@ export function createConnectionsStore(options: {
   async function connectMcp(entry: McpDirectoryInfo) {
     const startedAt = perfNow();
     const aiworkSnapshot = getAiWorkSnapshot();
-    const isRemoteWorkspace =
-      options.workspaceType() === "remote" ||
-      (!isDesktopRuntime() && aiworkSnapshot.aiworkServerStatus === "connected");
+    const preferAiWorkServerPath =
+      !isDesktopRuntime() && aiworkSnapshot.aiworkServerStatus === "connected";
     const projectDir = options.projectDir().trim();
     const entryType = entry.type ?? "remote";
 
     recordPerfLog(options.developerMode(), "mcp.connect", "start", {
       name: entry.name,
       type: entryType,
-      workspaceType: isRemoteWorkspace ? "remote" : "local",
+      mcpConfigChannel: preferAiWorkServerPath ? "aiwork-server" : "desktop",
       projectDir: projectDir || null,
     });
 
     const { aiworkClient, aiworkWorkspaceId, canUseAiWorkServer } =
       await resolveWritableAiWorkTarget();
 
-    if (isRemoteWorkspace && !canUseAiWorkServer) {
+    if (preferAiWorkServerPath && !canUseAiWorkServer) {
       setStateField("mcpStatus", "AiWork server unavailable. MCP config is read-only.");
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
         reason: "aiwork-server-unavailable",
@@ -444,7 +420,7 @@ export function createConnectionsStore(options: {
       return;
     }
 
-    if (!isRemoteWorkspace && !projectDir) {
+    if (!preferAiWorkServerPath && !projectDir) {
       setStateField("mcpStatus", t("mcp.pick_workspace_first"));
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
         reason: "missing-workspace",
@@ -667,15 +643,14 @@ export function createConnectionsStore(options: {
 
   async function logoutMcpAuth(name: string) {
     const aiworkSnapshot = getAiWorkSnapshot();
-    const isRemoteWorkspace =
-      options.workspaceType() === "remote" ||
-      (!isDesktopRuntime() && aiworkSnapshot.aiworkServerStatus === "connected");
+    const preferAiWorkServerPath =
+      !isDesktopRuntime() && aiworkSnapshot.aiworkServerStatus === "connected";
     const projectDir = options.projectDir().trim();
 
     const { aiworkClient, aiworkWorkspaceId, canUseAiWorkServer } =
       await resolveWritableAiWorkTarget();
 
-    if (isRemoteWorkspace && !canUseAiWorkServer) {
+    if (preferAiWorkServerPath && !canUseAiWorkServer) {
       setStateField("mcpStatus", "AiWork server unavailable. MCP auth is read-only.");
       return;
     }

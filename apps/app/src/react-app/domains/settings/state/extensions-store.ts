@@ -159,7 +159,6 @@ export function createExtensionsStore(options: {
   projectDir: () => string;
   selectedWorkspaceId: () => string;
   selectedWorkspaceRoot: () => string;
-  workspaceType: () => "local" | "remote";
   aiworkServer: AiWorkServerStore;
   aiworkServerConnection?: () => {
     aiworkServerClient: AiWorkServerClient | null;
@@ -226,8 +225,7 @@ export function createExtensionsStore(options: {
     const workspaceId = options.selectedWorkspaceId().trim();
     const root = normalizeDirectoryPath(options.selectedWorkspaceRoot().trim());
     const runtimeWorkspaceId = (options.runtimeWorkspaceId() ?? "").trim();
-    const workspaceType = options.workspaceType();
-    return `${workspaceType}:${workspaceId}:${root}:${runtimeWorkspaceId}`;
+    return `local:${workspaceId}:${root}:${runtimeWorkspaceId}`;
   };
 
   const getAiWorkServerSnapshot = () => {
@@ -326,7 +324,6 @@ export function createExtensionsStore(options: {
 
   const readWorkspaceAiWorkConfigRecord = async (): Promise<Record<string, unknown>> => {
     const root = options.selectedWorkspaceRoot().trim();
-    const isLocalWorkspace = options.workspaceType() === "local";
     const aiworkSnapshot = getAiWorkServerSnapshot();
     const aiworkClient = aiworkSnapshot.aiworkServerClient;
     const aiworkWorkspaceId = options.runtimeWorkspaceId();
@@ -341,7 +338,7 @@ export function createExtensionsStore(options: {
       return config.aiwork ?? {};
     }
 
-    if (isLocalWorkspace && isDesktopRuntime() && root) {
+    if (isDesktopRuntime() && root) {
       return await workspaceAiWorkRead({ workspacePath: root }) as unknown as Record<string, unknown>;
     }
 
@@ -350,7 +347,6 @@ export function createExtensionsStore(options: {
 
   const writeWorkspaceAiWorkConfigRecord = async (config: Record<string, unknown>) => {
     const root = options.selectedWorkspaceRoot().trim();
-    const isLocalWorkspace = options.workspaceType() === "local";
     const aiworkSnapshot = getAiWorkServerSnapshot();
     const aiworkClient = aiworkSnapshot.aiworkServerClient;
     const aiworkWorkspaceId = options.runtimeWorkspaceId();
@@ -365,7 +361,7 @@ export function createExtensionsStore(options: {
       return true;
     }
 
-    if (isLocalWorkspace && isDesktopRuntime() && root) {
+    if (isDesktopRuntime() && root) {
       const result = await workspaceAiWorkWrite({
         workspacePath: root,
         config: config as never,
@@ -423,8 +419,6 @@ export function createExtensionsStore(options: {
     description: string,
     optionsOverride?: { overwrite?: boolean },
   ) => {
-    const isRemoteWorkspace = options.workspaceType() === "remote";
-    const isLocalWorkspace = options.workspaceType() === "local";
     const root = options.selectedWorkspaceRoot().trim();
     const aiworkSnapshot = getAiWorkServerSnapshot();
     const aiworkClient = aiworkSnapshot.aiworkServerClient;
@@ -444,15 +438,11 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (isRemoteWorkspace) {
-      throw new Error("AiWork server unavailable. Connect to import skills.");
-    }
-
     if (!isDesktopRuntime()) {
       throw new Error(t("skills.desktop_required"));
     }
 
-    if (!isLocalWorkspace || !root) {
+    if (!root) {
       throw new Error(t("skills.pick_workspace_first"));
     }
 
@@ -466,8 +456,6 @@ export function createExtensionsStore(options: {
 
 
   const deleteWorkspaceSkill = async (name: string) => {
-    const isRemoteWorkspace = options.workspaceType() === "remote";
-    const isLocalWorkspace = options.workspaceType() === "local";
     const root = options.selectedWorkspaceRoot().trim();
     const aiworkSnapshot = getAiWorkServerSnapshot();
     const aiworkClient = aiworkSnapshot.aiworkServerClient;
@@ -483,15 +471,11 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (isRemoteWorkspace) {
-      throw new Error("AiWork server unavailable. Connect to remove skills.");
-    }
-
     if (!isDesktopRuntime()) {
       throw new Error(t("skills.desktop_required"));
     }
 
-    if (!isLocalWorkspace || !root) {
+    if (!root) {
       throw new Error(t("skills.pick_workspace_first"));
     }
 
@@ -524,7 +508,6 @@ export function createExtensionsStore(options: {
 
   const getSkillsTransportFingerprint = () => {
     const root = options.selectedWorkspaceRoot().trim();
-    const wsType = options.workspaceType();
     const ow = getAiWorkServerSnapshot();
     const runtimeId = (options.runtimeWorkspaceId() ?? "").trim();
     const canUseAiWorkSkills =
@@ -532,7 +515,7 @@ export function createExtensionsStore(options: {
       !!ow.aiworkServerClient &&
       !!runtimeId &&
       !!ow.aiworkServerCapabilities?.skills?.read;
-    const desktopLocal = wsType === "local" && isDesktopRuntime();
+    const desktopLocal = isDesktopRuntime();
     const hasOpencodeClient = !!options.client();
     return `root:${root}|ow:${canUseAiWorkSkills ? 1 : 0}|dl:${desktopLocal ? 1 : 0}|oc:${hasOpencodeClient ? 1 : 0}`;
   };
@@ -655,7 +638,6 @@ export function createExtensionsStore(options: {
     const repo = snapshot.hubRepo;
     if (!repo) return { ok: false, message: "Select a hub repo before installing skills." };
 
-    const isRemoteWorkspace = options.workspaceType() === "remote";
     const aiworkSnapshot = getAiWorkServerSnapshot();
     const aiworkClient = aiworkSnapshot.aiworkServerClient;
     const aiworkWorkspaceId = options.runtimeWorkspaceId();
@@ -666,7 +648,6 @@ export function createExtensionsStore(options: {
       aiworkSnapshot.aiworkServerCapabilities?.hub?.skills?.install;
 
     if (!canUseAiWorkServer) {
-      if (isRemoteWorkspace) return { ok: false, message: "AiWork server unavailable. Connect to install skills." };
       return { ok: false, message: "Hub install requires AiWork server." };
     }
 
@@ -711,8 +692,6 @@ export function createExtensionsStore(options: {
 
   async function refreshSkills(optionsOverride?: { force?: boolean }) {
     const root = options.selectedWorkspaceRoot().trim();
-    const isRemoteWorkspace = options.workspaceType() === "remote";
-    const isLocalWorkspace = options.workspaceType() === "local";
     const aiworkSnapshot = getAiWorkServerSnapshot();
     const aiworkClient = aiworkSnapshot.aiworkServerClient;
     const aiworkWorkspaceId = options.runtimeWorkspaceId();
@@ -740,7 +719,7 @@ export function createExtensionsStore(options: {
       refreshSkillsAborted = false;
       try {
         setStateField("skillsStatus", null);
-        const response = await aiworkClient.listSkills(aiworkWorkspaceId, { includeGlobal: isLocalWorkspace });
+        const response = await aiworkClient.listSkills(aiworkWorkspaceId, { includeGlobal: true });
         if (refreshSkillsAborted) return;
         let next: SkillCard[] = Array.isArray(response.items)
           ? response.items.map((entry) => ({
@@ -753,7 +732,7 @@ export function createExtensionsStore(options: {
 
         // Server can briefly return an empty catalog while the engine/workspace warms up.
         // Desktop host can still see skills on disk — fall back so the UI isn't stuck until manual refresh.
-        if (next.length === 0 && isLocalWorkspace && isDesktopRuntime() && root) {
+        if (next.length === 0 && isDesktopRuntime() && root) {
           try {
             const local = await listLocalSkills(root);
             if (refreshSkillsAborted) return;
@@ -791,7 +770,7 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (isLocalWorkspace && isDesktopRuntime()) {
+    if (isDesktopRuntime()) {
       if (root !== skillsRoot) skillsLoaded = false;
       if (!optionsOverride?.force && skillsLoaded) return;
       if (refreshSkillsInFlight) return;
@@ -889,8 +868,6 @@ export function createExtensionsStore(options: {
   }
 
   async function refreshPlugins(scopeOverride?: PluginScope) {
-    const isRemoteWorkspace = options.workspaceType() === "remote";
-    const isLocalWorkspace = options.workspaceType() === "local";
     const aiworkSnapshot = getAiWorkServerSnapshot();
     const aiworkClient = aiworkSnapshot.aiworkServerClient;
     const aiworkWorkspaceId = options.runtimeWorkspaceId();
@@ -907,23 +884,11 @@ export function createExtensionsStore(options: {
     const scope = scopeOverride ?? snapshot.pluginScope;
     const targetDir = options.projectDir().trim();
 
-    if (scope !== "project" && !isLocalWorkspace) {
-      mutateState((current) => ({
-        ...current,
-        pluginStatus: "Global plugins are only available for local workers.",
-        pluginList: [],
-        sidebarPluginStatus: "Global plugins require a local worker.",
-        sidebarPluginList: [],
-      }));
-      refreshPluginsInFlight = false;
-      return;
-    }
-
     if (scope === "project" && canUseAiWorkServer) {
       mutateState((current) => ({
         ...current,
         pluginConfig: null,
-        pluginConfigPath: `opencode.json (${isRemoteWorkspace ? "remote" : "aiwork"} server)`,
+        pluginConfigPath: "opencode.json (aiwork server)",
       }));
 
       try {
@@ -962,18 +927,6 @@ export function createExtensionsStore(options: {
         pluginStatus: t("skills.plugin_management_host_only"),
         pluginList: [],
         sidebarPluginStatus: t("skills.plugins_host_only"),
-        sidebarPluginList: [],
-      }));
-      refreshPluginsInFlight = false;
-      return;
-    }
-
-    if (!isLocalWorkspace && !canUseAiWorkServer) {
-      mutateState((current) => ({
-        ...current,
-        pluginStatus: "AiWork server unavailable. Connect to manage plugins.",
-        pluginList: [],
-        sidebarPluginStatus: "Connect an AiWork server to load plugins.",
         sidebarPluginList: [],
       }));
       refreshPluginsInFlight = false;
@@ -1060,8 +1013,6 @@ export function createExtensionsStore(options: {
     const isManualInput = pluginNameOverride == null;
     const triggerName = stripPluginVersion(pluginName);
 
-    const isRemoteWorkspace = options.workspaceType() === "remote";
-    const isLocalWorkspace = options.workspaceType() === "local";
     const aiworkSnapshot = getAiWorkServerSnapshot();
     const aiworkClient = aiworkSnapshot.aiworkServerClient;
     const aiworkWorkspaceId = options.runtimeWorkspaceId();
@@ -1073,11 +1024,6 @@ export function createExtensionsStore(options: {
 
     if (!pluginName) {
       if (isManualInput) setStateField("pluginStatus", t("skills.enter_plugin_name"));
-      return;
-    }
-
-    if (snapshot.pluginScope !== "project" && !isLocalWorkspace) {
-      setStateField("pluginStatus", "Global plugins are only available for local workers.");
       return;
     }
 
@@ -1096,11 +1042,6 @@ export function createExtensionsStore(options: {
 
     if (!isDesktopRuntime()) {
       setStateField("pluginStatus", t("skills.plugin_management_host_only"));
-      return;
-    }
-
-    if (!isLocalWorkspace && !canUseAiWorkServer) {
-      setStateField("pluginStatus", "AiWork server unavailable. Connect to manage plugins.");
       return;
     }
 
@@ -1155,7 +1096,6 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    const isLocalWorkspace = options.workspaceType() === "local";
     const aiworkSnapshot = getAiWorkServerSnapshot();
     const aiworkClient = aiworkSnapshot.aiworkServerClient;
     const aiworkWorkspaceId = options.runtimeWorkspaceId();
@@ -1164,11 +1104,6 @@ export function createExtensionsStore(options: {
       aiworkClient &&
       aiworkWorkspaceId &&
       aiworkSnapshot.aiworkServerCapabilities?.plugins?.write;
-
-    if (snapshot.pluginScope !== "project" && !isLocalWorkspace) {
-      setStateField("pluginStatus", "Global plugins are only available for local workers.");
-      return;
-    }
 
     if (snapshot.pluginScope === "project" && canUseAiWorkServer) {
       try {
@@ -1184,11 +1119,6 @@ export function createExtensionsStore(options: {
 
     if (!isDesktopRuntime()) {
       setStateField("pluginStatus", t("skills.plugin_management_host_only"));
-      return;
-    }
-
-    if (!isLocalWorkspace && !canUseAiWorkServer) {
-      setStateField("pluginStatus", "AiWork server unavailable. Connect to manage plugins.");
       return;
     }
 
@@ -1227,13 +1157,8 @@ export function createExtensionsStore(options: {
   }
 
   async function importLocalSkill() {
-    const isLocalWorkspace = options.workspaceType() === "local";
     if (!isDesktopRuntime()) {
       options.setError(t("skills.desktop_required"));
-      return;
-    }
-    if (!isLocalWorkspace) {
-      options.setError("Local workers are required to import skills.");
       return;
     }
     const targetDir = options.projectDir().trim();
@@ -1267,8 +1192,6 @@ export function createExtensionsStore(options: {
   }
 
   async function installSkillCreator(): Promise<{ ok: boolean; message: string }> {
-    const isRemoteWorkspace = options.workspaceType() === "remote";
-    const isLocalWorkspace = options.workspaceType() === "local";
     const aiworkSnapshot = getAiWorkServerSnapshot();
     const aiworkClient = aiworkSnapshot.aiworkServerClient;
     const aiworkWorkspaceId = options.runtimeWorkspaceId();
@@ -1300,19 +1223,8 @@ export function createExtensionsStore(options: {
       }
     }
 
-    if (isRemoteWorkspace) {
-      const message = "AiWork server unavailable. Connect to install skills.";
-      setStateField("skillsStatus", message);
-      return { ok: false, message };
-    }
     if (!isDesktopRuntime()) {
       const message = t("skills.desktop_required");
-      setStateField("skillsStatus", message);
-      return { ok: false, message };
-    }
-    if (!isLocalWorkspace) {
-      const message = "Local workers are required to install skills.";
-      options.setError(message);
       setStateField("skillsStatus", message);
       return { ok: false, message };
     }
@@ -1424,8 +1336,6 @@ export function createExtensionsStore(options: {
       return null;
     }
 
-    const isRemoteWorkspace = options.workspaceType() === "remote";
-    const isLocalWorkspace = options.workspaceType() === "local";
     const aiworkSnapshot = getAiWorkServerSnapshot();
     const aiworkClient = aiworkSnapshot.aiworkServerClient;
     const aiworkWorkspaceId = options.runtimeWorkspaceId();
@@ -1438,7 +1348,7 @@ export function createExtensionsStore(options: {
     if (canUseAiWorkServer) {
       try {
         setStateField("skillsStatus", null);
-        const result = await aiworkClient.getSkill(aiworkWorkspaceId, trimmed, { includeGlobal: isLocalWorkspace });
+        const result = await aiworkClient.getSkill(aiworkWorkspaceId, trimmed, { includeGlobal: true });
         return { name: result.item.name, path: result.item.path, content: result.content };
       } catch (error) {
         setStateField("skillsStatus", error instanceof Error ? error.message : t("skills.failed_to_load"));
@@ -1446,16 +1356,8 @@ export function createExtensionsStore(options: {
       }
     }
 
-    if (isRemoteWorkspace) {
-      setStateField("skillsStatus", "AiWork server unavailable. Connect to view skills.");
-      return null;
-    }
     if (!isDesktopRuntime()) {
       setStateField("skillsStatus", t("skills.desktop_required"));
-      return null;
-    }
-    if (!isLocalWorkspace) {
-      setStateField("skillsStatus", "Local workers are required to view skills.");
       return null;
     }
 
@@ -1478,8 +1380,6 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    const isRemoteWorkspace = options.workspaceType() === "remote";
-    const isLocalWorkspace = options.workspaceType() === "local";
     const aiworkSnapshot = getAiWorkServerSnapshot();
     const aiworkClient = aiworkSnapshot.aiworkServerClient;
     const aiworkWorkspaceId = options.runtimeWorkspaceId();
@@ -1511,16 +1411,8 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (isRemoteWorkspace) {
-      setStateField("skillsStatus", "AiWork server unavailable. Connect to edit skills.");
-      return;
-    }
     if (!isDesktopRuntime()) {
       setStateField("skillsStatus", t("skills.desktop_required"));
-      return;
-    }
-    if (!isLocalWorkspace) {
-      setStateField("skillsStatus", "Local workers are required to edit skills.");
       return;
     }
 

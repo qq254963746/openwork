@@ -94,9 +94,6 @@ export type SessionPageSidebarProps = {
   onCreateTaskInWorkspace: (workspaceId: string) => void;
   onOpenRenameWorkspace: (workspaceId: string) => void;
   onRevealWorkspace: (workspaceId: string) => void;
-  onRecoverWorkspace: (workspaceId: string) => Promise<boolean> | boolean | void;
-  onTestWorkspaceConnection: (workspaceId: string) => Promise<boolean> | boolean | void;
-  onEditWorkspaceConnection: (workspaceId: string) => void;
   onForgetWorkspace: (workspaceId: string) => void;
   onOpenCreateWorkspace: () => void;
   /** Lazy-load tasks when a workspace group is expanded without selecting it. */
@@ -122,7 +119,6 @@ export type SessionPageProps = {
     id?: string;
     name?: string;
     displayName?: string;
-    workspaceType?: WorkspaceInfo["workspaceType"];
   };
   selectedWorkspaceRoot: string;
   runtimeWorkspaceId: string | null;
@@ -484,9 +480,6 @@ export function SessionPage(props: SessionPageProps) {
               onOpenDeleteSession={props.onDeleteSession ? handleSidebarDeleteRequest : undefined}
               onOpenRenameWorkspace={props.sidebar.onOpenRenameWorkspace}
               onRevealWorkspace={props.sidebar.onRevealWorkspace}
-              onRecoverWorkspace={props.sidebar.onRecoverWorkspace}
-              onTestWorkspaceConnection={props.sidebar.onTestWorkspaceConnection}
-              onEditWorkspaceConnection={props.sidebar.onEditWorkspaceConnection}
               onForgetWorkspace={props.sidebar.onForgetWorkspace}
               onOpenCreateWorkspace={props.sidebar.onOpenCreateWorkspace}
               onWorkspaceSectionOpened={props.sidebar.onWorkspaceSectionOpened}

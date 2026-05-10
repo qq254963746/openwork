@@ -140,12 +140,9 @@ export function ConfigView(props: ConfigViewProps) {
   })();
 
   const hostInfo = props.aiworkServerHostInfo;
-  const hostRemoteAccessEnabled = hostInfo?.remoteAccessEnabled === true;
   const hostStatusLabel = !hostInfo?.running
     ? t("config.host_offline")
-    : hostRemoteAccessEnabled
-      ? t("config.host_remote_enabled")
-      : t("config.host_local_only");
+    : t("config.host_local_only");
   const hostStatusStyle = !hostInfo?.running
     ? "bg-gray-4/60 text-gray-11 border-gray-7/50"
     : "bg-green-7/10 text-green-11 border-green-7/20";
@@ -183,7 +180,6 @@ export function ConfigView(props: ConfigViewProps) {
         host: hostInfo
           ? {
               running: Boolean(hostInfo.running),
-              remoteAccessEnabled: hostInfo.remoteAccessEnabled,
               baseUrl: hostInfo.baseUrl ?? null,
               connectUrl: hostInfo.connectUrl ?? null,
               mdnsUrl: hostInfo.mdnsUrl ?? null,
@@ -422,11 +418,9 @@ export function ConfigView(props: ConfigViewProps) {
                 </div>
                 {hostConnectUrl ? (
                   <div className="text-[11px] text-gray-8 mt-1">
-                    {!hostRemoteAccessEnabled
-                      ? t("config.remote_access_off_hint")
-                      : hostConnectUrlUsesMdns
-                        ? t("config.mdns_hint")
-                        : t("config.local_ip_hint")}
+                    {hostConnectUrlUsesMdns
+                      ? t("config.mdns_hint")
+                      : t("config.local_ip_hint")}
                   </div>
                 ) : null}
               </div>
@@ -445,9 +439,7 @@ export function ConfigView(props: ConfigViewProps) {
             {renderTokenRow(
               t("config.collaborator_token_label"),
               hostInfo?.clientToken,
-              hostRemoteAccessEnabled
-                ? t("config.collaborator_token_remote_hint")
-                : t("config.collaborator_token_disabled_hint"),
+              t("config.collaborator_token_disabled_hint"),
               clientTokenVisible,
               () => setClientTokenVisible((prev) => !prev),
               "client-token",
@@ -456,9 +448,7 @@ export function ConfigView(props: ConfigViewProps) {
             {renderTokenRow(
               t("config.owner_token_label"),
               hostInfo?.ownerToken,
-              hostRemoteAccessEnabled
-                ? t("config.owner_token_remote_hint")
-                : t("config.owner_token_disabled_hint"),
+              t("config.owner_token_disabled_hint"),
               ownerTokenVisible,
               () => setOwnerTokenVisible((prev) => !prev),
               "owner-token",

@@ -8,7 +8,7 @@ import type {
   WorkspaceRuntimeStateRecord,
 } from "../database/types.js";
 
-type WorkspacePreset = "minimal" | "remote" | "starter";
+type WorkspacePreset = "minimal" | "starter";
 
 export type WorkspaceBackend = {
   kind: BackendKind;
@@ -16,13 +16,6 @@ export type WorkspaceBackend = {
     configDir: string | null;
     dataDir: string | null;
     opencodeProjectId: string | null;
-  };
-  remote: null | {
-    directory: string | null;
-    hostUrl: string | null;
-    remoteType: "aiwork" | "opencode";
-    remoteWorkspaceId: string | null;
-    workspaceName: string | null;
   };
   serverId: string;
 };
@@ -72,23 +65,7 @@ function readPreset(workspace: WorkspaceRecord): WorkspacePreset {
     return preset;
   }
 
-  return workspace.kind === "remote" ? "remote" : "starter";
-}
-
-function readRemoteDirectory(workspace: WorkspaceRecord) {
-  const value = workspace.notes?.directory;
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function readRemoteType(workspace: WorkspaceRecord): "aiwork" | "opencode" {
-  const explicit = workspace.notes?.remoteType;
-  return explicit === "opencode" ? "opencode" : "aiwork";
-}
-
-function readRemoteWorkspaceName(workspace: WorkspaceRecord) {
-  const legacyDesktop = asJsonObject(workspace.notes?.legacyDesktop);
-  const value = legacyDesktop?.aiworkWorkspaceName;
-  return typeof value === "string" && value.trim() ? value.trim() : null;
+  return "starter";
 }
 
 function serializeRuntimeState(runtimeState: WorkspaceRuntimeStateRecord | null, backendKind: BackendKind): WorkspaceRuntimeSummary {
@@ -109,25 +86,6 @@ export function createWorkspaceRegistryService(input: {
   const { repositories } = input;
 
   function resolveBackend(workspace: WorkspaceRecord): WorkspaceBackend {
-    const runtimeState = repositories.workspaceRuntimeState.getByWorkspaceId(workspace.id);
-    const backendKind = runtimeState?.backendKind ?? (workspace.kind === "remote" ? "remote_aiwork" : "local_opencode");
-
-    if (backendKind === "remote_aiwork") {
-      const server = input.servers.getById(workspace.serverId);
-      return {
-        kind: backendKind,
-        local: null,
-        remote: {
-          directory: readRemoteDirectory(workspace),
-          hostUrl: server?.baseUrl ?? null,
-          remoteType: readRemoteType(workspace),
-          remoteWorkspaceId: workspace.remoteWorkspaceId,
-          workspaceName: readRemoteWorkspaceName(workspace),
-        },
-        serverId: workspace.serverId,
-      };
-    }
-
     return {
       kind: "local_opencode",
       local: {
@@ -135,7 +93,6 @@ export function createWorkspaceRegistryService(input: {
         dataDir: workspace.dataDir,
         opencodeProjectId: workspace.opencodeProjectId,
       },
-      remote: null,
       serverId: workspace.serverId,
     };
   }

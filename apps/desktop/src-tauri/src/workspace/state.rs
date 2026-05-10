@@ -5,7 +5,7 @@ use sha2::{Digest, Sha256};
 use tauri::Manager;
 
 use crate::paths::home_dir;
-use crate::types::{WorkspaceState, WorkspaceType, WORKSPACE_STATE_VERSION};
+use crate::types::{WorkspaceState, WORKSPACE_STATE_VERSION};
 
 pub fn stable_workspace_id(path: &str) -> String {
     let digest = Sha256::digest(path.as_bytes());
@@ -72,36 +72,19 @@ pub fn repair_workspace_state(state: &mut WorkspaceState) {
     let old_selected_workspace_id = state.selected_workspace_id.clone();
     let old_watched_workspace_id = state.watched_workspace_id.clone();
     for workspace in state.workspaces.iter_mut() {
-        let next_id = match workspace.workspace_type {
-            WorkspaceType::Local => {
-                // Canonicalize only currently selected/watched entries. Full canonicalization across
-                // every workspace can block startup/switch paths when mounts are slow.
-                let canonicalize_for_active_workspace = workspace.id == old_selected_workspace_id
-                    || workspace.id == old_watched_workspace_id;
-                let normalized = if canonicalize_for_active_workspace {
-                    normalize_local_workspace_path(&workspace.path)
-                } else {
-                    normalize_local_workspace_path_fast(&workspace.path)
-                };
-                if !normalized.is_empty() {
-                    workspace.path = normalized;
-                }
-                stable_workspace_id(&workspace.path)
-            }
-            WorkspaceType::Remote => {
-                if workspace.remote_type == Some(crate::types::RemoteType::AiWork) {
-                    stable_workspace_id_for_aiwork(
-                        workspace.aiwork_host_url.as_deref().unwrap_or(""),
-                        workspace.aiwork_workspace_id.as_deref(),
-                    )
-                } else {
-                    stable_workspace_id_for_remote(
-                        workspace.base_url.as_deref().unwrap_or(""),
-                        workspace.directory.as_deref(),
-                    )
-                }
-            }
+        // Canonicalize only currently selected/watched entries. Full canonicalization across
+        // every workspace can block startup/switch paths when mounts are slow.
+        let canonicalize_for_active_workspace = workspace.id == old_selected_workspace_id
+            || workspace.id == old_watched_workspace_id;
+        let normalized = if canonicalize_for_active_workspace {
+            normalize_local_workspace_path(&workspace.path)
+        } else {
+            normalize_local_workspace_path_fast(&workspace.path)
         };
+        if !normalized.is_empty() {
+            workspace.path = normalized;
+        }
+        let next_id = stable_workspace_id(&workspace.path);
 
         if workspace.id != next_id {
             if old_selected_workspace_id == workspace.id {
@@ -178,32 +161,10 @@ pub fn save_workspace_state(app: &tauri::AppHandle, state: &WorkspaceState) -> R
     Ok(())
 }
 
-pub fn stable_workspace_id_for_remote(base_url: &str, directory: Option<&str>) -> String {
-    let mut key = format!("remote::{base_url}");
-    if let Some(dir) = directory {
-        if !dir.trim().is_empty() {
-            key.push_str("::");
-            key.push_str(dir.trim());
-        }
-    }
-    stable_workspace_id(&key)
-}
-
-pub fn stable_workspace_id_for_aiwork(host_url: &str, workspace_id: Option<&str>) -> String {
-    let mut key = format!("aiwork::{host_url}");
-    if let Some(id) = workspace_id {
-        if !id.trim().is_empty() {
-            key.push_str("::");
-            key.push_str(id.trim());
-        }
-    }
-    stable_workspace_id(&key)
-}
-
 #[cfg(test)]
 mod tests {
     use super::{normalize_local_workspace_path, repair_workspace_state, stable_workspace_id};
-    use crate::types::{WorkspaceInfo, WorkspaceState, WorkspaceType};
+    use crate::types::{WorkspaceInfo, WorkspaceState};
     use std::fs;
 
     #[test]
@@ -265,40 +226,14 @@ mod tests {
                     name: "First".to_string(),
                     path: first.to_string_lossy().to_string(),
                     preset: "starter".to_string(),
-                    workspace_type: WorkspaceType::Local,
-                    remote_type: None,
-                    base_url: None,
-                    directory: None,
                     display_name: None,
-                    aiwork_host_url: None,
-                    aiwork_token: None,
-                    aiwork_client_token: None,
-                    aiwork_host_token: None,
-                    aiwork_workspace_id: None,
-                    aiwork_workspace_name: None,
-                    sandbox_backend: None,
-                    sandbox_run_id: None,
-                    sandbox_container_name: None,
                 },
                 WorkspaceInfo {
                     id: "watched-legacy".to_string(),
                     name: "Second".to_string(),
                     path: second.to_string_lossy().to_string(),
                     preset: "starter".to_string(),
-                    workspace_type: WorkspaceType::Local,
-                    remote_type: None,
-                    base_url: None,
-                    directory: None,
                     display_name: None,
-                    aiwork_host_url: None,
-                    aiwork_token: None,
-                    aiwork_client_token: None,
-                    aiwork_host_token: None,
-                    aiwork_workspace_id: None,
-                    aiwork_workspace_name: None,
-                    sandbox_backend: None,
-                    sandbox_run_id: None,
-                    sandbox_container_name: None,
                 },
             ],
         };
@@ -334,20 +269,7 @@ mod tests {
                 name: "First".to_string(),
                 path: first.to_string_lossy().to_string(),
                 preset: "starter".to_string(),
-                workspace_type: WorkspaceType::Local,
-                remote_type: None,
-                base_url: None,
-                directory: None,
                 display_name: None,
-                aiwork_host_url: None,
-                aiwork_token: None,
-                aiwork_client_token: None,
-                aiwork_host_token: None,
-                aiwork_workspace_id: None,
-                aiwork_workspace_name: None,
-                sandbox_backend: None,
-                sandbox_run_id: None,
-                sandbox_container_name: None,
             }],
         };
 

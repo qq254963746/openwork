@@ -33,7 +33,6 @@ type SuggestedPlugin = {
 export type ExtensionsViewProps = {
   busy: boolean;
   selectedWorkspaceRoot: string;
-  isRemoteWorkspace: boolean;
   canEditPlugins: boolean;
   canUseGlobalScope: boolean;
   accessHint?: string | null;

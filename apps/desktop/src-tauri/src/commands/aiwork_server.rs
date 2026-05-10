@@ -3,7 +3,7 @@ use tauri::{AppHandle, State};
 use crate::engine::manager::EngineManager;
 use crate::aiwork_server::manager::AiWorkServerManager;
 use crate::aiwork_server::start_aiwork_server;
-use crate::types::{AiWorkServerInfo, WorkspaceType};
+use crate::types::AiWorkServerInfo;
 use crate::workspace::state::load_workspace_state;
 
 #[tauri::command]
@@ -20,7 +20,6 @@ pub fn aiwork_server_restart(
     app: AppHandle,
     manager: State<AiWorkServerManager>,
     engine_manager: State<EngineManager>,
-    remote_access_enabled: Option<bool>,
 ) -> Result<AiWorkServerInfo, String> {
     let (workspace_paths, opencode_url, opencode_username, opencode_password) = {
         let engine = engine_manager
@@ -46,9 +45,6 @@ pub fn aiwork_server_restart(
     if workspace_paths.is_empty() {
         let state = load_workspace_state(&app)?;
         for workspace in state.workspaces {
-            if workspace.workspace_type != WorkspaceType::Local {
-                continue;
-            }
             let trimmed = workspace.path.trim().to_string();
             if trimmed.is_empty() || workspace_paths.iter().any(|path| path == &trimmed) {
                 continue;
@@ -64,7 +60,6 @@ pub fn aiwork_server_restart(
         opencode_url.as_deref(),
         opencode_username.as_deref(),
         opencode_password.as_deref(),
-        remote_access_enabled.unwrap_or(false),
         false,
         None,
         None,

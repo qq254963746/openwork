@@ -91,7 +91,7 @@ export function useDesktopRuntimeBoot() {
         const workspace = selectedId
           ? list.workspaces.find((w) => w.id === selectedId)
           : undefined;
-        if (!workspace || workspace.workspaceType === "remote") {
+        if (!workspace) {
           markReady();
           return;
         }
@@ -118,7 +118,6 @@ export function useDesktopRuntimeBoot() {
               ownerToken?: string | null;
               clientToken?: string | null;
               port?: number | null;
-              remoteAccessEnabled?: boolean;
             };
           };
 
@@ -166,7 +165,6 @@ export function useDesktopRuntimeBoot() {
                   undefined,
                 hostToken: fresh.hostToken?.trim() || undefined,
                 portOverride: fresh.port ?? undefined,
-                remoteAccessEnabled: fresh.remoteAccessEnabled === true,
               });
               try {
                 window.dispatchEvent(
@@ -187,7 +185,6 @@ export function useDesktopRuntimeBoot() {
         // No running engine. Tauri now mirrors Electron: engine_start boots
         // aiwork-server and lets that server manage OpenCode.
         const localPaths = list.workspaces
-          .filter((entry) => entry.workspaceType !== "remote")
           .map((entry) => entry.path?.trim() ?? "")
           .filter((path): path is string => path.length > 0);
         const workspacePathsFor = (root: string) => {
@@ -202,7 +199,6 @@ export function useDesktopRuntimeBoot() {
         let engineStartResult = await engineStart(workspaceRoot, {
           runtime: "direct",
           workspacePaths: workspacePathsFor(workspaceRoot),
-          aiworkRemoteAccess: readAiWorkServerSettings().remoteAccessEnabled === true,
         }).catch((error) => {
           console.warn("[desktop-boot] engineStart failed:", error);
           return null;
@@ -211,7 +207,7 @@ export function useDesktopRuntimeBoot() {
         if (!engineStartResult) {
           const fallback = list.workspaces.find((entry) => {
             const path = entry.path?.trim() ?? "";
-            return entry.workspaceType !== "remote" && path && path !== workspaceRoot;
+            return path && path !== workspaceRoot;
           });
           const fallbackRoot = fallback?.path?.trim() ?? "";
           if (fallback && fallbackRoot) {
@@ -223,7 +219,6 @@ export function useDesktopRuntimeBoot() {
             engineStartResult = await engineStart(fallbackRoot, {
               runtime: "direct",
               workspacePaths: workspacePathsFor(fallbackRoot).filter((path) => path !== workspaceRoot),
-              aiworkRemoteAccess: readAiWorkServerSettings().remoteAccessEnabled === true,
             }).catch((error) => {
               console.warn("[desktop-boot] fallback engineStart failed:", error);
               setError(error instanceof Error ? error.message : safeStringify(error));
@@ -253,7 +248,6 @@ export function useDesktopRuntimeBoot() {
                   undefined,
                 hostToken: freshInfo.hostToken?.trim() || undefined,
                 portOverride: freshInfo.port ?? undefined,
-                remoteAccessEnabled: freshInfo.remoteAccessEnabled === true,
               });
               try {
                 window.dispatchEvent(new CustomEvent("aiwork-server-settings-changed"));

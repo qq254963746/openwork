@@ -27,7 +27,6 @@ type ApplyEnvironmentChangesResult = { statusMessage?: string } | void;
 
 export type EnvironmentViewProps = {
   client: AiWorkServerClient | null;
-  isRemoteWorkspace: boolean;
   onStatusMessage: (message: string) => void;
   onApplyChanges?: () => Promise<ApplyEnvironmentChangesResult>;
   applyBlocked?: boolean;
@@ -60,8 +59,8 @@ function validateKey(key: string): string | null {
 }
 
 export function EnvironmentView(props: EnvironmentViewProps) {
-  const { client, isRemoteWorkspace, onStatusMessage } = props;
-  const canEdit = !isRemoteWorkspace && client !== null;
+  const { client, onStatusMessage } = props;
+  const canEdit = client !== null;
   const editorTitleId = useId();
 
   const [items, setItems] = useState<EnvItem[]>([]);
@@ -86,7 +85,7 @@ export function EnvironmentView(props: EnvironmentViewProps) {
 
   const refresh = useCallback(async () => {
     const requestId = ++refreshRequestId.current;
-    if (!client || isRemoteWorkspace) {
+    if (!client) {
       setItems([]);
       setRevealed({});
       setError(null);
@@ -105,7 +104,7 @@ export function EnvironmentView(props: EnvironmentViewProps) {
     } finally {
       if (requestId === refreshRequestId.current) setLoading(false);
     }
-  }, [client, isRemoteWorkspace]);
+  }, [client]);
 
   useEffect(() => {
     void refresh();
@@ -253,19 +252,13 @@ export function EnvironmentView(props: EnvironmentViewProps) {
           ) : null}
         </div>
 
-        {isRemoteWorkspace ? (
-          <div className="rounded-lg border border-dls-border/60 bg-dls-surface-muted/40 px-3 py-2 text-xs text-gray-10">
-            {t("settings.environment.remote_workspace_hint")}
-          </div>
-        ) : null}
-
         {error ? (
           <div className="rounded-lg border border-red-7 bg-red-3/40 px-3 py-2 text-xs text-red-11">
             {error}
           </div>
         ) : null}
 
-        {pendingChanges && !isRemoteWorkspace ? (
+        {pendingChanges ? (
           <div className="rounded-xl border border-amber-7/50 bg-amber-3/30 px-3 py-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex min-w-0 items-start gap-2.5">
@@ -316,7 +309,7 @@ export function EnvironmentView(props: EnvironmentViewProps) {
           </div>
         ) : null}
 
-        {isRemoteWorkspace ? null : loading && items.length === 0 ? (
+        {loading && items.length === 0 ? (
           <div className="py-6 text-center text-xs text-gray-10">
             {t("settings.environment.loading")}
           </div>
@@ -390,12 +383,10 @@ export function EnvironmentView(props: EnvironmentViewProps) {
           </div>
         )}
 
-        {!isRemoteWorkspace ? (
-          <div className="space-y-1 text-[11px] text-gray-8">
-            <div>{t("settings.environment.footer_hint")}</div>
-            <div>{t("settings.environment.override_hint")}</div>
-          </div>
-        ) : null}
+        <div className="space-y-1 text-[11px] text-gray-8">
+          <div>{t("settings.environment.footer_hint")}</div>
+          <div>{t("settings.environment.override_hint")}</div>
+        </div>
       </div>
 
       {editor ? (

@@ -12,7 +12,6 @@ export type AddMcpModalProps = {
   onClose: () => void;
   onAdd: (entry: McpDirectoryInfo) => void;
   busy: boolean;
-  isRemoteWorkspace: boolean;
 };
 
 export function AddMcpModal(props: AddMcpModalProps) {
@@ -155,25 +154,16 @@ export function AddMcpModal(props: AddMcpModalProps) {
               </button>
               <button
                 type="button"
-                disabled={props.isRemoteWorkspace}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   serverType === "local"
                     ? "bg-dls-active text-dls-text"
                     : "text-dls-secondary hover:text-dls-text hover:bg-dls-hover"
-                } ${props.isRemoteWorkspace ? "opacity-50 cursor-not-allowed" : ""}`}
-                onClick={() => {
-                  if (props.isRemoteWorkspace) return;
-                  setServerType("local");
-                }}
+                }`}
+                onClick={() => setServerType("local")}
               >
                 {t("mcp.type_local_cmd")}
               </button>
             </div>
-            {props.isRemoteWorkspace ? (
-              <div className="mt-2 text-[11px] text-dls-secondary">
-                {t("mcp.remote_workspace_url_hint")}
-              </div>
-            ) : null}
           </div>
 
           {serverType === "remote" ? (

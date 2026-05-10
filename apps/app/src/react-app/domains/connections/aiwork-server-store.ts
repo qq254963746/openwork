@@ -26,17 +26,8 @@ import {
 
 type SetStateAction<T> = T | ((current: T) => T);
 
-type RemoteWorkspaceInput = {
-  aiworkHostUrl: string;
-  aiworkToken?: string | null;
-  directory?: string | null;
-  displayName?: string | null;
-};
-
 export type AiWorkServerStoreSnapshot = {
   aiworkServerSettings: AiWorkServerSettings;
-  shareRemoteAccessBusy: boolean;
-  shareRemoteAccessError: string | null;
   aiworkServerUrl: string;
   aiworkServerBaseUrl: string;
   aiworkServerAuth: { token?: string; hostToken?: string };
@@ -67,13 +58,10 @@ type CreateAiWorkServerStoreOptions = {
   activeClient: () => unknown | null;
   selectedWorkspaceDisplay: () => WorkspaceDisplay;
   restartLocalServer: () => Promise<boolean>;
-  createRemoteWorkspaceFlow: (input: RemoteWorkspaceInput) => Promise<boolean>;
 };
 
 type MutableState = {
   aiworkServerSettings: AiWorkServerSettings;
-  shareRemoteAccessBusy: boolean;
-  shareRemoteAccessError: string | null;
   aiworkServerUrl: string;
   aiworkServerStatus: AiWorkServerStatus;
   aiworkServerCapabilities: AiWorkServerCapabilities | null;
@@ -107,8 +95,6 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
 
   let state: MutableState = {
     aiworkServerSettings: readAiWorkServerSettings(),
-    shareRemoteAccessBusy: false,
-    shareRemoteAccessError: null,
     aiworkServerUrl: "",
     aiworkServerStatus: "disconnected",
     aiworkServerCapabilities: null,
@@ -214,8 +200,6 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
 
     snapshot = {
       aiworkServerSettings: state.aiworkServerSettings,
-      shareRemoteAccessBusy: state.shareRemoteAccessBusy,
-      shareRemoteAccessError: state.shareRemoteAccessError,
       aiworkServerUrl,
       aiworkServerBaseUrl,
       aiworkServerAuth,
@@ -602,21 +586,6 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
     }));
 
     const ok = result.status === "connected" || result.status === "limited";
-    if (ok && !isDesktopRuntime()) {
-      const active = options.selectedWorkspaceDisplay();
-      const shouldAttach =
-        !options.activeClient() ||
-        active.workspaceType !== "remote" ||
-        active.remoteType !== "aiwork";
-      if (shouldAttach) {
-        await options
-          .createRemoteWorkspaceFlow({
-            aiworkHostUrl: derived,
-            aiworkToken: next.token ?? null,
-          })
-          .catch(() => undefined);
-      }
-    }
     return ok;
   };
 
@@ -691,9 +660,7 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
     if (!isDesktopRuntime()) return null;
 
     try {
-      hostInfo = await aiworkServerRestart({
-        remoteAccessEnabled: state.aiworkServerSettings.remoteAccessEnabled === true,
-      });
+      hostInfo = await aiworkServerRestart();
       mutateState((current) => ({ ...current, aiworkServerHostInfo: hostInfo }));
     } catch {
       return null;
@@ -715,44 +682,6 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
     });
   }
 
-  const saveShareRemoteAccess = async (enabled: boolean) => {
-    if (state.shareRemoteAccessBusy) return;
-    const previous = state.aiworkServerSettings;
-    const next: AiWorkServerSettings = {
-      ...previous,
-      remoteAccessEnabled: enabled,
-    };
-
-    mutateState((current) => ({
-      ...current,
-      shareRemoteAccessBusy: true,
-      shareRemoteAccessError: null,
-    }));
-    updateAiWorkServerSettings(next);
-
-    try {
-      if (isDesktopRuntime() && options.selectedWorkspaceDisplay().workspaceType === "local") {
-        const restarted = await options.restartLocalServer();
-        if (!restarted) {
-          throw new Error(t("app.error_restart_local_worker"));
-        }
-        await reconnectAiWorkServer();
-      }
-    } catch (error) {
-      updateAiWorkServerSettings(previous);
-      mutateState((current) => ({
-        ...current,
-        shareRemoteAccessError:
-          error instanceof Error
-            ? error.message
-            : t("app.error_remote_access"),
-      }));
-      return;
-    } finally {
-      setStateField("shareRemoteAccessBusy", false);
-    }
-  };
-
   refreshSnapshot();
 
   const subscribe = (listener: () => void) => {
@@ -773,7 +702,6 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
     setAiWorkServerSettings,
     updateAiWorkServerSettings,
     resetAiWorkServerSettings,
-    saveShareRemoteAccess,
     checkAiWorkServer,
     testAiWorkServerConnection,
     reconnectAiWorkServer,

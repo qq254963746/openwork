@@ -54,7 +54,6 @@ type RawWorkspaceRow = {
   kind: WorkspaceRecord["kind"];
   notes_json: string | null;
   opencode_project_id: string | null;
-  remote_workspace_id: string | null;
   server_id: string;
   slug: string;
   status: WorkspaceRecord["status"];
@@ -198,7 +197,6 @@ function mapWorkspace(row: RawWorkspaceRow | null | undefined): WorkspaceRecord 
     kind: row.kind,
     notes: parseJsonValue(row.notes_json, null),
     opencodeProjectId: row.opencode_project_id,
-    remoteWorkspaceId: row.remote_workspace_id,
     serverId: row.server_id,
     slug: row.slug,
     status: row.status,
@@ -480,7 +478,7 @@ export class WorkspacesRepository {
         `
           INSERT INTO workspaces (
             id, server_id, kind, display_name, slug, is_hidden, status, opencode_project_id,
-            remote_workspace_id, data_dir, config_dir, notes_json, created_at, updated_at
+            data_dir, config_dir, notes_json, created_at, updated_at
           )
           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
           ON CONFLICT(id) DO UPDATE SET
@@ -491,7 +489,6 @@ export class WorkspacesRepository {
             is_hidden = excluded.is_hidden,
             status = excluded.status,
             opencode_project_id = excluded.opencode_project_id,
-            remote_workspace_id = excluded.remote_workspace_id,
             data_dir = excluded.data_dir,
             config_dir = excluded.config_dir,
             notes_json = excluded.notes_json,
@@ -507,7 +504,6 @@ export class WorkspacesRepository {
         toSqlBoolean(input.isHidden),
         input.status,
         input.opencodeProjectId,
-        input.remoteWorkspaceId,
         input.dataDir,
         input.configDir,
         stringifyJsonValue(input.notes),

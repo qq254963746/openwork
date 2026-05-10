@@ -259,7 +259,7 @@ export function CreateWorkspaceLocalPanel(
                 className={`mt-3 ${softCardClass} text-[11px] text-dls-text`}
               >
                 <summary className="cursor-pointer text-[12px] font-semibold text-dls-text">
-                  Docker debug details
+                  Worker debug details
                 </summary>
                 <div className="mt-2 space-y-1 break-words font-mono">
                   {props.workerDebugLines.map((line, index) => (

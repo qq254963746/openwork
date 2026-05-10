@@ -5,6 +5,7 @@ import { t } from "../../../../i18n";
 import type {
   AiWorkOpenCodeRouterHealthSnapshot,
   AiWorkOpenCodeRouterIdentityItem,
+  AiWorkOpenCodeRouterSendFailure,
   AiWorkOpenCodeRouterSendResult,
   AiWorkServerStatus,
 } from "../../../../app/lib/aiwork-server";
@@ -162,9 +163,14 @@ function StatusPill(props: { label: string; value: string; ok: boolean }) {
   );
 }
 
-function formatLastActivityLabel(timestamp?: number | null) {
-  if (!timestamp) return "-";
-  const elapsedMs = Math.max(0, Date.now() - timestamp);
+function formatLastActivityLabel(timestamp?: number | string | null) {
+  if (timestamp == null || timestamp === "") return "-";
+  const ms =
+    typeof timestamp === "number"
+      ? timestamp
+      : Date.parse(String(timestamp));
+  if (!Number.isFinite(ms)) return "-";
+  const elapsedMs = Math.max(0, Date.now() - ms);
   if (elapsedMs < 60_000) return t("identities.just_now");
   const minutes = Math.floor(elapsedMs / 60_000);
   if (minutes < 60) return t("identities.minutes_ago", undefined, { minutes });
@@ -1004,7 +1010,7 @@ export function MessagingView(props: MessagingViewProps) {
                       {props.sendTest.result.failures?.length ? ` failures=${props.sendTest.result.failures.length}` : ""}
                       {props.sendTest.result.reason?.trim() ? ` reason=${props.sendTest.result.reason}` : ""}
                     </div>
-                    {props.sendTest.result.failures?.map((failure) => (
+                    {props.sendTest.result.failures?.map((failure: AiWorkOpenCodeRouterSendFailure) => (
                       <div key={`${failure.identityId}:${failure.peerId}:${failure.error}`} className="text-red-11">
                         {failure.identityId}/{failure.peerId}: {failure.error}
                       </div>

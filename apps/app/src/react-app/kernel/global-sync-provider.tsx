@@ -25,8 +25,10 @@ import type {
 } from "@opencode-ai/sdk/v2/client";
 
 import { t } from "../../i18n";
+import { readGlobalDisabledProviderIds } from "../../app/lib/global-opencode-disabled-providers";
+import { mergeAuthMetadataBaseUrlIntoProviderList } from "../../app/lib/provider-list-merge";
 import { unwrap } from "../../app/lib/opencode";
-import type { McpStatusMap, TodoItem } from "../../app/types";
+import type { Client, McpStatusMap, TodoItem } from "../../app/types";
 import { safeStringify } from "../../app/utils";
 import {
   filterProviderList,
@@ -156,37 +158,41 @@ export function GlobalSyncProvider({ children }: GlobalSyncProviderProps) {
   }, [globalSDK.client, setField]);
 
   const refreshProviders = useCallback(async () => {
-    let disabledProviders =
-      latestStateRef.current.config.disabled_providers ?? [];
+    let disabledProviders: string[] = [];
     try {
-      const config = unwrap(await globalSDK.client.config.get());
-      disabledProviders = Array.isArray(config.disabled_providers)
-        ? config.disabled_providers
-        : [];
+      disabledProviders = await readGlobalDisabledProviderIds({
+        workspaceRoot: "",
+        selectedWorkspaceId: "",
+        runtimeWorkspaceId: null,
+        aiworkServerStatus: "disconnected",
+        aiworkServerClient: null,
+        aiworkServerCapabilities: null,
+      });
     } catch {
-      // ignore config read failures
+      disabledProviders = [];
     }
     try {
-      const result = filterProviderList(
-        unwrap(await globalSDK.client.provider.list()),
-        disabledProviders,
+      const listed = unwrap(await globalSDK.client.provider.list());
+      const merged = await mergeAuthMetadataBaseUrlIntoProviderList(
+        globalSDK.client as Client,
+        listed,
       );
+      const result = filterProviderList(merged, disabledProviders);
       setField("provider", result);
     } catch {
       const fallback = unwrap(
         await globalSDK.client.config.providers(),
       ) as ConfigProvidersResponse;
-      setField(
-        "provider",
-        filterProviderList(
-          {
-            all: mapConfigProvidersToList(fallback.providers),
-            connected: [],
-            default: fallback.default,
-          },
-          disabledProviders,
-        ),
+      const fallbackList = {
+        all: mapConfigProvidersToList(fallback.providers),
+        connected: [] as string[],
+        default: fallback.default,
+      };
+      const mergedFallback = await mergeAuthMetadataBaseUrlIntoProviderList(
+        globalSDK.client as Client,
+        fallbackList,
       );
+      setField("provider", filterProviderList(mergedFallback, disabledProviders));
     }
   }, [globalSDK.client, setField]);
 

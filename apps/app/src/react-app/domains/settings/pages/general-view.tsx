@@ -32,6 +32,7 @@ export type GeneralSettingsViewProps = {
   providerDisconnectError: string | null;
   onOpenProviderAuth: () => void | Promise<void>;
   onDisconnectProvider: (providerId: string) => void | Promise<void>;
+  onEditProvider?: (providerId: string) => void | Promise<void>;
   canDisconnectProvider: (source?: ConnectedProvider["source"]) => boolean;
   defaultModelLabel: string;
   defaultModelRef: string;
@@ -104,23 +105,37 @@ export function GeneralSettingsView(props: GeneralSettingsViewProps) {
                     ) : null}
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  className="h-8 px-3 py-0 text-xs"
-                  onClick={() => void props.onDisconnectProvider(provider.id)}
-                  disabled={
-                    props.busy ||
-                    props.providerAuthBusy ||
-                    props.disconnectingProviderId !== null ||
-                    !props.canDisconnectProvider(provider.source)
-                  }
-                >
-                  {props.disconnectingProviderId === provider.id
-                    ? t("settings.disconnecting")
-                    : props.canDisconnectProvider(provider.source)
-                      ? t("settings.disconnect")
-                      : t("settings.managed_by_env")}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  {props.onEditProvider ? (
+                    <Button
+                      variant="outline"
+                      className="h-8 px-3 py-0 text-xs"
+                      onClick={() => void props.onEditProvider?.(provider.id)}
+                      disabled={
+                        props.busy || props.providerAuthBusy || props.disconnectingProviderId !== null
+                      }
+                    >
+                      {t("settings.edit_provider")}
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="outline"
+                    className="h-8 px-3 py-0 text-xs"
+                    onClick={() => void props.onDisconnectProvider(provider.id)}
+                    disabled={
+                      props.busy ||
+                      props.providerAuthBusy ||
+                      props.disconnectingProviderId !== null ||
+                      !props.canDisconnectProvider(provider.source)
+                    }
+                  >
+                    {props.disconnectingProviderId === provider.id
+                      ? t("settings.disconnecting")
+                      : props.canDisconnectProvider(provider.source)
+                        ? t("settings.disconnect")
+                        : t("settings.managed_by_env")}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

@@ -72,7 +72,6 @@ function createAiWorkServerState() {
   return {
     child: null,
     childExited: true,
-    remoteAccessEnabled: false,
     host: null,
     port: null,
     baseUrl: null,
@@ -93,7 +92,6 @@ function snapshotAiWorkServerState(state) {
   const child = state.childExited ? null : state.child;
   return {
     running: Boolean(child && child.exitCode === null && !child.killed),
-    remoteAccessEnabled: state.remoteAccessEnabled,
     host: state.host,
     port: state.port,
     baseUrl: state.baseUrl,
@@ -152,30 +150,6 @@ async function readJsonFile(targetPath, fallback) {
   } catch {
     return fallback;
   }
-}
-
-function selectLanAddress() {
-  const interfaces = os.networkInterfaces();
-  for (const entries of Object.values(interfaces)) {
-    for (const entry of entries ?? []) {
-      if (entry && entry.family === "IPv4" && entry.internal === false) {
-        return entry.address;
-      }
-    }
-  }
-  return null;
-}
-
-function buildConnectUrls(port) {
-  const hostname = os.hostname().trim();
-  const mdnsUrl = hostname ? `http://${hostname.replace(/\.local$/i, "")}.local:${port}` : null;
-  const lan = selectLanAddress();
-  const lanUrl = lan ? `http://${lan}:${port}` : null;
-  return {
-    connectUrl: lanUrl ?? mdnsUrl,
-    mdnsUrl,
-    lanUrl,
-  };
 }
 
 function targetTriple() {
@@ -797,102 +771,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     return explicitPath ? { path: explicitPath, source: "custom" } : resolveBinaryInfo("opencode");
   }
 
-  function resolveDockerCandidates() {
-    const candidates = [];
-    const seen = new Set();
-
-    for (const key of ["AIWORK_DOCKER_BIN", "OPENWRK_DOCKER_BIN", "DOCKER_BIN"]) {
-      const value = process.env[key]?.trim();
-      if (value && !seen.has(value)) {
-        seen.add(value);
-        candidates.push(value);
-      }
-    }
-
-    for (const entry of (process.env.PATH ?? "").split(path.delimiter).filter(Boolean)) {
-      const candidate = path.join(entry, process.platform === "win32" ? "docker.exe" : "docker");
-      if (!seen.has(candidate)) {
-        seen.add(candidate);
-        candidates.push(candidate);
-      }
-    }
-
-    for (const candidate of [
-      "/opt/homebrew/bin/docker",
-      "/usr/local/bin/docker",
-      "/Applications/Docker.app/Contents/Resources/bin/docker",
-    ]) {
-      if (!seen.has(candidate)) {
-        seen.add(candidate);
-        candidates.push(candidate);
-      }
-    }
-
-    return candidates.filter((candidate) => existsSync(candidate));
-  }
-
-  function runDockerCommandDetailed(args, timeoutMs = 8000) {
-    const tried = [...resolveDockerCandidates(), process.platform === "win32" ? "docker.exe" : "docker"];
-    const errors = [];
-
-    for (const program of tried) {
-      try {
-        const result = spawnSync(program, args, {
-          encoding: "utf8",
-          timeout: timeoutMs,
-          windowsHide: true,
-        });
-        return {
-          program,
-          status: typeof result.status === "number" ? result.status : -1,
-          stdout: result.stdout ?? "",
-          stderr: result.stderr ?? "",
-        };
-      } catch (error) {
-        errors.push(error instanceof Error ? error.message : String(error));
-      }
-    }
-
-    throw new Error(
-      `Failed to run docker: ${errors.join("; ")} (Set AIWORK_DOCKER_BIN to your docker binary if needed)`,
-    );
-  }
-
-  function parseDockerClientVersion(stdout) {
-    const line = String(stdout ?? "").split(/\r?\n/)[0]?.trim() ?? "";
-    return line.toLowerCase().startsWith("docker version") ? line : null;
-  }
-
-  function parseDockerServerVersion(stdout) {
-    for (const line of String(stdout ?? "").split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith("Server Version:")) {
-        return trimmed.slice("Server Version:".length).trim() || null;
-      }
-    }
-    return null;
-  }
-
-  function deriveOrchestratorContainerName(runId) {
-    const sanitized = String(runId ?? "")
-      .replace(/[^a-zA-Z0-9_.-]+/g, "-")
-      .slice(0, 24);
-    return `aiwork-orchestrator-${sanitized}`;
-  }
-
-  async function listAiWorkManagedContainers() {
-    const result = runDockerCommandDetailed(["ps", "-a", "--format", "{{.Names}}"], 8000);
-    if (result.status !== 0) {
-      const combined = `${result.stdout.trim()}\n${result.stderr.trim()}`.trim();
-      throw new Error(combined || `docker ps -a failed (status ${result.status})`);
-    }
-    return result.stdout
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((name) => name && (name.startsWith("aiwork-orchestrator-") || name.startsWith("aiwork-dev-") || name.startsWith("openwrk-")))
-      .sort();
-  }
-
   async function runShellCommand(program, args, options = {}) {
     const result = spawnSync(program, args, {
       encoding: "utf8",
@@ -1102,7 +980,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
 
     const workspacePaths = options.workspacePaths.filter((value) => value.trim().length > 0);
     const activeWorkspace = workspacePaths[0] ?? "";
-    const host = options.remoteAccessEnabled ? "0.0.0.0" : "127.0.0.1";
+    const host = "127.0.0.1";
     const port = await resolveAiWorkPort(host, activeWorkspace);
     const baseUrl = `http://127.0.0.1:${port}`;
     const tokens = await loadOrCreateWorkspaceTokens(activeWorkspace);
@@ -1148,14 +1026,13 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       env,
     });
 
-    aiworkServerState.remoteAccessEnabled = options.remoteAccessEnabled;
     aiworkServerState.host = host;
     aiworkServerState.port = port;
     aiworkServerState.baseUrl = baseUrl;
     aiworkServerState.clientToken = tokens.clientToken;
     aiworkServerState.hostToken = tokens.hostToken;
 
-    const connectUrls = options.remoteAccessEnabled ? buildConnectUrls(port) : { connectUrl: null, mdnsUrl: null, lanUrl: null };
+    const connectUrls = { connectUrl: null, mdnsUrl: null, lanUrl: null };
     aiworkServerState.connectUrl = connectUrls.connectUrl;
     aiworkServerState.mdnsUrl = connectUrls.mdnsUrl;
     aiworkServerState.lanUrl = connectUrls.lanUrl;
@@ -1350,7 +1227,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
         opencodeBaseUrl: engineState.baseUrl,
         opencodeUsername: engineState.opencodeUsername,
         opencodePassword: engineState.opencodePassword,
-        remoteAccessEnabled: options.remoteAccessEnabled,
         manageOpencode: options.manageOpencode === true,
         opencodeBinPath: options.opencodeBinPath,
       });
@@ -1386,7 +1262,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       await ensureAiWork({
         projectDir: safeProjectDir,
         workspacePaths,
-        remoteAccessEnabled: options.aiworkRemoteAccess === true,
         manageOpencode: true,
         opencodeBinPath: options.opencodeBinPath,
       });
@@ -1415,7 +1290,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       runtime: engineState.runtime,
       workspacePaths: [projectDir],
       opencodeEnableExa: options.opencodeEnableExa,
-      aiworkRemoteAccess: options.aiworkRemoteAccess,
     });
   }
 
@@ -1442,7 +1316,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       opencodeBaseUrl: engineState.baseUrl,
       opencodeUsername: engineState.opencodeUsername,
       opencodePassword: engineState.opencodePassword,
-      remoteAccessEnabled: options.remoteAccessEnabled === true,
     });
   }
 
@@ -1550,160 +1423,13 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     };
   }
 
-  async function sandboxDoctor() {
-    const candidates = resolveDockerCandidates();
-    const debug = {
-      candidates,
-      selectedBin: null,
-      versionCommand: null,
-      infoCommand: null,
-    };
-
-    let version;
-    try {
-      version = runDockerCommandDetailed(["--version"], 2000);
-    } catch (error) {
-      return {
-        installed: false,
-        daemonRunning: false,
-        permissionOk: false,
-        ready: false,
-        clientVersion: null,
-        serverVersion: null,
-        error: error instanceof Error ? error.message : String(error),
-        debug,
-      };
-    }
-
-    debug.selectedBin = version.program;
-    debug.versionCommand = {
-      status: version.status,
-      stdout: truncateOutput(version.stdout, 1200),
-      stderr: truncateOutput(version.stderr, 1200),
-    };
-
-    const clientVersion = parseDockerClientVersion(version.stdout);
-    if (version.status !== 0) {
-      return {
-        installed: false,
-        daemonRunning: false,
-        permissionOk: false,
-        ready: false,
-        clientVersion: null,
-        serverVersion: null,
-        error: `docker --version failed (status ${version.status}): ${version.stderr.trim()}`,
-        debug,
-      };
-    }
-
-    let info;
-    try {
-      info = runDockerCommandDetailed(["info"], 8000);
-    } catch (error) {
-      return {
-        installed: true,
-        daemonRunning: false,
-        permissionOk: false,
-        ready: false,
-        clientVersion,
-        serverVersion: null,
-        error: error instanceof Error ? error.message : String(error),
-        debug,
-      };
-    }
-
-    debug.infoCommand = {
-      status: info.status,
-      stdout: truncateOutput(info.stdout, 1200),
-      stderr: truncateOutput(info.stderr, 1200),
-    };
-
-    if (info.status === 0) {
-      return {
-        installed: true,
-        daemonRunning: true,
-        permissionOk: true,
-        ready: true,
-        clientVersion,
-        serverVersion: parseDockerServerVersion(info.stdout),
-        error: null,
-        debug,
-      };
-    }
-
-    const combined = `${info.stdout.trim()}\n${info.stderr.trim()}`.trim().toLowerCase();
-    const permissionOk = !combined.includes("permission denied") && !combined.includes("access is denied");
-    const daemonRunning = !combined.includes("cannot connect to the docker daemon") && !combined.includes("is the docker daemon running") && !combined.includes("connection refused") && !combined.includes("no such file or directory");
-
-    return {
-      installed: true,
-      daemonRunning,
-      permissionOk,
-      ready: false,
-      clientVersion,
-      serverVersion: null,
-      error: `${info.stdout.trim()}\n${info.stderr.trim()}`.trim() || `docker info failed (status ${info.status})`,
-      debug,
-    };
-  }
-
-  async function sandboxStop(containerName) {
-    const name = String(containerName ?? "").trim();
-    if (!name) {
-      throw new Error("containerName is required");
-    }
-    if (!name.startsWith("aiwork-orchestrator-")) {
-      throw new Error("Refusing to stop container: expected name starting with 'aiwork-orchestrator-'");
-    }
-    if (!/^[A-Za-z0-9_.-]+$/.test(name)) {
-      throw new Error("containerName contains invalid characters");
-    }
-    const result = runDockerCommandDetailed(["stop", name], 15_000);
-    return {
-      ok: result.status === 0,
-      status: result.status,
-      stdout: result.stdout,
-      stderr: result.stderr,
-    };
-  }
-
-  async function sandboxCleanupAiWorkContainers() {
-    const candidates = await listAiWorkManagedContainers().catch((error) => {
-      throw error;
-    });
-    const removed = [];
-    const errors = [];
-
-    for (const name of candidates) {
-      try {
-        const result = runDockerCommandDetailed(["rm", "-f", name], 20_000);
-        if (result.status === 0) {
-          removed.push(name);
-        } else {
-          errors.push(`${name}: exit ${result.status}: ${(result.stdout + "\n" + result.stderr).trim()}`);
-        }
-      } catch (error) {
-        errors.push(`${name}: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
-
-    return { candidates, removed, errors };
-  }
-
   async function orchestratorStartDetached(options = {}) {
     const workspacePath = String(options.workspacePath ?? "").trim();
     if (!workspacePath) {
       throw new Error("workspacePath is required");
     }
 
-    const sandboxBackend = String(options.sandboxBackend ?? "none").trim().toLowerCase();
-    if (!["none", "docker", "microsandbox"].includes(sandboxBackend)) {
-      throw new Error("sandboxBackend must be one of: none, docker, microsandbox");
-    }
-
-    const wantsDockerSandbox = sandboxBackend === "docker" || sandboxBackend === "microsandbox";
     const runId = String(options.runId ?? randomUUID()).trim();
-    const containerName = wantsDockerSandbox ? deriveOrchestratorContainerName(runId) : null;
     const port = await findFreePort("127.0.0.1");
     const token = String(options.aiworkToken ?? randomUUID()).trim();
     const hostToken = String(options.aiworkHostToken ?? randomUUID()).trim();
@@ -1724,8 +1450,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       String(port),
       "--run-id",
       runId,
-      ...(wantsDockerSandbox ? ["--sandbox", "docker"] : []),
-      ...(options.sandboxImageRef ? ["--sandbox-image", String(options.sandboxImageRef)] : []),
     ];
 
     const child = spawn(program, args, {
@@ -1736,7 +1460,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     });
     child.unref();
 
-    await waitForHttpOk(`${aiworkUrl}/health`, wantsDockerSandbox ? 90_000 : 12_000);
+    await waitForHttpOk(`${aiworkUrl}/health`, 12_000);
     const ownerToken = await issueOwnerToken(aiworkUrl, hostToken).catch(() => null);
 
     return {
@@ -1745,100 +1469,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       ownerToken,
       hostToken,
       port,
-      sandboxBackend: wantsDockerSandbox ? sandboxBackend : null,
-      sandboxRunId: wantsDockerSandbox ? runId : null,
-      sandboxContainerName: containerName,
-    };
-  }
-
-  async function sandboxDebugProbe() {
-    const startedAt = nowMs();
-    const runId = `probe-${randomUUID()}`;
-    const workspacePath = path.join(os.tmpdir(), `aiwork-sandbox-probe-${randomUUID()}`);
-    await mkdir(workspacePath, { recursive: true });
-
-    const doctor = await sandboxDoctor();
-    let detachedHost = null;
-    let dockerInspect = null;
-    let dockerLogs = null;
-    let error = null;
-    const cleanupErrors = [];
-    let containerRemoved = false;
-    let workspaceRemoved = false;
-    let removeResult = null;
-
-    if (doctor.ready) {
-      try {
-        detachedHost = await orchestratorStartDetached({
-          workspacePath,
-          sandboxBackend: "docker",
-          runId,
-        });
-        const containerName = detachedHost.sandboxContainerName ?? deriveOrchestratorContainerName(runId);
-        try {
-          const inspectResult = runDockerCommandDetailed(["inspect", containerName], 6000);
-          dockerInspect = {
-            status: inspectResult.status,
-            stdout: truncateOutput(inspectResult.stdout, 48000),
-            stderr: truncateOutput(inspectResult.stderr, 48000),
-          };
-        } catch (inspectError) {
-          cleanupErrors.push(`docker inspect failed: ${inspectError instanceof Error ? inspectError.message : String(inspectError)}`);
-        }
-        try {
-          const logsResult = runDockerCommandDetailed(["logs", "--timestamps", "--tail", "400", containerName], 8000);
-          dockerLogs = {
-            status: logsResult.status,
-            stdout: truncateOutput(logsResult.stdout, 48000),
-            stderr: truncateOutput(logsResult.stderr, 48000),
-          };
-        } catch (logsError) {
-          cleanupErrors.push(`docker logs failed: ${logsError instanceof Error ? logsError.message : String(logsError)}`);
-        }
-
-        try {
-          const rmResult = runDockerCommandDetailed(["rm", "-f", containerName], 20_000);
-          containerRemoved = rmResult.status === 0;
-          removeResult = {
-            status: rmResult.status,
-            stdout: truncateOutput(rmResult.stdout, 48000),
-            stderr: truncateOutput(rmResult.stderr, 48000),
-          };
-        } catch (removeError) {
-          cleanupErrors.push(`docker rm -f ${containerName} failed: ${removeError instanceof Error ? removeError.message : String(removeError)}`);
-        }
-      } catch (probeError) {
-        error = `Sandbox probe failed to start: ${probeError instanceof Error ? probeError.message : String(probeError)}`;
-      }
-    } else {
-      error = doctor.error ?? "Docker is not ready for sandbox creation";
-    }
-
-    try {
-      await rm(workspacePath, { recursive: true, force: true });
-      workspaceRemoved = true;
-    } catch (workspaceError) {
-      cleanupErrors.push(`Failed to remove probe workspace: ${workspaceError instanceof Error ? workspaceError.message : String(workspaceError)}`);
-    }
-
-    return {
-      startedAt,
-      finishedAt: nowMs(),
-      runId,
-      workspacePath,
-      ready: doctor.ready && !error,
-      doctor,
-      detachedHost,
-      dockerInspect,
-      dockerLogs,
-      cleanup: {
-        containerName: detachedHost?.sandboxContainerName ?? null,
-        containerRemoved,
-        removeResult,
-        workspaceRemoved,
-        errors: cleanupErrors,
-      },
-      error,
     };
   }
 
@@ -1860,9 +1490,5 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     orchestratorInstanceDispose,
     orchestratorStartDetached,
     opencodeMcpAuth,
-    sandboxDoctor,
-    sandboxStop,
-    sandboxCleanupAiWorkContainers,
-    sandboxDebugProbe,
   };
 }

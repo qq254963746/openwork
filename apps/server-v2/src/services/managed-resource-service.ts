@@ -615,13 +615,6 @@ export function createManagedResourceService(input: {
   }
 
   function ensureWorkspaceMutable(workspace: WorkspaceRecord) {
-    if (workspace.kind === "remote") {
-      throw new RouteError(
-        501,
-        "not_implemented",
-        "Phase 8 managed-resource mutation currently supports local, control, and help workspaces only. Remote managed-resource mutation stays on the compatibility path until remote credentials and projection ownership fully migrate.",
-      );
-    }
     if (!workspace.dataDir?.trim()) {
       throw new RouteError(400, "invalid_request", `Workspace ${workspace.id} does not have a local data directory.`);
     }
@@ -694,7 +687,7 @@ export function createManagedResourceService(input: {
   async function materializeAssignments(kind: ManagedKind, workspaceIds: string[], action: "added" | "removed" | "updated", name: string) {
     for (const workspaceId of Array.from(new Set(workspaceIds.filter(Boolean)))) {
       const workspace = input.repositories.workspaces.getById(workspaceId);
-      if (!workspace || workspace.kind === "remote") {
+      if (!workspace) {
         continue;
       }
       input.config.ensureWorkspaceConfig(workspaceId);
@@ -747,9 +740,6 @@ export function createManagedResourceService(input: {
     if (payload.workspaceIds) {
       const currentAssignments = kindConfig[kind].assignmentRepo.listForItem(item.id).map((assignment) => assignment.workspaceId);
       for (const workspace of input.repositories.workspaces.list({ includeHidden: true })) {
-        if (workspace.kind === "remote") {
-          continue;
-        }
         const nextAssigned = workspaceIds.includes(workspace.id);
         const currentlyAssigned = currentAssignments.includes(workspace.id);
         if (nextAssigned === currentlyAssigned) {
@@ -776,9 +766,6 @@ export function createManagedResourceService(input: {
     }
     const changedWorkspaceIds = new Set<string>();
     for (const workspace of input.repositories.workspaces.list({ includeHidden: true })) {
-      if (workspace.kind === "remote") {
-        continue;
-      }
       const currentForWorkspace = kindConfig[kind].assignmentRepo.listForWorkspace(workspace.id).map((assignment) => assignment.itemId);
       const currentlyAssigned = currentForWorkspace.includes(itemId);
       const nextAssigned = normalizedWorkspaceIds.includes(workspace.id);

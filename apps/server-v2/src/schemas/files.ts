@@ -108,6 +108,7 @@ export const fileMutationResultSchema = successResponseSchema(
 
 export const simpleContentQuerySchema = z.object({
   path: z.string().min(1),
+  optional: z.string().optional(),
 }).meta({ ref: "AiWorkServerV2SimpleContentQuery" });
 
 export const simpleContentWriteRequestSchema = z.object({
@@ -122,7 +123,8 @@ export const simpleContentDataSchema = z.object({
   content: z.string(),
   path: z.string(),
   revision: z.string().optional(),
-  updatedAt: z.number(),
+  updatedAt: z.number().optional(),
+  missing: z.boolean().optional(),
 }).meta({ ref: "AiWorkServerV2SimpleContentData" });
 
 export const binaryItemSchema = z.object({

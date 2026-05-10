@@ -178,7 +178,6 @@ pub fn engine_restart(
     manager: State<EngineManager>,
     aiwork_manager: State<AiWorkServerManager>,
     opencode_enable_exa: Option<bool>,
-    aiwork_remote_access: Option<bool>,
 ) -> Result<EngineInfo, String> {
     let project_dir = {
         let state = manager.inner.lock().expect("engine mutex poisoned");
@@ -197,7 +196,6 @@ pub fn engine_restart(
         None,
         None,
         opencode_enable_exa,
-        aiwork_remote_access,
         None,
         Some(workspace_paths),
     )
@@ -299,7 +297,6 @@ pub fn engine_start(
     prefer_sidecar: Option<bool>,
     opencode_bin_path: Option<String>,
     _opencode_enable_exa: Option<bool>,
-    aiwork_remote_access: Option<bool>,
     _runtime: Option<EngineRuntime>,
     workspace_paths: Option<Vec<String>>,
 ) -> Result<EngineInfo, String> {
@@ -330,8 +327,6 @@ pub fn engine_start(
     workspace_paths.retain(|path| !path.trim().is_empty());
     workspace_paths.retain(|path| path.trim() != project_dir);
     workspace_paths.insert(0, project_dir.clone());
-
-    let aiwork_remote_access_enabled = aiwork_remote_access.unwrap_or(false);
 
     let mut state = manager.inner.lock().expect("engine mutex poisoned");
     EngineManager::stop_locked(&mut state);
@@ -372,7 +367,6 @@ pub fn engine_start(
         None,
         None,
         None,
-        aiwork_remote_access_enabled,
         true,
         Some(&opencode_bin),
         opencode_bin_source.as_deref(),

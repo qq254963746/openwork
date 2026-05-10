@@ -500,7 +500,8 @@ export function registerFileRoutes(app: Hono<AppBindings>) {
     async (c) => {
       const { requestContext, workspaceId } = requireWorkspaceAccess(c);
       const query = parseQuery(simpleContentQuerySchema, c.req.url);
-      const result = await requestContext.services.files.readSimpleContent(workspaceId, query.path);
+      const optional = query.optional === "1" || query.optional === "true";
+      const result = await requestContext.services.files.readSimpleContent(workspaceId, query.path, { optional });
       return c.json(buildSuccessResponse(requestContext.requestId, result));
     },
   );

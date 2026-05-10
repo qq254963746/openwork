@@ -6,11 +6,10 @@ AiWork helps users run agents, skills, and MCP. It is an open-source alternative
 
 AiWork is a practical control surface for agentic work:
 
-* Run local and remote agent workflows from one place.
+* Run agent workflows from one place.
 * Use OpenCode capabilities directly through AiWork.
 * Compose desktop app, server, and messaging connectors without lock-in.
 * Treat the AiWork app as a client of the AiWork server API surface.
-* Connect to hosted workers through a simple user flow: `Add a worker` -> `Connect remote`.
 
 ## Core Philosophy
 
@@ -28,15 +27,7 @@ AiWork now has three production-grade ways to run the same product surface:
    - AiWork app runs locally and can host server functionality on-device.
 2. **CLI-hosted server (aiwork-orchestrator)**
    - AiWork server surfaces can be provided by the orchestrator/CLI on a trusted machine.
-3. **Hosted AiWork Cloud server**
-   - AiWork-hosted infrastructure provisions workers and exposes the same remote-connect semantics.
 
-User mental model:
-
-* The app is the UI and control layer.
-* The server is the execution/control API layer.
-* A worker is a remote runtime destination.
-* Connecting to a worker happens through `Add worker` -> `Connect remote` using URL + token (or deep link).
 
 Read `ARCHITECTURE.md` for runtime flow, server-vs-shell ownership, and architecture behavior. Read `INFRASTRUCTURE.md` for deployment and control-plane details.
 

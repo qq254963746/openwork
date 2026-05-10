@@ -21,25 +21,6 @@ export function createLocalWorkspaceId(dataDir: string) {
   return createStableId("ws", dataDir);
 }
 
-export function createRemoteWorkspaceId(input: {
-  baseUrl: string;
-  directory?: string | null;
-  remoteWorkspaceId?: string | null;
-  remoteType: "aiwork" | "opencode";
-}) {
-  if (input.remoteType === "aiwork") {
-    const key = ["aiwork", input.baseUrl, input.remoteWorkspaceId?.trim() ?? ""]
-      .filter(Boolean)
-      .join("::");
-    return createStableId("ws", key);
-  }
-
-  const key = ["remote", input.baseUrl, input.directory?.trim() ?? ""]
-    .filter(Boolean)
-    .join("::");
-  return createStableId("ws", key);
-}
-
 export function createInternalWorkspaceId(kind: "control" | "help") {
   return createStableId("ws", `internal::${kind}`);
 }

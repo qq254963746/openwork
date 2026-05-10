@@ -6,7 +6,6 @@ import type { JsonObject, ManagedConfigRecord, WorkspaceRecord } from "../databa
 import type { ServerWorkingDirectory } from "../database/working-directory.js";
 import { ensureWorkspaceConfigDir } from "../database/working-directory.js";
 import { RouteError } from "../http.js";
-import { requestRemoteAiWork, resolveRemoteWorkspaceTarget } from "../adapters/remote-aiwork.js";
 
 const MANAGED_SKILL_DOMAIN = "aiwork-managed";
 const AIWORK_CONFIG_VERSION = 1;
@@ -289,24 +288,6 @@ export function createConfigMaterializationService(input: {
     return workspace;
   }
 
-  function getRemoteServerOrThrow(workspace: WorkspaceRecord) {
-    const server = input.repositories.servers.getById(workspace.serverId);
-    if (!server) {
-      throw new RouteError(502, "bad_gateway", `Workspace ${workspace.id} points at missing remote server ${workspace.serverId}.`);
-    }
-    return server;
-  }
-
-  function ensureWorkspaceLocal(workspace: WorkspaceRecord) {
-    if (workspace.kind === "remote") {
-      throw new RouteError(
-        501,
-        "not_implemented",
-        "Phase 7 local file/config ownership currently supports local, control, and help workspaces only. Remote config and file mutation stay on the direct remote path during migration.",
-      );
-    }
-  }
-
   function workspaceOpencodeConfigPath(workspace: WorkspaceRecord) {
     const configDir = workspace.configDir?.trim();
     if (!configDir) {
@@ -351,7 +332,7 @@ export function createConfigMaterializationService(input: {
     if (preset) {
       return preset;
     }
-    return workspace.kind === "local" ? "starter" : "remote";
+    return "starter";
   }
 
   function buildDefaultAiWork(workspace: WorkspaceRecord) {
@@ -403,7 +384,6 @@ export function createConfigMaterializationService(input: {
   }
 
   function ensureWorkspaceConfigState(workspace: WorkspaceRecord) {
-    ensureWorkspaceLocal(workspace);
     ensureWorkspaceConfigDir(input.workingDirectory, workspace.id);
     const existing = input.repositories.workspaceConfigState.getByWorkspaceId(workspace.id);
     if (existing) {
@@ -640,7 +620,6 @@ export function createConfigMaterializationService(input: {
 
   function materializeWorkspaceSnapshot(workspaceId: string) {
     const workspace = getWorkspaceOrThrow(workspaceId);
-    ensureWorkspaceLocal(workspace);
     const snapshot = computeSnapshot(workspace);
     writeJsonFile(snapshot.materialized.configOpencodePath!, snapshot.effective.opencode);
     writeJsonFile(snapshot.materialized.configAiWorkPath!, snapshot.effective.aiwork);
@@ -680,36 +659,23 @@ export function createConfigMaterializationService(input: {
   return {
     absorbWorkspaceConfig(workspaceId: string) {
       const workspace = getWorkspaceOrThrow(workspaceId);
-      ensureWorkspaceLocal(workspace);
       absorbWorkspaceConfigState(workspace);
       return materializeWorkspaceSnapshot(workspaceId);
     },
 
     ensureWorkspaceConfig(workspaceId: string) {
       const workspace = getWorkspaceOrThrow(workspaceId);
-      ensureWorkspaceLocal(workspace);
       ensureWorkspaceConfigState(workspace);
       return materializeWorkspaceSnapshot(workspaceId);
     },
 
     async getWorkspaceConfigSnapshot(workspaceId: string) {
       const workspace = getWorkspaceOrThrow(workspaceId);
-      if (workspace.kind === "remote") {
-        const server = getRemoteServerOrThrow(workspace);
-        const target = resolveRemoteWorkspaceTarget(server, workspace);
-        return requestRemoteAiWork<WorkspaceConfigSnapshot>({
-          path: `/workspaces/${encodeURIComponent(target.remoteWorkspaceId)}/config`,
-          server,
-          timeoutMs: 10_000,
-        });
-      }
-      ensureWorkspaceLocal(workspace);
       return computeSnapshot(workspace);
     },
 
     listWatchRoots(workspaceId: string) {
       const workspace = getWorkspaceOrThrow(workspaceId);
-      ensureWorkspaceLocal(workspace);
       return [
         workspace.configDir,
         workspace.dataDir,
@@ -719,18 +685,6 @@ export function createConfigMaterializationService(input: {
 
     async patchWorkspaceConfig(workspaceId: string, patch: { aiwork?: JsonObject; opencode?: JsonObject }) {
       const workspace = getWorkspaceOrThrow(workspaceId);
-      if (workspace.kind === "remote") {
-        const server = getRemoteServerOrThrow(workspace);
-        const target = resolveRemoteWorkspaceTarget(server, workspace);
-        return requestRemoteAiWork<WorkspaceConfigSnapshot>({
-          body: patch,
-          method: "PATCH",
-          path: `/workspaces/${encodeURIComponent(target.remoteWorkspaceId)}/config`,
-          server,
-          timeoutMs: 15_000,
-        });
-      }
-      ensureWorkspaceLocal(workspace);
       const current = ensureWorkspaceConfigState(workspace);
       const nextAiWork = patch.aiwork ? mergeObjects(current.aiwork, asObject(patch.aiwork)) : current.aiwork;
       let nextOpencode = current.opencode;
@@ -755,22 +709,12 @@ export function createConfigMaterializationService(input: {
     },
 
     async readRawOpencodeConfig(workspaceId: string, scope: "global" | "project") {
-      const workspace = getWorkspaceOrThrow(workspaceId);
-      if (workspace.kind === "remote") {
-        const server = getRemoteServerOrThrow(workspace);
-        const target = resolveRemoteWorkspaceTarget(server, workspace);
-        const query = `?scope=${encodeURIComponent(scope)}`;
-        return requestRemoteAiWork<{ content: string; exists: boolean; path: string | null; updatedAt: string }>({
-          path: `/workspaces/${encodeURIComponent(target.remoteWorkspaceId)}/config/opencode-raw${query}`,
-          server,
-          timeoutMs: 10_000,
-        });
-      }
+      getWorkspaceOrThrow(workspaceId);
       return scope === "global" ? readRawGlobalOpencodeConfig() : readRawProjectOpencodeConfig(workspaceId);
     },
 
     reconcileAllWorkspaces() {
-      const workspaces = input.repositories.workspaces.list({ includeHidden: true }).filter((workspace) => workspace.kind !== "remote");
+      const workspaces = input.repositories.workspaces.list({ includeHidden: true });
       for (const workspace of workspaces) {
         absorbWorkspaceConfigState(workspace);
         materializeWorkspaceSnapshot(workspace.id);
@@ -800,18 +744,6 @@ export function createConfigMaterializationService(input: {
 
     async writeWorkspaceRawOpencodeConfig(workspaceId: string, content: string) {
       const workspace = getWorkspaceOrThrow(workspaceId);
-      if (workspace.kind === "remote") {
-        const server = getRemoteServerOrThrow(workspace);
-        const target = resolveRemoteWorkspaceTarget(server, workspace);
-        return requestRemoteAiWork<{ content: string; exists: boolean; path: string | null; updatedAt: string }>({
-          body: { content, scope: "project" },
-          method: "POST",
-          path: `/workspaces/${encodeURIComponent(target.remoteWorkspaceId)}/config/opencode-raw`,
-          server,
-          timeoutMs: 15_000,
-        });
-      }
-      ensureWorkspaceLocal(workspace);
       const parsed = asObject(parseJsoncText(content));
       const recognized = extractRecognizedOpencodeSections(parsed);
       upsertManagedRecords(workspace.id, "mcps", recognized.mcps);

@@ -1,8 +1,8 @@
 export type ServerKind = "local" | "remote";
 export type HostingKind = "desktop" | "self_hosted" | "cloud";
-export type WorkspaceKind = "local" | "remote" | "control" | "help";
+export type WorkspaceKind = "local" | "control" | "help";
 export type WorkspaceStatus = "ready" | "imported" | "attention";
-export type BackendKind = "local_opencode" | "remote_aiwork";
+export type BackendKind = "local_opencode";
 export type ImportStatus = "error" | "imported" | "skipped" | "unavailable";
 
 export type JsonObject = Record<string, unknown>;
@@ -34,7 +34,6 @@ export type WorkspaceRecord = {
   kind: WorkspaceKind;
   notes: JsonObject | null;
   opencodeProjectId: string | null;
-  remoteWorkspaceId: string | null;
   serverId: string;
   slug: string;
   status: WorkspaceStatus;

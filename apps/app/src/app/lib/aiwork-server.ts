@@ -16,7 +16,6 @@ export type AiWorkServerCapabilities = {
   mcp: { read: boolean; write: boolean };
   commands: { read: boolean; write: boolean };
   config: { read: boolean; write: boolean };
-  sandbox?: { enabled: boolean; backend: "none" | "docker" | "container" };
   proxy?: { opencode: boolean };
   toolProviders?: {
     browser?: {
@@ -71,7 +70,6 @@ export type AiWorkRuntimeSnapshot = {
   };
   worker?: {
     workspace: string;
-    sandboxMode: string;
   };
   upgrade?: {
     status: "idle" | "running" | "failed";
@@ -89,7 +87,6 @@ export type AiWorkServerSettings = {
   portOverride?: number;
   token?: string;
   hostToken?: string;
-  remoteAccessEnabled?: boolean;
 };
 
 export type AiWorkWorkspaceInfo = WorkspaceInfo & {
@@ -105,6 +102,57 @@ export type AiWorkWorkspaceList = {
   items: AiWorkWorkspaceInfo[];
   workspaces?: WorkspaceInfo[];
   activeId?: string | null;
+};
+
+/** OpenCode Router (messaging) — shapes used by the settings UI. */
+export type AiWorkOpenCodeRouterHealthSnapshot = {
+  ok: boolean;
+  opencode: Record<string, unknown>;
+  channels: Record<string, unknown>;
+  config: Record<string, unknown>;
+  activity?: {
+    inboundToday?: number;
+    outboundToday?: number;
+    lastMessageAt?: number | string | null;
+  };
+  agent?: {
+    loaded?: boolean;
+    selected?: string | null;
+  };
+};
+
+export type AiWorkOpenCodeRouterIdentityItem = {
+  id: string;
+  enabled: boolean;
+  access?: "private" | "public";
+  pairingRequired?: boolean;
+  running?: boolean;
+};
+
+export type AiWorkOpenCodeRouterSendFailure = {
+  identityId: string;
+  peerId: string;
+  error: string;
+};
+
+export type AiWorkOpenCodeRouterSendResult = {
+  channel?: string;
+  directory?: string;
+  identityId?: string;
+  peerId?: string;
+  attempted: number;
+  sent: number;
+  failures?: AiWorkOpenCodeRouterSendFailure[];
+  reason?: string;
+};
+
+/** Router identity upsert/delete responses include apply metadata from the server. */
+export type AiWorkOpenCodeRouterMutationResult = {
+  ok: boolean;
+  applied?: boolean;
+  applyError?: string;
+  telegram?: Record<string, unknown>;
+  slack?: Record<string, unknown>;
 };
 
 export type AiWorkSessionMessage = {
@@ -164,7 +212,9 @@ export type AiWorkWorkspaceFileContent = {
   path: string;
   content: string;
   bytes: number;
-  updatedAt: number;
+  updatedAt?: number;
+  /** Present when `optional` read was used and the path is not a readable file */
+  missing?: boolean;
 };
 
 export type AiWorkWorkspaceFileWriteResult = {
@@ -322,7 +372,6 @@ const STORAGE_URL_OVERRIDE = "aiwork.server.urlOverride";
 const STORAGE_PORT_OVERRIDE = "aiwork.server.port";
 const STORAGE_TOKEN = "aiwork.server.token";
 const STORAGE_HOST_TOKEN = "aiwork.server.hostToken";
-const STORAGE_REMOTE_ACCESS = "aiwork.server.remoteAccessEnabled";
 
 export function normalizeAiWorkServerUrl(input: string) {
   const trimmed = input.trim();
@@ -463,13 +512,11 @@ export function readAiWorkServerSettings(): AiWorkServerSettings {
     const portOverride = portRaw ? Number(portRaw) : undefined;
     const token = window.localStorage.getItem(STORAGE_TOKEN) ?? undefined;
     const hostToken = window.localStorage.getItem(STORAGE_HOST_TOKEN) ?? undefined;
-    const remoteAccessRaw = window.localStorage.getItem(STORAGE_REMOTE_ACCESS) ?? "";
     return {
       urlOverride: urlOverride ?? undefined,
       portOverride: Number.isNaN(portOverride) ? undefined : portOverride,
       token: token?.trim() || undefined,
       hostToken: hostToken?.trim() || undefined,
-      remoteAccessEnabled: remoteAccessRaw === "1",
     };
   } catch {
     return {};
@@ -483,7 +530,6 @@ export function writeAiWorkServerSettings(next: AiWorkServerSettings): AiWorkSer
     const portOverride = typeof next.portOverride === "number" ? next.portOverride : undefined;
     const token = next.token?.trim() || undefined;
     const hostToken = next.hostToken?.trim() || undefined;
-    const remoteAccessEnabled = next.remoteAccessEnabled === true;
 
     if (urlOverride) {
       window.localStorage.setItem(STORAGE_URL_OVERRIDE, urlOverride);
@@ -507,12 +553,6 @@ export function writeAiWorkServerSettings(next: AiWorkServerSettings): AiWorkSer
       window.localStorage.setItem(STORAGE_HOST_TOKEN, hostToken);
     } else {
       window.localStorage.removeItem(STORAGE_HOST_TOKEN);
-    }
-
-    if (remoteAccessEnabled) {
-      window.localStorage.setItem(STORAGE_REMOTE_ACCESS, "1");
-    } else {
-      window.localStorage.removeItem(STORAGE_REMOTE_ACCESS);
     }
 
     return readAiWorkServerSettings();
@@ -582,7 +622,11 @@ export function clearAiWorkServerSettings() {
     window.localStorage.removeItem(STORAGE_PORT_OVERRIDE);
     window.localStorage.removeItem(STORAGE_TOKEN);
     window.localStorage.removeItem(STORAGE_HOST_TOKEN);
-    window.localStorage.removeItem(STORAGE_REMOTE_ACCESS);
+    try {
+      window.localStorage.removeItem("aiwork.server.remoteAccessEnabled");
+    } catch {
+      /* ignore */
+    }
   } catch {
     // ignore
   }
@@ -697,6 +741,36 @@ async function fetchWithTimeout(
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
   }
+}
+
+async function requestJsonResponse(
+  baseUrl: string,
+  path: string,
+  options: { method?: string; token?: string; hostToken?: string; body?: unknown; timeoutMs?: number } = {},
+): Promise<{ ok: boolean; status: number; json: unknown }> {
+  const url = `${baseUrl}${path}`;
+  const fetchImpl = resolveFetch(url);
+  const response = await fetchWithTimeout(
+    fetchImpl,
+    url,
+    {
+      method: options.method ?? "GET",
+      headers: buildHeaders(options.token, options.hostToken),
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    },
+    options.timeoutMs ?? DEFAULT_AIWORK_SERVER_TIMEOUT_MS,
+  );
+
+  const text = await response.text();
+  let json: unknown = null;
+  if (text) {
+    try {
+      json = JSON.parse(text);
+    } catch {
+      json = { raw: text };
+    }
+  }
+  return { ok: response.ok, status: response.status, json };
 }
 
 async function requestJson<T>(
@@ -999,7 +1073,10 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
         body: payload,
       }),
     readOpencodeConfigFile: (workspaceId: string, scope: "project" | "global" = "project") => {
-      const query = `?scope=${scope}`;
+      const params = new URLSearchParams({ scope });
+      // Avoid stale reads after rapid global config writes (disabled_providers, etc.).
+      params.set("_", String(Date.now()));
+      const query = `?${params.toString()}`;
       return requestJson<OpencodeConfigFile>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/opencode-config${query}`, {
         token,
         hostToken,
@@ -1244,10 +1321,12 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
         { token, hostToken, timeoutMs: timeouts.binary },
       ),
 
-    readWorkspaceFile: (workspaceId: string, path: string) =>
+    readWorkspaceFile: (workspaceId: string, path: string, options?: { optional?: boolean }) =>
       requestJson<AiWorkWorkspaceFileContent>(
         baseUrl,
-        `/workspace/${encodeURIComponent(workspaceId)}/files/content?path=${encodeURIComponent(path)}`,
+        `/workspace/${encodeURIComponent(workspaceId)}/files/content?path=${encodeURIComponent(path)}${
+          options?.optional ? "&optional=1" : ""
+        }`,
         { token, hostToken },
       ),
 
@@ -1284,6 +1363,108 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
         baseUrl,
         `/workspace/${encodeURIComponent(workspaceId)}/artifacts/${encodeURIComponent(artifactId)}`,
         { token, hostToken, timeoutMs: timeouts.binary },
+      ),
+
+    getOpenCodeRouterHealth: (workspaceId: string) =>
+      requestJsonResponse(
+        baseUrl,
+        `/workspace/${encodeURIComponent(workspaceId)}/opencode-router/health`,
+        { token, hostToken },
+      ),
+
+    getOpenCodeRouterTelegramIdentities: (workspaceId: string) =>
+      requestJson<{ ok: boolean; items: AiWorkOpenCodeRouterIdentityItem[] }>(
+        baseUrl,
+        `/workspace/${encodeURIComponent(workspaceId)}/opencode-router/identities/telegram`,
+        { token, hostToken },
+      ),
+
+    getOpenCodeRouterSlackIdentities: (workspaceId: string) =>
+      requestJson<{ ok: boolean; items: AiWorkOpenCodeRouterIdentityItem[] }>(
+        baseUrl,
+        `/workspace/${encodeURIComponent(workspaceId)}/opencode-router/identities/slack`,
+        { token, hostToken },
+      ),
+
+    getOpenCodeRouterTelegram: (workspaceId: string) =>
+      requestJson<Record<string, unknown>>(
+        baseUrl,
+        `/workspace/${encodeURIComponent(workspaceId)}/opencode-router/telegram`,
+        { token, hostToken },
+      ),
+
+    sendOpenCodeRouterMessage: (
+      workspaceId: string,
+      body: {
+        channel: "slack" | "telegram";
+        text: string;
+        directory?: string;
+        peerId?: string;
+        autoBind?: boolean;
+        identityId?: string;
+      },
+    ) =>
+      requestJson<AiWorkOpenCodeRouterSendResult>(
+        baseUrl,
+        `/workspace/${encodeURIComponent(workspaceId)}/opencode-router/send`,
+        {
+          token,
+          hostToken,
+          method: "POST",
+          body,
+        },
+      ),
+
+    upsertOpenCodeRouterTelegramIdentity: (
+      workspaceId: string,
+      body: { token: string; enabled?: boolean; access?: "private" | "public"; id?: string },
+    ) =>
+      requestJson<AiWorkOpenCodeRouterMutationResult>(
+        baseUrl,
+        `/workspace/${encodeURIComponent(workspaceId)}/opencode-router/identities/telegram`,
+        {
+          token,
+          hostToken,
+          method: "POST",
+          body,
+        },
+      ),
+
+    deleteOpenCodeRouterTelegramIdentity: (workspaceId: string, identityId: string) =>
+      requestJson<AiWorkOpenCodeRouterMutationResult>(
+        baseUrl,
+        `/workspace/${encodeURIComponent(workspaceId)}/opencode-router/identities/telegram/${encodeURIComponent(identityId)}`,
+        {
+          token,
+          hostToken,
+          method: "DELETE",
+        },
+      ),
+
+    upsertOpenCodeRouterSlackIdentity: (
+      workspaceId: string,
+      body: { botToken: string; appToken: string; enabled?: boolean; id?: string },
+    ) =>
+      requestJson<AiWorkOpenCodeRouterMutationResult>(
+        baseUrl,
+        `/workspace/${encodeURIComponent(workspaceId)}/opencode-router/identities/slack`,
+        {
+          token,
+          hostToken,
+          method: "POST",
+          body,
+        },
+      ),
+
+    deleteOpenCodeRouterSlackIdentity: (workspaceId: string, identityId: string) =>
+      requestJson<AiWorkOpenCodeRouterMutationResult>(
+        baseUrl,
+        `/workspace/${encodeURIComponent(workspaceId)}/opencode-router/identities/slack/${encodeURIComponent(identityId)}`,
+        {
+          token,
+          hostToken,
+          method: "DELETE",
+        },
       ),
 
     // User-level env vars (host-auth only — desktop shell is the sole caller).

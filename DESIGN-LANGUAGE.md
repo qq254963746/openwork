@@ -52,7 +52,6 @@ The product should feel like:
 - a serious desktop tool
 - a clean command center
 - a modern open-source alternative to Claude Cowork
-- something you would trust with real workflows, team sharing, and remote workers
 
 Tone:
 

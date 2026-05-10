@@ -16,12 +16,18 @@ import {
 
 import { openDesktopUrl } from "../../../../app/lib/desktop";
 import { isDesktopRuntime } from "../../../../app/utils";
+import {
+  AIWORK_CUSTOM_PROVIDER_ENTRY_KEY,
+  MODEL_PROVIDER_PRESETS,
+  listModelProviderPresetKeys,
+} from "../../../../app/utils/model-providers-catalog";
 import { compareProviders } from "../../../../app/utils/providers";
 import { t } from "../../../../i18n";
 import { Button } from "../../../design-system/button";
 import { ProviderIcon } from "../../../design-system/provider-icon";
 import { TextInput } from "../../../design-system/text-input";
 import type {
+  ProviderAuthEditSession,
   ProviderAuthMethod,
   ProviderAuthProvider,
   ProviderOAuthStartResult,
@@ -55,11 +61,17 @@ export type ProviderAuthModalProps = {
   error: string | null;
   preferredProviderId?: string | null;
   workerType?: "local" | "remote";
+  editSession?: ProviderAuthEditSession | null;
   providers: ProviderAuthProvider[];
   connectedProviderIds: string[];
   authMethods: Record<string, ProviderAuthMethod[]>;
   onSelect: (providerId: string, methodIndex?: number) => Promise<ProviderOAuthStartResult>;
-  onSubmitApiKey: (providerId: string, apiKey: string, baseUrl: string) => Promise<string | void>;
+  onSubmitApiKey: (
+    providerId: string,
+    apiKey: string,
+    baseUrl: string,
+    ctx?: { displayName: string; presetCode: string },
+  ) => Promise<string | void>;
   onSubmitOAuth: (
     providerId: string,
     methodIndex: number,
@@ -89,6 +101,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   const [oauthCodeCopied, setOauthCodeCopied] = useState(false);
   const [oauthBrowserOpened, setOauthBrowserOpened] = useState(false);
   const [autoOpenedPreferredProviderId, setAutoOpenedPreferredProviderId] = useState<string | null>(null);
+  const [displayNameInput, setDisplayNameInput] = useState("");
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const providerPollRef = useRef<number | null>(null);
@@ -142,40 +155,57 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   };
 
   const entries = useMemo<ProviderAuthEntry[]>(() => {
-    const methods = props.authMethods ?? {};
+    const apiMethod: ProviderAuthMethod = {
+      type: "api",
+      label: t("providers.api_key_label"),
+      methodIndex: 0,
+    };
     const connected = new Set(props.connectedProviderIds ?? []);
-    const providers = props.providers ?? [];
+    const presetIds = listModelProviderPresetKeys();
+    const presetEntries: ProviderAuthEntry[] = presetIds.map((key) => {
+      const preset = MODEL_PROVIDER_PRESETS[key];
+      return {
+        id: key,
+        name: preset?.name ?? formatProviderName(key),
+        methods: [apiMethod],
+        connected: connected.has(key),
+        env: [],
+      };
+    });
+    const customEntry: ProviderAuthEntry = {
+      id: AIWORK_CUSTOM_PROVIDER_ENTRY_KEY,
+      name: t("providers.custom_provider"),
+      methods: [apiMethod],
+      connected: false,
+      env: [],
+    };
+    return [...[...presetEntries].sort(compareProviders), customEntry];
+  }, [props.connectedProviderIds]);
 
-    return Object.keys(methods)
-      .map((id): ProviderAuthEntry => {
-        const provider = providers.find((item) => item.id === id);
-        const entryMethods = (methods[id] ?? []).filter((method) => {
-          if (isAnthropicProvider(id, provider?.name) && isClaudeProMaxMethod(method)) {
-            return false;
-          }
-          if (!isOpenAiProvider(id, provider?.name)) return true;
-          if (method.type !== "oauth") return true;
-          if (isRemoteWorker) return isOpenAiHeadlessMethod(method);
-          return !isOpenAiHeadlessMethod(method);
-        });
-        return {
-          id,
-          name: formatProviderName(id, provider?.name),
-          methods: entryMethods,
-          connected: connected.has(id),
-          env: Array.isArray(provider?.env) ? provider.env : [],
-        };
-      })
-      .filter((entry) => entry.methods.length > 0)
-      .sort(compareProviders);
-  }, [isRemoteWorker, props.authMethods, props.connectedProviderIds, props.providers]);
+  const editSyntheticEntry = useMemo((): ProviderAuthEntry | null => {
+    const session = props.editSession;
+    if (!session) return null;
+    const apiMethod: ProviderAuthMethod = {
+      type: "api",
+      label: t("providers.api_key_label"),
+      methodIndex: 0,
+    };
+    return {
+      id: session.providerId,
+      name: session.name,
+      methods: [apiMethod],
+      connected: true,
+      env: [],
+    };
+  }, [props.editSession]);
 
-  const selectedEntry = useMemo(
-    () => entries.find((entry) => entry.id === selectedProviderId) ?? null,
-    [entries, selectedProviderId],
-  );
+  const selectedEntry = useMemo(() => {
+    if (editSyntheticEntry && props.editSession) return editSyntheticEntry;
+    return entries.find((entry) => entry.id === selectedProviderId) ?? null;
+  }, [editSyntheticEntry, entries, props.editSession, selectedProviderId]);
 
   const resolvedView = selectedEntry ? view : "list";
+  const effectiveView = props.editSession ? "api" : resolvedView;
   const errorMessage = localError ?? props.error;
 
   const filteredEntries = useMemo(() => {
@@ -235,6 +265,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     setLocalError(null);
     setOauthCodeCopied(false);
     setOauthBrowserOpened(false);
+    setDisplayNameInput("");
   };
 
   const stopProviderPolling = () => {
@@ -267,31 +298,49 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   }, [props.open]);
 
   useEffect(() => {
-    if (!props.open || resolvedView !== "list") return;
+    if (!props.open || effectiveView !== "list") return;
     const total = filteredEntries.length;
     if (total <= 0) {
       setActiveEntryIndex(0);
       return;
     }
     setActiveEntryIndex((current) => Math.max(0, Math.min(current, total - 1)));
-  }, [filteredEntries.length, props.open, resolvedView]);
+  }, [effectiveView, filteredEntries.length, props.open]);
 
   useEffect(() => {
-    if (!props.open || resolvedView !== "list") return;
+    if (!props.open || effectiveView !== "list") return;
     queueMicrotask(() => searchInputRef.current?.focus());
-  }, [props.open, resolvedView]);
+  }, [effectiveView, props.open]);
 
   /** Backfill base URL / API key hint when provider list updates after opening the API form. */
   useEffect(() => {
-    if (!props.open || resolvedView !== "api" || !selectedProviderId || !apiPrefillSignature) return;
+    if (!props.open || effectiveView !== "api" || !selectedProviderId || props.editSession) return;
+    if (!apiPrefillSignature) return;
     const meta = props.providers.find((item) => item.id === selectedProviderId);
     if (!meta) return;
     setBaseUrlInput((prev) => (prev.trim() ? prev : meta.initialApiBaseUrl ?? ""));
     setApiKeyInput((prev) => (prev.trim() ? prev : meta.existingApiKeyHint ?? ""));
-  }, [apiPrefillSignature, props.open, props.providers, resolvedView, selectedProviderId]);
+  }, [
+    apiPrefillSignature,
+    effectiveView,
+    props.editSession,
+    props.open,
+    props.providers,
+    selectedProviderId,
+  ]);
 
   useEffect(() => {
-    if (!props.open || props.loading || resolvedView !== "list") return;
+    if (!props.open || !props.editSession) return;
+    setView("api");
+    setSelectedProviderId(props.editSession.providerId);
+    setBaseUrlInput(props.editSession.baseUrl);
+    setApiKeyInput(props.editSession.apiKeyHint ?? "");
+    setDisplayNameInput(props.editSession.name);
+    setLocalError(null);
+  }, [props.editSession, props.open]);
+
+  useEffect(() => {
+    if (!props.open || props.loading || effectiveView !== "list") return;
 
     const preferredId = props.preferredProviderId?.trim().toLowerCase() ?? "";
     if (!preferredId || autoOpenedPreferredProviderId === preferredId) return;
@@ -309,7 +358,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
     props.loading,
     props.open,
     props.preferredProviderId,
-    resolvedView,
+    effectiveView,
   ]);
 
   useEffect(() => {
@@ -491,9 +540,11 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
       return;
     }
 
+    const preset = MODEL_PROVIDER_PRESETS[entry.id];
     const providerMeta = props.providers.find((item) => item.id === entry.id);
-    setBaseUrlInput(providerMeta?.initialApiBaseUrl ?? "");
+    setBaseUrlInput(preset?.baseUrl ?? providerMeta?.initialApiBaseUrl ?? "");
     setApiKeyInput(providerMeta?.existingApiKeyHint ?? "");
+    setDisplayNameInput(entry.id === AIWORK_CUSTOM_PROVIDER_ENTRY_KEY ? "" : entry.name);
     setView("api");
   };
 
@@ -520,13 +571,44 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
 
     const trimmed = apiKeyInput.trim();
     if (!trimmed) {
-      setLocalError("API key is required.");
+      setLocalError(t("providers.api_key_required"));
       return;
     }
 
     setLocalError(null);
     try {
-      await props.onSubmitApiKey(selectedEntry.id, trimmed, baseUrlInput);
+      if (props.editSession) {
+        await props.onSubmitApiKey(props.editSession.providerId, trimmed, baseUrlInput, {
+          displayName: displayNameInput.trim() || props.editSession.name,
+          presetCode: props.editSession.presetCode,
+        });
+        return;
+      }
+
+      let providerId = selectedEntry.id;
+      let displayName = displayNameInput.trim();
+      let presetCode = "";
+
+      if (selectedEntry.id === AIWORK_CUSTOM_PROVIDER_ENTRY_KEY) {
+        if (!displayName) {
+          setLocalError(t("providers.provider_display_name_required"));
+          return;
+        }
+        providerId =
+          typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+            ? crypto.randomUUID()
+            : `custom_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`;
+        presetCode = "";
+      } else {
+        const preset = MODEL_PROVIDER_PRESETS[selectedEntry.id];
+        displayName = preset?.name ?? selectedEntry.name;
+        presetCode = selectedEntry.id;
+      }
+
+      await props.onSubmitApiKey(providerId, trimmed, baseUrlInput, {
+        displayName,
+        presetCode,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to save API key";
       setLocalError(message);
@@ -546,6 +628,10 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   };
 
   const handleBack = () => {
+    if (props.editSession) {
+      props.onClose();
+      return;
+    }
     if (resolvedView === "oauth-code" || resolvedView === "oauth-auto") {
       if ((selectedEntry?.methods.length ?? 0) > 1) {
         setView("method");
@@ -572,7 +658,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
 
   const submittingLabel = () => {
     if (!props.submitting) return null;
-    if (resolvedView === "api") return "Saving API key...";
+    if (effectiveView === "api") return "Saving API key...";
     if (resolvedView === "oauth-code") return "Verifying authorization code...";
     if (resolvedView === "oauth-auto") return "Waiting for OAuth confirmation...";
     return "Opening authentication...";
@@ -591,7 +677,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
   };
 
   const handleListKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (resolvedView !== "list") return;
+    if (effectiveView !== "list") return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
       stepEntryIndex(1);
@@ -639,7 +725,9 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
       <div className="bg-gray-2 border border-gray-6/70 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden max-h-[calc(100vh-2rem)] flex flex-col">
         <div className="px-6 pt-6 pb-4 border-b border-gray-6/50 flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-12">{t("providers.modal_title")}</h3>
+            <h3 className="text-lg font-semibold text-gray-12">
+              {props.editSession ? t("providers.edit_provider_title") : t("providers.modal_title")}
+            </h3>
             <p className="text-sm text-gray-11 mt-1">{t("providers.modal_description")}</p>
           </div>
           <Button variant="ghost" className="!p-2 rounded-full" onClick={handleClose} aria-label="Close">
@@ -662,7 +750,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
 
           {!props.loading ? (
             <div className="flex-1 space-y-2 overflow-y-auto pr-1 -mr-1">
-              {resolvedView === "list" ? (
+              {effectiveView === "list" ? (
                 <div className="space-y-3" onKeyDown={handleListKeyDown}>
                   <div className="relative flex items-center mb-1">
                     <Search size={16} className="absolute left-3 text-gray-9" />
@@ -696,7 +784,17 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                         onClick={() => handleEntrySelect(entry)}
                       >
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-gray-5/60 bg-gray-2 shadow-sm overflow-hidden">
-                          <ProviderIcon providerId={entry.id} size={18} className="text-gray-12" />
+                          {MODEL_PROVIDER_PRESETS[entry.id]?.icon ? (
+                            <span
+                              className="flex h-full w-full items-center justify-center text-gray-12 [&_svg]:h-[18px] [&_svg]:w-[18px]"
+                              // Preset SVG strings ship with the app bundle (not user-controlled HTML).
+                              dangerouslySetInnerHTML={{
+                                __html: MODEL_PROVIDER_PRESETS[entry.id]?.icon ?? "",
+                              }}
+                            />
+                          ) : (
+                            <ProviderIcon providerId={entry.id} size={18} className="text-gray-12" />
+                          )}
                         </div>
 
                         <div className="flex-1 min-w-0">
@@ -783,17 +881,37 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
                 </div>
               ) : null}
 
-              {resolvedView === "api" && selectedEntry ? (
+              {effectiveView === "api" && selectedEntry ? (
                 <div className="rounded-xl border border-gray-6/40 bg-gray-2/50 shadow-sm p-5 space-y-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <div className="text-sm font-medium text-gray-12">{selectedEntry.name}</div>
                       <div className="text-xs text-gray-10 mt-1">{t("providers.api_connect_intro")}</div>
+                      {props.editSession ? (
+                        <div className="mt-2 font-mono text-[11px] text-gray-9 break-all">
+                          {props.editSession.providerId}
+                        </div>
+                      ) : null}
                     </div>
                     <Button variant="ghost" onClick={handleBack} disabled={actionDisabled}>
                       Back
                     </Button>
                   </div>
+                  {selectedEntry.id === AIWORK_CUSTOM_PROVIDER_ENTRY_KEY || props.editSession ? (
+                    <TextInput
+                      label={t("providers.provider_display_name")}
+                      placeholder={t("providers.provider_display_name")}
+                      value={displayNameInput}
+                      onChange={(event) => {
+                        setDisplayNameInput(event.currentTarget.value);
+                        if (localError) setLocalError(null);
+                      }}
+                      autoComplete="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      disabled={actionDisabled}
+                    />
+                  ) : null}
                   <TextInput
                     label={t("providers.api_base_url_label")}
                     placeholder="https://api.example.com/v1"

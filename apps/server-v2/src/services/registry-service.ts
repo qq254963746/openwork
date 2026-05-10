@@ -2,7 +2,6 @@ import path from "node:path";
 import {
   createInternalWorkspaceId,
   createLocalWorkspaceId,
-  createRemoteWorkspaceId,
   createServerId,
   deriveWorkspaceSlugSource,
 } from "../database/identifiers.js";
@@ -16,20 +15,6 @@ import type {
   WorkspaceKind,
   WorkspaceRecord,
 } from "../database/types.js";
-
-export type LegacyRemoteWorkspaceInput = {
-  baseUrl: string;
-  displayName: string;
-  directory?: string | null;
-  legacyNotes: JsonObject;
-  remoteType: "aiwork" | "opencode";
-  remoteWorkspaceId?: string | null;
-  serverAuth?: JsonObject | null;
-  serverBaseUrl: string;
-  serverHostingKind: HostingKind;
-  serverLabel: string;
-  workspaceStatus?: WorkspaceRecord["status"];
-};
 
 export type LegacyLocalWorkspaceInput = {
   dataDir: string;
@@ -150,7 +135,6 @@ export function createRegistryService(input: {
           seededBy: "server-v2-phase-2",
         },
         opencodeProjectId: null,
-        remoteWorkspaceId: null,
         serverId: localServerId,
         status: "ready",
       });
@@ -187,7 +171,6 @@ export function createRegistryService(input: {
           workspaceKind,
         }),
         opencodeProjectId: workspace.opencodeProjectId ?? null,
-        remoteWorkspaceId: null,
         serverId: localServerId,
         status: workspace.status ?? "imported",
       });
@@ -197,66 +180,6 @@ export function createRegistryService(input: {
         health: {
           configDir,
           imported: true,
-        },
-        lastError: null,
-        lastSessionRefreshAt: null,
-        lastSyncAt: null,
-        workspaceId: record.id,
-      });
-
-      return record;
-    },
-
-    importRemoteWorkspace(workspace: LegacyRemoteWorkspaceInput) {
-      const serverId = createServerId("remote", workspace.serverBaseUrl);
-      const existingServer = input.repositories.servers.getById(serverId);
-      input.repositories.servers.upsert({
-        auth: workspace.serverAuth ?? existingServer?.auth ?? null,
-        baseUrl: workspace.serverBaseUrl,
-        capabilities: mergeJson(existingServer?.capabilities ?? {}, {
-          legacyRemoteType: workspace.remoteType,
-          phase: 2,
-          source: "desktop-import",
-        }) ?? {},
-        hostingKind: workspace.serverHostingKind,
-        id: serverId,
-        isEnabled: true,
-        isLocal: false,
-        kind: "remote",
-        label: workspace.serverLabel,
-        lastSeenAt: existingServer?.lastSeenAt ?? null,
-        notes: mergeJson(existingServer?.notes, workspace.legacyNotes),
-        source: existingServer?.source ?? "imported",
-      });
-
-      const workspaceId = createRemoteWorkspaceId({
-        baseUrl: workspace.serverBaseUrl,
-        directory: workspace.directory,
-        remoteType: workspace.remoteType,
-        remoteWorkspaceId: workspace.remoteWorkspaceId,
-      });
-      const record = upsertWorkspace({
-        configDir: null,
-        dataDir: null,
-        displayName: workspace.displayName,
-        id: workspaceId,
-        isHidden: false,
-        kind: "remote",
-        notes: mergeJson(workspace.legacyNotes, {
-          directory: workspace.directory ?? null,
-          remoteType: workspace.remoteType,
-        }),
-        opencodeProjectId: null,
-        remoteWorkspaceId: workspace.remoteWorkspaceId ?? null,
-        serverId,
-        status: workspace.workspaceStatus ?? "imported",
-      });
-
-      input.repositories.workspaceRuntimeState.upsert({
-        backendKind: "remote_aiwork",
-        health: {
-          imported: true,
-          remoteServerId: serverId,
         },
         lastError: null,
         lastSessionRefreshAt: null,

@@ -67,8 +67,6 @@ export const routePaths = {
     routerHealth: `${routeNamespaces.system}/router/health`,
     servers: `${routeNamespaces.system}/servers`,
     serverById: (serverId: string = ":serverId") => `${routeNamespaces.system}/servers/${serverId}`,
-    serverConnect: `${routeNamespaces.system}/servers/connect`,
-    serverSync: (serverId: string = ":serverId") => `${routeNamespaces.system}/servers/${serverId}/sync`,
     status: `${routeNamespaces.system}/status`,
     runtime: {
       upgrade: `${routeNamespaces.system}/runtime/upgrade`,

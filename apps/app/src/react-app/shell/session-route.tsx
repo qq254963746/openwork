@@ -9,12 +9,18 @@ import type {
   TextPartInput,
 } from "@opencode-ai/sdk/v2/client";
 
+import {
+  readGlobalDisabledProviderIds,
+  type ReadGlobalOpencodeConfigInput,
+} from "../../app/lib/global-opencode-disabled-providers";
 import { createClient, unwrap } from "../../app/lib/opencode";
+import { mergeAuthMetadataBaseUrlIntoProviderList } from "../../app/lib/provider-list-merge";
 import { listCommands, shellInSession } from "../../app/lib/opencode-session";
 import {
   buildAiWorkWorkspaceBaseUrl,
   createAiWorkServerClient,
   readAiWorkServerSettings,
+  type AiWorkServerCapabilities,
   type AiWorkServerClient,
   type AiWorkWorkspaceInfo,
 } from "../../app/lib/aiwork-server";
@@ -35,6 +41,7 @@ import {
   type WorkspaceList,
 } from "../../app/lib/desktop";
 import type {
+  Client,
   ComposerAttachment,
   ComposerDraft,
   ComposerPart,
@@ -49,13 +56,7 @@ import type {
   ProviderListItem,
   WorkspaceSessionGroup,
 } from "../../app/types";
-import {
-  getWorkspaceTaskLoadErrorDisplay,
-  isDesktopRuntime,
-  isSandboxWorkspace,
-  normalizeDirectoryPath,
-  safeStringify,
-} from "../../app/utils";
+import { isDesktopRuntime, normalizeDirectoryPath, safeStringify } from "../../app/utils";
 import { t } from "../../i18n";
 import { useLocal } from "../kernel/local-provider";
 import { SessionPage } from "../domains/session/chat/session-page";
@@ -67,15 +68,8 @@ import {
   questionKey as reactQuestionKey,
   seedQuestionState,
 } from "../domains/session/sync/session-sync";
-import { CreateRemoteWorkspaceModal } from "../domains/workspace/create-remote-workspace-modal";
 import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-modal";
 import { RenameWorkspaceModal } from "../domains/workspace/rename-workspace-modal";
-import { useRemoteWorkspaceConnectionEditor } from "../domains/workspace/use-remote-workspace-connection-editor";
-import {
-  diagnoseRemoteWorkspaceTaskLoadFailure,
-  getRemoteWorkspaceConnectionKey,
-  testRemoteWorkspaceConnection,
-} from "../domains/workspace/remote-workspace-diagnostics";
 import { ModelPickerModal } from "../domains/session/modals/model-picker-modal";
 import { CommandPalette, type SessionOption as PaletteSessionOption } from "./command-palette";
 import {
@@ -179,7 +173,6 @@ function isTransientStartupError(message: string | null | undefined) {
 function workspaceLabel(workspace: AiWorkWorkspaceInfo) {
   return (
     workspace.displayName?.trim() ||
-    workspace.aiworkWorkspaceName?.trim() ||
     workspace.name?.trim() ||
     workspace.path?.trim() ||
     t("session.workspace_fallback")
@@ -393,8 +386,6 @@ export function SessionRoute() {
   const refreshInFlightRef = useRef(false);
   const reloadEventCursorByWorkspaceRef = useRef<Record<string, number | null>>({});
   const workspacesRef = useRef<RouteWorkspace[]>([]);
-  const remoteWorkspaceCheckRunRef = useRef<Record<string, string>>({});
-  const remoteWorkspaceCheckRunCounterRef = useRef(0);
   const sessionsByWorkspaceIdRef = useRef<Record<string, any[]>>({});
   const sessionAutoRenamedRef = useRef<Set<string>>(new Set());
   const startupRetryTimerRef = useRef<number | null>(null);
@@ -502,22 +493,6 @@ export function SessionRoute() {
             await new Promise((r) => window.setTimeout(r, backoffMs(attempt)));
             await fetchOnce(workspace, attempt + 1);
             return;
-          }
-          // Final failure: keep local workspace startup quiet, but give
-          // remote workers a precise endpoint/token/workspace diagnostic.
-          if (workspace.workspaceType === "remote") {
-            const connectionState = await diagnoseRemoteWorkspaceTaskLoadFailure(workspace, message);
-            setErrorsByWorkspaceId((current) => ({
-              ...current,
-              [workspace.id]: connectionState.message ?? "Remote worker connection failed.",
-            }));
-            setWorkspaceConnectionOverrides((current) => {
-              if (current[workspace.id]?.status === "connecting") return current;
-              return {
-                ...current,
-                [workspace.id]: connectionState,
-              };
-            });
           }
           setRetryingWorkspaceIds((current) =>
             current.includes(workspace.id) ? current.filter((id) => id !== workspace.id) : current,
@@ -807,26 +782,6 @@ export function SessionRoute() {
     sessionsByWorkspaceIdRef.current = sessionsByWorkspaceId;
   }, [sessionsByWorkspaceId]);
 
-  const handleRemoteWorkspaceConnectionSaved = useCallback(
-    async (workspaceId: string) => {
-      delete remoteWorkspaceCheckRunRef.current[workspaceId];
-      setWorkspaceConnectionOverrides((current) => {
-        const next = { ...current };
-        delete next[workspaceId];
-        return next;
-      });
-      setErrorsByWorkspaceId((current) => ({ ...current, [workspaceId]: null }));
-      setRetryingWorkspaceIds((current) => current.filter((id) => id !== workspaceId));
-      await refreshRouteState();
-    },
-    [refreshRouteState],
-  );
-
-  const remoteWorkspaceConnectionEditor = useRemoteWorkspaceConnectionEditor({
-    workspaces,
-    onSaved: handleRemoteWorkspaceConnectionSaved,
-  });
-
   useEffect(() => {
     let cancelled = false;
 
@@ -892,7 +847,6 @@ export function SessionRoute() {
       workspaces: workspaces.map((workspace) => ({
         id: workspace.id,
         displayNameResolved: workspace.displayNameResolved,
-        workspaceType: workspace.workspaceType,
         path: workspace.path,
         sessionCount: (sessionsByWorkspaceId[workspace.id] ?? []).length,
         loading: retryingWorkspaceIds.includes(workspace.id),
@@ -986,20 +940,10 @@ export function SessionRoute() {
     () => workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ?? (selectedWorkspaceId ? null : workspaces[0] ?? null),
     [selectedWorkspaceId, workspaces],
   );
-  const workspaceConnectionStateById = useMemo(() => {
-    const next: Record<string, WorkspaceConnectionState> = { ...workspaceConnectionOverrides };
-    for (const workspace of workspaces) {
-      if (workspace.workspaceType !== "remote") continue;
-      const error = errorsByWorkspaceId[workspace.id]?.trim();
-      if (!error || next[workspace.id]?.status === "connecting") continue;
-      next[workspace.id] ??= {
-        status: "error",
-        message: getWorkspaceTaskLoadErrorDisplay(workspace, error).message || error,
-        checkedAt: null,
-      };
-    }
-    return next;
-  }, [errorsByWorkspaceId, workspaceConnectionOverrides, workspaces]);
+  const workspaceConnectionStateById = useMemo(
+    () => ({ ...workspaceConnectionOverrides }),
+    [workspaceConnectionOverrides],
+  );
 
   useEffect(() => {
     if (!isDesktopRuntime()) return;
@@ -1008,7 +952,7 @@ export function SessionRoute() {
       reconnectAttemptedWorkspaceIdRef.current = "";
       return;
     }
-    if (!selectedWorkspace || selectedWorkspace.workspaceType !== "local") return;
+    if (!selectedWorkspace) return;
     const workspaceId = selectedWorkspace.id?.trim() ?? "";
     if (!workspaceId || reconnectAttemptedWorkspaceIdRef.current === workspaceId) return;
     reconnectAttemptedWorkspaceIdRef.current = workspaceId;
@@ -1233,25 +1177,34 @@ export function SessionRoute() {
     void (async () => {
       let disabledProviders: string[] = [];
       try {
-        const config = unwrap(
-          await opencodeClient.config.get({
-            directory: selectedWorkspaceRoot || undefined,
-          }),
-        ) as { disabled_providers?: string[] };
-        disabledProviders = Array.isArray(config.disabled_providers)
-          ? config.disabled_providers
-          : [];
+        let caps: AiWorkServerCapabilities | null = null;
+        if (client) {
+          try {
+            caps = await client.capabilities();
+          } catch {
+            caps = null;
+          }
+        }
+        const globalInput: ReadGlobalOpencodeConfigInput = {
+          workspaceRoot: selectedWorkspaceRoot,
+          selectedWorkspaceId: selectedWorkspaceId.trim(),
+          runtimeWorkspaceId: selectedWorkspaceId.trim() || null,
+          aiworkServerStatus: client ? "connected" : "disconnected",
+          aiworkServerClient: client,
+          aiworkServerCapabilities: caps,
+        };
+        disabledProviders = await readGlobalDisabledProviderIds(globalInput);
       } catch {
         // ignore config read failures and continue with provider discovery
       }
 
       try {
-        applyProviderState(
-          filterProviderList(
-            unwrap(await opencodeClient.provider.list()),
-            disabledProviders,
-          ),
+        const listed = unwrap(await opencodeClient.provider.list());
+        const merged = await mergeAuthMetadataBaseUrlIntoProviderList(
+          opencodeClient as Client,
+          listed,
         );
+        applyProviderState(filterProviderList(merged, disabledProviders));
       } catch {
         try {
           const fallback = unwrap(
@@ -1259,18 +1212,16 @@ export function SessionRoute() {
               directory: selectedWorkspaceRoot || undefined,
             }),
           ) as ConfigProvidersResponse;
-          applyProviderState(
-            filterProviderList(
-              {
-                all: mapConfigProvidersToList(
-                  fallback.providers,
-                ) as ProviderListResponse["all"],
-                connected: [],
-                default: fallback.default,
-              },
-              disabledProviders,
-            ),
+          const fallbackList: ProviderListResponse = {
+            all: mapConfigProvidersToList(fallback.providers) as ProviderListResponse["all"],
+            connected: [],
+            default: fallback.default,
+          };
+          const mergedFallback = await mergeAuthMetadataBaseUrlIntoProviderList(
+            opencodeClient as Client,
+            fallbackList,
           );
+          applyProviderState(filterProviderList(mergedFallback, disabledProviders));
         } catch {
           if (cancelled) return;
           setProviders([]);
@@ -1282,7 +1233,12 @@ export function SessionRoute() {
     return () => {
       cancelled = true;
     };
-  }, [opencodeClient, selectedWorkspaceRoot]);
+  }, [
+    client,
+    opencodeClient,
+    selectedWorkspaceId,
+    selectedWorkspaceRoot,
+  ]);
 
   useEffect(() => {
     if (!selectedWorkspaceId || !selectedSessionId) {
@@ -1590,8 +1546,6 @@ export function SessionRoute() {
         );
         return result;
       },
-      isRemoteWorkspace: selectedWorkspace?.workspaceType === "remote",
-      isSandboxWorkspace: selectedWorkspace ? isSandboxWorkspace(selectedWorkspace) : false,
       onChangeModel: (model: { providerID: string; modelID: string }) => {
         if (selectedWorkspaceId && selectedSessionId) {
           writeSessionModelOverride(selectedWorkspaceId, selectedSessionId, model);
@@ -1713,65 +1667,6 @@ export function SessionRoute() {
       await refreshRouteState();
     },
     [client, navigate, refreshRouteState, selectedWorkspaceId],
-  );
-
-  const runRemoteWorkspaceConnectionCheck = useCallback(
-    async (workspaceId: string, mode: "test" | "recover") => {
-      const workspace = workspacesRef.current.find((item) => item.id === workspaceId);
-      if (!workspace || workspace.workspaceType !== "remote") return false;
-      const connectionKey = getRemoteWorkspaceConnectionKey(workspace);
-      remoteWorkspaceCheckRunCounterRef.current += 1;
-      const runId = String(remoteWorkspaceCheckRunCounterRef.current);
-      remoteWorkspaceCheckRunRef.current[workspaceId] = runId;
-
-      setWorkspaceConnectionOverrides((current) => ({
-        ...current,
-        [workspaceId]: {
-          status: "connecting",
-          message: t("config.testing_connection"),
-          checkedAt: null,
-        },
-      }));
-
-      const result = await testRemoteWorkspaceConnection(workspace);
-      const currentWorkspace = workspacesRef.current.find((item) => item.id === workspaceId);
-      if (
-        remoteWorkspaceCheckRunRef.current[workspaceId] !== runId ||
-        !currentWorkspace ||
-        getRemoteWorkspaceConnectionKey(currentWorkspace) !== connectionKey
-      ) {
-        if (remoteWorkspaceCheckRunRef.current[workspaceId] === runId) {
-          delete remoteWorkspaceCheckRunRef.current[workspaceId];
-        }
-        return false;
-      }
-      setWorkspaceConnectionOverrides((current) => ({
-        ...current,
-        [workspaceId]: result.state,
-      }));
-
-      if (!result.ok) {
-        setErrorsByWorkspaceId((current) => ({
-          ...current,
-          [workspaceId]: result.state.message ?? "Remote worker connection failed.",
-        }));
-        if (remoteWorkspaceCheckRunRef.current[workspaceId] === runId) {
-          delete remoteWorkspaceCheckRunRef.current[workspaceId];
-        }
-        return false;
-      }
-
-      setErrorsByWorkspaceId((current) => ({ ...current, [workspaceId]: null }));
-      setRetryingWorkspaceIds((current) => current.filter((id) => id !== workspaceId));
-      if (mode === "recover") {
-        await refreshRouteState();
-      }
-      if (remoteWorkspaceCheckRunRef.current[workspaceId] === runId) {
-        delete remoteWorkspaceCheckRunRef.current[workspaceId];
-      }
-      return true;
-    },
-    [refreshRouteState],
   );
 
   const handleReorderWorkspaces = useCallback(
@@ -2010,8 +1905,7 @@ export function SessionRoute() {
         id: selectedWorkspace.id,
         name: selectedWorkspace.name ?? undefined,
         displayName: selectedWorkspace.displayNameResolved,
-        workspaceType: selectedWorkspace.workspaceType,
-      } : { workspaceType: "local" }}
+      } : {}}
       selectedWorkspaceRoot={selectedWorkspaceRoot}
       runtimeWorkspaceId={selectedWorkspaceId || null}
       workspaces={workspaces}
@@ -2077,9 +1971,6 @@ export function SessionRoute() {
         },
         onOpenRenameWorkspace: handleOpenRenameWorkspace,
         onRevealWorkspace: (id) => void handleRevealWorkspace(id),
-        onRecoverWorkspace: (workspaceId) => runRemoteWorkspaceConnectionCheck(workspaceId, "recover"),
-        onTestWorkspaceConnection: (workspaceId) => runRemoteWorkspaceConnectionCheck(workspaceId, "test"),
-        onEditWorkspaceConnection: remoteWorkspaceConnectionEditor.open,
         onForgetWorkspace: (id) => void handleForgetWorkspace(id),
         onOpenCreateWorkspace: handleOpenCreateWorkspace,
         onWorkspaceSectionOpened: ensureWorkspaceSessionsLoaded,
@@ -2135,17 +2026,6 @@ export function SessionRoute() {
       onPickFolder={() => pickDirectory({ title: t("onboarding.authorize_folder") }) as Promise<string | null>}
       submitting={createWorkspaceBusy}
       localError={createWorkspaceError}
-    />
-    <CreateRemoteWorkspaceModal
-      open={remoteWorkspaceConnectionEditor.workspace !== null}
-      onClose={remoteWorkspaceConnectionEditor.close}
-      onConfirm={(input) => void remoteWorkspaceConnectionEditor.save(input)}
-      initialValues={remoteWorkspaceConnectionEditor.initialValues}
-      submitting={remoteWorkspaceConnectionEditor.busy}
-      error={remoteWorkspaceConnectionEditor.error}
-      title={t("dashboard.edit_remote_workspace_title")}
-      subtitle={t("dashboard.edit_remote_workspace_subtitle")}
-      confirmLabel={t("dashboard.edit_remote_workspace_confirm")}
     />
     <RenameWorkspaceModal
       open={renameWorkspaceId !== null}

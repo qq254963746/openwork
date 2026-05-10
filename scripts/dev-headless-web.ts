@@ -116,11 +116,10 @@ const shutdown = (
 
 await ensureTmp();
 
-const remoteAccessEnabled = readBool(process.env.AIWORK_REMOTE_ACCESS);
-const host = remoteAccessEnabled ? "0.0.0.0" : "127.0.0.1";
+const host = "127.0.0.1";
 const viteHost = process.env.VITE_HOST ?? process.env.HOST ?? host;
 const publicHost = process.env.AIWORK_PUBLIC_HOST ?? null;
-const clientHost = publicHost ?? (host === "0.0.0.0" ? "127.0.0.1" : host);
+const clientHost = publicHost ?? host;
 const workspace = process.env.AIWORK_WORKSPACE ?? cwd;
 const aiworkPort = await resolvePort(process.env.AIWORK_PORT, "127.0.0.1");
 const webPort = await resolvePort(process.env.AIWORK_WEB_PORT, "127.0.0.1");
@@ -234,7 +233,6 @@ const headlessEnv = {
   ...process.env,
   AIWORK_WORKSPACE: workspace,
   AIWORK_HOST: host,
-  AIWORK_REMOTE_ACCESS: remoteAccessEnabled ? "1" : "0",
   AIWORK_PORT: String(aiworkPort),
   AIWORK_TOKEN: aiworkToken,
   AIWORK_HOST_TOKEN: aiworkHostToken,
@@ -299,7 +297,6 @@ const headlessProcess = spawnLogged(
     "--opencode-router",
     opencodeRouterEnabled ? "true" : "false",
     ...(opencodeRouterRequired ? ["--opencode-router-required"] : []),
-    ...(remoteAccessEnabled ? ["--remote-access"] : []),
     "--aiwork-port",
     String(aiworkPort),
   ],

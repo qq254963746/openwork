@@ -6,7 +6,7 @@ use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use serde_json::json;
 use tauri::{AppHandle, Emitter, State};
 
-use crate::types::{WorkspaceInfo, WorkspaceType};
+use crate::types::WorkspaceInfo;
 
 const RELOAD_EVENT: &str = "aiwork://reload-required";
 
@@ -92,9 +92,6 @@ pub fn update_workspace_watch(
     let Some(active) = workspace else {
         return Ok(());
     };
-    if active.workspace_type != WorkspaceType::Local {
-        return Ok(());
-    }
 
     let root = PathBuf::from(active.path.trim());
     if root.as_os_str().is_empty() {

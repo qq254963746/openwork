@@ -151,7 +151,6 @@ const IDLE_ENGINE_INFO = Object.freeze({
 
 const IDLE_AIWORK_SERVER_INFO = Object.freeze({
   running: false,
-  remoteAccessEnabled: false,
   host: null,
   port: null,
   baseUrl: null,
@@ -428,20 +427,6 @@ function localWorkspaceId(workspacePath) {
   return stableWorkspaceId(workspacePath);
 }
 
-function remoteWorkspaceId(baseUrl, directory) {
-  const key = String(directory ?? "").trim()
-    ? `remote::${baseUrl}::${String(directory).trim()}`
-    : `remote::${baseUrl}`;
-  return stableWorkspaceId(key);
-}
-
-function aiworkRemoteWorkspaceId(hostUrl, workspaceId) {
-  const key = String(workspaceId ?? "").trim()
-    ? `aiwork::${hostUrl}::${String(workspaceId).trim()}`
-    : `aiwork::${hostUrl}`;
-  return stableWorkspaceId(key);
-}
-
 async function readWorkspaceAiWorkConfig(workspacePath) {
   const aiworkPath = path.join(workspacePath, ".opencode", "aiwork.json");
   if (!(await pathExists(aiworkPath))) {
@@ -505,9 +490,7 @@ const runtimeManager = createRuntimeManager({
   desktopRoot: path.resolve(__dirname, ".."),
   listLocalWorkspacePaths: async () =>
     (await readWorkspaceState())
-      .workspaces
-      .filter((entry) => entry?.workspaceType !== "remote")
-      .map((entry) => String(entry?.path ?? "").trim())
+      .workspaces.map((entry) => String(entry?.path ?? "").trim())
       .filter(Boolean),
 });
 
@@ -540,13 +523,12 @@ async function bootRuntimeForSelectedWorkspace() {
     ? list.workspaces.find((entry) => entry?.id === selectedId)
     : list.workspaces[0];
   const workspaceRoot = String(workspace?.path ?? "").trim();
-  if (!workspaceRoot || workspace?.workspaceType === "remote") {
+  if (!workspaceRoot) {
     return { ok: true, skipped: true, reason: "no-local-workspace" };
   }
 
   const workspacePaths = [];
   for (const entry of list.workspaces) {
-    if (entry?.workspaceType === "remote") continue;
     const workspacePath = String(entry?.path ?? "").trim();
     if (workspacePath && !workspacePaths.includes(workspacePath)) workspacePaths.push(workspacePath);
   }
@@ -563,7 +545,7 @@ async function bootRuntimeForSelectedWorkspace() {
   } catch (error) {
     const fallback = list.workspaces.find((entry) => {
       const candidatePath = String(entry?.path ?? "").trim();
-      return entry?.workspaceType !== "remote" && candidatePath && candidatePath !== workspaceRoot;
+      return candidatePath && candidatePath !== workspaceRoot;
     });
     const fallbackRoot = String(fallback?.path ?? "").trim();
     if (!fallback || !fallbackRoot) throw error;
@@ -612,20 +594,7 @@ function normalizeWorkspaceEntry(input) {
     name: String(input.name ?? "Workspace"),
     path: String(input.path ?? ""),
     preset: String(input.preset ?? "starter"),
-    workspaceType: input.workspaceType === "remote" ? "remote" : "local",
-    remoteType: input.remoteType ?? null,
-    baseUrl: input.baseUrl ?? null,
-    directory: input.directory ?? null,
     displayName: input.displayName ?? null,
-    aiworkHostUrl: input.aiworkHostUrl ?? null,
-    aiworkToken: input.aiworkToken ?? null,
-    aiworkClientToken: input.aiworkClientToken ?? null,
-    aiworkHostToken: input.aiworkHostToken ?? null,
-    aiworkWorkspaceId: input.aiworkWorkspaceId ?? null,
-    aiworkWorkspaceName: input.aiworkWorkspaceName ?? null,
-    sandboxBackend: input.sandboxBackend ?? null,
-    sandboxRunId: input.sandboxRunId ?? null,
-    sandboxContainerName: input.sandboxContainerName ?? null,
   };
 }
 
@@ -981,7 +950,6 @@ async function handleDesktopInvoke(event, command, ...args) {
         displayName: String(input.name ?? (path.basename(folderPath) || "Workspace")),
         path: folderPath,
         preset,
-        workspaceType: "local",
       });
       await mkdir(path.join(folderPath, ".opencode"), { recursive: true });
       await writeWorkspaceAiWorkConfig(folderPath, defaultWorkspaceAiWorkConfig(folderPath, preset));
@@ -994,63 +962,6 @@ async function handleDesktopInvoke(event, command, ...args) {
         state.selectedId = workspace.id;
         state.activeId = workspace.id;
         state.watchedId = workspace.id;
-        return state;
-      });
-    }
-    case "workspaceCreateRemote": {
-      const input = args[0] ?? {};
-      const baseUrl = String(input.baseUrl ?? "").trim();
-      if (!baseUrl) throw new Error("baseUrl is required");
-      if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
-        throw new Error("baseUrl must start with http:// or https://");
-      }
-      const remoteType = input.remoteType === "opencode" ? "opencode" : "aiwork";
-      const directory = typeof input.directory === "string" && input.directory.trim() ? input.directory.trim() : null;
-      const aiworkHostUrl = typeof input.aiworkHostUrl === "string" && input.aiworkHostUrl.trim()
-        ? input.aiworkHostUrl.trim()
-        : null;
-      const aiworkWorkspaceId = typeof input.aiworkWorkspaceId === "string" && input.aiworkWorkspaceId.trim()
-        ? input.aiworkWorkspaceId.trim()
-        : null;
-      const id = remoteType === "aiwork"
-        ? aiworkRemoteWorkspaceId(aiworkHostUrl ?? baseUrl, aiworkWorkspaceId)
-        : remoteWorkspaceId(baseUrl, directory);
-      const workspace = normalizeWorkspaceEntry({
-        id,
-        name: String(input.displayName ?? input.aiworkWorkspaceName ?? "Remote workspace"),
-        displayName: input.displayName ?? null,
-        path: directory ?? "",
-        preset: "remote",
-        workspaceType: "remote",
-        remoteType,
-        baseUrl,
-        directory,
-        aiworkHostUrl,
-        aiworkToken: input.aiworkToken ?? null,
-        aiworkClientToken: input.aiworkClientToken ?? null,
-        aiworkHostToken: input.aiworkHostToken ?? null,
-        aiworkWorkspaceId,
-        aiworkWorkspaceName: input.aiworkWorkspaceName ?? null,
-        sandboxBackend: input.sandboxBackend ?? null,
-        sandboxRunId: input.sandboxRunId ?? null,
-        sandboxContainerName: input.sandboxContainerName ?? null,
-      });
-      return mutateWorkspaceState((state) => {
-        state.workspaces = state.workspaces.filter((entry) => entry.id !== workspace.id);
-        state.workspaces.push(workspace);
-        state.selectedId = workspace.id;
-        state.activeId = workspace.id;
-        return state;
-      });
-    }
-    case "workspaceUpdateRemote": {
-      const input = args[0] ?? {};
-      const workspaceId = String(input.workspaceId ?? "").trim();
-      if (!workspaceId) throw new Error("workspaceId is required");
-      return mutateWorkspaceState((state) => {
-        state.workspaces = state.workspaces.map((entry) =>
-          entry.id === workspaceId ? { ...entry, ...input } : entry,
-        );
         return state;
       });
     }
@@ -1128,7 +1039,6 @@ async function handleDesktopInvoke(event, command, ...args) {
         displayName: null,
         path: targetDir,
         preset: imported.preset,
-        workspaceType: "local",
       });
       return mutateWorkspaceState((state) => {
         const workspacePathKey = normalizeWorkspacePathKey(workspace.path);
@@ -1206,14 +1116,6 @@ async function handleDesktopInvoke(event, command, ...args) {
     case "orchestratorStartDetached": {
       return runtimeManager.orchestratorStartDetached(args[0] ?? {});
     }
-    case "sandboxDoctor":
-      return runtimeManager.sandboxDoctor();
-    case "sandboxStop":
-      return runtimeManager.sandboxStop(String(args[0] ?? "").trim());
-    case "sandboxCleanupAiWorkContainers":
-      return runtimeManager.sandboxCleanupAiWorkContainers();
-    case "sandboxDebugProbe":
-      return runtimeManager.sandboxDebugProbe();
     case "aiworkServerInfo":
       return runtimeManager.aiworkServerInfo();
     case "aiworkServerRestart":

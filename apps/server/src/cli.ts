@@ -39,10 +39,13 @@ if (!config.opencodeBaseUrl && process.env.AIWORK_MANAGE_OPENCODE === "1") {
     config.opencodeUsername = managedOpencode.username;
     config.opencodePassword = managedOpencode.password;
     for (const entry of config.workspaces) {
-      entry.baseUrl ??= managedOpencode.url;
+      entry.opencode = {
+        ...entry.opencode,
+        baseUrl: entry.opencode?.baseUrl ?? managedOpencode.url,
+        directory: entry.opencode?.directory ?? entry.path,
+      };
       entry.opencodeUsername ??= managedOpencode.username;
       entry.opencodePassword ??= managedOpencode.password;
-      entry.directory ??= entry.path;
     }
     logger.log("info", `Managed OpenCode listening on ${managedOpencode.url}`);
   }

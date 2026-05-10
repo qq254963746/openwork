@@ -13,12 +13,10 @@ import type {
 import type { RuntimeService } from "./runtime-service.js";
 import { createLocalOpencodeSessionAdapter } from "../adapters/sessions/local-opencode.js";
 import { OpenCodeBackendError } from "../adapters/sessions/opencode-backend.js";
-import { createRemoteAiWorkSessionAdapter } from "../adapters/sessions/remote-aiwork.js";
-
 type SessionBackend = ReturnType<typeof createLocalOpencodeSessionAdapter>;
 
-function toBackendKind(workspace: WorkspaceRecord) {
-  return workspace.kind === "remote" ? "remote_aiwork" : "local_opencode";
+function toBackendKind(_workspace: WorkspaceRecord) {
+  return "local_opencode" as const;
 }
 
 function readRuntimeState(repositories: ServerRepositories, workspace: WorkspaceRecord) {
@@ -94,14 +92,6 @@ export function createWorkspaceSessionService(input: {
   }
 
   function resolveBackend(workspace: WorkspaceRecord): SessionBackend {
-    if (workspace.kind === "remote") {
-      const server = input.repositories.servers.getById(workspace.serverId);
-      if (!server) {
-        throw new RouteError(502, "bad_gateway", `Workspace ${workspace.id} points at missing server ${workspace.serverId}.`);
-      }
-      return createRemoteAiWorkSessionAdapter({ server, workspace });
-    }
-
     return createLocalOpencodeSessionAdapter({ runtime: input.runtime, workspace });
   }
 
