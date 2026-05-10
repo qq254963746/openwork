@@ -22,7 +22,7 @@ const POLL_SHELL_MS = 600;
 const POLL_SERVICE_MS = 1000;
 
 /** Cap displayed/stored log volume so the log viewer cannot retain unbounded text in memory. */
-const LOG_VIEWER_MAX_LINES = 2500;
+const LOG_VIEWER_MAX_LINES = 10000;
 
 function truncateLogLines(text: string, maxLines: number): string {
   if (maxLines <= 0 || !text) return text;
