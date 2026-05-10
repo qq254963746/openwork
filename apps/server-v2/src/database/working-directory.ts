@@ -31,8 +31,8 @@ function isTruthy(value: string | undefined) {
 
 function resolvePlatformDataRoot() {
   const home = os.homedir();
-  const devMode = isTruthy(process.env.OPENWORK_DEV_MODE);
-  const folderName = devMode ? "com.fengai.openwork.dev" : "com.fengai.openwork";
+  const devMode = isTruthy(process.env.AIWORK_DEV_MODE);
+  const folderName = devMode ? "com.fengai.aiwork.dev" : "com.fengai.aiwork";
 
   if (process.platform === "darwin") {
     return path.join(home, "Library", "Application Support", folderName);
@@ -52,18 +52,18 @@ function resolveRootDir(options: ResolveServerWorkingDirectoryOptions) {
     return path.resolve(options.explicitRootDir.trim());
   }
 
-  const override = process.env.OPENWORK_SERVER_V2_WORKDIR?.trim();
+  const override = process.env.AIWORK_SERVER_V2_WORKDIR?.trim();
   if (override) {
     return path.resolve(override);
   }
 
-  const sharedDataDir = process.env.OPENWORK_DATA_DIR?.trim();
+  const sharedDataDir = process.env.AIWORK_DATA_DIR?.trim();
   if (sharedDataDir) {
     return path.join(path.resolve(sharedDataDir), "server-v2");
   }
 
   if (options.environment === "test") {
-    return path.join(process.cwd(), ".openwork-server-v2-test");
+    return path.join(process.cwd(), ".aiwork-server-v2-test");
   }
 
   return path.join(resolvePlatformDataRoot(), "server-v2");
@@ -76,7 +76,7 @@ export function resolveServerWorkingDirectory(options: ResolveServerWorkingDirec
 
   return {
     databaseDir,
-    databasePath: path.join(databaseDir, "openwork-server-v2.sqlite"),
+    databasePath: path.join(databaseDir, "aiwork-server-v2.sqlite"),
     importsDir: path.join(rootDir, "imports"),
     managedDir,
     managedMcpDir: path.join(managedDir, "mcps"),

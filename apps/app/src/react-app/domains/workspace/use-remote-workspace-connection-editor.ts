@@ -41,11 +41,11 @@ export function useRemoteWorkspaceConnectionEditor<TWorkspace extends WorkspaceI
 
   const initialValues = useMemo(
     () => ({
-      openworkHostUrl: workspace?.openworkHostUrl ?? workspace?.baseUrl ?? "",
-      openworkToken:
-        workspace?.openworkToken ??
-        workspace?.openworkClientToken ??
-        workspace?.openworkHostToken ??
+      aiworkHostUrl: workspace?.aiworkHostUrl ?? workspace?.baseUrl ?? "",
+      aiworkToken:
+        workspace?.aiworkToken ??
+        workspace?.aiworkClientToken ??
+        workspace?.aiworkHostToken ??
         "",
       directory: workspace?.directory ?? workspace?.path ?? "",
       displayName: workspace?.displayName ?? workspace?.name ?? "",
@@ -72,7 +72,7 @@ export function useRemoteWorkspaceConnectionEditor<TWorkspace extends WorkspaceI
   const save = useCallback(
     async (fields: RemoteWorkspaceInput) => {
       const id = workspaceId?.trim() ?? "";
-      const baseUrl = fields.openworkHostUrl?.trim() ?? "";
+      const baseUrl = fields.aiworkHostUrl?.trim() ?? "";
       if (!id || !baseUrl) {
         setError(t("dashboard.remote_base_url_required"));
         return;
@@ -84,13 +84,13 @@ export function useRemoteWorkspaceConnectionEditor<TWorkspace extends WorkspaceI
         await workspaceUpdateRemote({
           workspaceId: id,
           baseUrl,
-          openworkHostUrl: baseUrl,
-          openworkToken: fields.openworkToken?.trim() ?? "",
-          openworkClientToken: "",
-          openworkHostToken: "",
+          aiworkHostUrl: baseUrl,
+          aiworkToken: fields.aiworkToken?.trim() ?? "",
+          aiworkClientToken: "",
+          aiworkHostToken: "",
           displayName: fields.displayName?.trim() || null,
           directory: fields.directory?.trim() || null,
-          remoteType: "openwork",
+          remoteType: "aiwork",
         });
         await onSaved(id);
         setWorkspaceId(null);

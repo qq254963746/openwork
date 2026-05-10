@@ -1,13 +1,13 @@
 import type { UIMessage } from "ai";
 
-import type { OpenworkSessionSnapshot } from "../../../../app/lib/openwork-server";
+import type { AiWorkSessionSnapshot } from "../../../../app/lib/aiwork-server";
 import { mergeSnapshotAndLiveMessages, messageListContainsAll } from "../sync/message-merge";
 import { snapshotToUIMessages } from "../sync/usechat-adapter";
 
 export function resolveRenderedSessionSnapshot(input: {
   sessionId: string;
-  currentSnapshot: OpenworkSessionSnapshot | null | undefined;
-  cachedRendered: { sessionId: string; snapshot: OpenworkSessionSnapshot } | null | undefined;
+  currentSnapshot: AiWorkSessionSnapshot | null | undefined;
+  cachedRendered: { sessionId: string; snapshot: AiWorkSessionSnapshot } | null | undefined;
 }) {
   if (input.currentSnapshot?.session.id === input.sessionId) {
     return input.currentSnapshot;
@@ -31,7 +31,7 @@ export type AssistantReplyFooterMeta = {
 };
 
 function parseAssistantMetaFromSnapshot(
-  snapshot: OpenworkSessionSnapshot | null | undefined,
+  snapshot: AiWorkSessionSnapshot | null | undefined,
 ): Map<string, AssistantReplyFooterMeta> {
   const map = new Map<string, AssistantReplyFooterMeta>();
   if (!snapshot?.messages?.length) return map;
@@ -139,7 +139,7 @@ function aggregateAssistantRunMeta(
  * consecutive assistant segment maps to aggregated timing + summed tokens for the whole run.
  */
 export function buildAssistantReplyFooterMetaMap(
-  snapshot: OpenworkSessionSnapshot | null | undefined,
+  snapshot: AiWorkSessionSnapshot | null | undefined,
   orderedMessages: UIMessage[],
 ): ReadonlyMap<string, AssistantReplyFooterMeta> {
   const raw = parseAssistantMetaFromSnapshot(snapshot);
@@ -170,7 +170,7 @@ export function buildAssistantReplyFooterMetaMap(
 
 export function deriveRenderedSessionMessages(input: {
   transcriptState: UIMessage[] | null | undefined;
-  snapshot: OpenworkSessionSnapshot | null | undefined;
+  snapshot: AiWorkSessionSnapshot | null | undefined;
   includeLiveOnlyMessages?: boolean;
 }) {
   const liveMessages = input.transcriptState ?? [];

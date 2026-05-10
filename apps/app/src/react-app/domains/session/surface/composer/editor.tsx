@@ -517,7 +517,7 @@ export function LexicalPromptEditor(props: EditorProps) {
 
   const initialConfig = useMemo(
     () => ({
-      namespace: "openwork-react-session-composer",
+      namespace: "aiwork-react-session-composer",
       onError(error: Error) {
         throw error;
       },

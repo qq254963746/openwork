@@ -1,5 +1,5 @@
-export const denSessionUpdatedEvent = "openwork-den-session-updated";
-export const denSettingsChangedEvent = "openwork-den-settings-changed";
+export const denSessionUpdatedEvent = "aiwork-den-session-updated";
+export const denSettingsChangedEvent = "aiwork-den-settings-changed";
 
 /** Persisted hosted-app connection targets + optional session/org ids (localStorage). */
 export type HostedAppConnectionSettings = {

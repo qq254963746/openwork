@@ -30,7 +30,7 @@ pub struct MigrateToElectronRequest {
     /// Optional electron-builder sha512 (base64) from latest-mac.yml.
     #[serde(default)]
     pub sha512: Option<String>,
-    /// Optional override for where the new OpenWork bundle should land on
+    /// Optional override for where the new AiWork bundle should land on
     /// macOS. Defaults to replacing the currently-running .app in place.
     #[serde(default)]
     pub target_app_path: Option<String>,
@@ -82,7 +82,7 @@ pub fn write_migration_snapshot(
 
 #[cfg(target_os = "macos")]
 fn current_app_bundle_path() -> Result<PathBuf, String> {
-    // Tauri's running .app is <something>/Contents/MacOS/OpenWork. Walk up
+    // Tauri's running .app is <something>/Contents/MacOS/AiWork. Walk up
     // two directories to get to <something>.app.
     let exe = std::env::current_exe().map_err(|e| format!("current_exe failed: {e}"))?;
     let bundle = exe
@@ -115,7 +115,7 @@ fn write_macos_migration_script(
     fs::create_dir_all(&cache).map_err(|e| format!("Failed to create cache dir: {e}"))?;
 
     let log_path = cache.join(MIGRATION_INSTALLER_LOG);
-    let script_path = cache.join("openwork-migrate.sh");
+    let script_path = cache.join("aiwork-migrate.sh");
 
     let sha256_check = match sha256 {
         Some(hash) => format!(
@@ -156,8 +156,8 @@ echo "[migration] script start $(date -u +%FT%TZ)"
 TARGET="{target}"
 URL="{url}"
 TAURI_PID="{tauri_pid}"
-WORK=$(mktemp -d /tmp/openwork-migrate-XXXXXX)
-ZIP="$WORK/OpenWork-electron.zip"
+WORK=$(mktemp -d /tmp/aiwork-migrate-XXXXXX)
+ZIP="$WORK/AiWork-electron.zip"
 
 # Wait for Tauri to fully exit before touching the .app bundle. A fixed
 # sleep races on slower machines and can leave the old bundle locked while
@@ -188,9 +188,9 @@ curl --fail --location --silent --show-error --output "$ZIP" "$URL"
 echo "[migration] extracting"
 /usr/bin/unzip -q "$ZIP" -d "$WORK"
 
-NEW_APP=$(find "$WORK" -maxdepth 2 -name 'OpenWork.app' -type d | head -n 1)
+NEW_APP=$(find "$WORK" -maxdepth 2 -name 'AiWork.app' -type d | head -n 1)
 if [ -z "$NEW_APP" ]; then
-  echo "[migration] no OpenWork.app in zip" >&2
+  echo "[migration] no AiWork.app in zip" >&2
   exit 1
 fi
 

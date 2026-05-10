@@ -1,14 +1,14 @@
-# OpenWork Design Language
+# AiWork Design Language
 
-This is the definitive visual system for OpenWork product and landing work.
+This is the definitive visual system for AiWork product and landing work.
 
-OpenWork should feel like a premium work tool: calm, useful, technical, and trustworthy. The design should read as software first, not a flashy marketing site. The goal is clarity with taste, not visual noise.
+AiWork should feel like a premium work tool: calm, useful, technical, and trustworthy. The design should read as software first, not a flashy marketing site. The goal is clarity with taste, not visual noise.
 
 ---
 
 ## 1. Core Design Position
 
-OpenWork design is:
+AiWork design is:
 
 - quiet
 - premium
@@ -17,7 +17,7 @@ OpenWork design is:
 - structured by typography, spacing, and borders
 - atmospheric only in controlled places
 
-OpenWork design is **not**:
+AiWork design is **not**:
 
 - glossy
 - glassy
@@ -45,7 +45,7 @@ Shadow should almost never be the first tool.
 
 ---
 
-## 2. The OpenWork Mood
+## 2. The AiWork Mood
 
 The product should feel like:
 
@@ -134,7 +134,7 @@ Pattern/background image rules:
 
 ## 4. Borders
 
-Borders are one of the main structure tools in OpenWork.
+Borders are one of the main structure tools in AiWork.
 
 ### Border philosophy
 
@@ -217,7 +217,7 @@ Reserved for the primary CTA only.
 
 ## 6. Geometry + Radius
 
-OpenWork should have a small set of radii and use them consistently.
+AiWork should have a small set of radii and use them consistently.
 
 ### Radius system
 
@@ -283,7 +283,7 @@ If paired with an active state (like a selected workflow descriptor), the copy m
 
 ## 7.5 Copy Direction
 
-OpenWork copy should feel as disciplined as the UI.
+AiWork copy should feel as disciplined as the UI.
 
 ### General tone
 
@@ -307,9 +307,9 @@ OpenWork copy should feel as disciplined as the UI.
 - admin-heavy or billing-heavy framing when the main value is team workflow
 - overdescribing secondary features
 
-### Preferred OpenWork Cloud framing
+### Preferred AiWork Cloud framing
 
-For OpenWork Cloud, the primary story is:
+For AiWork Cloud, the primary story is:
 
 1. share setup across the team/org
 2. keep everything in sync
@@ -332,7 +332,7 @@ It should read like:
 
 Use:
 
-- **OpenWork Cloud**
+- **AiWork Cloud**
 - **Shared setups**
 - **Shared templates**
 - **Custom LLM providers**
@@ -374,7 +374,7 @@ These should feel like helpful follow-through, not a second headline.
 
 ## 8. Buttons
 
-There are only a few button families in OpenWork.
+There are only a few button families in AiWork.
 
 ### 8.1 Primary button
 
@@ -434,7 +434,7 @@ Characteristics:
 
 ## 9. Selectors, Tabs, and Pills
 
-This is now one of the clearest OpenWork patterns.
+This is now one of the clearest AiWork patterns.
 
 ### Track pattern
 
@@ -486,7 +486,7 @@ For app navigation, especially dashboard sidebars:
 
 ## 10. Lists and Row Systems
 
-OpenWork has two primary list patterns.
+AiWork has two primary list patterns.
 
 ### 10.1 Operational row list
 
@@ -671,7 +671,7 @@ Selection should **not** usually be shown through:
 - glow
 - thick stroke
 
-OpenWork selection should feel confident, not loud.
+AiWork selection should feel confident, not loud.
 
 When a selected item sits inside a soft app shell, prefer:
 
@@ -735,7 +735,7 @@ Motion should be tight and purposeful.
 
 ---
 
-## 15. OpenWork App vs Landing
+## 15. AiWork App vs Landing
 
 The app and the landing share one system, but not the same degree of atmosphere.
 
@@ -850,7 +850,7 @@ Before shipping a UI change, ask:
 3. Are we reusing the existing primary/secondary button language?
 4. Does this section need cards, or would pills / text / opacity be cleaner?
 5. Is the shadow doing real work, or is it just decoration?
-6. Would this still feel like OpenWork if all colors were muted?
+6. Would this still feel like AiWork if all colors were muted?
 7. Does this feel like one coherent product across app and landing?
 
 If the answer to those is not clearly yes, simplify.
@@ -862,7 +862,7 @@ If the answer to those is not clearly yes, simplify.
 Use these as implementation references:
 
 - Cloud dashboard sidebar shell + selected state: match the calm sidebar/list patterns in `apps/app` settings shells (`apps/app/src/react-app/domains/settings/shell/settings-shell.tsx`) and session sidebars (`workspace-session-list.tsx`) unless a hosted Cloud reference implementation is available separately
-- Share/package modal direction: `_repos/openwork/apps/app/src/app/components/share-workspace-modal.tsx`
-- App workspace/session list rhythm: `_repos/openwork/apps/app/src/app/components/session/workspace-session-list.tsx`
+- Share/package modal direction: `_repos/aiwork/apps/app/src/app/components/share-workspace-modal.tsx`
+- App workspace/session list rhythm: `_repos/aiwork/apps/app/src/app/components/session/workspace-session-list.tsx`
 
 When in doubt, prefer the calmer version.

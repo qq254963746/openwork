@@ -81,12 +81,12 @@ function resolveLocalHostingKind(explicit?: "cloud" | "desktop" | "self_hosted")
     return explicit;
   }
 
-  const fromEnv = process.env.OPENWORK_SERVER_V2_HOSTING_KIND?.trim();
+  const fromEnv = process.env.AIWORK_SERVER_V2_HOSTING_KIND?.trim();
   if (fromEnv === "desktop" || fromEnv === "self_hosted" || fromEnv === "cloud") {
     return fromEnv;
   }
 
-  if (isTruthy(process.env.OPENWORK_DESKTOP_HOSTED) || Boolean(process.env.TAURI_ENV_PLATFORM)) {
+  if (isTruthy(process.env.AIWORK_DESKTOP_HOSTED) || Boolean(process.env.TAURI_ENV_PLATFORM)) {
     return "desktop";
   }
 
@@ -105,7 +105,7 @@ export function createAppDependencies(overrides: CreateAppDependenciesOverrides 
     localServer: {
       baseUrl: overrides.localServer?.baseUrl ?? null,
       hostingKind: resolveLocalHostingKind(overrides.localServer?.hostingKind),
-      label: overrides.localServer?.label ?? "Local OpenWork Server",
+      label: overrides.localServer?.label ?? "Local AiWork Server",
     },
     version,
     workingDirectory: overrides.workingDirectory,

@@ -2,16 +2,16 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Eye, EyeOff, Plus, RefreshCw, Trash2, X } from "lucide-react";
 
-import type { OpenworkServerClient } from "../../../../app/lib/openwork-server";
+import type { AiWorkServerClient } from "../../../../app/lib/aiwork-server";
 import {
-  readOpenworkEnvPendingChanges,
-  writeOpenworkEnvPendingChanges,
-} from "../../../../app/lib/openwork-env-runtime";
+  readAiWorkEnvPendingChanges,
+  writeAiWorkEnvPendingChanges,
+} from "../../../../app/lib/aiwork-env-runtime";
 import { t } from "../../../../i18n";
 import { Button } from "../../../design-system/button";
 import { ConfirmModal } from "../../../design-system/modals/confirm-modal";
 import { TextInput } from "../../../design-system/text-input";
-import { clearOpenworkEnvSystemContextCache } from "../../session/sync/env-context";
+import { clearAiWorkEnvSystemContextCache } from "../../session/sync/env-context";
 
 const settingsPanelClass = "rounded-[28px] border border-dls-border bg-dls-surface p-5 md:p-6";
 const rowIconButtonClass =
@@ -20,13 +20,13 @@ const rowDangerIconButtonClass =
   "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-red-7/75 bg-red-3/40 text-red-10 shadow-sm transition-colors hover:border-red-8 hover:bg-red-4/80 hover:text-red-11 focus:outline-none focus:ring-2 focus:ring-red-7/30 disabled:cursor-not-allowed disabled:opacity-50";
 
 const KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const RESERVED_PREFIXES = ["OPENWORK_", "OPENCODE_"] as const;
+const RESERVED_PREFIXES = ["AIWORK_", "OPENCODE_"] as const;
 
 type EnvItem = { key: string; value: string; updatedAt: number };
 type ApplyEnvironmentChangesResult = { statusMessage?: string } | void;
 
 export type EnvironmentViewProps = {
-  client: OpenworkServerClient | null;
+  client: AiWorkServerClient | null;
   isRemoteWorkspace: boolean;
   onStatusMessage: (message: string) => void;
   onApplyChanges?: () => Promise<ApplyEnvironmentChangesResult>;
@@ -74,7 +74,7 @@ export function EnvironmentView(props: EnvironmentViewProps) {
   const [deleteCandidate, setDeleteCandidate] = useState<EnvItem | null>(null);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [pendingChanges, setPendingChanges] = useState(() =>
-    readOpenworkEnvPendingChanges(props.runtimeKey),
+    readAiWorkEnvPendingChanges(props.runtimeKey),
   );
   const [applyConfirmOpen, setApplyConfirmOpen] = useState(false);
   const [applyBusy, setApplyBusy] = useState(false);
@@ -112,7 +112,7 @@ export function EnvironmentView(props: EnvironmentViewProps) {
   }, [refresh]);
 
   useEffect(() => {
-    setPendingChanges(readOpenworkEnvPendingChanges(props.runtimeKey));
+    setPendingChanges(readAiWorkEnvPendingChanges(props.runtimeKey));
   }, [props.runtimeKey]);
 
   useEffect(() => {
@@ -146,9 +146,9 @@ export function EnvironmentView(props: EnvironmentViewProps) {
   };
 
   const markChangesPending = () => {
-    clearOpenworkEnvSystemContextCache();
+    clearAiWorkEnvSystemContextCache();
     setPendingChanges(true);
-    writeOpenworkEnvPendingChanges(true, props.runtimeKey);
+    writeAiWorkEnvPendingChanges(true, props.runtimeKey);
     setApplyError(null);
     onStatusMessage(t("settings.environment.restart_required"));
   };
@@ -215,9 +215,9 @@ export function EnvironmentView(props: EnvironmentViewProps) {
     setApplyError(null);
     try {
       const result = await props.onApplyChanges();
-      clearOpenworkEnvSystemContextCache();
+      clearAiWorkEnvSystemContextCache();
       setPendingChanges(false);
-      writeOpenworkEnvPendingChanges(false);
+      writeAiWorkEnvPendingChanges(false);
       setApplyConfirmOpen(false);
       onStatusMessage(result?.statusMessage ?? t("settings.environment.apply_success"));
     } catch (err) {

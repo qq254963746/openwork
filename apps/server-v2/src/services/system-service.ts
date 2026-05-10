@@ -21,8 +21,8 @@ export function createSystemService(input: {
   version: string;
   workspaceRegistry: WorkspaceRegistryService;
 }) {
-  const service = "openwork-server-v2" as const;
-  const packageName = "openwork-server-v2" as const;
+  const service = "aiwork-server-v2" as const;
+  const packageName = "aiwork-server-v2" as const;
 
   return {
     getRootInfo() {
@@ -38,7 +38,7 @@ export function createSystemService(input: {
         contract: {
           source: "hono-openapi" as const,
           openapiPath: routeNamespaces.openapi,
-          sdkPackage: "@openwork/server-sdk" as const,
+          sdkPackage: "@aiwork/server-sdk" as const,
         },
       };
     },
@@ -124,7 +124,7 @@ export function createSystemService(input: {
         contract: {
           source: "hono-openapi" as const,
           openapiPath: routeNamespaces.openapi,
-          sdkPackage: "@openwork/server-sdk" as const,
+          sdkPackage: "@aiwork/server-sdk" as const,
         },
       };
     },

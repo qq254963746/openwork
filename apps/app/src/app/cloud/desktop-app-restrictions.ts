@@ -1,7 +1,7 @@
 import type {
   DesktopAppRestrictions,
   DesktopConfig,
-} from "@openwork/types/den/desktop-app-restrictions";
+} from "@aiwork/types/den/desktop-app-restrictions";
 import type { ModelRef } from "../types";
 
 export type DesktopAppRestrictionKey = keyof DesktopAppRestrictions;

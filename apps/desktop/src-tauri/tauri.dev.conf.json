@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "OpenWork Dev",
-  "identifier": "com.fengai.openwork.dev",
+  "productName": "AiWork Dev",
+  "identifier": "com.fengai.aiwork.dev",
   "bundle": {
     "icon": [
       "../resources/icons/dev/32x32.png",
@@ -10,14 +10,14 @@
       "../resources/icons/dev/icon-dev.icns"
     ],
     "macOS": {
-      "bundleName": "OpenWork - Dev",
+      "bundleName": "AiWork - Dev",
       "infoPlist": "./Info.dev.plist"
     }
   },
   "app": {
     "windows": [
       {
-        "title": "OpenWork - Dev",
+        "title": "AiWork - Dev",
         "width": 1180,
         "height": 820,
         "resizable": true,
@@ -32,7 +32,7 @@
     "deep-link": {
       "desktop": {
         "schemes": [
-          "openwork-dev"
+          "aiwork-dev"
         ]
       }
     }

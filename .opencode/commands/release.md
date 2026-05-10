@@ -1,8 +1,8 @@
 ---
-description: Run the OpenWork release flow
+description: Run the AiWork release flow
 ---
 
-You are running the OpenWork release flow in this repo.
+You are running the AiWork release flow in this repo.
 
 Arguments: `$ARGUMENTS`
 - If empty, default to a patch release.
@@ -16,7 +16,7 @@ Do the following, in order, and stop on any failure:
 4. Run `pnpm release:review` and resolve any mismatches.
 5. Tag and push: `git tag vX.Y.Z` and `git push origin vX.Y.Z`, then `git push origin dev`.
 6. Watch the Release App GitHub Actions workflow to completion.
-7. If releasing openwork-orchestrator sidecars, build deterministically with `SOURCE_DATE_EPOCH`, upload assets to `openwork-orchestrator-vX.Y.Z`, and publish `openwork-orchestrator`.
-8. If `openwork-server` or `opencode-router` versions changed, publish those packages.
+7. If releasing aiwork-orchestrator sidecars, build deterministically with `SOURCE_DATE_EPOCH`, upload assets to `aiwork-orchestrator-vX.Y.Z`, and publish `aiwork-orchestrator`.
+8. If `aiwork-server` or `opencode-router` versions changed, publish those packages.
 
 Report what you changed, the tag created, and the GHA status.

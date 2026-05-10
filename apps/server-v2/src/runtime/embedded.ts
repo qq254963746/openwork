@@ -5,15 +5,15 @@ export type EmbeddedRuntimeBundle = {
 };
 
 declare global {
-  var __OPENWORK_SERVER_V2_EMBEDDED_RUNTIME__:
+  var __AIWORK_SERVER_V2_EMBEDDED_RUNTIME__:
     | EmbeddedRuntimeBundle
     | undefined;
 }
 
 export function registerEmbeddedRuntimeBundle(bundle: EmbeddedRuntimeBundle | undefined) {
-  globalThis.__OPENWORK_SERVER_V2_EMBEDDED_RUNTIME__ = bundle;
+  globalThis.__AIWORK_SERVER_V2_EMBEDDED_RUNTIME__ = bundle;
 }
 
 export function getEmbeddedRuntimeBundle() {
-  return globalThis.__OPENWORK_SERVER_V2_EMBEDDED_RUNTIME__ ?? null;
+  return globalThis.__AIWORK_SERVER_V2_EMBEDDED_RUNTIME__ ?? null;
 }

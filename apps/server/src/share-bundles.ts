@@ -7,8 +7,8 @@ type PublishBundleInput = {
   timeoutMs?: number;
 };
 
-const DEFAULT_PUBLISHER_BASE_URL = String(process.env.OPENWORK_PUBLISHER_BASE_URL ?? "").trim() || "https://share.openworklabs.com";
-const DEFAULT_PUBLISHER_ORIGIN = String(process.env.OPENWORK_PUBLISHER_REQUEST_ORIGIN ?? "").trim() || "https://app.openwork.software";
+const DEFAULT_PUBLISHER_BASE_URL = String(process.env.AIWORK_PUBLISHER_BASE_URL ?? "").trim() || "https://share.aiworklabs.com";
+const DEFAULT_PUBLISHER_ORIGIN = String(process.env.AIWORK_PUBLISHER_REQUEST_ORIGIN ?? "").trim() || "https://app.aiwork.software";
 const ALLOWED_BUNDLE_TYPES = new Set(["skill", "skills-set"]);
 
 export function normalizeSharedBundleFetchUrl(input: URL): URL {
@@ -60,7 +60,7 @@ export function resolveTrustedSharedBundleFetchUrl(bundleUrl: unknown): URL {
     throw new ApiError(
       400,
       "untrusted_bundle_url",
-      `Shared bundle URLs must use the configured OpenWork publisher (${trustedBaseUrl.origin}). Import only bundles from trusted sources.`,
+      `Shared bundle URLs must use the configured AiWork publisher (${trustedBaseUrl.origin}). Import only bundles from trusted sources.`,
     );
   }
 
@@ -107,9 +107,9 @@ export async function publishSharedBundle(input: PublishBundleInput): Promise<{ 
         "Content-Type": "application/json",
         Accept: "application/json",
         Origin: DEFAULT_PUBLISHER_ORIGIN,
-        "X-OpenWork-Bundle-Type": bundleType,
-        "X-OpenWork-Schema-Version": "v1",
-        ...(input.name?.trim() ? { "X-OpenWork-Name": input.name.trim() } : {}),
+        "X-AiWork-Bundle-Type": bundleType,
+        "X-AiWork-Schema-Version": "v1",
+        ...(input.name?.trim() ? { "X-AiWork-Name": input.name.trim() } : {}),
       },
       body: JSON.stringify(input.payload),
       signal: controller.signal,

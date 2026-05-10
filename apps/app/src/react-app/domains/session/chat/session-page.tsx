@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Loader2, Minimize2, PanelLeftOpen, PanelRightIcon, Zap } from "lucide-react";
 
 import { t } from "../../../../i18n";
-import { buildOpenworkWorkspaceBaseUrl, type OpenworkServerClient, type OpenworkServerStatus } from "../../../../app/lib/openwork-server";
+import { buildAiWorkWorkspaceBaseUrl, type AiWorkServerClient, type AiWorkServerStatus } from "../../../../app/lib/aiwork-server";
 import { getDisplaySessionTitle } from "../../../../app/lib/session-title";
 import type { BootPhase } from "../../../../app/lib/startup-boot";
 import type { WorkspaceInfo } from "../../../../app/lib/desktop";
@@ -110,7 +110,7 @@ export type SessionPageSurfaceProps = Omit<
   | "workspaceId"
   | "sessionId"
   | "opencodeBaseUrl"
-  | "openworkToken"
+  | "aiworkToken"
   | "workspaceSidePanelOpen"
   | "requestWorkspaceSidePanelOpen"
 >;
@@ -128,9 +128,9 @@ export type SessionPageProps = {
   runtimeWorkspaceId: string | null;
   workspaces: WorkspaceInfo[];
   clientConnected: boolean;
-  openworkServerStatus: OpenworkServerStatus;
-  openworkServerClient: OpenworkServerClient | null;
-  openworkServerToken?: string | null;
+  aiworkServerStatus: AiWorkServerStatus;
+  aiworkServerClient: AiWorkServerClient | null;
+  aiworkServerToken?: string | null;
   developerMode: boolean;
   headerStatus: string;
   busyHint: string | null;
@@ -248,17 +248,17 @@ export function SessionPage(props: SessionPageProps) {
 
   const reactSessionBaseUrl = useMemo(() => {
     const workspaceId = props.runtimeWorkspaceId?.trim() ?? "";
-    const baseUrl = props.openworkServerClient?.baseUrl?.trim() ?? "";
+    const baseUrl = props.aiworkServerClient?.baseUrl?.trim() ?? "";
     if (!workspaceId || !baseUrl) return "";
-    const mounted = buildOpenworkWorkspaceBaseUrl(baseUrl, workspaceId) ?? baseUrl;
+    const mounted = buildAiWorkWorkspaceBaseUrl(baseUrl, workspaceId) ?? baseUrl;
     return `${mounted.replace(/\/+$/, "")}/opencode`;
-  }, [props.openworkServerClient?.baseUrl, props.runtimeWorkspaceId]);
+  }, [props.aiworkServerClient?.baseUrl, props.runtimeWorkspaceId]);
 
-  const reactSessionToken = props.openworkServerClient?.token?.trim() || props.openworkServerToken?.trim() || "";
+  const reactSessionToken = props.aiworkServerClient?.token?.trim() || props.aiworkServerToken?.trim() || "";
   const canRenderReactSurface = Boolean(
     props.selectedSessionId &&
       props.runtimeWorkspaceId &&
-      props.openworkServerClient &&
+      props.aiworkServerClient &&
       reactSessionBaseUrl &&
       reactSessionToken &&
       props.surface,
@@ -405,7 +405,7 @@ export function SessionPage(props: SessionPageProps) {
   const statusBarSharedProps = useMemo(
     () => ({
       clientConnected: props.clientConnected,
-      openworkServerStatus: props.openworkServerStatus,
+      aiworkServerStatus: props.aiworkServerStatus,
       developerMode: props.developerMode,
       settingsOpen: props.statusBar?.settingsOpen ?? false,
       onOpenSettings: props.onOpenSettings,
@@ -426,7 +426,7 @@ export function SessionPage(props: SessionPageProps) {
       props.developerMode,
       props.mcpConnectedCount,
       props.onOpenSettings,
-      props.openworkServerStatus,
+      props.aiworkServerStatus,
       props.providerConnectedIds,
       props.statusBar?.settingsOpen,
       props.statusBar?.showSettingsButton,
@@ -684,11 +684,11 @@ export function SessionPage(props: SessionPageProps) {
 
               {!showDelayedSessionLoadingState && canRenderReactSurface ? (
                 <SessionSurface
-                  client={props.openworkServerClient!}
+                  client={props.aiworkServerClient!}
                   workspaceId={props.runtimeWorkspaceId!}
                   sessionId={props.selectedSessionId!}
                   opencodeBaseUrl={reactSessionBaseUrl}
-                  openworkToken={reactSessionToken}
+                  aiworkToken={reactSessionToken}
                   {...props.surface!}
                   workspaceSidePanelOpen={workspaceSidePanelOpen}
                   requestWorkspaceSidePanelOpen={() => setWorkspaceSidePanelOpen(true)}

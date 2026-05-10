@@ -3,21 +3,21 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key>
-  <string>com.fengai.openwork.dev</string>
+  <string>com.fengai.aiwork.dev</string>
   <key>CFBundleName</key>
-  <string>OpenWork - Dev</string>
+  <string>AiWork - Dev</string>
   <key>CFBundleDisplayName</key>
-  <string>OpenWork - Dev</string>
+  <string>AiWork - Dev</string>
   <key>CFBundleURLTypes</key>
   <array>
     <dict>
       <key>CFBundleTypeRole</key>
       <string>Editor</string>
       <key>CFBundleURLName</key>
-      <string>com.fengai.openwork.dev openwork-dev</string>
+      <string>com.fengai.aiwork.dev aiwork-dev</string>
       <key>CFBundleURLSchemes</key>
       <array>
-        <string>openwork-dev</string>
+        <string>aiwork-dev</string>
       </array>
     </dict>
   </array>

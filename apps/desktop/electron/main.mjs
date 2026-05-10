@@ -23,26 +23,26 @@ import { createRuntimeManager } from "./runtime.mjs";
 import { exportWorkspaceConfig, importWorkspaceConfig } from "./workspace-archive.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const NATIVE_DEEP_LINK_EVENT = "openwork:deep-link-native";
-const TAURI_APP_IDENTIFIER = "com.fengai.openwork";
-const DEV_APP_IDENTIFIER = "com.fengai.openwork.dev";
-const DESKTOP_PROTOCOL_SCHEME = "openwork";
-const isDevMode = process.env.OPENWORK_DEV_MODE === "1";
-const APP_NAME = isDevMode ? "OpenWork - Dev" : "OpenWork";
+const NATIVE_DEEP_LINK_EVENT = "aiwork:deep-link-native";
+const TAURI_APP_IDENTIFIER = "com.fengai.aiwork";
+const DEV_APP_IDENTIFIER = "com.fengai.aiwork.dev";
+const DESKTOP_PROTOCOL_SCHEME = "aiwork";
+const isDevMode = process.env.AIWORK_DEV_MODE === "1";
+const APP_NAME = isDevMode ? "AiWork - Dev" : "AiWork";
 const APP_IDENTIFIER = isDevMode ? DEV_APP_IDENTIFIER : TAURI_APP_IDENTIFIER;
 
 // Production Electron shares the same on-disk state folder as the Tauri shell
 // so in-place migration is a no-op for almost every file. Dev mode uses the
 // separate dev identifier so it can run beside the production app.
 //
-// Override via OPENWORK_ELECTRON_USERDATA so dogfooders can isolate their
+// Override via AIWORK_ELECTRON_USERDATA so dogfooders can isolate their
 // Electron install from the real Tauri app.
 app.setName(APP_NAME);
 app.setAppUserModelId(APP_IDENTIFIER);
 if (app.isPackaged) {
   app.setAsDefaultProtocolClient(DESKTOP_PROTOCOL_SCHEME);
 }
-const userDataOverride = process.env.OPENWORK_ELECTRON_USERDATA?.trim();
+const userDataOverride = process.env.AIWORK_ELECTRON_USERDATA?.trim();
 if (userDataOverride) {
   app.setPath("userData", userDataOverride);
 } else {
@@ -86,16 +86,16 @@ if (process.platform === "darwin" && APP_ICON_IMAGE && !APP_ICON_IMAGE.isEmpty()
 
 // Optional: expose Chrome DevTools Protocol so external tools (chrome-devtools
 // MCP, raw CDP clients, etc.) can attach to this Electron instance.
-// Enable by setting OPENWORK_ELECTRON_REMOTE_DEBUG_PORT=<port> before launch.
+// Enable by setting AIWORK_ELECTRON_REMOTE_DEBUG_PORT=<port> before launch.
 const remoteDebugPort = Number.parseInt(
-  process.env.OPENWORK_ELECTRON_REMOTE_DEBUG_PORT?.trim() ?? "",
+  process.env.AIWORK_ELECTRON_REMOTE_DEBUG_PORT?.trim() ?? "",
   10,
 );
 if (Number.isFinite(remoteDebugPort) && remoteDebugPort > 0) {
   app.commandLine.appendSwitch("remote-debugging-port", String(remoteDebugPort));
   app.commandLine.appendSwitch("remote-debugging-address", "127.0.0.1");
 }
-const DEFAULT_DEN_BASE_URL = "https://app.openworklabs.com";
+const DEFAULT_DEN_BASE_URL = "https://app.aiworklabs.com";
 const DEFAULT_LOCAL_BASE_URL = "http://127.0.0.1:4096";
 
 function envFlagDisabled(name) {
@@ -104,7 +104,7 @@ function envFlagDisabled(name) {
 }
 
 async function installReactDevToolsForDev() {
-  if (app.isPackaged || envFlagDisabled("OPENWORK_REACT_DEVTOOLS")) return;
+  if (app.isPackaged || envFlagDisabled("AIWORK_REACT_DEVTOOLS")) return;
   try {
     const mod = await import("electron-devtools-installer");
     const installExtension =
@@ -149,7 +149,7 @@ const IDLE_ENGINE_INFO = Object.freeze({
   lastStderr: null,
 });
 
-const IDLE_OPENWORK_SERVER_INFO = Object.freeze({
+const IDLE_AIWORK_SERVER_INFO = Object.freeze({
   running: false,
   remoteAccessEnabled: false,
   host: null,
@@ -197,8 +197,8 @@ function forwardedDeepLinks(argv) {
     .map((entry) => entry.trim())
     .filter(
       (entry) =>
-        entry.startsWith("openwork://") ||
-        entry.startsWith("openwork-dev://") ||
+        entry.startsWith("aiwork://") ||
+        entry.startsWith("aiwork-dev://") ||
         entry.startsWith("https://") ||
         entry.startsWith("http://"),
     );
@@ -220,19 +220,19 @@ function flushPendingDeepLinks() {
 }
 
 function desktopBootstrapPath() {
-  if (process.env.OPENWORK_DESKTOP_BOOTSTRAP_PATH?.trim()) {
-    return process.env.OPENWORK_DESKTOP_BOOTSTRAP_PATH.trim();
+  if (process.env.AIWORK_DESKTOP_BOOTSTRAP_PATH?.trim()) {
+    return process.env.AIWORK_DESKTOP_BOOTSTRAP_PATH.trim();
   }
-  return path.join(os.homedir(), ".config", "openwork", "desktop-bootstrap.json");
+  return path.join(os.homedir(), ".config", "aiwork", "desktop-bootstrap.json");
 }
 
 function workspaceStatePath() {
-  return path.join(app.getPath("userData"), "openwork-workspaces.json");
+  return path.join(app.getPath("userData"), "aiwork-workspaces.json");
 }
 
-// Earlier Electron alpha builds copied Tauri's openwork-workspaces.json into an
+// Earlier Electron alpha builds copied Tauri's aiwork-workspaces.json into an
 // Electron-only workspace-state.json. Keep importing that file when the shared
-// canonical file is missing, but write openwork-workspaces.json going forward so
+// canonical file is missing, but write aiwork-workspaces.json going forward so
 // Tauri rollback and Electron both read the same desktop workspace state.
 function legacyElectronWorkspaceStatePath() {
   return path.join(app.getPath("userData"), "workspace-state.json");
@@ -248,7 +248,7 @@ async function migrateLegacyElectronWorkspaceStateIfNeeded() {
     const raw = await readFile(legacy, "utf8");
     await writeFile(current, raw, "utf8");
     console.info(
-      "[migration] copied workspace-state.json → openwork-workspaces.json",
+      "[migration] copied workspace-state.json → aiwork-workspaces.json",
     );
     return true;
   } catch (error) {
@@ -388,7 +388,7 @@ function validateSkillName(raw) {
   return trimmed;
 }
 
-function defaultWorkspaceOpenworkConfig(workspacePath, preset = null) {
+function defaultWorkspaceAiWorkConfig(workspacePath, preset = null) {
   return {
     version: 1,
     workspace: workspacePath
@@ -435,27 +435,27 @@ function remoteWorkspaceId(baseUrl, directory) {
   return stableWorkspaceId(key);
 }
 
-function openworkRemoteWorkspaceId(hostUrl, workspaceId) {
+function aiworkRemoteWorkspaceId(hostUrl, workspaceId) {
   const key = String(workspaceId ?? "").trim()
-    ? `openwork::${hostUrl}::${String(workspaceId).trim()}`
-    : `openwork::${hostUrl}`;
+    ? `aiwork::${hostUrl}::${String(workspaceId).trim()}`
+    : `aiwork::${hostUrl}`;
   return stableWorkspaceId(key);
 }
 
-async function readWorkspaceOpenworkConfig(workspacePath) {
-  const openworkPath = path.join(workspacePath, ".opencode", "openwork.json");
-  if (!(await pathExists(openworkPath))) {
-    return defaultWorkspaceOpenworkConfig(workspacePath);
+async function readWorkspaceAiWorkConfig(workspacePath) {
+  const aiworkPath = path.join(workspacePath, ".opencode", "aiwork.json");
+  if (!(await pathExists(aiworkPath))) {
+    return defaultWorkspaceAiWorkConfig(workspacePath);
   }
-  const raw = await readFile(openworkPath, "utf8");
+  const raw = await readFile(aiworkPath, "utf8");
   return JSON.parse(raw);
 }
 
-async function writeWorkspaceOpenworkConfig(workspacePath, config) {
-  const openworkPath = path.join(workspacePath, ".opencode", "openwork.json");
-  await mkdir(path.dirname(openworkPath), { recursive: true });
-  await writeFile(openworkPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
-  return execResult(true, `Wrote ${openworkPath}`);
+async function writeWorkspaceAiWorkConfig(workspacePath, config) {
+  const aiworkPath = path.join(workspacePath, ".opencode", "aiwork.json");
+  await mkdir(path.dirname(aiworkPath), { recursive: true });
+  await writeFile(aiworkPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+  return execResult(true, `Wrote ${aiworkPath}`);
 }
 
 async function readWorkspaceState() {
@@ -520,15 +520,15 @@ async function disposeRuntimeBeforeQuit() {
   await runtimeManager.dispose().catch(() => undefined);
 }
 
-function assertOpenworkServerReady(info) {
+function assertAiWorkServerReady(info) {
   if (!info?.running) {
-    throw new Error("OpenWork server did not stay running after startup.");
+    throw new Error("AiWork server did not stay running after startup.");
   }
   if (!info.baseUrl) {
-    throw new Error("OpenWork server did not report a base URL after startup.");
+    throw new Error("AiWork server did not report a base URL after startup.");
   }
   if (!info.ownerToken && !info.clientToken) {
-    throw new Error("OpenWork server did not report an access token after startup.");
+    throw new Error("AiWork server did not report an access token after startup.");
   }
   return info;
 }
@@ -592,8 +592,8 @@ async function bootRuntimeForSelectedWorkspace() {
     workspacePath: bootWorkspaceRoot,
     name: bootWorkspace.name ?? bootWorkspace.displayName ?? null,
   }).catch(() => undefined);
-  const openworkServer = assertOpenworkServerReady(await runtimeManager.openworkServerInfo());
-  return { ok: true, skipped: false, engine, openworkServer, workspaceId: bootWorkspace.id ?? null };
+  const aiworkServer = assertAiWorkServerReady(await runtimeManager.aiworkServerInfo());
+  return { ok: true, skipped: false, engine, aiworkServer, workspaceId: bootWorkspace.id ?? null };
 }
 
 function ensureRuntimeBootstrap() {
@@ -617,12 +617,12 @@ function normalizeWorkspaceEntry(input) {
     baseUrl: input.baseUrl ?? null,
     directory: input.directory ?? null,
     displayName: input.displayName ?? null,
-    openworkHostUrl: input.openworkHostUrl ?? null,
-    openworkToken: input.openworkToken ?? null,
-    openworkClientToken: input.openworkClientToken ?? null,
-    openworkHostToken: input.openworkHostToken ?? null,
-    openworkWorkspaceId: input.openworkWorkspaceId ?? null,
-    openworkWorkspaceName: input.openworkWorkspaceName ?? null,
+    aiworkHostUrl: input.aiworkHostUrl ?? null,
+    aiworkToken: input.aiworkToken ?? null,
+    aiworkClientToken: input.aiworkClientToken ?? null,
+    aiworkHostToken: input.aiworkHostToken ?? null,
+    aiworkWorkspaceId: input.aiworkWorkspaceId ?? null,
+    aiworkWorkspaceName: input.aiworkWorkspaceName ?? null,
     sandboxBackend: input.sandboxBackend ?? null,
     sandboxRunId: input.sandboxRunId ?? null,
     sandboxContainerName: input.sandboxContainerName ?? null,
@@ -984,7 +984,7 @@ async function handleDesktopInvoke(event, command, ...args) {
         workspaceType: "local",
       });
       await mkdir(path.join(folderPath, ".opencode"), { recursive: true });
-      await writeWorkspaceOpenworkConfig(folderPath, defaultWorkspaceOpenworkConfig(folderPath, preset));
+      await writeWorkspaceAiWorkConfig(folderPath, defaultWorkspaceAiWorkConfig(folderPath, preset));
       return mutateWorkspaceState((state) => {
         const workspacePathKey = normalizeWorkspacePathKey(workspace.path);
         state.workspaces = state.workspaces.filter(
@@ -1004,20 +1004,20 @@ async function handleDesktopInvoke(event, command, ...args) {
       if (!baseUrl.startsWith("http://") && !baseUrl.startsWith("https://")) {
         throw new Error("baseUrl must start with http:// or https://");
       }
-      const remoteType = input.remoteType === "opencode" ? "opencode" : "openwork";
+      const remoteType = input.remoteType === "opencode" ? "opencode" : "aiwork";
       const directory = typeof input.directory === "string" && input.directory.trim() ? input.directory.trim() : null;
-      const openworkHostUrl = typeof input.openworkHostUrl === "string" && input.openworkHostUrl.trim()
-        ? input.openworkHostUrl.trim()
+      const aiworkHostUrl = typeof input.aiworkHostUrl === "string" && input.aiworkHostUrl.trim()
+        ? input.aiworkHostUrl.trim()
         : null;
-      const openworkWorkspaceId = typeof input.openworkWorkspaceId === "string" && input.openworkWorkspaceId.trim()
-        ? input.openworkWorkspaceId.trim()
+      const aiworkWorkspaceId = typeof input.aiworkWorkspaceId === "string" && input.aiworkWorkspaceId.trim()
+        ? input.aiworkWorkspaceId.trim()
         : null;
-      const id = remoteType === "openwork"
-        ? openworkRemoteWorkspaceId(openworkHostUrl ?? baseUrl, openworkWorkspaceId)
+      const id = remoteType === "aiwork"
+        ? aiworkRemoteWorkspaceId(aiworkHostUrl ?? baseUrl, aiworkWorkspaceId)
         : remoteWorkspaceId(baseUrl, directory);
       const workspace = normalizeWorkspaceEntry({
         id,
-        name: String(input.displayName ?? input.openworkWorkspaceName ?? "Remote workspace"),
+        name: String(input.displayName ?? input.aiworkWorkspaceName ?? "Remote workspace"),
         displayName: input.displayName ?? null,
         path: directory ?? "",
         preset: "remote",
@@ -1025,12 +1025,12 @@ async function handleDesktopInvoke(event, command, ...args) {
         remoteType,
         baseUrl,
         directory,
-        openworkHostUrl,
-        openworkToken: input.openworkToken ?? null,
-        openworkClientToken: input.openworkClientToken ?? null,
-        openworkHostToken: input.openworkHostToken ?? null,
-        openworkWorkspaceId,
-        openworkWorkspaceName: input.openworkWorkspaceName ?? null,
+        aiworkHostUrl,
+        aiworkToken: input.aiworkToken ?? null,
+        aiworkClientToken: input.aiworkClientToken ?? null,
+        aiworkHostToken: input.aiworkHostToken ?? null,
+        aiworkWorkspaceId,
+        aiworkWorkspaceName: input.aiworkWorkspaceName ?? null,
         sandboxBackend: input.sandboxBackend ?? null,
         sandboxRunId: input.sandboxRunId ?? null,
         sandboxContainerName: input.sandboxContainerName ?? null,
@@ -1083,21 +1083,21 @@ async function handleDesktopInvoke(event, command, ...args) {
       if (!workspacePath || !authorizedRoot) {
         throw new Error("workspacePath and folderPath are required");
       }
-      const config = await readWorkspaceOpenworkConfig(workspacePath);
+      const config = await readWorkspaceAiWorkConfig(workspacePath);
       if (!Array.isArray(config.authorizedRoots)) {
         config.authorizedRoots = [];
       }
       if (!config.authorizedRoots.includes(authorizedRoot)) {
         config.authorizedRoots.push(authorizedRoot);
       }
-      return writeWorkspaceOpenworkConfig(workspacePath, config);
+      return writeWorkspaceAiWorkConfig(workspacePath, config);
     }
-    case "workspaceOpenworkRead":
-      return readWorkspaceOpenworkConfig(String(args[0]?.workspacePath ?? "").trim());
-    case "workspaceOpenworkWrite":
-      return writeWorkspaceOpenworkConfig(
+    case "workspaceAiWorkRead":
+      return readWorkspaceAiWorkConfig(String(args[0]?.workspacePath ?? "").trim());
+    case "workspaceAiWorkWrite":
+      return writeWorkspaceAiWorkConfig(
         String(args[0]?.workspacePath ?? "").trim(),
-        args[0]?.config ?? defaultWorkspaceOpenworkConfig(""),
+        args[0]?.config ?? defaultWorkspaceAiWorkConfig(""),
       );
     case "workspaceExportConfig": {
       const input = args[0] ?? {};
@@ -1190,15 +1190,15 @@ async function handleDesktopInvoke(event, command, ...args) {
     case "appBuildInfo":
       return {
         version: app.getVersion(),
-        gitSha: process.env.OPENWORK_GIT_SHA ?? null,
-        buildEpoch: process.env.OPENWORK_BUILD_EPOCH ?? null,
-        openworkDevMode: process.env.OPENWORK_DEV_MODE === "1",
+        gitSha: process.env.AIWORK_GIT_SHA ?? null,
+        buildEpoch: process.env.AIWORK_BUILD_EPOCH ?? null,
+        aiworkDevMode: process.env.AIWORK_DEV_MODE === "1",
       };
     case "getDesktopBootstrapConfig":
       return getDesktopBootstrapConfig();
     case "setDesktopBootstrapConfig":
       return setDesktopBootstrapConfig(args[0] ?? {});
-    case "nukeOpenworkAndOpencodeConfigAndExit": {
+    case "nukeAiWorkAndOpencodeConfigAndExit": {
       await rm(app.getPath("userData"), { recursive: true, force: true });
       app.exit(0);
       return undefined;
@@ -1210,14 +1210,14 @@ async function handleDesktopInvoke(event, command, ...args) {
       return runtimeManager.sandboxDoctor();
     case "sandboxStop":
       return runtimeManager.sandboxStop(String(args[0] ?? "").trim());
-    case "sandboxCleanupOpenworkContainers":
-      return runtimeManager.sandboxCleanupOpenworkContainers();
+    case "sandboxCleanupAiWorkContainers":
+      return runtimeManager.sandboxCleanupAiWorkContainers();
     case "sandboxDebugProbe":
       return runtimeManager.sandboxDebugProbe();
-    case "openworkServerInfo":
-      return runtimeManager.openworkServerInfo();
-    case "openworkServerRestart":
-      return runtimeManager.openworkServerRestart(args[0] ?? {});
+    case "aiworkServerInfo":
+      return runtimeManager.aiworkServerInfo();
+    case "aiworkServerRestart":
+      return runtimeManager.aiworkServerRestart(args[0] ?? {});
     case "pickDirectory": {
       const options = args[0] ?? {};
       /** @type {import("electron").OpenDialogOptions["properties"]} */
@@ -1340,7 +1340,7 @@ async function handleDesktopInvoke(event, command, ...args) {
         String(args[1] ?? "").trim(),
         String(args[2] ?? ""),
       );
-    case "resetOpenworkState": {
+    case "resetAiWorkState": {
       await rm(workspaceStatePath(), { force: true });
       await rm(desktopBootstrapPath(), { force: true });
       return undefined;
@@ -1454,7 +1454,7 @@ function jsonForJavaScript(value) {
   return JSON.stringify(JSON.stringify(value ?? {}));
 }
 
-async function evaluateOpenworkControl(expression, options = {}) {
+async function evaluateAiWorkControl(expression, options = {}) {
   const win = await createMainWindow();
   if (options.focus === true) {
     win.show();
@@ -1464,37 +1464,37 @@ async function evaluateOpenworkControl(expression, options = {}) {
   return win.webContents.executeJavaScript(expression, true);
 }
 
-async function runOpenworkControlCommand(command, args = {}) {
+async function runAiWorkControlCommand(command, args = {}) {
   const argsJsonLiteral = jsonForJavaScript(args);
   if (command === "snapshot") {
-    return evaluateOpenworkControl(`(async () => {
-      const control = window.__openworkControl;
-      if (!control) return { ok: false, error: "OpenWork control surface is not available yet." };
+    return evaluateAiWorkControl(`(async () => {
+      const control = window.__aiworkControl;
+      if (!control) return { ok: false, error: "AiWork control surface is not available yet." };
       control.setEnabled?.(true);
       return { ok: true, ...control.snapshot() };
     })()`);
   }
   if (command === "actions") {
-    return evaluateOpenworkControl(`(async () => {
-      const control = window.__openworkControl;
-      if (!control) return { ok: false, error: "OpenWork control surface is not available yet." };
+    return evaluateAiWorkControl(`(async () => {
+      const control = window.__aiworkControl;
+      if (!control) return { ok: false, error: "AiWork control surface is not available yet." };
       control.setEnabled?.(true);
       return { ok: true, actions: control.listActions() };
     })()`);
   }
   if (command === "execute") {
-    return evaluateOpenworkControl(`(async () => {
-      const control = window.__openworkControl;
+    return evaluateAiWorkControl(`(async () => {
+      const control = window.__aiworkControl;
       const input = JSON.parse(${argsJsonLiteral});
-      if (!control) return { ok: false, error: "OpenWork control surface is not available yet." };
+      if (!control) return { ok: false, error: "AiWork control surface is not available yet." };
       if (!input || typeof input.actionId !== "string" || !input.actionId.trim()) {
-        return { ok: false, error: "Missing OpenWork actionId." };
+        return { ok: false, error: "Missing AiWork actionId." };
       }
       control.setEnabled?.(true);
       return control.execute(input.actionId, input.args ?? {});
     })()`, { focus: true });
   }
-  return { ok: false, error: `Unknown OpenWork control command: ${command}` };
+  return { ok: false, error: `Unknown AiWork control command: ${command}` };
 }
 
 async function startUiControlServer() {
@@ -1511,15 +1511,15 @@ async function startUiControlServer() {
         return;
       }
       if (request.method === "GET" && url.pathname === "/snapshot") {
-        sendJsonResponse(response, 200, await runOpenworkControlCommand("snapshot"));
+        sendJsonResponse(response, 200, await runAiWorkControlCommand("snapshot"));
         return;
       }
       if (request.method === "GET" && url.pathname === "/actions") {
-        sendJsonResponse(response, 200, await runOpenworkControlCommand("actions"));
+        sendJsonResponse(response, 200, await runAiWorkControlCommand("actions"));
         return;
       }
       if (request.method === "POST" && url.pathname === "/execute") {
-        sendJsonResponse(response, 200, await runOpenworkControlCommand("execute", await readJsonRequestBody(request)));
+        sendJsonResponse(response, 200, await runAiWorkControlCommand("execute", await readJsonRequestBody(request)));
         return;
       }
       sendJsonResponse(response, 404, { ok: false, error: "Not found" });
@@ -1533,8 +1533,8 @@ async function startUiControlServer() {
   });
   const address = uiControlServer.address();
   const port = typeof address === "object" && address ? address.port : null;
-  if (!port) throw new Error("Could not start OpenWork UI control bridge.");
-  uiControlDiscoveryPath = path.join(app.getPath("userData"), "openwork-ui-control.json");
+  if (!port) throw new Error("Could not start AiWork UI control bridge.");
+  uiControlDiscoveryPath = path.join(app.getPath("userData"), "aiwork-ui-control.json");
   await writeFile(
     uiControlDiscoveryPath,
     `${JSON.stringify({ version: 1, app: APP_NAME, identifier: APP_IDENTIFIER, platform: process.platform, baseUrl: `http://127.0.0.1:${port}`, token: uiControlToken }, null, 2)}\n`,
@@ -1610,7 +1610,7 @@ async function createMainWindow() {
     return { action: "allow" };
   });
 
-  const startUrl = process.env.OPENWORK_ELECTRON_START_URL?.trim() || process.env.ELECTRON_START_URL?.trim();
+  const startUrl = process.env.AIWORK_ELECTRON_START_URL?.trim() || process.env.ELECTRON_START_URL?.trim();
   if (startUrl) {
     await mainWindow.loadURL(startUrl);
   } else {
@@ -1622,13 +1622,13 @@ async function createMainWindow() {
   return mainWindow;
 }
 
-ipcMain.handle("openwork:desktop", handleDesktopInvoke);
-ipcMain.handle("openwork:shell:openExternal", async (_event, url) => {
+ipcMain.handle("aiwork:desktop", handleDesktopInvoke);
+ipcMain.handle("aiwork:shell:openExternal", async (_event, url) => {
   if (typeof url === "string" && url.trim().length > 0) {
     await shell.openExternal(url);
   }
 });
-ipcMain.handle("openwork:shell:relaunch", async () => {
+ipcMain.handle("aiwork:shell:relaunch", async () => {
   app.relaunch();
   app.exit(0);
 });

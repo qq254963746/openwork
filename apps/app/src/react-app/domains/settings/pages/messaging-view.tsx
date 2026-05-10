@@ -3,11 +3,11 @@ import { ArrowRight, ChevronRight, Copy, Link, RefreshCcw, Shield } from "lucide
 
 import { t } from "../../../../i18n";
 import type {
-  OpenworkOpenCodeRouterHealthSnapshot,
-  OpenworkOpenCodeRouterIdentityItem,
-  OpenworkOpenCodeRouterSendResult,
-  OpenworkServerStatus,
-} from "../../../../app/lib/openwork-server";
+  AiWorkOpenCodeRouterHealthSnapshot,
+  AiWorkOpenCodeRouterIdentityItem,
+  AiWorkOpenCodeRouterSendResult,
+  AiWorkServerStatus,
+} from "../../../../app/lib/aiwork-server";
 import { Button } from "../../../design-system/button";
 import { ConfirmModal } from "../../../design-system/modals/confirm-modal";
 import { TextInput } from "../../../design-system/text-input";
@@ -21,16 +21,16 @@ export type MessagingViewExpandedChannel = MessagingChannel | null;
 export type MessagingViewProps = {
   busy: boolean;
   showHeader?: boolean;
-  openworkServerStatus: OpenworkServerStatus;
-  openworkServerUrl: string;
-  scopedOpenworkBaseUrl?: string;
+  aiworkServerStatus: AiWorkServerStatus;
+  aiworkServerUrl: string;
+  scopedAiWorkBaseUrl?: string;
   workspaceId: string | null;
   selectedWorkspaceRoot: string;
   refreshing: boolean;
-  openworkReconnectBusy: boolean;
+  aiworkReconnectBusy: boolean;
   reconnectStatus: string | null;
   reconnectError: string | null;
-  health: OpenworkOpenCodeRouterHealthSnapshot | null;
+  health: AiWorkOpenCodeRouterHealthSnapshot | null;
   healthError: string | null;
   messagingEnabled: boolean;
   messagingSaving: boolean;
@@ -41,7 +41,7 @@ export type MessagingViewProps = {
   activeTab: MessagingViewTab;
   expandedChannel: MessagingViewExpandedChannel;
   telegram: {
-    identities: OpenworkOpenCodeRouterIdentityItem[];
+    identities: AiWorkOpenCodeRouterIdentityItem[];
     identitiesError: string | null;
     token: string;
     enabled: boolean;
@@ -52,7 +52,7 @@ export type MessagingViewProps = {
     pairingCode: string | null;
   };
   slack: {
-    identities: OpenworkOpenCodeRouterIdentityItem[];
+    identities: AiWorkOpenCodeRouterIdentityItem[];
     identitiesError: string | null;
     botToken: string;
     appToken: string;
@@ -79,7 +79,7 @@ export type MessagingViewProps = {
     busy: boolean;
     status: string | null;
     error: string | null;
-    result: OpenworkOpenCodeRouterSendResult | null;
+    result: AiWorkOpenCodeRouterSendResult | null;
   };
   modals: {
     messagingRiskOpen: boolean;
@@ -175,10 +175,10 @@ function formatLastActivityLabel(timestamp?: number | null) {
 }
 
 export function MessagingView(props: MessagingViewProps) {
-  const serverReady = props.openworkServerStatus === "connected";
+  const serverReady = props.aiworkServerStatus === "connected";
   const scopedWorkspaceReady = Boolean(props.workspaceId?.trim());
   const workspaceScopeLabel =
-    props.scopedOpenworkBaseUrl?.trim() || props.openworkServerUrl.trim() || t("identities.not_set");
+    props.scopedAiWorkBaseUrl?.trim() || props.aiworkServerUrl.trim() || t("identities.not_set");
   const defaultRoutingDirectory = props.selectedWorkspaceRoot.trim() || t("identities.not_set");
   const telegramBotLink = props.telegram.botUsername?.trim()
     ? `https://t.me/${props.telegram.botUsername.trim().replace(/^@+/, "")}`
@@ -215,9 +215,9 @@ export function MessagingView(props: MessagingViewProps) {
               variant="outline"
               className="h-8 px-3 text-xs"
               onClick={() => void props.onRepairAndReconnect()}
-              disabled={props.busy || props.openworkReconnectBusy}
+              disabled={props.busy || props.aiworkReconnectBusy}
             >
-              <RefreshCcw size={14} className={props.openworkReconnectBusy ? "animate-spin" : ""} />
+              <RefreshCcw size={14} className={props.aiworkReconnectBusy ? "animate-spin" : ""} />
               <span className="ml-1.5">{t("identities.repair_reconnect")}</span>
             </Button>
             <Button

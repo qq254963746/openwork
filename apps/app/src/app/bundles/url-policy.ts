@@ -1,4 +1,4 @@
-import { DEFAULT_OPENWORK_PUBLISHER_BASE_URL } from "../lib/publisher";
+import { DEFAULT_AIWORK_PUBLISHER_BASE_URL } from "../lib/publisher";
 
 export type BundleUrlTrust = {
   trusted: boolean;
@@ -15,7 +15,7 @@ export function extractBundleId(url: URL): string | null {
   return null;
 }
 
-export function resolveConfiguredBundlePublisherOrigin(baseUrl = DEFAULT_OPENWORK_PUBLISHER_BASE_URL): string | null {
+export function resolveConfiguredBundlePublisherOrigin(baseUrl = DEFAULT_AIWORK_PUBLISHER_BASE_URL): string | null {
   try {
     return new URL(baseUrl).origin;
   } catch {
@@ -23,7 +23,7 @@ export function resolveConfiguredBundlePublisherOrigin(baseUrl = DEFAULT_OPENWOR
   }
 }
 
-export function describeBundleUrlTrust(bundleUrl: string, baseUrl = DEFAULT_OPENWORK_PUBLISHER_BASE_URL): BundleUrlTrust {
+export function describeBundleUrlTrust(bundleUrl: string, baseUrl = DEFAULT_AIWORK_PUBLISHER_BASE_URL): BundleUrlTrust {
   const configuredOrigin = resolveConfiguredBundlePublisherOrigin(baseUrl);
   try {
     const url = new URL(bundleUrl);
@@ -44,6 +44,6 @@ export function describeBundleUrlTrust(bundleUrl: string, baseUrl = DEFAULT_OPEN
   }
 }
 
-export function isConfiguredBundlePublisherUrl(bundleUrl: string, baseUrl = DEFAULT_OPENWORK_PUBLISHER_BASE_URL): boolean {
+export function isConfiguredBundlePublisherUrl(bundleUrl: string, baseUrl = DEFAULT_AIWORK_PUBLISHER_BASE_URL): boolean {
   return describeBundleUrlTrust(bundleUrl, baseUrl).trusted;
 }

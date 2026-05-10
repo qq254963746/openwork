@@ -13,7 +13,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
 const packageSpec =
-  process.env.OPENWORK_CHROME_DEVTOOLS_MCP_SPEC?.trim() ||
+  process.env.AIWORK_CHROME_DEVTOOLS_MCP_SPEC?.trim() ||
   process.env.CHROME_DEVTOOLS_MCP_SPEC?.trim() ||
   "chrome-devtools-mcp@0.17.0";
 

@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 use crate::types::DesktopBootstrapConfig;
 
 const DESKTOP_BOOTSTRAP_FILE_NAME: &str = "desktop-bootstrap.json";
-const DESKTOP_BOOTSTRAP_PATH_ENV: &str = "OPENWORK_DESKTOP_BOOTSTRAP_PATH";
-const DEFAULT_DEN_BASE_URL: &str = "https://app.openworklabs.com";
+const DESKTOP_BOOTSTRAP_PATH_ENV: &str = "AIWORK_DESKTOP_BOOTSTRAP_PATH";
+const DEFAULT_DEN_BASE_URL: &str = "https://app.aiworklabs.com";
 
 fn trim_to_option(value: Option<&'static str>) -> Option<String> {
     value.and_then(|entry| {
@@ -56,15 +56,15 @@ fn default_desktop_bootstrap_config() -> DesktopBootstrapConfig {
 fn seed_desktop_bootstrap_config() -> Result<DesktopBootstrapConfig, String> {
     normalize_desktop_bootstrap_config(&DesktopBootstrapConfig {
         base_url: trim_to_option(
-            option_env!("OPENWORK_DESKTOP_DEN_BASE_URL").or(option_env!("VITE_DEN_BASE_URL")),
+            option_env!("AIWORK_DESKTOP_DEN_BASE_URL").or(option_env!("VITE_DEN_BASE_URL")),
         )
         .unwrap_or_else(|| DEFAULT_DEN_BASE_URL.to_string()),
         api_base_url: trim_to_option(
-            option_env!("OPENWORK_DESKTOP_DEN_API_BASE_URL")
+            option_env!("AIWORK_DESKTOP_DEN_API_BASE_URL")
                 .or(option_env!("VITE_DEN_API_BASE_URL")),
         ),
         require_signin: env_truthy(
-            option_env!("OPENWORK_DESKTOP_DEN_REQUIRE_SIGNIN")
+            option_env!("AIWORK_DESKTOP_DEN_REQUIRE_SIGNIN")
                 .or(option_env!("VITE_DEN_REQUIRE_SIGNIN")),
         ),
     })
@@ -88,7 +88,7 @@ fn desktop_bootstrap_path() -> Result<PathBuf, String> {
     let config_root = dirs::home_dir()
         .ok_or_else(|| "Failed to resolve a desktop bootstrap config directory".to_string())?
         .join(".config")
-        .join("openwork");
+        .join("aiwork");
     Ok(config_root.join(DESKTOP_BOOTSTRAP_FILE_NAME))
 }
 

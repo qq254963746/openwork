@@ -1,16 +1,16 @@
 [package]
-name = "openwork"
+name = "aiwork"
 version = "0.13.29"
-description = "OpenWork"
+description = "AiWork"
 authors = ["Different AI"]
 edition = "2021"
-default-run = "OpenWork-Dev"
+default-run = "AiWork-Dev"
 
 [lib]
-name = "openwork"
+name = "aiwork"
 
 [[bin]]
-name = "OpenWork-Dev"
+name = "AiWork-Dev"
 path = "src/main.rs"
 
 [build-dependencies]

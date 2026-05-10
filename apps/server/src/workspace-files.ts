@@ -13,8 +13,8 @@ export function opencodeConfigPath(workspaceRoot: string): string {
   return jsoncPath;
 }
 
-export function openworkConfigPath(workspaceRoot: string): string {
-  return join(workspaceRoot, ".opencode", "openwork.json");
+export function aiworkConfigPath(workspaceRoot: string): string {
+  return join(workspaceRoot, ".opencode", "aiwork.json");
 }
 
 export function projectSkillsDir(workspaceRoot: string): string {

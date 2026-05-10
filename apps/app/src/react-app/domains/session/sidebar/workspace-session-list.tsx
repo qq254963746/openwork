@@ -65,7 +65,7 @@ type Props = {
    * that were not the active one at boot.
    */
   onWorkspaceSectionOpened?: (workspaceId: string) => void;
-  /** Persist workspace order (desktop + OpenWork server when connected). */
+  /** Persist workspace order (desktop + AiWork server when connected). */
   onReorderWorkspaces?: (workspaceIds: string[]) => void | Promise<void>;
 };
 
@@ -167,7 +167,7 @@ const flattenSessionRows = (
 
 const workspaceLabel = (workspace: WorkspaceInfo) =>
   workspace.displayName?.trim() ||
-  workspace.openworkWorkspaceName?.trim() ||
+  workspace.aiworkWorkspaceName?.trim() ||
   workspace.name?.trim() ||
   workspace.path?.trim() ||
   t("workspace_list.workspace_fallback");
@@ -179,7 +179,7 @@ const workspaceKindLabel = (workspace: WorkspaceInfo) =>
       : t("workspace.remote_badge")
     : t("workspace.local_badge");
 
-const OPENWORK_MARK_SRC = `${import.meta.env.BASE_URL}openwork-mark.svg`;
+const AIWORK_MARK_SRC = `${import.meta.env.BASE_URL}aiwork-mark.svg`;
 
 const SESSION_ROW_SELECTED_BOX_SHADOW =
   "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.02) 0px 2px 4px 0px, rgba(0, 0, 0, 0.02) 0px 4px 10px 0px";
@@ -681,7 +681,7 @@ export function WorkspaceSessionList(props: Props) {
       <div className="shrink-0 border-b border-dls-border/80 pb-3 pt-2.5">
         <div className="flex min-w-0 items-center gap-2 px-3.5">
           <img
-            src={OPENWORK_MARK_SRC}
+            src={AIWORK_MARK_SRC}
             alt=""
             className="h-6 w-auto max-w-[26px] shrink-0 object-contain sm:h-7 sm:max-w-[28px]"
             width={28}
@@ -790,7 +790,7 @@ export function WorkspaceSessionList(props: Props) {
                 onDrop={(event) => {
                   if (!props.onReorderWorkspaces) return;
                   event.preventDefault();
-                  const raw = event.dataTransfer.getData("application/x-openwork-workspace-index");
+                  const raw = event.dataTransfer.getData("application/x-aiwork-workspace-index");
                   const fromIndex = Number.parseInt(raw, 10);
                   setDropTargetWorkspaceIndex(null);
                   if (!Number.isFinite(fromIndex)) return;
@@ -867,7 +867,7 @@ export function WorkspaceSessionList(props: Props) {
                           event.stopPropagation();
                           event.dataTransfer.effectAllowed = "move";
                           event.dataTransfer.setData(
-                            "application/x-openwork-workspace-index",
+                            "application/x-aiwork-workspace-index",
                             String(workspaceIndex),
                           );
                         }}

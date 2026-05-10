@@ -11,7 +11,7 @@ description: Guide users through the get started setup and Chrome DevTools demo.
 
 - Reply with these four lines, exactly and in order:
 
-  1) hey there welcome this is openwork
+  1) hey there welcome this is aiwork
   2) we've pre-configured you with a couple tools
   3) Get Started
   4) write "hey go on google.com"

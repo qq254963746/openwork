@@ -21,7 +21,7 @@ pub struct OrchestratorStateFile {
 }
 
 pub fn resolve_orchestrator_data_dir() -> String {
-    let env_dir = env::var("OPENWORK_DATA_DIR")
+    let env_dir = env::var("AIWORK_DATA_DIR")
         .ok()
         .filter(|value| !value.trim().is_empty());
 
@@ -31,21 +31,21 @@ pub fn resolve_orchestrator_data_dir() -> String {
 
     if let Some(home) = home_dir() {
         return home
-            .join(".openwork")
-            .join("openwork-orchestrator")
+            .join(".aiwork")
+            .join("aiwork-orchestrator")
             .to_string_lossy()
             .to_string();
     }
 
-    ".openwork/openwork-orchestrator".to_string()
+    ".aiwork/aiwork-orchestrator".to_string()
 }
 
 fn orchestrator_state_path(data_dir: &str) -> PathBuf {
-    Path::new(data_dir).join("openwork-orchestrator-state.json")
+    Path::new(data_dir).join("aiwork-orchestrator-state.json")
 }
 
 fn orchestrator_auth_path(data_dir: &str) -> PathBuf {
-    Path::new(data_dir).join("openwork-orchestrator-auth.json")
+    Path::new(data_dir).join("aiwork-orchestrator-auth.json")
 }
 
 pub fn clear_orchestrator_auth(data_dir: &str) {
@@ -96,7 +96,7 @@ mod tests {
     #[test]
     fn request_shutdown_returns_false_without_state() {
         let dir = std::env::temp_dir().join(format!(
-            "openwork-orchestrator-shutdown-missing-{}",
+            "aiwork-orchestrator-shutdown-missing-{}",
             Uuid::new_v4()
         ));
         fs::create_dir_all(&dir).expect("create test dir");
@@ -126,11 +126,11 @@ mod tests {
         });
 
         let dir = std::env::temp_dir().join(format!(
-            "openwork-orchestrator-shutdown-state-{}",
+            "aiwork-orchestrator-shutdown-state-{}",
             Uuid::new_v4()
         ));
         fs::create_dir_all(&dir).expect("create state dir");
-        let state_path = dir.join("openwork-orchestrator-state.json");
+        let state_path = dir.join("aiwork-orchestrator-state.json");
         fs::write(
             &state_path,
             format!(

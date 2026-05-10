@@ -2693,7 +2693,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "openwork"
+name = "aiwork"
 version = "0.13.29"
 dependencies = [
  "dirs",

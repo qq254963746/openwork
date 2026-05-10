@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import type { CSSProperties } from "react";
 import { RefreshCcw } from "lucide-react";
 
-import type { OpenworkServerClient } from "../../../../app/lib/openwork-server";
+import type { AiWorkServerClient } from "../../../../app/lib/aiwork-server";
 import type { WorkspaceSessionGroup } from "../../../../app/types";
 import { t } from "../../../../i18n";
 import { Button } from "../../../design-system/button";
@@ -42,7 +42,7 @@ type UsageScanState = {
 };
 
 export type UsageViewProps = {
-  openworkServerClient: OpenworkServerClient | null;
+  aiworkServerClient: AiWorkServerClient | null;
   selectedWorkspaceId: string;
   workspaceSessionGroups: WorkspaceSessionGroup[];
 };
@@ -225,7 +225,7 @@ function readMessageMeta(payload: unknown): { id: string; providerID: string; mo
 }
 
 async function loadUsageRecords(
-  client: OpenworkServerClient,
+  client: AiWorkServerClient,
   groups: WorkspaceSessionGroup[],
   signal: AbortSignal,
   onProgress: (state: UsageScanState) => void,
@@ -718,7 +718,7 @@ export function UsageView(props: UsageViewProps) {
   );
 
   useEffect(() => {
-    if (!props.openworkServerClient) {
+    if (!props.aiworkServerClient) {
       setRecords([]);
       setLoading(false);
       setError(null);
@@ -736,7 +736,7 @@ export function UsageView(props: UsageViewProps) {
     setLoading(true);
     setError(null);
     setScanState({ sessions: 0, workspaces: 0 });
-    void loadUsageRecords(props.openworkServerClient, groupsForScope, controller.signal, (state) => {
+    void loadUsageRecords(props.aiworkServerClient, groupsForScope, controller.signal, (state) => {
       if (controller.signal.aborted) return;
       setScanState(state);
     })
@@ -752,7 +752,7 @@ export function UsageView(props: UsageViewProps) {
         setLoading(false);
       });
     return () => controller.abort();
-  }, [groupsForScope, props.openworkServerClient, refreshKey]);
+  }, [groupsForScope, props.aiworkServerClient, refreshKey]);
 
   const now = useMemo(() => Date.now(), [refreshKey]);
   const rangeFrom = useMemo(() => rangeStart(range, now), [range, now]);
@@ -834,7 +834,7 @@ export function UsageView(props: UsageViewProps) {
         variant="outline"
         className="h-8 px-3 py-0 text-xs"
         onClick={handleRefresh}
-        disabled={loading || !props.openworkServerClient}
+        disabled={loading || !props.aiworkServerClient}
       >
         <RefreshCcw size={13} className={`mr-1.5 ${loading ? "animate-spin" : ""}`} />
         {loading ? t("settings.usage.refreshing") : t("settings.usage.refresh")}
@@ -842,7 +842,7 @@ export function UsageView(props: UsageViewProps) {
     </div>
   );
 
-  if (!props.openworkServerClient) {
+  if (!props.aiworkServerClient) {
     return (
       <div className="space-y-6">
         <div className={`${settingsPanelClass} flex flex-col items-start gap-2`}>

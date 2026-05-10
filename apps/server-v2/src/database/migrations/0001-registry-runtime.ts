@@ -58,7 +58,7 @@ export const phase2RegistryRuntimeMigration = {
 
     CREATE TABLE IF NOT EXISTS workspace_runtime_state (
       workspace_id TEXT PRIMARY KEY REFERENCES workspaces(id) ON DELETE CASCADE,
-      backend_kind TEXT NOT NULL CHECK (backend_kind IN ('local_opencode', 'remote_openwork')),
+      backend_kind TEXT NOT NULL CHECK (backend_kind IN ('local_opencode', 'remote_aiwork')),
       last_sync_at TEXT,
       last_session_refresh_at TEXT,
       last_error_json TEXT,

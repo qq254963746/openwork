@@ -8,7 +8,7 @@ import { useBootState } from "./boot-state";
 import {
   fetchEngineInfoForLogViewer,
   fetchOpencodeEngineDiskLogsForLogViewer,
-  fetchOpenworkServerInfoForLogViewer,
+  fetchAiWorkServerInfoForLogViewer,
   isDesktopServiceLogsAvailableInLogViewer,
 } from "./desktop-log-viewer-host-bridge";
 import {
@@ -51,7 +51,7 @@ function truncateFormattedShellEntries(formattedEntries: string[], maxLines: num
   return out.reverse();
 }
 
-type LogTabId = "shell" | "openwork_server" | "opencode";
+type LogTabId = "shell" | "aiwork_server" | "opencode";
 
 function formatServiceLogs(stdout: string | null | undefined, stderr: string | null | undefined): string {
   const out = (stdout ?? "").toString().trim();
@@ -91,17 +91,17 @@ function formatEntry(
   return `[${time}] ${entry.name}${payload}`;
 }
 
-function resolveOpenerLogApi(): NonNullable<typeof window.__openwork> | null {
+function resolveOpenerLogApi(): NonNullable<typeof window.__aiwork> | null {
   try {
-    const openerWindow = window.opener as (Window & { __openwork?: typeof window.__openwork }) | null;
+    const openerWindow = window.opener as (Window & { __aiwork?: typeof window.__aiwork }) | null;
     if (!openerWindow || openerWindow.closed) return null;
-    return openerWindow.__openwork ?? null;
+    return openerWindow.__aiwork ?? null;
   } catch {
     return null;
   }
 }
 
-/** Tauri detached log webview uses `open_app_log_window` + `?openworkLogViewer=1` (no `window.opener`). */
+/** Tauri detached log webview uses `open_app_log_window` + `?aiworkLogViewer=1` (no `window.opener`). */
 function shouldPullShellEventsFromMainShell(): boolean {
   if (!isTauriRuntime()) return false;
   try {
@@ -129,8 +129,8 @@ export function AppLogWindowRoute() {
   const [live, setLive] = useState(true);
 
   const [shellLines, setShellLines] = useState<string[]>([]);
-  const [openworkText, setOpenworkText] = useState("");
-  const [openworkError, setOpenworkError] = useState<string | null>(null);
+  const [aiworkText, setAiWorkText] = useState("");
+  const [aiworkError, setAiWorkError] = useState<string | null>(null);
   const [opencodeText, setOpencodeText] = useState("");
   const [opencodeError, setOpencodeError] = useState<string | null>(null);
 
@@ -177,8 +177,8 @@ export function AppLogWindowRoute() {
     }
 
     try {
-      if (window.__openwork) {
-        const events = window.__openwork.events(500);
+      if (window.__aiwork) {
+        const events = window.__aiwork.events(500);
         setShellLines(
           truncateFormattedShellEntries(
             events.map((e) => formatEntry(e, stringify)),
@@ -194,16 +194,16 @@ export function AppLogWindowRoute() {
     setShellLines([t("session.app_log_window_no_opener")]);
   }, [stringify, t]);
 
-  const refreshOpenwork = useCallback(async () => {
+  const refreshAiWork = useCallback(async () => {
     if (!isDesktopServiceLogsAvailableInLogViewer()) return;
-    setOpenworkError(null);
+    setAiWorkError(null);
     try {
-      const info = await fetchOpenworkServerInfoForLogViewer();
+      const info = await fetchAiWorkServerInfoForLogViewer();
       const raw = formatServiceLogs(info.lastStdout, info.lastStderr);
-      setOpenworkText(truncateLogLines(raw || t("settings.no_logs_captured"), LOG_VIEWER_MAX_LINES));
+      setAiWorkText(truncateLogLines(raw || t("settings.no_logs_captured"), LOG_VIEWER_MAX_LINES));
     } catch (error) {
-      setOpenworkError(error instanceof Error ? error.message : String(error));
-      setOpenworkText("");
+      setAiWorkError(error instanceof Error ? error.message : String(error));
+      setAiWorkText("");
     }
   }, []);
 
@@ -231,9 +231,9 @@ export function AppLogWindowRoute() {
 
   const refreshActive = useCallback(async () => {
     if (tab === "shell") await refreshShell();
-    else if (tab === "openwork_server") await refreshOpenwork();
+    else if (tab === "aiwork_server") await refreshAiWork();
     else await refreshOpencode();
-  }, [refreshOpencode, refreshOpenwork, refreshShell, tab]);
+  }, [refreshOpencode, refreshAiWork, refreshShell, tab]);
 
   useEffect(() => {
     stickBottomRef.current = true;
@@ -250,17 +250,17 @@ export function AppLogWindowRoute() {
   }, [live, refreshActive, tab]);
 
   const displayBody = useMemo(() => {
-    if (tab === "openwork_server" || tab === "opencode") {
+    if (tab === "aiwork_server" || tab === "opencode") {
       if (!isDesktopServiceLogsAvailableInLogViewer()) return t("session.app_log_services_desktop_only");
-      if (tab === "openwork_server") {
-        if (openworkError) return `${t("session.app_log_fetch_error")}\n${openworkError}`;
-        return openworkText || t("settings.no_logs_captured");
+      if (tab === "aiwork_server") {
+        if (aiworkError) return `${t("session.app_log_fetch_error")}\n${aiworkError}`;
+        return aiworkText || t("settings.no_logs_captured");
       }
       if (opencodeError) return `${t("session.app_log_fetch_error")}\n${opencodeError}`;
       return opencodeText || t("settings.no_logs_captured");
     }
     return shellLines.length === 0 ? t("session.app_log_empty") : shellLines.join("\n\n");
-  }, [openworkError, openworkText, opencodeError, opencodeText, shellLines, tab]);
+  }, [aiworkError, aiworkText, opencodeError, opencodeText, shellLines, tab]);
 
   useEffect(() => {
     const el = preRef.current;
@@ -288,7 +288,7 @@ export function AppLogWindowRoute() {
         .catch(() => void refreshShell());
       return;
     }
-    window.__openwork?.clearEvents();
+    window.__aiwork?.clearEvents();
     void refreshShell();
   };
 
@@ -362,11 +362,11 @@ export function AppLogWindowRoute() {
           <button
             type="button"
             role="tab"
-            aria-selected={tab === "openwork_server"}
-            className={`${tabButtonBase} ${tab === "openwork_server" ? tabButtonActive : tabButtonIdle}`}
-            onClick={() => setTab("openwork_server")}
+            aria-selected={tab === "aiwork_server"}
+            className={`${tabButtonBase} ${tab === "aiwork_server" ? tabButtonActive : tabButtonIdle}`}
+            onClick={() => setTab("aiwork_server")}
           >
-            {t("settings.openwork_server_label")}
+            {t("settings.aiwork_server_label")}
           </button>
           <button
             type="button"

@@ -1,11 +1,11 @@
 import type { ModelRef, SuggestedPlugin } from "./types";
 import { t } from "../i18n";
 
-export const MODEL_PREF_KEY = "openwork.defaultModel";
-export const SESSION_MODEL_PREF_KEY = "openwork.sessionModels";
-export const THINKING_PREF_KEY = "openwork.showThinking";
-export const VARIANT_PREF_KEY = "openwork.modelVariant";
-export const LANGUAGE_PREF_KEY = "openwork.language";
+export const MODEL_PREF_KEY = "aiwork.defaultModel";
+export const SESSION_MODEL_PREF_KEY = "aiwork.sessionModels";
+export const THINKING_PREF_KEY = "aiwork.showThinking";
+export const VARIANT_PREF_KEY = "aiwork.modelVariant";
+export const LANGUAGE_PREF_KEY = "aiwork.language";
 
 export const DEFAULT_MODEL: ModelRef = {
   providerID: "opencode",

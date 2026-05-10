@@ -5,7 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { ensureDir, exists } from "./utils.js";
 
 // User-level environment variables, persisted so the desktop shell can inject
-// them into every spawned child (OpenCode, OpenWork server, opencode-router).
+// them into every spawned child (OpenCode, AiWork server, opencode-router).
 // Motivation: Linux GUI launches don't inherit shell env, so users set
 // ANTHROPIC_API_KEY / GCLOUD_* / GCP_* in .bashrc and hit silent auth failures.
 // Scope: user/machine, not workspace. Not synced to the cloud.
@@ -13,12 +13,12 @@ import { ensureDir, exists } from "./utils.js";
 const ENV_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 // Keys reserved for internal wiring by the shell/orchestrator/server. This UI
-// is for service credentials, not OpenWork/OpenCode runtime knobs; users who
+// is for service credentials, not AiWork/OpenCode runtime knobs; users who
 // need OPENCODE_* process settings should set them from the launching shell.
 // We refuse writes to these and strip them when reading for injection, so a
 // tampered file cannot shadow auth credentials, token paths, or process
 // identity.
-const RESERVED_PREFIXES = ["OPENWORK_", "OPENCODE_"] as const;
+const RESERVED_PREFIXES = ["AIWORK_", "OPENCODE_"] as const;
 
 export type EnvRecord = {
   key: string;
@@ -44,15 +44,15 @@ export function isReservedEnvKey(key: string): boolean {
 // Do NOT key this off ServerConfig.configPath — the shell resolves the path
 // before the server config exists, and must agree with us byte-for-byte.
 export function resolveDefaultEnvStorePath(): string {
-  const override = (process.env.OPENWORK_ENV_STORE ?? "").trim();
+  const override = (process.env.AIWORK_ENV_STORE ?? "").trim();
   if (override) return resolve(override);
 
   if (platform() === "win32") {
     const appData = (process.env.APPDATA ?? "").trim();
     const root = appData || join(homedir(), "AppData", "Roaming");
-    return join(root, "openwork", "env.json");
+    return join(root, "aiwork", "env.json");
   }
-  return join(homedir(), ".config", "openwork", "env.json");
+  return join(homedir(), ".config", "aiwork", "env.json");
 }
 
 function parseRecord(raw: unknown): EnvRecord | null {
@@ -249,7 +249,7 @@ export class InvalidEnvKeyError extends Error {
   constructor(key: string, code: "invalid_env_key" | "reserved_env_key") {
     super(
       code === "reserved_env_key"
-        ? `Environment variable name is reserved for OpenWork internals: ${key}`
+        ? `Environment variable name is reserved for AiWork internals: ${key}`
         : `Invalid environment variable name: ${key}`,
     );
     this.code = code;

@@ -8,7 +8,7 @@ import { useDesktopFontZoomBehavior } from "./font-zoom";
 import { LoadingOverlay } from "./loading-overlay";
 import { DevProfiler, DevProfilerOverlay } from "./dev-profiler";
 import { ReactRenderWatchdogOverlay } from "./react-render-watchdog-overlay";
-import { OpenworkControlProvider, OpenworkRouteControlActions } from "./control/control-provider";
+import { AiWorkControlProvider, AiWorkRouteControlActions } from "./control/control-provider";
 import { SessionRoute } from "./session-route";
 import { SettingsRoute } from "./settings-route";
 import { WelcomeRoute } from "./welcome-route";
@@ -120,10 +120,10 @@ export function AppRoot() {
   return (
     <>
       <DevProfiler id="AppRoot">
-        <OpenworkControlProvider>
-          <OpenworkRouteControlActions />
+        <AiWorkControlProvider>
+          <AiWorkRouteControlActions />
           <AppRoutes />
-        </OpenworkControlProvider>
+        </AiWorkControlProvider>
         <LoadingOverlay />
       </DevProfiler>
       <DevProfilerOverlay />

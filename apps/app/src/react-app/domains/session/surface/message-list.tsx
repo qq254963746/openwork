@@ -273,7 +273,7 @@ export type SessionTranscriptProps = {
   /** Resolves relative tool paths when opening files from the transcript footer */
   workspaceRoot?: string;
   /** Routes “View” into the workspace side panel (same rules as clicking a file there). */
-  onOpenWorkspaceRelativePath?: (relativePath: string) => void;
+  onAiWorkspaceRelativePath?: (relativePath: string) => void;
   /** Loads workspace-relative file text for SVG inline previews on written-file cards */
   fetchWorkspaceFileText?: (relativePath: string) => Promise<string | undefined>;
   /** Prefix for SVG preview cache keys (typically `workspaceId`) */
@@ -282,7 +282,7 @@ export type SessionTranscriptProps = {
   assistantReplyMetaById?: ReadonlyMap<string, AssistantReplyFooterMeta>;
 };
 
-// 500 was too high for real-world OpenWork sessions: a handful of giant
+// 500 was too high for real-world AiWork sessions: a handful of giant
 // messages (emails, legal docs, pasted transcripts) can still produce a
 // massive DOM even when the block count is low. Lowering the threshold means
 // we switch to react-virtual much earlier and keep the main thread lighter
@@ -936,7 +936,7 @@ function WrittenFileRow(props: {
   touch: WorkspaceWriteTouch;
   workspaceRoot: string;
   desktop: boolean;
-  onOpenWorkspaceRelativePath?: (relativePath: string) => void;
+  onAiWorkspaceRelativePath?: (relativePath: string) => void;
   fetchWorkspaceFileText?: (relativePath: string) => Promise<string | undefined>;
   writtenFileSvgQueryKey?: string;
 }) {
@@ -947,7 +947,7 @@ function WrittenFileRow(props: {
   const metaLine = props.touch.extLabel ? `${badge} · ${props.touch.extLabel}` : badge;
 
   const canTryOpen =
-    Boolean(props.onOpenWorkspaceRelativePath) ||
+    Boolean(props.onAiWorkspaceRelativePath) ||
     (props.desktop &&
       (looksAbsoluteWorkspacePath(props.touch.displayPath) || Boolean(props.workspaceRoot.trim())));
 
@@ -995,8 +995,8 @@ function WrittenFileRow(props: {
     (previewKind === "html" || Boolean(svgMarkup));
 
   const handleView = () => {
-    if (props.onOpenWorkspaceRelativePath) {
-      props.onOpenWorkspaceRelativePath(props.touch.displayPath);
+    if (props.onAiWorkspaceRelativePath) {
+      props.onAiWorkspaceRelativePath(props.touch.displayPath);
       return;
     }
     void (async () => {
@@ -1104,7 +1104,7 @@ function WrittenFileRow(props: {
 const AssistantWrittenFiles = memo(function AssistantWrittenFiles(props: {
   message: UIMessage;
   workspaceRoot: string;
-  onOpenWorkspaceRelativePath?: (relativePath: string) => void;
+  onAiWorkspaceRelativePath?: (relativePath: string) => void;
   fetchWorkspaceFileText?: (relativePath: string) => Promise<string | undefined>;
   writtenFileSvgQueryKey?: string;
   /** Reserve space when a floating copy control sits at the bottom-right of the bubble */
@@ -1130,7 +1130,7 @@ const AssistantWrittenFiles = memo(function AssistantWrittenFiles(props: {
           touch={touch}
           workspaceRoot={props.workspaceRoot}
           desktop={desktop}
-          onOpenWorkspaceRelativePath={props.onOpenWorkspaceRelativePath}
+          onAiWorkspaceRelativePath={props.onAiWorkspaceRelativePath}
           fetchWorkspaceFileText={props.fetchWorkspaceFileText}
           writtenFileSvgQueryKey={props.writtenFileSvgQueryKey}
         />
@@ -1755,7 +1755,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
               <AssistantWrittenFiles
                 message={clusterMessage}
                 workspaceRoot={props.workspaceRoot ?? ""}
-                onOpenWorkspaceRelativePath={props.onOpenWorkspaceRelativePath}
+                onAiWorkspaceRelativePath={props.onAiWorkspaceRelativePath}
                 fetchWorkspaceFileText={props.fetchWorkspaceFileText}
                 writtenFileSvgQueryKey={props.writtenFileSvgQueryKey}
                 clearFloatingCopySlot={showClusterQaFooterChrome}
@@ -1946,7 +1946,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
             <AssistantWrittenFiles
               message={block.message}
               workspaceRoot={props.workspaceRoot ?? ""}
-              onOpenWorkspaceRelativePath={props.onOpenWorkspaceRelativePath}
+              onAiWorkspaceRelativePath={props.onAiWorkspaceRelativePath}
               fetchWorkspaceFileText={props.fetchWorkspaceFileText}
               writtenFileSvgQueryKey={props.writtenFileSvgQueryKey}
               clearFloatingCopySlot={!isNestedVariant && showAssistantQaFooterChrome}

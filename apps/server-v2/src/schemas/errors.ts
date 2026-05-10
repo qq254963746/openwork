@@ -4,7 +4,7 @@ import { requestIdSchema } from "./common.js";
 export const errorDetailSchema = z.object({
   message: z.string(),
   path: z.array(z.union([z.string(), z.number()])).optional(),
-}).meta({ ref: "OpenWorkServerV2ErrorDetail" });
+}).meta({ ref: "AiWorkServerV2ErrorDetail" });
 
 const baseErrorSchema = z.object({
   message: z.string(),
@@ -17,32 +17,32 @@ export const invalidRequestErrorSchema = z.object({
   error: baseErrorSchema.extend({
     code: z.literal("invalid_request"),
   }),
-}).meta({ ref: "OpenWorkServerV2InvalidRequestError" });
+}).meta({ ref: "AiWorkServerV2InvalidRequestError" });
 
 export const unauthorizedErrorSchema = z.object({
   ok: z.literal(false),
   error: baseErrorSchema.extend({
     code: z.literal("unauthorized"),
   }),
-}).meta({ ref: "OpenWorkServerV2UnauthorizedError" });
+}).meta({ ref: "AiWorkServerV2UnauthorizedError" });
 
 export const forbiddenErrorSchema = z.object({
   ok: z.literal(false),
   error: baseErrorSchema.extend({
     code: z.literal("forbidden"),
   }),
-}).meta({ ref: "OpenWorkServerV2ForbiddenError" });
+}).meta({ ref: "AiWorkServerV2ForbiddenError" });
 
 export const notFoundErrorSchema = z.object({
   ok: z.literal(false),
   error: baseErrorSchema.extend({
     code: z.literal("not_found"),
   }),
-}).meta({ ref: "OpenWorkServerV2NotFoundError" });
+}).meta({ ref: "AiWorkServerV2NotFoundError" });
 
 export const internalErrorSchema = z.object({
   ok: z.literal(false),
   error: baseErrorSchema.extend({
     code: z.literal("internal_error"),
   }),
-}).meta({ ref: "OpenWorkServerV2InternalError" });
+}).meta({ ref: "AiWorkServerV2InternalError" });

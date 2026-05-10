@@ -192,7 +192,7 @@ export type WorkspaceConnectionState = {
   checkedAt?: number | null;
 };
 
-export type ResetOpenworkMode = "onboarding" | "all";
+export type ResetAiWorkMode = "onboarding" | "all";
 
 export type WorkspaceBlueprintStarterKind = "prompt" | "session" | "action";
 
@@ -245,7 +245,7 @@ export type WorkspaceBlueprint = {
   } | null;
 };
 
-export type WorkspaceOpenworkConfig = {
+export type WorkspaceAiWorkConfig = {
   version: number;
   workspace?: {
     name?: string | null;
@@ -282,7 +282,7 @@ export type HubSkillCard = {
   };
 };
 
-/** OpenWork Cloud (Den) org skill surfaced in the Skills catalog (team hub + shared). */
+/** AiWork Cloud (Den) org skill surfaced in the Skills catalog (team hub + shared). */
 export type DenOrgSkillCard = {
   id: string;
   title: string;

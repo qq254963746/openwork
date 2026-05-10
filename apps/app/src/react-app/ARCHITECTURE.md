@@ -114,7 +114,7 @@ Rules for agents and future code:
   `workspaceId` param first.
 - Read the active session from the URL `sessionId` param. A selected session should never imply a
   different workspace than the URL workspace.
-- The legacy `openwork.react.activeWorkspace` and `openwork.react.sessionByWorkspace` values are
+- The legacy `aiwork.react.activeWorkspace` and `aiwork.react.sessionByWorkspace` values are
   only restore/fallback memory. They are not authoritative while a workspace-scoped URL is active.
 - `/session`, `/session/:sessionId`, and `/settings/*` are compatibility entry points. They should
   redirect to workspace-scoped URLs when the workspace can be resolved.
@@ -139,7 +139,7 @@ Practical examples:
 Anything that is already Solid-free stays under `src/app/` and is re-exported from the React
 tree when a domain-scoped import path is clearer. Examples:
 
-- `app/lib/*` (opencode, tauri, den, openwork-server, ...) — consumed directly by React.
+- `app/lib/*` (opencode, tauri, den, aiwork-server, ...) — consumed directly by React.
 - `app/types.ts`, `app/constants.ts`, `app/theme.ts`, `app/utils/*` — shared across both runtimes.
 - `app/session/composer-tools.ts` — shared session helpers.
 - `app/bundles/{types,schema,url-policy,sources,apply,publish,skill-org-publish,index}` — bundle

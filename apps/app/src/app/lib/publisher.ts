@@ -1,13 +1,13 @@
-export type OpenworkPublisherBundleType = "skill" | "skills-set";
+export type AiWorkPublisherBundleType = "skill" | "skills-set";
 
 export type PublishBundleResult = {
   url: string;
 };
 
-const ENV_OPENWORK_PUBLISHER_BASE_URL = String(import.meta.env.VITE_OPENWORK_PUBLISHER_BASE_URL ?? "").trim();
+const ENV_AIWORK_PUBLISHER_BASE_URL = String(import.meta.env.VITE_AIWORK_PUBLISHER_BASE_URL ?? "").trim();
 
-export const DEFAULT_OPENWORK_PUBLISHER_BASE_URL =
-  ENV_OPENWORK_PUBLISHER_BASE_URL || "https://share.openworklabs.com";
+export const DEFAULT_AIWORK_PUBLISHER_BASE_URL =
+  ENV_AIWORK_PUBLISHER_BASE_URL || "https://share.aiworklabs.com";
 
 function normalizeBaseUrl(input: string): string {
   const trimmed = String(input ?? "").trim();
@@ -35,14 +35,14 @@ async function readErrorMessage(response: Response): Promise<string> {
   }
 }
 
-export async function publishOpenworkBundleJson(input: {
+export async function publishAiWorkBundleJson(input: {
   payload: unknown;
-  bundleType: OpenworkPublisherBundleType;
+  bundleType: AiWorkPublisherBundleType;
   name?: string;
   baseUrl?: string;
   timeoutMs?: number;
 }): Promise<PublishBundleResult> {
-  const baseUrl = normalizeBaseUrl(input.baseUrl ?? DEFAULT_OPENWORK_PUBLISHER_BASE_URL);
+  const baseUrl = normalizeBaseUrl(input.baseUrl ?? DEFAULT_AIWORK_PUBLISHER_BASE_URL);
   const timeoutMs = typeof input.timeoutMs === "number" && Number.isFinite(input.timeoutMs) ? input.timeoutMs : 15_000;
 
   const controller = new AbortController();
@@ -54,9 +54,9 @@ export async function publishOpenworkBundleJson(input: {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        "X-OpenWork-Bundle-Type": input.bundleType,
-        "X-OpenWork-Schema-Version": "v1",
-        ...(input.name?.trim() ? { "X-OpenWork-Name": input.name.trim() } : null),
+        "X-AiWork-Bundle-Type": input.bundleType,
+        "X-AiWork-Schema-Version": "v1",
+        ...(input.name?.trim() ? { "X-AiWork-Name": input.name.trim() } : null),
       },
       body: JSON.stringify(input.payload),
       signal: controller.signal,

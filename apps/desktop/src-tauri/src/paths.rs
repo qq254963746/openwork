@@ -86,7 +86,7 @@ fn writable_probe_name() -> String {
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_nanos())
         .unwrap_or(0);
-    format!(".openwork-write-test-{}-{nonce}", std::process::id())
+    format!(".aiwork-write-test-{}-{nonce}", std::process::id())
 }
 
 #[cfg(windows)]

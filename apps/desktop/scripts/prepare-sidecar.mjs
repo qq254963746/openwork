@@ -29,15 +29,15 @@ const readArg = (name) => {
 };
 
 const hasFlag = (name) => process.argv.slice(2).includes(name);
-const forceBuild = hasFlag("--force") || process.env.OPENWORK_SIDECAR_FORCE_BUILD === "1";
-const sidecarOverride = process.env.OPENWORK_SIDECAR_DIR?.trim() || readArg("--outdir");
+const forceBuild = hasFlag("--force") || process.env.AIWORK_SIDECAR_FORCE_BUILD === "1";
+const sidecarOverride = process.env.AIWORK_SIDECAR_DIR?.trim() || readArg("--outdir");
 const sidecarDir = sidecarOverride ? resolve(sidecarOverride) : join(__dirname, "..", "src-tauri", "sidecars");
 const constantsPath = resolve(__dirname, "..", "..", "..", "constants.json");
 
 const opencodeGithubRepo = (() => {
   const raw =
     process.env.OPENCODE_GITHUB_REPO?.trim() ||
-    process.env.OPENWORK_OPENCODE_GITHUB_REPO?.trim() ||
+    process.env.AIWORK_OPENCODE_GITHUB_REPO?.trim() ||
     "anomalyco/opencode";
   const normalized = raw
     .replace(/^https:\/\/github\.com\//i, "")
@@ -68,7 +68,7 @@ const normalizeVersion = (value) => {
 const opencodeAssetOverride = process.env.OPENCODE_ASSET?.trim() || null;
 const chromeDevtoolsMcpVersion =
   process.env.CHROME_DEVTOOLS_MCP_VERSION?.trim() ||
-  process.env.OPENWORK_CHROME_DEVTOOLS_MCP_VERSION?.trim() ||
+  process.env.AIWORK_CHROME_DEVTOOLS_MCP_VERSION?.trim() ||
   "0.17.0";
 
 // Target triple for native platform binaries
@@ -122,21 +122,21 @@ const opencodeTargetPath = opencodeTargetName ? join(sidecarDir, opencodeTargetN
 const opencodeCandidatePath = opencodeTargetPath ?? opencodePath;
 let existingOpencodeVersion = null;
 
-// openwork-server paths
-const openworkServerBaseName = "openwork-server";
-const openworkServerName = isWindowsTarget ? `${openworkServerBaseName}.exe` : openworkServerBaseName;
-const openworkServerPath = join(sidecarDir, openworkServerName);
-const openworkServerBuildName = bunTarget
-  ? `${openworkServerBaseName}-${bunTarget}${bunTarget.includes("windows") ? ".exe" : ""}`
-  : openworkServerName;
-const openworkServerBuildPath = join(sidecarDir, openworkServerBuildName);
-const openworkServerTargetTriple = resolvedTargetTriple;
-const openworkServerTargetName = openworkServerTargetTriple
-  ? `${openworkServerBaseName}-${openworkServerTargetTriple}${openworkServerTargetTriple.includes("windows") ? ".exe" : ""}`
+// aiwork-server paths
+const aiworkServerBaseName = "aiwork-server";
+const aiworkServerName = isWindowsTarget ? `${aiworkServerBaseName}.exe` : aiworkServerBaseName;
+const aiworkServerPath = join(sidecarDir, aiworkServerName);
+const aiworkServerBuildName = bunTarget
+  ? `${aiworkServerBaseName}-${bunTarget}${bunTarget.includes("windows") ? ".exe" : ""}`
+  : aiworkServerName;
+const aiworkServerBuildPath = join(sidecarDir, aiworkServerBuildName);
+const aiworkServerTargetTriple = resolvedTargetTriple;
+const aiworkServerTargetName = aiworkServerTargetTriple
+  ? `${aiworkServerBaseName}-${aiworkServerTargetTriple}${aiworkServerTargetTriple.includes("windows") ? ".exe" : ""}`
   : null;
-const openworkServerTargetPath = openworkServerTargetName ? join(sidecarDir, openworkServerTargetName) : null;
+const aiworkServerTargetPath = aiworkServerTargetName ? join(sidecarDir, aiworkServerTargetName) : null;
 
-const openworkServerDir = resolve(__dirname, "..", "..", "server");
+const aiworkServerDir = resolve(__dirname, "..", "..", "server");
 
 const resolveBuildScript = (dir) => {
   const scriptPath = resolve(dir, "script", "build.ts");
@@ -147,7 +147,7 @@ const resolveBuildScript = (dir) => {
 };
 
 // orchestrator paths
-const orchestratorBaseName = "openwork-orchestrator";
+const orchestratorBaseName = "aiwork-orchestrator";
 const orchestratorName =
   isWindowsTarget ? `${orchestratorBaseName}.exe` : orchestratorBaseName;
 const orchestratorPath = join(sidecarDir, orchestratorName);
@@ -163,7 +163,7 @@ const orchestratorTargetPath = orchestratorTargetName ? join(sidecarDir, orchest
 const orchestratorDir = resolve(__dirname, "..", "..", "orchestrator");
 
 // chrome-devtools-mcp: now bundled as a node_modules dependency of
-// @openwork/desktop (Electron resolves it directly). The Bun-compiled shim
+// @aiwork/desktop (Electron resolves it directly). The Bun-compiled shim
 // sidecar is no longer built.  These variables are kept only so the
 // versions.json metadata block below can record the pinned version without
 // breaking the build.
@@ -287,52 +287,52 @@ const parseChecksum = (content, assetName) => {
   return null;
 };
 
-let didBuildOpenworkServer = false;
-let existingOpenworkServerVersion = null;
-if (existsSync(openworkServerPath) && !isStubBinary(openworkServerPath)) {
-  existingOpenworkServerVersion = readBinaryVersion(openworkServerPath);
+let didBuildAiWorkServer = false;
+let existingAiWorkServerVersion = null;
+if (existsSync(aiworkServerPath) && !isStubBinary(aiworkServerPath)) {
+  existingAiWorkServerVersion = readBinaryVersion(aiworkServerPath);
 }
 
-const desiredOpenworkServerVersion = (() => {
+const desiredAiWorkServerVersion = (() => {
   try {
-    const raw = readFileSync(resolve(openworkServerDir, "package.json"), "utf8");
+    const raw = readFileSync(resolve(aiworkServerDir, "package.json"), "utf8");
     return String(JSON.parse(raw).version ?? "").trim() || null;
   } catch {
     return null;
   }
 })();
 
-const shouldRebuildOpenworkServerForVersion = Boolean(
-  desiredOpenworkServerVersion &&
-    existingOpenworkServerVersion &&
-    existingOpenworkServerVersion !== desiredOpenworkServerVersion,
+const shouldRebuildAiWorkServerForVersion = Boolean(
+  desiredAiWorkServerVersion &&
+    existingAiWorkServerVersion &&
+    existingAiWorkServerVersion !== desiredAiWorkServerVersion,
 );
-const shouldBuildOpenworkServer =
+const shouldBuildAiWorkServer =
   forceBuild ||
-  shouldRebuildOpenworkServerForVersion ||
-  !existsSync(openworkServerBuildPath) ||
-  isStubBinary(openworkServerBuildPath);
+  shouldRebuildAiWorkServerForVersion ||
+  !existsSync(aiworkServerBuildPath) ||
+  isStubBinary(aiworkServerBuildPath);
 
-if (shouldBuildOpenworkServer) {
+if (shouldBuildAiWorkServer) {
   mkdirSync(sidecarDir, { recursive: true });
-  if (existsSync(openworkServerBuildPath)) {
+  if (existsSync(aiworkServerBuildPath)) {
     try {
-      unlinkSync(openworkServerBuildPath);
+      unlinkSync(aiworkServerBuildPath);
     } catch {
       // ignore
     }
   }
-  const openworkServerScript = resolveBuildScript(openworkServerDir);
-  if (!existsSync(openworkServerScript)) {
-    console.error(`OpenWork server build script not found at ${openworkServerScript}`);
+  const aiworkServerScript = resolveBuildScript(aiworkServerDir);
+  if (!existsSync(aiworkServerScript)) {
+    console.error(`AiWork server build script not found at ${aiworkServerScript}`);
     process.exit(1);
   }
-  const openworkServerArgs = [openworkServerScript, "--outdir", sidecarDir, "--filename", "openwork-server"];
+  const aiworkServerArgs = [aiworkServerScript, "--outdir", sidecarDir, "--filename", "aiwork-server"];
   if (bunTarget) {
-    openworkServerArgs.push("--target", bunTarget);
+    aiworkServerArgs.push("--target", bunTarget);
   }
-  const buildResult = spawnSync("bun", openworkServerArgs, {
-    cwd: openworkServerDir,
+  const buildResult = spawnSync("bun", aiworkServerArgs, {
+    cwd: aiworkServerDir,
     stdio: "inherit",
     shell: true,
   });
@@ -341,34 +341,34 @@ if (shouldBuildOpenworkServer) {
     process.exit(buildResult.status ?? 1);
   }
 
-  didBuildOpenworkServer = true;
+  didBuildAiWorkServer = true;
 }
 
-if (existsSync(openworkServerBuildPath)) {
-  const shouldCopyCanonical = didBuildOpenworkServer || !existsSync(openworkServerPath) || isStubBinary(openworkServerPath);
-  if (shouldCopyCanonical && openworkServerBuildPath !== openworkServerPath) {
+if (existsSync(aiworkServerBuildPath)) {
+  const shouldCopyCanonical = didBuildAiWorkServer || !existsSync(aiworkServerPath) || isStubBinary(aiworkServerPath);
+  if (shouldCopyCanonical && aiworkServerBuildPath !== aiworkServerPath) {
     try {
-      if (existsSync(openworkServerPath)) {
-        unlinkSync(openworkServerPath);
+      if (existsSync(aiworkServerPath)) {
+        unlinkSync(aiworkServerPath);
       }
     } catch {
       // ignore
     }
-    copyFileSync(openworkServerBuildPath, openworkServerPath);
+    copyFileSync(aiworkServerBuildPath, aiworkServerPath);
   }
 
-  if (openworkServerTargetPath) {
+  if (aiworkServerTargetPath) {
     const shouldCopyTarget =
-      didBuildOpenworkServer || !existsSync(openworkServerTargetPath) || isStubBinary(openworkServerTargetPath);
-    if (shouldCopyTarget && openworkServerBuildPath !== openworkServerTargetPath) {
+      didBuildAiWorkServer || !existsSync(aiworkServerTargetPath) || isStubBinary(aiworkServerTargetPath);
+    if (shouldCopyTarget && aiworkServerBuildPath !== aiworkServerTargetPath) {
       try {
-        if (existsSync(openworkServerTargetPath)) {
-          unlinkSync(openworkServerTargetPath);
+        if (existsSync(aiworkServerTargetPath)) {
+          unlinkSync(aiworkServerTargetPath);
         }
       } catch {
         // ignore
       }
-      copyFileSync(openworkServerBuildPath, openworkServerTargetPath);
+      copyFileSync(aiworkServerBuildPath, aiworkServerTargetPath);
     }
   }
 }
@@ -581,15 +581,15 @@ if (existsSync(orchestratorBuildPath)) {
 adHocSignDarwinSidecars([
   opencodePath,
   opencodeTargetPath,
-  openworkServerBuildPath,
-  openworkServerPath,
-  openworkServerTargetPath,
+  aiworkServerBuildPath,
+  aiworkServerPath,
+  aiworkServerTargetPath,
   orchestratorBuildPath,
   orchestratorPath,
   orchestratorTargetPath,
 ]);
 
-const openworkServerVersion = desiredOpenworkServerVersion;
+const aiworkServerVersion = desiredAiWorkServerVersion;
 
 const orchestratorVersion = (() => {
   try {
@@ -605,11 +605,11 @@ const versions = {
     version: normalizedOpencodeVersion,
     sha256: opencodeCandidatePath && existsSync(opencodeCandidatePath) ? sha256File(opencodeCandidatePath) : null,
   },
-  "openwork-server": {
-    version: openworkServerVersion,
-    sha256: existsSync(openworkServerPath) ? sha256File(openworkServerPath) : null,
+  "aiwork-server": {
+    version: aiworkServerVersion,
+    sha256: existsSync(aiworkServerPath) ? sha256File(aiworkServerPath) : null,
   },
-  "openwork-orchestrator": {
+  "aiwork-orchestrator": {
     version: orchestratorVersion,
     sha256: existsSync(orchestratorPath) ? sha256File(orchestratorPath) : null,
   },

@@ -627,9 +627,9 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
         : "Use OpenAI's device flow when the local browser callback is unreliable.";
     }
     if (method.type === "oauth") {
-      return "Continue in the browser and let OpenWork finish the connection automatically.";
+      return "Continue in the browser and let AiWork finish the connection automatically.";
     }
-    return "Paste a secret key that OpenWork stores locally on this device.";
+    return "Paste a secret key that AiWork stores locally on this device.";
   };
 
   if (!props.open) return null;

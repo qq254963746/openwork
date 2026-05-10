@@ -62,9 +62,9 @@ function fileExists(filePath: string) {
 
 function readArgs(argv: string[]): BuildOptions {
   const options: BuildOptions = {
-    bundleDir: process.env.OPENWORK_SERVER_V2_BUNDLE_DIR?.trim() ? resolve(process.env.OPENWORK_SERVER_V2_BUNDLE_DIR.trim()) : null,
+    bundleDir: process.env.AIWORK_SERVER_V2_BUNDLE_DIR?.trim() ? resolve(process.env.AIWORK_SERVER_V2_BUNDLE_DIR.trim()) : null,
     embedRuntime: false,
-    filename: "openwork-server-v2",
+    filename: "aiwork-server-v2",
     outdir: resolve("dist", "bin"),
     targets: [],
   };
@@ -180,7 +180,7 @@ function runtimeAssetCandidates(bundleDir: string, target?: string): RuntimeAsse
 }
 
 function createEmbeddedEntrypoint(assets: RuntimeAssetPaths) {
-  const buildDir = mkdtempSync(join(os.tmpdir(), "openwork-server-v2-build-"));
+  const buildDir = mkdtempSync(join(os.tmpdir(), "aiwork-server-v2-build-"));
   const embeddedModulePath = join(buildDir, "embedded-runtime.ts");
   const entrypointPath = join(buildDir, "entry.ts");
 
@@ -246,7 +246,7 @@ function buildOnce(options: BuildOptions, target?: string) {
     "--outfile",
     outfile,
     "--define",
-    `__OPENWORK_SERVER_V2_VERSION__=${JSON.stringify(version)}`,
+    `__AIWORK_SERVER_V2_VERSION__=${JSON.stringify(version)}`,
   ];
   if (target) {
     args.push("--target", target);

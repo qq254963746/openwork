@@ -19,8 +19,8 @@ export type TuiService = {
 export type TuiConnectInfo = {
   runId: string;
   workspace: string;
-  openworkUrl: string;
-  openworkToken: string;
+  aiworkUrl: string;
+  aiworkToken: string;
   ownerToken?: string;
   hostToken: string;
   opencodeUrl: string;
@@ -134,7 +134,7 @@ const levelColor: Record<TuiLogLevel, RGBA> = {
 
 const levelCycle: Array<"all" | TuiLogLevel> = ["all", "info", "warn", "error", "debug"];
 
-const serviceCycle = ["all", "openwork-orchestrator", "opencode", "openwork-server", "router"];
+const serviceCycle = ["all", "aiwork-orchestrator", "opencode", "aiwork-server", "router"];
 
 const viewTabs: Array<{ name: string; description: string; value: ViewName }> = [
   { name: "Overview", description: "Overview", value: "overview" },
@@ -568,7 +568,7 @@ export function startOrchestratorTui(options: TuiOptions): TuiHandle {
         <box flexDirection="column" width={dimensions().width} height={dimensions().height} paddingLeft={2} paddingRight={2}>
           <box flexDirection="row" justifyContent="space-between" paddingTop={1}>
             <text fg={theme.text} attributes={TextAttributes.BOLD}>
-              openwork · {state.view}
+              aiwork · {state.view}
             </text>
             <text fg={theme.textMuted}>v{options.version}</text>
           </box>
@@ -638,15 +638,15 @@ export function startOrchestratorTui(options: TuiOptions): TuiHandle {
                 <text fg={theme.text} attributes={TextAttributes.BOLD}>
                   Connect
                 </text>
-                <text fg={theme.textMuted}>OpenWork URL (LAN)</text>
-                <text fg={theme.text}>{state.connect.openworkUrl}</text>
-                <text fg={theme.textMuted}>OpenWork Collaborator Token</text>
-                <text fg={theme.text}>{state.connect.openworkToken}</text>
+                <text fg={theme.textMuted}>AiWork URL (LAN)</text>
+                <text fg={theme.text}>{state.connect.aiworkUrl}</text>
+                <text fg={theme.textMuted}>AiWork Collaborator Token</text>
+                <text fg={theme.text}>{state.connect.aiworkToken}</text>
                 <Show when={state.connect.ownerToken}>
-                  <text fg={theme.textMuted}>OpenWork Owner Token</text>
+                  <text fg={theme.textMuted}>AiWork Owner Token</text>
                   <text fg={theme.text}>{state.connect.ownerToken}</text>
                 </Show>
-                <text fg={theme.textMuted}>OpenWork Host Admin Token</text>
+                <text fg={theme.textMuted}>AiWork Host Admin Token</text>
                 <text fg={theme.text}>{state.connect.hostToken}</text>
                 <text fg={theme.textMuted}>OpenCode URL</text>
                 <text fg={theme.text}>{state.connect.opencodeUrl}</text>

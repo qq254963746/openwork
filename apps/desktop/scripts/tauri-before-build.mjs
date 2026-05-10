@@ -14,5 +14,5 @@ const runPnpm = (args) => {
   }
 };
 
-runPnpm(["-C", "../..", "--filter", "@openwork/desktop", "run", "prepare:sidecar"]);
-runPnpm(["--filter", "@openwork/app", "build"]);
+runPnpm(["-C", "../..", "--filter", "@aiwork/desktop", "run", "prepare:sidecar"]);
+runPnpm(["--filter", "@aiwork/app", "build"]);

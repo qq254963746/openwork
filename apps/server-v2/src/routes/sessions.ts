@@ -106,7 +106,7 @@ export function registerSessionRoutes(app: Hono<AppBindings>) {
     describeRoute({
       tags: ["Sessions"],
       summary: "List workspace sessions",
-      description: "Returns the normalized session inventory for the resolved local OpenCode or remote OpenWork workspace backend.",
+      description: "Returns the normalized session inventory for the resolved local OpenCode or remote AiWork workspace backend.",
       responses: withCommonErrorResponses({
         200: jsonResponse("Workspace sessions returned successfully.", sessionListResponseSchema),
       }, { includeInvalidRequest: true, includeUnauthorized: true }),

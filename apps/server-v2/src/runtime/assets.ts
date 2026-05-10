@@ -264,10 +264,10 @@ export function createRuntimeAssetService(options: RuntimeAssetServiceOptions) {
 
   const serverVersion = options.serverVersion;
   const repoRoot = findRepoRoot(path.resolve(dirnameFromMetaUrl(import.meta.url), "..", "..", "..", ".."));
-  const runtimeSourcePreference = process.env.OPENWORK_SERVER_V2_RUNTIME_SOURCE?.trim().toLowerCase();
-  const bundleRootOverride = process.env.OPENWORK_SERVER_V2_RUNTIME_BUNDLE_DIR?.trim();
-  const releaseRootOverride = process.env.OPENWORK_SERVER_V2_RUNTIME_RELEASE_DIR?.trim();
-  const manifestPathOverride = process.env.OPENWORK_SERVER_V2_RUNTIME_MANIFEST_PATH?.trim();
+  const runtimeSourcePreference = process.env.AIWORK_SERVER_V2_RUNTIME_SOURCE?.trim().toLowerCase();
+  const bundleRootOverride = process.env.AIWORK_SERVER_V2_RUNTIME_BUNDLE_DIR?.trim();
+  const releaseRootOverride = process.env.AIWORK_SERVER_V2_RUNTIME_RELEASE_DIR?.trim();
+  const manifestPathOverride = process.env.AIWORK_SERVER_V2_RUNTIME_MANIFEST_PATH?.trim();
 
   const developmentRoot = repoRoot ? path.join(repoRoot, ".local", "runtime-assets") : null;
   const releaseRoot = releaseRootOverride?.trim()
@@ -422,7 +422,7 @@ export function createRuntimeAssetService(options: RuntimeAssetServiceOptions) {
     const manifestPath =
       source === "release"
         ? path.join(rootDir, "manifest.json")
-        : path.join(rootDir, "manifests", runtimeTarget, `openwork-server-v2-${serverVersion}.json`);
+        : path.join(rootDir, "manifests", runtimeTarget, `aiwork-server-v2-${serverVersion}.json`);
     await writeIfChanged(`${manifestPath}`, `${JSON.stringify(manifest, null, 2)}\n`);
     return manifest;
   };
@@ -703,8 +703,8 @@ export function createRuntimeAssetService(options: RuntimeAssetServiceOptions) {
     }
 
     const asset = resolveOpencodeAsset(runtimeTarget);
-    const archivePath = path.join(os.tmpdir(), `openwork-server-v2-opencode-${Date.now()}-${asset}`);
-    const extractDir = await mkdtemp(path.join(os.tmpdir(), "openwork-server-v2-opencode-"));
+    const archivePath = path.join(os.tmpdir(), `aiwork-server-v2-opencode-${Date.now()}-${asset}`);
+    const extractDir = await mkdtemp(path.join(os.tmpdir(), "aiwork-server-v2-opencode-"));
     const downloadUrl = `https://github.com/anomalyco/opencode/releases/download/v${version}/${asset}`;
 
     try {

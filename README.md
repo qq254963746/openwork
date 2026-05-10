@@ -1,25 +1,25 @@
-> OpenWork is the open source alternative to Claude Cowork/Codex (desktop app).
+> AiWork is the open source alternative to Claude Cowork/Codex (desktop app).
 
 
 ## Core Philosophy
 
-- Local-first, cloud-ready: OpenWork runs on your machine in one click. Send a message instantly.
+- Local-first, cloud-ready: AiWork runs on your machine in one click. Send a message instantly.
 - Composable: desktop app, Slack/Telegram connector, or server. Use what fits, no lock-in.
-- Ejectable: OpenWork is powered by OpenCode, so everything OpenCode can do works in OpenWork, even without a UI yet.
+- Ejectable: AiWork is powered by OpenCode, so everything OpenCode can do works in AiWork, even without a UI yet.
 
-OpenWork is designed around the idea that you can easily ship your agentic workflows for your team as a repeatable, productized process.
+AiWork is designed around the idea that you can easily ship your agentic workflows for your team as a repeatable, productized process.
 
 
 ## Why
 
 Current CLI and GUIs for opencode are anchored around developers. That means a focus on file diffs, tool names, and hard to extend capabilities without relying on exposing some form of cli.
 
-OpenWork is designed to be:
+AiWork is designed to be:
 
 - **Extensible**: skill and opencode plugins are installable modules.
 - **Auditable**: show what happened, when, and why.
 - **Permissioned**: access to privileged flows.
-- **Local**: OpenWork works locally
+- **Local**: AiWork works locally
 
 ## What’s Included
 
@@ -65,7 +65,7 @@ pnpm install --frozen-lockfile
 
 which bun
 bun --version
-pnpm --filter @openwork/desktop exec tauri --version
+pnpm --filter @aiwork/desktop exec tauri --version
 ```
 
 ### Install
@@ -74,7 +74,7 @@ pnpm --filter @openwork/desktop exec tauri --version
 pnpm install
 ```
 
-OpenWork now lives in `apps/app` (UI) and `apps/desktop` (desktop shell).
+AiWork now lives in `apps/app` (UI) and `apps/desktop` (desktop shell).
 
 ### Run (Desktop)
 
@@ -82,7 +82,7 @@ OpenWork now lives in `apps/app` (UI) and `apps/desktop` (desktop shell).
 pnpm dev
 ```
 
-`pnpm dev` now enables `OPENWORK_DEV_MODE=1` automatically, so desktop dev uses an isolated OpenCode state instead of your personal global config/auth/data.
+`pnpm dev` now enables `AIWORK_DEV_MODE=1` automatically, so desktop dev uses an isolated OpenCode state instead of your personal global config/auth/data.
 
 ### Run (Web UI only)
 
@@ -90,7 +90,7 @@ pnpm dev
 pnpm dev:ui
 ```
 
-All repo `dev` entrypoints now opt into the same dev-mode isolation so local testing uses the OpenWork-managed OpenCode state consistently.
+All repo `dev` entrypoints now opt into the same dev-mode isolation so local testing uses the AiWork-managed OpenCode state consistently.
 
 ### Arch Users:
 
@@ -101,11 +101,11 @@ curl -fsSL https://opencode.ai/install | bash -s -- --version "$(node -e "const 
 
 ## Architecture (high-level)
 
-- In **Host mode**, OpenWork runs a local host stack and connects the UI to it.
-  - Default runtime: `openwork` (installed from `openwork-orchestrator`), which orchestrates `opencode`, `openwork-server`, and optionally `opencode-router`.
+- In **Host mode**, AiWork runs a local host stack and connects the UI to it.
+  - Default runtime: `aiwork` (installed from `aiwork-orchestrator`), which orchestrates `opencode`, `aiwork-server`, and optionally `opencode-router`.
   - Fallback runtime: `direct`, where the desktop app spawns `opencode serve --hostname 127.0.0.1 --port <free-port>` directly.
 
-When you select a project folder, OpenWork runs the host stack locally using that folder and connects the desktop UI.
+When you select a project folder, AiWork runs the host stack locally using that folder and connects the desktop UI.
 This lets you run agentic workflows, send prompts, and see progress entirely on your machine without a remote server.
 
 - The UI uses `@opencode-ai/sdk/v2/client` to:
@@ -124,13 +124,13 @@ Capability permissions are defined in:
 
 ## OpenCode Plugins
 
-Plugins are the **native** way to extend OpenCode. OpenWork now manages them from the Skills tab by
+Plugins are the **native** way to extend OpenCode. AiWork now manages them from the Skills tab by
 reading and writing `opencode.json`.
 
 - **Project scope**: `<workspace>/opencode.json`
 - **Global scope**: `~/.config/opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode/opencode.json`)
 
-You can still edit `opencode.json` manually; OpenWork uses the same format as the OpenCode CLI:
+You can still edit `opencode.json` manually; AiWork uses the same format as the OpenCode CLI:
 
 ```json
 {
@@ -156,17 +156,17 @@ If you need to report a desktop or session bug, open Settings -> Debug and expor
 
 ### Linux / Wayland (Hyprland)
 
-If OpenWork crashes on launch with WebKitGTK errors like `Failed to create GBM buffer`, disable dmabuf or compositing before launch. Try one of the following environment flags.
+If AiWork crashes on launch with WebKitGTK errors like `Failed to create GBM buffer`, disable dmabuf or compositing before launch. Try one of the following environment flags.
 
 ```bash
-WEBKIT_DISABLE_DMABUF_RENDERER=1 openwork
+WEBKIT_DISABLE_DMABUF_RENDERER=1 aiwork
 ```
 
 ```bash
-WEBKIT_DISABLE_COMPOSITING_MODE=1 openwork
+WEBKIT_DISABLE_COMPOSITING_MODE=1 aiwork
 ```
 
 ## Security Notes
 
-- OpenWork hides model reasoning and sensitive tool metadata by default.
+- AiWork hides model reasoning and sensitive tool metadata by default.
 - Host mode binds to `127.0.0.1` by default.

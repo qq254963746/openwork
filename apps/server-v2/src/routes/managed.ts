@@ -215,7 +215,7 @@ export function registerManagedRoutes(app: Hono<AppBindings>) {
     describeRoute({
       tags: ["Cloud"],
       summary: "Clear cloud signin state",
-      description: "Removes the server-owned cloud signin record for the current OpenWork server.",
+      description: "Removes the server-owned cloud signin record for the current AiWork server.",
       responses: withCommonErrorResponses({
         200: jsonResponse("Cloud signin cleared successfully.", cloudSigninResponseSchema),
       }, { includeUnauthorized: true }),
@@ -487,7 +487,7 @@ export function registerManagedRoutes(app: Hono<AppBindings>) {
     describeRoute({
       tags: ["Bundles"],
       summary: "Publish shared bundle",
-      description: "Publishes a trusted shared bundle through the configured OpenWork bundle publisher.",
+      description: "Publishes a trusted shared bundle through the configured AiWork bundle publisher.",
       responses: withCommonErrorResponses({
         200: jsonResponse("Shared bundle published successfully.", sharedBundlePublishResponseSchema),
       }, { includeInvalidRequest: true, includeUnauthorized: true }),
@@ -504,7 +504,7 @@ export function registerManagedRoutes(app: Hono<AppBindings>) {
     describeRoute({
       tags: ["Bundles"],
       summary: "Fetch shared bundle",
-      description: "Fetches a trusted shared bundle through the configured OpenWork bundle publisher.",
+      description: "Fetches a trusted shared bundle through the configured AiWork bundle publisher.",
       responses: withCommonErrorResponses({
         200: jsonResponse("Shared bundle fetched successfully.", sharedBundleFetchResponseSchema),
       }, { includeInvalidRequest: true, includeUnauthorized: true }),

@@ -1,13 +1,13 @@
-# OpenWork Infrastructure Principles
+# AiWork Infrastructure Principles
 
-OpenWork is an experience layer. `opencode` is the engine. This document defines how infrastructure is built so every component is usable on its own, composable as a sidecar, and easy to automate.
+AiWork is an experience layer. `opencode` is the engine. This document defines how infrastructure is built so every component is usable on its own, composable as a sidecar, and easy to automate.
 
 ## Core Principles
 
 1.  CLI-first, always
 
 * Every infrastructure component must be runnable via a single CLI command.
-* The OpenWork UI may wrap these, but never replace or lock them out.
+* The AiWork UI may wrap these, but never replace or lock them out.
 
 2.  Unix-like interfaces
 
@@ -21,7 +21,7 @@ OpenWork is an experience layer. `opencode` is the engine. This document defines
 
 4.  Clear boundaries
 
-* OpenCode remains the engine; OpenWork adds a thin config + UX layer.
+* OpenCode remains the engine; AiWork adds a thin config + UX layer.
 * When OpenCode exposes a stable API, use it instead of re-implementing.
 
 5.  Local-first, graceful degradation
@@ -67,18 +67,18 @@ But what you can do is:
 ### opencode Engine
 
 * Always usable via `opencode` CLI.
-* OpenWork never replaces the CLI; it only connects to the engine.
+* AiWork never replaces the CLI; it only connects to the engine.
 
-### OpenWork Server
+### AiWork Server
 
-* Runs standalone via `openwork-server` CLI.
+* Runs standalone via `aiwork-server` CLI.
 * Provides filesystem-backed config surfaces (skills, plugins, MCP, commands).
-* Sidecar lifecycle is described in `packages/app/pr/openwork-server.md`.
-* Can also be consumed as a hosted OpenWork Cloud control surface for remote worker lifecycle.
+* Sidecar lifecycle is described in `packages/app/pr/aiwork-server.md`.
+* Can also be consumed as a hosted AiWork Cloud control surface for remote worker lifecycle.
 
-### OpenWork Cloud Control Plane
+### AiWork Cloud Control Plane
 
-* Hosted deployment of OpenWork server capabilities for worker provisioning and remote connect.
+* Hosted deployment of AiWork server capabilities for worker provisioning and remote connect.
 * Must preserve the same user-level contract as self-hosted paths:
   - launch worker
   - get connect credentials (URL + token)
@@ -88,7 +88,7 @@ But what you can do is:
 ### OpenCode Router
 
 * Runs standalone via `opencode-router` CLI.
-* Must be able to use OpenWork server for config and approvals.
+* Must be able to use AiWork server for config and approvals.
 
 ## Non-goals
 
@@ -100,4 +100,4 @@ But what you can do is:
 * `VISION.md`
 * `PRINCIPLES.md`
 * `ARCHITECTURE.md`
-* `packages/app/pr/openwork-server.md`
+* `packages/app/pr/aiwork-server.md`

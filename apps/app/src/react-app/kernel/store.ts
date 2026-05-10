@@ -1,10 +1,10 @@
 import { create } from "zustand";
 
 import type {
-  OpenworkServerCapabilities,
-  OpenworkServerDiagnostics,
-  OpenworkWorkspaceInfo,
-} from "../../app/lib/openwork-server";
+  AiWorkServerCapabilities,
+  AiWorkServerDiagnostics,
+  AiWorkWorkspaceInfo,
+} from "../../app/lib/aiwork-server";
 
 export type ServerState = {
   url: string;
@@ -12,8 +12,8 @@ export type ServerState = {
   status: "idle" | "connecting" | "connected" | "error";
   error: string | null;
   version: string | null;
-  capabilities: OpenworkServerCapabilities | null;
-  diagnostics: OpenworkServerDiagnostics | null;
+  capabilities: AiWorkServerCapabilities | null;
+  diagnostics: AiWorkServerDiagnostics | null;
 };
 
 const INITIAL_SERVER: ServerState = {
@@ -26,23 +26,23 @@ const INITIAL_SERVER: ServerState = {
   diagnostics: null,
 };
 
-export type OpenworkStore = {
+export type AiWorkStore = {
   bootstrapping: boolean;
   server: ServerState;
-  workspaces: OpenworkWorkspaceInfo[];
+  workspaces: AiWorkWorkspaceInfo[];
   activeWorkspaceId: string | null;
   selectedSessionId: string | null;
   errorBanner: string | null;
   setBootstrapping: (value: boolean) => void;
   setServer: (server: ServerState) => void;
-  setWorkspaces: (workspaces: OpenworkWorkspaceInfo[]) => void;
+  setWorkspaces: (workspaces: AiWorkWorkspaceInfo[]) => void;
   setActiveWorkspaceId: (workspaceId: string | null) => void;
   setSelectedSessionId: (sessionId: string | null) => void;
   setErrorBanner: (message: string | null) => void;
   clearErrorBanner: () => void;
 };
 
-export const useOpenworkStore = create<OpenworkStore>((set) => ({
+export const useAiWorkStore = create<AiWorkStore>((set) => ({
   bootstrapping: true,
   server: INITIAL_SERVER,
   workspaces: [],

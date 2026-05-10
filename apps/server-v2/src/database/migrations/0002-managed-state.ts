@@ -9,7 +9,7 @@ export const phase2ManagedStateMigration = {
       config_json TEXT NOT NULL DEFAULT '{}',
       auth_json TEXT,
       metadata_json TEXT,
-      source TEXT NOT NULL CHECK (source IN ('openwork_managed', 'imported', 'discovered', 'cloud_synced')),
+      source TEXT NOT NULL CHECK (source IN ('aiwork_managed', 'imported', 'discovered', 'cloud_synced')),
       cloud_item_id TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -23,7 +23,7 @@ export const phase2ManagedStateMigration = {
       config_json TEXT NOT NULL DEFAULT '{}',
       auth_json TEXT,
       metadata_json TEXT,
-      source TEXT NOT NULL CHECK (source IN ('openwork_managed', 'imported', 'discovered', 'cloud_synced')),
+      source TEXT NOT NULL CHECK (source IN ('aiwork_managed', 'imported', 'discovered', 'cloud_synced')),
       cloud_item_id TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -37,7 +37,7 @@ export const phase2ManagedStateMigration = {
       config_json TEXT NOT NULL DEFAULT '{}',
       auth_json TEXT,
       metadata_json TEXT,
-      source TEXT NOT NULL CHECK (source IN ('openwork_managed', 'imported', 'discovered', 'cloud_synced')),
+      source TEXT NOT NULL CHECK (source IN ('aiwork_managed', 'imported', 'discovered', 'cloud_synced')),
       cloud_item_id TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -51,7 +51,7 @@ export const phase2ManagedStateMigration = {
       config_json TEXT NOT NULL DEFAULT '{}',
       auth_json TEXT,
       metadata_json TEXT,
-      source TEXT NOT NULL CHECK (source IN ('openwork_managed', 'imported', 'discovered', 'cloud_synced')),
+      source TEXT NOT NULL CHECK (source IN ('aiwork_managed', 'imported', 'discovered', 'cloud_synced')),
       cloud_item_id TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL

@@ -1,5 +1,5 @@
 import { HTTPException } from "hono/http-exception";
-import { requestRemoteOpenwork } from "../adapters/remote-openwork.js";
+import { requestRemoteAiWork } from "../adapters/remote-aiwork.js";
 import { createRemoteWorkspaceId, createServerId } from "../database/identifiers.js";
 import type { ServerRepositories } from "../database/repositories.js";
 import type { HostingKind, JsonObject, ServerRecord, WorkspaceRecord } from "../database/types.js";
@@ -34,10 +34,10 @@ function stripWorkspaceMount(value: string) {
 function detectRemoteHostingKind(value: string): HostingKind {
   const hostname = new URL(value).hostname.toLowerCase();
   if (
-    hostname === "app.openworklabs.com"
-    || hostname === "app.openwork.software"
-    || hostname.endsWith(".openworklabs.com")
-    || hostname.endsWith(".openwork.software")
+    hostname === "app.aiworklabs.com"
+    || hostname === "app.aiwork.software"
+    || hostname.endsWith(".aiworklabs.com")
+    || hostname.endsWith(".aiwork.software")
   ) {
     return "cloud";
   }
@@ -98,8 +98,8 @@ export function createRemoteServerService(input: {
     const existing = input.repositories.servers.getById(serverId);
     const auth: JsonObject = {
       ...(existing?.auth ?? {}),
-      ...(payload.token?.trim() ? { openworkToken: payload.token.trim(), openworkClientToken: payload.token.trim() } : {}),
-      ...(payload.hostToken?.trim() ? { openworkHostToken: payload.hostToken.trim() } : {}),
+      ...(payload.token?.trim() ? { aiworkToken: payload.token.trim(), aiworkClientToken: payload.token.trim() } : {}),
+      ...(payload.hostToken?.trim() ? { aiworkHostToken: payload.hostToken.trim() } : {}),
     };
     const label = payload.label?.trim() || existing?.label || new URL(baseUrl).host;
     const server = input.repositories.servers.upsert({
@@ -128,7 +128,7 @@ export function createRemoteServerService(input: {
   }
 
   async function fetchRemoteWorkspaces(server: ServerRecord) {
-    const response = await requestRemoteOpenwork<unknown>({
+    const response = await requestRemoteAiWork<unknown>({
       path: "/workspaces",
       server,
       timeoutMs: 10_000,
@@ -139,7 +139,7 @@ export function createRemoteServerService(input: {
   function updateWorkspaceRuntime(workspace: WorkspaceRecord, details: Record<string, unknown>) {
     const current = input.repositories.workspaceRuntimeState.getByWorkspaceId(workspace.id);
     input.repositories.workspaceRuntimeState.upsert({
-      backendKind: "remote_openwork",
+      backendKind: "remote_aiwork",
       health: {
         ...(current?.health ?? {}),
         ...details,
@@ -165,7 +165,7 @@ export function createRemoteServerService(input: {
     });
     const current = input.repositories.workspaceRuntimeState.getByWorkspaceId(workspace.id);
     input.repositories.workspaceRuntimeState.upsert({
-      backendKind: "remote_openwork",
+      backendKind: "remote_aiwork",
       health: current?.health ?? null,
       lastError: {
         code: "not_found",
@@ -186,7 +186,7 @@ export function createRemoteServerService(input: {
     for (const remoteWorkspace of discovered) {
       const workspaceId = createRemoteWorkspaceId({
         baseUrl: server.baseUrl ?? "",
-        remoteType: "openwork",
+        remoteType: "aiwork",
         remoteWorkspaceId: remoteWorkspace.remoteWorkspaceId,
       });
       seenWorkspaceIds.add(workspaceId);
@@ -201,7 +201,7 @@ export function createRemoteServerService(input: {
         notes: {
           ...(previous?.notes ?? {}),
           directory: remoteWorkspace.directory,
-          remoteType: "openwork",
+          remoteType: "aiwork",
           sync: {
             directoryHint: hints?.directory?.trim() || null,
             syncedAt: new Date().toISOString(),
@@ -251,7 +251,7 @@ export function createRemoteServerService(input: {
       const server = buildServerRecord(inputValue);
       const discovered = await fetchRemoteWorkspaces(server);
       if (discovered.length === 0) {
-        throw new HTTPException(404, { message: "Remote OpenWork server did not return any visible workspaces." });
+        throw new HTTPException(404, { message: "Remote AiWork server did not return any visible workspaces." });
       }
       const result = syncRemoteWorkspaceRecords(server, discovered, {
         directory: inputValue.directory,

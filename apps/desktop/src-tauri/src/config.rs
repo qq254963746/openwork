@@ -22,7 +22,7 @@ fn opencode_config_candidates(
             ])
         }
         "global" => {
-            // Match OpenCode: OPENCODE_CONFIG_DIR is the global config root (OpenWork dev isolation).
+            // Match OpenCode: OPENCODE_CONFIG_DIR is the global config root (AiWork dev isolation).
             if let Ok(dir) = env::var("OPENCODE_CONFIG_DIR") {
                 let trimmed = dir.trim();
                 if !trimmed.is_empty() {

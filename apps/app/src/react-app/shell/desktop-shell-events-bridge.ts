@@ -1,8 +1,8 @@
 import { isTauriRuntime } from "../../app/utils";
 import { ensureInspectorInstalled } from "./app-inspector";
 
-const EVENT_SHELL_EVENTS_REQUEST = "openwork-shell-events-request";
-const EVENT_SHELL_CLEAR_REQUEST = "openwork-shell-clear-request";
+const EVENT_SHELL_EVENTS_REQUEST = "aiwork-shell-events-request";
+const EVENT_SHELL_CLEAR_REQUEST = "aiwork-shell-clear-request";
 
 /**
  * Listeners on the **main** webview only: answers IPC pull/clear for the detached `app-log` window.
@@ -22,7 +22,7 @@ export async function installDesktopShellEventsBridgeListeners(): Promise<void> 
     const rawLimit = event.payload.limit;
     const limit = typeof rawLimit === "number" && rawLimit > 0 ? rawLimit : 500;
     try {
-      const entries = window.__openwork?.events(limit) ?? [];
+      const entries = window.__aiwork?.events(limit) ?? [];
       await invoke("shell_events_bridge_reply", { eventsJson: JSON.stringify(entries) });
     } catch {
       await invoke("shell_events_bridge_reply", { eventsJson: "[]" });
@@ -31,7 +31,7 @@ export async function installDesktopShellEventsBridgeListeners(): Promise<void> 
 
   await listen(EVENT_SHELL_CLEAR_REQUEST, async () => {
     try {
-      window.__openwork?.clearEvents();
+      window.__aiwork?.clearEvents();
     } finally {
       await invoke("shell_events_clear_bridge_ack");
     }

@@ -273,8 +273,8 @@ function sanitizePortableOpencodeConfig(opencode: Record<string, unknown> | null
   return next;
 }
 
-function sanitizeOpenworkTemplateConfig(openwork: Record<string, unknown> | null | undefined) {
-  const next = cloneJson(openwork ?? {});
+function sanitizeAiWorkTemplateConfig(aiwork: Record<string, unknown> | null | undefined) {
+  const next = cloneJson(aiwork ?? {});
   const blueprint = readRecord(next.blueprint);
   if (!blueprint) {
     return next;
@@ -479,7 +479,7 @@ function normalizeBundleFetchUrl(bundleUrl: unknown) {
   }
   const trustedBaseUrl = new URL(resolvePublisherBaseUrl().replace(/\/+$/, ""));
   if (inputUrl.origin !== trustedBaseUrl.origin) {
-    throw new RouteError(400, "invalid_request", `Shared bundle URLs must use the configured OpenWork publisher (${trustedBaseUrl.origin}).`);
+    throw new RouteError(400, "invalid_request", `Shared bundle URLs must use the configured AiWork publisher (${trustedBaseUrl.origin}).`);
   }
   const segments = inputUrl.pathname.split("/").filter(Boolean);
   if (segments[0] !== "b" || !segments[1]) {
@@ -504,11 +504,11 @@ function readErrorMessage(text: string) {
 }
 
 function resolvePublisherBaseUrl() {
-  return String(process.env.OPENWORK_PUBLISHER_BASE_URL ?? "").trim() || "https://share.openworklabs.com";
+  return String(process.env.AIWORK_PUBLISHER_BASE_URL ?? "").trim() || "https://share.aiworklabs.com";
 }
 
 function resolvePublisherOrigin() {
-  return String(process.env.OPENWORK_PUBLISHER_REQUEST_ORIGIN ?? "").trim() || "https://app.openwork.software";
+  return String(process.env.AIWORK_PUBLISHER_REQUEST_ORIGIN ?? "").trim() || "https://app.aiwork.software";
 }
 
 function fetchTelegramBotInfo(token: string) {
@@ -630,7 +630,7 @@ export function createManagedResourceService(input: {
 
   function workspaceSkillPath(workspace: WorkspaceRecord, key: string) {
     const baseDir = workspace.configDir?.trim() || workspace.dataDir?.trim() || "";
-    return path.join(baseDir, ".opencode", "skills", "openwork-managed", key, "SKILL.md");
+    return path.join(baseDir, ".opencode", "skills", "aiwork-managed", key, "SKILL.md");
   }
 
   function workspaceCommandDir(workspace: WorkspaceRecord) {
@@ -742,7 +742,7 @@ export function createManagedResourceService(input: {
       id,
       key,
       metadata: payload.metadata ?? null,
-      source: payload.source ?? "openwork_managed",
+      source: payload.source ?? "aiwork_managed",
     });
     if (payload.workspaceIds) {
       const currentAssignments = kindConfig[kind].assignmentRepo.listForItem(item.id).map((assignment) => assignment.workspaceId);
@@ -1004,7 +1004,7 @@ export function createManagedResourceService(input: {
         id: existing?.id,
         key: payload.name,
         metadata: nextMetadata,
-        source: payload.source ?? existing?.source ?? "openwork_managed",
+        source: payload.source ?? existing?.source ?? "aiwork_managed",
         workspaceIds: [workspace.id],
       });
       await materializeAssignments("skills", [workspaceId], existing ? "updated" : "added", item.displayName);
@@ -1034,7 +1034,7 @@ export function createManagedResourceService(input: {
         ref: normalizeString(repo?.ref) || DEFAULT_HUB_REPO.ref,
       };
       const listing = await fetch(`https://api.github.com/repos/${encodeURIComponent(resolvedRepo.owner)}/${encodeURIComponent(resolvedRepo.repo)}/contents/skills?ref=${encodeURIComponent(resolvedRepo.ref)}`, {
-        headers: { Accept: "application/vnd.github+json", "User-Agent": "openwork-server-v2" },
+        headers: { Accept: "application/vnd.github+json", "User-Agent": "aiwork-server-v2" },
       });
       if (!listing.ok) {
         throw new RouteError(502, "bad_gateway", `Failed to fetch hub catalog (${listing.status}).`);
@@ -1050,7 +1050,7 @@ export function createManagedResourceService(input: {
         }
         try {
           const content = await fetch(`${rawBase}/skills/${encodeURIComponent(name)}/SKILL.md`, {
-            headers: { Accept: "text/plain", "User-Agent": "openwork-server-v2" },
+            headers: { Accept: "text/plain", "User-Agent": "aiwork-server-v2" },
           }).then((response) => response.ok ? response.text() : "");
           if (!content) {
             continue;
@@ -1082,7 +1082,7 @@ export function createManagedResourceService(input: {
       };
       const rawUrl = `https://raw.githubusercontent.com/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.repo)}/${encodeURIComponent(repo.ref)}/skills/${encodeURIComponent(inputValue.name)}/SKILL.md`;
       const response = await fetch(rawUrl, {
-        headers: { Accept: "text/plain", "User-Agent": "openwork-server-v2" },
+        headers: { Accept: "text/plain", "User-Agent": "aiwork-server-v2" },
       });
       if (!response.ok) {
         throw new RouteError(404, "not_found", `Hub skill not found: ${inputValue.name}`);
@@ -1233,7 +1233,7 @@ export function createManagedResourceService(input: {
       const sensitiveMode = options?.sensitiveMode ?? "auto";
       const snapshot = await input.config.getWorkspaceConfigSnapshot(workspaceId);
       let opencode = sanitizePortableOpencodeConfig(snapshot.effective.opencode);
-      const openwork = sanitizeOpenworkTemplateConfig(snapshot.stored.openwork);
+      const aiwork = sanitizeAiWorkTemplateConfig(snapshot.stored.aiwork);
       const skills = kindConfig.skills.assignmentRepo.listForWorkspace(workspaceId)
         .map((assignment) => input.repositories.skills.getById(assignment.itemId))
         .filter(Boolean)
@@ -1259,7 +1259,7 @@ export function createManagedResourceService(input: {
         commands,
         exportedAt: Date.now(),
         ...(files.length ? { files } : {}),
-        openwork,
+        aiwork,
         opencode,
         skills,
         workspaceId,
@@ -1270,7 +1270,7 @@ export function createManagedResourceService(input: {
       const workspace = ensureWorkspaceMutable(getWorkspaceOrThrow(workspaceId));
       const modes = asObject(payload.mode);
       const opencode = readRecord(payload.opencode);
-      const openwork = readRecord(payload.openwork);
+      const aiwork = readRecord(payload.aiwork);
       const skills = Array.isArray(payload.skills) ? payload.skills : [];
       const commands = Array.isArray(payload.commands) ? payload.commands : [];
       const files = Array.isArray(payload.files) ? payload.files : [];
@@ -1282,9 +1282,9 @@ export function createManagedResourceService(input: {
           });
       }
 
-      if (openwork) {
+      if (aiwork) {
           await input.config.patchWorkspaceConfig(workspaceId, {
-            openwork: sanitizeOpenworkTemplateConfig(openwork),
+            aiwork: sanitizeAiWorkTemplateConfig(aiwork),
           });
       }
 
@@ -1378,9 +1378,9 @@ export function createManagedResourceService(input: {
             Accept: "application/json",
             "Content-Type": "application/json",
             Origin: resolvePublisherOrigin(),
-            ...(normalizeString(inputValue.name) ? { "X-OpenWork-Name": normalizeString(inputValue.name) } : {}),
-            "X-OpenWork-Bundle-Type": bundleType,
-            "X-OpenWork-Schema-Version": "v1",
+            ...(normalizeString(inputValue.name) ? { "X-AiWork-Name": normalizeString(inputValue.name) } : {}),
+            "X-AiWork-Bundle-Type": bundleType,
+            "X-AiWork-Schema-Version": "v1",
           },
           method: "POST",
           redirect: "manual",

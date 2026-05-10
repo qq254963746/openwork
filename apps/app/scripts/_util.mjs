@@ -63,7 +63,7 @@ export async function spawnOpencodeServe({
     env: {
       ...process.env,
       // Make it explicit we're a non-TUI client.
-      OPENCODE_CLIENT: "openwork-test",
+      OPENCODE_CLIENT: "aiwork-test",
     },
   });
 

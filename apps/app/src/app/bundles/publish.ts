@@ -1,12 +1,12 @@
 import type {
-  OpenworkServerClient,
-  OpenworkWorkspaceExport,
-} from "../lib/openwork-server";
+  AiWorkServerClient,
+  AiWorkWorkspaceExport,
+} from "../lib/aiwork-server";
 import type { SkillsSetBundleV1 } from "./types";
 
 export function buildSkillsSetBundle(
   workspaceName: string,
-  exported: OpenworkWorkspaceExport,
+  exported: AiWorkWorkspaceExport,
 ): SkillsSetBundleV1 {
   const skills = Array.isArray(exported.skills) ? exported.skills : [];
   if (!skills.length) {
@@ -17,7 +17,7 @@ export function buildSkillsSetBundle(
     schemaVersion: 1,
     type: "skills-set",
     name: `${workspaceName} skills`,
-    description: "Complete skills set from an OpenWork workspace.",
+    description: "Complete skills set from an AiWork workspace.",
     skills: skills.map((skill) => ({
       name: skill.name,
       description: skill.description,
@@ -28,7 +28,7 @@ export function buildSkillsSetBundle(
 }
 
 export async function publishSkillsSetBundleFromWorkspace(input: {
-  client: OpenworkServerClient;
+  client: AiWorkServerClient;
   workspaceId: string;
   workspaceName: string;
 }) {

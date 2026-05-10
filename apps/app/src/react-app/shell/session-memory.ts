@@ -4,8 +4,8 @@
  * their spot when switching between shells during the port.
  */
 
-const ACTIVE_WORKSPACE_KEY = "openwork.react.activeWorkspace";
-const SESSION_BY_WORKSPACE_KEY = "openwork.react.sessionByWorkspace";
+const ACTIVE_WORKSPACE_KEY = "aiwork.react.activeWorkspace";
+const SESSION_BY_WORKSPACE_KEY = "aiwork.react.sessionByWorkspace";
 
 function safeGet(key: string): string | null {
   if (typeof window === "undefined") return null;

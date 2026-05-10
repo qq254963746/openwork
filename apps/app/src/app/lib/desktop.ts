@@ -7,7 +7,7 @@ export type DesktopBridge = typeof tauriBridge;
 
 declare global {
   interface Window {
-    __OPENWORK_ELECTRON__?: {
+    __AIWORK_ELECTRON__?: {
       bridge?: Partial<DesktopBridge>;
       invokeDesktop?: (command: string, ...args: unknown[]) => Promise<unknown>;
       shell?: {
@@ -32,7 +32,7 @@ function missingElectronMethod(method: string): never {
 }
 
 function isElectronDesktopRuntime() {
-  return typeof window !== "undefined" && window.__OPENWORK_ELECTRON__ != null;
+  return typeof window !== "undefined" && window.__AIWORK_ELECTRON__ != null;
 }
 
 function isTauriDesktopRuntime() {
@@ -40,7 +40,7 @@ function isTauriDesktopRuntime() {
 }
 
 async function invokeElectronHelper<T>(command: string, ...args: unknown[]): Promise<T> {
-  const invokeDesktop = window.__OPENWORK_ELECTRON__?.invokeDesktop;
+  const invokeDesktop = window.__AIWORK_ELECTRON__?.invokeDesktop;
   if (!invokeDesktop) {
     throw new Error(`Electron desktop helper is unavailable: ${command}`);
   }
@@ -48,8 +48,8 @@ async function invokeElectronHelper<T>(command: string, ...args: unknown[]): Pro
 }
 
 function resolveElectronBridge(): DesktopBridge {
-  const exposed = window.__OPENWORK_ELECTRON__?.bridge ?? {};
-  const invokeDesktop = window.__OPENWORK_ELECTRON__?.invokeDesktop;
+  const exposed = window.__AIWORK_ELECTRON__?.bridge ?? {};
+  const invokeDesktop = window.__AIWORK_ELECTRON__?.invokeDesktop;
   return new Proxy(exposed as DesktopBridge, {
     get(target, prop, receiver) {
       const value = Reflect.get(target, prop, receiver);
@@ -77,7 +77,7 @@ function resolveElectronBridge(): DesktopBridge {
 function resolveDesktopBridge(): DesktopBridge {
   if (
     typeof window !== "undefined" &&
-    (window.__OPENWORK_ELECTRON__?.bridge || window.__OPENWORK_ELECTRON__?.invokeDesktop)
+    (window.__AIWORK_ELECTRON__?.bridge || window.__AIWORK_ELECTRON__?.invokeDesktop)
   ) {
     return resolveElectronBridge();
   }
@@ -129,7 +129,7 @@ export const desktopFetch: typeof globalThis.fetch = (input, init) => {
 
 export async function openDesktopUrl(url: string): Promise<void> {
   if (isElectronDesktopRuntime()) {
-    const openExternal = window.__OPENWORK_ELECTRON__?.shell?.openExternal;
+    const openExternal = window.__AIWORK_ELECTRON__?.shell?.openExternal;
     if (openExternal) {
       await openExternal(url);
       return;
@@ -165,7 +165,7 @@ export async function revealDesktopItemInDir(target: string): Promise<void> {
 
 export async function relaunchDesktopApp(): Promise<void> {
   if (isElectronDesktopRuntime()) {
-    await window.__OPENWORK_ELECTRON__?.shell?.relaunch?.();
+    await window.__AIWORK_ELECTRON__?.shell?.relaunch?.();
     return;
   }
   await tauriBridge.relaunchDesktopApp();
@@ -203,7 +203,7 @@ export async function subscribeDesktopDeepLinks(
       }
     };
     window.addEventListener(nativeDeepLinkEvent, listener as EventListener);
-    const initialUrls = window.__OPENWORK_ELECTRON__?.meta?.initialDeepLinks;
+    const initialUrls = window.__AIWORK_ELECTRON__?.meta?.initialDeepLinks;
     if (Array.isArray(initialUrls) && initialUrls.length > 0) {
       handler(initialUrls);
     }
@@ -230,8 +230,8 @@ const {
   workspaceAddAuthorizedRoot,
   workspaceExportConfig,
   workspaceImportConfig,
-  workspaceOpenworkRead,
-  workspaceOpenworkWrite,
+  workspaceAiWorkRead,
+  workspaceAiWorkWrite,
   opencodeCommandList,
   opencodeCommandWrite,
   opencodeCommandDelete,
@@ -240,14 +240,14 @@ const {
   appBuildInfo,
   getDesktopBootstrapConfig,
   setDesktopBootstrapConfig,
-  nukeOpenworkAndOpencodeConfigAndExit,
+  nukeAiWorkAndOpencodeConfigAndExit,
   orchestratorStartDetached,
   sandboxDoctor,
   sandboxStop,
-  sandboxCleanupOpenworkContainers,
+  sandboxCleanupAiWorkContainers,
   sandboxDebugProbe,
-  openworkServerInfo,
-  openworkServerRestart,
+  aiworkServerInfo,
+  aiworkServerRestart,
   runtimeBootstrap,
   engineInfo,
   readOpencodeEngineDiskLogs,
@@ -266,7 +266,7 @@ const {
   readOpencodeConfig,
   readOpencodeAuthJson,
   writeOpencodeConfig,
-  resetOpenworkState,
+  resetAiWorkState,
   resetOpencodeCache,
   opencodeMcpAuth,
   setWindowDecorations,
@@ -287,8 +287,8 @@ export {
   workspaceAddAuthorizedRoot,
   workspaceExportConfig,
   workspaceImportConfig,
-  workspaceOpenworkRead,
-  workspaceOpenworkWrite,
+  workspaceAiWorkRead,
+  workspaceAiWorkWrite,
   opencodeCommandList,
   opencodeCommandWrite,
   opencodeCommandDelete,
@@ -297,14 +297,14 @@ export {
   appBuildInfo,
   getDesktopBootstrapConfig,
   setDesktopBootstrapConfig,
-  nukeOpenworkAndOpencodeConfigAndExit,
+  nukeAiWorkAndOpencodeConfigAndExit,
   orchestratorStartDetached,
   sandboxDoctor,
   sandboxStop,
-  sandboxCleanupOpenworkContainers,
+  sandboxCleanupAiWorkContainers,
   sandboxDebugProbe,
-  openworkServerInfo,
-  openworkServerRestart,
+  aiworkServerInfo,
+  aiworkServerRestart,
   runtimeBootstrap,
   engineInfo,
   readOpencodeEngineDiskLogs,
@@ -323,7 +323,7 @@ export {
   readOpencodeConfig,
   readOpencodeAuthJson,
   writeOpencodeConfig,
-  resetOpenworkState,
+  resetAiWorkState,
   resetOpencodeCache,
   opencodeMcpAuth,
   setWindowDecorations,

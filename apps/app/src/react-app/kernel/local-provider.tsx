@@ -41,8 +41,8 @@ type LocalContextValue = {
 
 const LocalContext = createContext<LocalContextValue | undefined>(undefined);
 
-const UI_STORAGE_KEY = "openwork.ui";
-const PREFS_STORAGE_KEY = "openwork.preferences";
+const UI_STORAGE_KEY = "aiwork.ui";
+const PREFS_STORAGE_KEY = "aiwork.preferences";
 
 /** Default for Settings → “Show model reasoning” (new installs, cleared storage, reset). */
 export const DEFAULT_SHOW_MODEL_REASONING = true;

@@ -8,7 +8,7 @@ use std::process::Command;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 const APP_LOG_WINDOW_LABEL: &str = "app-log";
-const APP_LOG_VIEWER_QUERY_KEY: &str = "openworkLogViewer";
+const APP_LOG_VIEWER_QUERY_KEY: &str = "aiworkLogViewer";
 
 fn run_command_ok(cmd: &mut Command, label: &'static str) -> Result<(), String> {
     let status = cmd.status().map_err(|e| format!("{label}: {e}"))?;
@@ -36,7 +36,7 @@ pub fn open_app_log_window(app: AppHandle) -> Result<(), String> {
     url.set_fragment(Some("/devtools/app-log"));
 
     WebviewWindowBuilder::new(&app, APP_LOG_WINDOW_LABEL, WebviewUrl::External(url))
-        .title("OpenWork — Logs")
+        .title("AiWork — Logs")
         .inner_size(980.0, 760.0)
         .min_inner_size(520.0, 380.0)
         .build()

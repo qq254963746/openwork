@@ -3,15 +3,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollText, Settings } from "lucide-react";
 
 import { t } from "../../../../i18n";
-import { useControlAction, type OpenworkControlAction } from "../../../shell/control/control-provider";
-import type { OpenworkServerStatus } from "../../../../app/lib/openwork-server";
+import { useControlAction, type AiWorkControlAction } from "../../../shell/control/control-provider";
+import type { AiWorkServerStatus } from "../../../../app/lib/aiwork-server";
 
 const STATUS_BAR_BOOT_STARTED_AT = Date.now();
 const STATUS_BAR_INITIALIZING_MS = 15_000;
 
 export type StatusBarProps = {
   clientConnected: boolean;
-  openworkServerStatus: OpenworkServerStatus;
+  aiworkServerStatus: AiWorkServerStatus;
   developerMode: boolean;
   settingsOpen: boolean;
   onOpenSettings: () => void;
@@ -53,7 +53,7 @@ function deriveStatusCopy(props: StatusBarProps): StatusCopy {
 
   const mcp = props.mcpConnectedCount;
 
-  if (!props.clientConnected && props.openworkServerStatus === "disconnected" && props.initializing) {
+  if (!props.clientConnected && props.aiworkServerStatus === "disconnected" && props.initializing) {
     return {
       label: "Preparing",
       detail: t("session.loading_detail"),
@@ -76,7 +76,7 @@ function deriveStatusCopy(props: StatusBarProps): StatusCopy {
       detailBits.push(t("status.developer_mode"));
     }
     return {
-      label: t("status.openwork_ready"),
+      label: t("status.aiwork_ready"),
       detail: detailBits.join(" · "),
       dotClass: "bg-green-9",
       pingClass: "bg-green-9/45 animate-ping",
@@ -85,7 +85,7 @@ function deriveStatusCopy(props: StatusBarProps): StatusCopy {
     };
   }
 
-  if (props.openworkServerStatus === "limited") {
+  if (props.aiworkServerStatus === "limited") {
     return {
       label: t("status.limited_mode"),
       detail:
@@ -129,7 +129,7 @@ export function StatusBar(props: StatusBarProps) {
 
   const statusCopy = deriveStatusCopy({ ...props, initializing });
 
-  const settingsControlAction = useMemo<OpenworkControlAction>(() => ({
+  const settingsControlAction = useMemo<AiWorkControlAction>(() => ({
     id: "status.settings.open",
     label: props.settingsOpen ? "Go back from settings" : "Open settings from the status bar",
     description: "Use the visible settings button in the status bar.",
@@ -140,7 +140,7 @@ export function StatusBar(props: StatusBarProps) {
   }), [props.onOpenSettings, props.settingsOpen, props.showSettingsButton]);
   useControlAction(settingsControlAction);
 
-  const appLogsControlAction = useMemo<OpenworkControlAction>(() => ({
+  const appLogsControlAction = useMemo<AiWorkControlAction>(() => ({
     id: "status.app_logs.open",
     label: "Open application log viewer",
     description: "Opens the in-memory application event log.",

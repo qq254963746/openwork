@@ -23,8 +23,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { t } from "../../../../i18n";
 import { openDesktopPath, workspaceAddAuthorizedRoot } from "../../../../app/lib/desktop";
-import type { OpenworkServerClient } from "../../../../app/lib/openwork-server";
-import { OpenworkServerError } from "../../../../app/lib/openwork-server";
+import type { AiWorkServerClient } from "../../../../app/lib/aiwork-server";
+import { AiWorkServerError } from "../../../../app/lib/aiwork-server";
 import type { ComposerAttachment } from "../../../../app/types";
 import {
   isDesktopRuntime,
@@ -45,7 +45,7 @@ const WORKSPACE_PANEL_HEADER_DRAG_STYLE: CSSProperties = {
   WebkitUserSelect: "none",
 };
 
-const WORKSPACE_PANEL_WIDTH_KEY = "openwork.session.workspacePanelWidth.v1";
+const WORKSPACE_PANEL_WIDTH_KEY = "aiwork.session.workspacePanelWidth.v1";
 const DEFAULT_WORKSPACE_PANEL_WIDTH = 300;
 const MIN_WORKSPACE_PANEL_WIDTH = 240;
 /** Hide file list “modified” column when the panel is narrower than this (px). */
@@ -298,7 +298,7 @@ function collectSessionToolNames(messages: UIMessage[]): string[] {
 }
 
 export type SessionWorkspacePanelProps = {
-  client: OpenworkServerClient;
+  client: AiWorkServerClient;
   workspaceId: string;
   workspaceRoot: string;
   attachments: ComposerAttachment[];
@@ -458,7 +458,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         return await props.client.listWorkspaceDirectory(props.workspaceId, dirPath || undefined);
       } catch (error) {
         const looksUnauthorized =
-          error instanceof OpenworkServerError
+          error instanceof AiWorkServerError
             ? error.status === 403 && (error.code === "workspace_unauthorized" || error.code === "forbidden")
             : (() => {
                 const message = error instanceof Error ? error.message : String(error ?? "");
@@ -470,7 +470,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
                 );
               })();
 
-        if (error instanceof OpenworkServerError) {
+        if (error instanceof AiWorkServerError) {
           // Always keep a terse summary visible (safe for prod); detailed messages remain dev-only.
           let location = "";
           const url = (error.details &&

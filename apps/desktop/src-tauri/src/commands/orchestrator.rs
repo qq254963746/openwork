@@ -17,12 +17,12 @@ use uuid::Uuid;
 use crate::platform::configure_hidden;
 use crate::types::ExecResult;
 
-const SANDBOX_PROGRESS_EVENT: &str = "openwork://sandbox-create-progress";
+const SANDBOX_PROGRESS_EVENT: &str = "aiwork://sandbox-create-progress";
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrchestratorDetachedHost {
-    pub openwork_url: String,
+    pub aiwork_url: String,
     pub token: String,
     pub owner_token: Option<String>,
     pub host_token: String,
@@ -81,7 +81,7 @@ struct DockerCommandResult {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OpenworkDockerCleanupResult {
+pub struct AiWorkDockerCleanupResult {
     pub candidates: Vec<String>,
     pub removed: Vec<String>,
     pub errors: Vec<String>,
@@ -309,7 +309,7 @@ fn resolve_docker_candidates() -> Vec<PathBuf> {
     let mut seen: HashSet<PathBuf> = HashSet::new();
 
     // 1) Explicit override (most reliable in odd environments)
-    for key in ["OPENWORK_DOCKER_BIN", "OPENWRK_DOCKER_BIN", "DOCKER_BIN"] {
+    for key in ["AIWORK_DOCKER_BIN", "OPENWRK_DOCKER_BIN", "DOCKER_BIN"] {
         if let Some(value) = env::var_os(key) {
             let raw = value.to_string_lossy().trim().to_string();
             if !raw.is_empty() {
@@ -403,7 +403,7 @@ fn run_docker_command_detailed(
         }
     }
 
-    let hint = "Set OPENWORK_DOCKER_BIN (or OPENWRK_DOCKER_BIN) to your docker binary, e.g. /opt/homebrew/bin/docker";
+    let hint = "Set AIWORK_DOCKER_BIN (or OPENWRK_DOCKER_BIN) to your docker binary, e.g. /opt/homebrew/bin/docker";
     Err(format!(
         "Failed to run docker: {} ({})",
         errors.join("; "),
@@ -464,7 +464,7 @@ fn is_sensitive_progress_key(key: &str) -> bool {
             | "opencodepassword"
             | "opencodeusername"
             | "authorization"
-    ) || ((key.starts_with("OPENWORK_") || key.starts_with("OPENCODE_") || key.starts_with("DEN_"))
+    ) || ((key.starts_with("AIWORK_") || key.starts_with("OPENCODE_") || key.starts_with("DEN_"))
         && (key.contains("TOKEN") || key.contains("PASSWORD") || key.contains("USERNAME")))
 }
 
@@ -504,8 +504,8 @@ fn to_command_debug(result: DockerCommandResult) -> SandboxDoctorCommandDebug {
 }
 
 fn derive_orchestrator_container_name(run_id: &str) -> String {
-    // Must match openwork-orchestrator's docker naming scheme:
-    // `openwork-orchestrator-${runId.replace(/[^a-zA-Z0-9_.-]+/g, "-").slice(0, 24)}`
+    // Must match aiwork-orchestrator's docker naming scheme:
+    // `aiwork-orchestrator-${runId.replace(/[^a-zA-Z0-9_.-]+/g, "-").slice(0, 24)}`
     let mut sanitized = String::new();
     for ch in run_id.chars() {
         let ok = ch.is_ascii_alphanumeric() || ch == '_' || ch == '.' || ch == '-';
@@ -514,16 +514,16 @@ fn derive_orchestrator_container_name(run_id: &str) -> String {
     if sanitized.len() > 24 {
         sanitized.truncate(24);
     }
-    format!("openwork-orchestrator-{sanitized}")
+    format!("aiwork-orchestrator-{sanitized}")
 }
 
-fn is_openwork_managed_container(name: &str) -> bool {
-    name.starts_with("openwork-orchestrator-")
-        || name.starts_with("openwork-dev-")
+fn is_aiwork_managed_container(name: &str) -> bool {
+    name.starts_with("aiwork-orchestrator-")
+        || name.starts_with("aiwork-dev-")
         || name.starts_with("openwrk-")
 }
 
-fn list_openwork_managed_containers() -> Result<Vec<String>, String> {
+fn list_aiwork_managed_containers() -> Result<Vec<String>, String> {
     let (status, stdout, stderr) = run_docker_command(
         &["ps", "-a", "--format", "{{.Names}}"],
         Duration::from_secs(8),
@@ -543,7 +543,7 @@ fn list_openwork_managed_containers() -> Result<Vec<String>, String> {
     let mut names: Vec<String> = stdout
         .lines()
         .map(|line| line.trim().to_string())
-        .filter(|name| !name.is_empty() && is_openwork_managed_container(name))
+        .filter(|name| !name.is_empty() && is_aiwork_managed_container(name))
         .collect();
     names.sort();
     names.dedup();
@@ -636,15 +636,15 @@ fn docker_container_state(container_name: &str) -> Result<Option<String>, String
 
 fn format_sandbox_start_timeout_error(
     elapsed_ms: u64,
-    openwork_url: &str,
+    aiwork_url: &str,
     last_error: Option<&str>,
     container_state: Option<&str>,
     container_probe_error: Option<&str>,
 ) -> String {
     let mut details = vec![
-        format!("stage=openwork.healthcheck"),
+        format!("stage=aiwork.healthcheck"),
         format!("elapsed_ms={elapsed_ms}"),
-        format!("url={openwork_url}"),
+        format!("url={aiwork_url}"),
         format!("last_error={}", last_error.unwrap_or("none")),
         format!("container_state={}", container_state.unwrap_or("unknown")),
     ];
@@ -654,16 +654,16 @@ fn format_sandbox_start_timeout_error(
     }
 
     format!(
-        "Timed out waiting for OpenWork server ({})",
+        "Timed out waiting for AiWork server ({})",
         details.join(", ")
     )
 }
 
-fn issue_owner_token(openwork_url: &str, host_token: &str) -> Result<String, String> {
-    let response = ureq::post(&format!("{}/tokens", openwork_url.trim_end_matches('/')))
-        .set("X-OpenWork-Host-Token", host_token)
+fn issue_owner_token(aiwork_url: &str, host_token: &str) -> Result<String, String> {
+    let response = ureq::post(&format!("{}/tokens", aiwork_url.trim_end_matches('/')))
+        .set("X-AiWork-Host-Token", host_token)
         .set("Content-Type", "application/json")
-        .send_string(r#"{"scope":"owner","label":"OpenWork detached owner token"}"#)
+        .send_string(r#"{"scope":"owner","label":"AiWork detached owner token"}"#)
         .map_err(|err| err.to_string())?;
 
     let payload: Value = response
@@ -675,7 +675,7 @@ fn issue_owner_token(openwork_url: &str, host_token: &str) -> Result<String, Str
         .and_then(|value| value.as_str())
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
-        .ok_or_else(|| "OpenWork server did not return an owner token".to_string())
+        .ok_or_else(|| "AiWork server did not return an owner token".to_string())
 }
 
 #[tauri::command]
@@ -685,8 +685,8 @@ pub fn orchestrator_start_detached(
     sandbox_backend: Option<String>,
     sandbox_image_ref: Option<String>,
     run_id: Option<String>,
-    openwork_token: Option<String>,
-    openwork_host_token: Option<String>,
+    aiwork_token: Option<String>,
+    aiwork_host_token: Option<String>,
 ) -> Result<OrchestratorDetachedHost, String> {
     let start_ts = now_ms();
     let workspace_path = workspace_path.trim().to_string();
@@ -731,15 +731,15 @@ pub fn orchestrator_start_detached(
     );
 
     let port = allocate_free_port()?;
-    let token = openwork_token
+    let token = aiwork_token
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| Uuid::new_v4().to_string());
-    let host_token = openwork_host_token
+    let host_token = aiwork_host_token
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
         .unwrap_or_else(|| Uuid::new_v4().to_string());
-    let openwork_url = format!("http://127.0.0.1:{port}");
+    let aiwork_url = format!("http://127.0.0.1:{port}");
 
     emit_sandbox_progress(
         &app,
@@ -748,7 +748,7 @@ pub fn orchestrator_start_detached(
         "Starting sandbox...",
         json!({
             "workspacePath": workspace_path,
-            "openworkUrl": openwork_url,
+            "aiworkUrl": aiwork_url,
             "port": port,
             "sandboxBackend": if wants_microsandbox {
                 "microsandbox"
@@ -776,16 +776,16 @@ pub fn orchestrator_start_detached(
             json!({
                 "candidateCount": candidates.len(),
                 "resolvedDockerBin": resolved,
-                "hasOpenworkDockerBinOverride": env::var("OPENWORK_DOCKER_BIN").ok().is_some(),
+                "hasAiWorkDockerBinOverride": env::var("AIWORK_DOCKER_BIN").ok().is_some(),
                 "hasOpenwrkDockerBinOverride": env::var("OPENWRK_DOCKER_BIN").ok().is_some(),
                 "hasDockerBinOverride": env::var("DOCKER_BIN").ok().is_some(),
             }),
         );
     }
 
-    let (command, command_label) = match app.shell().sidecar("openwork-orchestrator") {
-        Ok(command) => (command, "sidecar:openwork-orchestrator".to_string()),
-        Err(_) => (app.shell().command("openwork"), "path:openwork".to_string()),
+    let (command, command_label) = match app.shell().sidecar("aiwork-orchestrator") {
+        Ok(command) => (command, "sidecar:aiwork-orchestrator".to_string()),
+        Err(_) => (app.shell().command("aiwork"), "path:aiwork".to_string()),
     };
 
     // Start a dedicated host stack for this workspace.
@@ -798,7 +798,7 @@ pub fn orchestrator_start_detached(
             "--approval".to_string(),
             "auto".to_string(),
             "--detach".to_string(),
-            "--openwork-port".to_string(),
+            "--aiwork-port".to_string(),
             port.to_string(),
             "--run-id".to_string(),
             sandbox_run_id.clone(),
@@ -827,9 +827,9 @@ pub fn orchestrator_start_detached(
             json!({
                 "command": command_label,
                 "workspacePath": workspace_path,
-                "openworkUrl": openwork_url,
+                "aiworkUrl": aiwork_url,
                 "argCount": args.len(),
-                "hasDockerOverrides": env::var("OPENWORK_DOCKER_BIN").ok().is_some()
+                "hasDockerOverrides": env::var("AIWORK_DOCKER_BIN").ok().is_some()
                     || env::var("OPENWRK_DOCKER_BIN").ok().is_some()
                     || env::var("DOCKER_BIN").ok().is_some(),
             }),
@@ -840,8 +840,8 @@ pub fn orchestrator_start_detached(
             command = command.env(key, value);
         }
         if let Err(err) = command
-            .env("OPENWORK_TOKEN", token.clone())
-            .env("OPENWORK_HOST_TOKEN", host_token.clone())
+            .env("AIWORK_TOKEN", token.clone())
+            .env("AIWORK_HOST_TOKEN", host_token.clone())
             .spawn()
         {
             emit_sandbox_progress(
@@ -854,10 +854,10 @@ pub fn orchestrator_start_detached(
                     "command": command_label,
                 }),
             );
-            return Err(format!("Failed to start openwork orchestrator: {err}"));
+            return Err(format!("Failed to start aiwork orchestrator: {err}"));
         }
         eprintln!(
-            "[sandbox-create][at={}][runId={}][stage=spawn] launched openwork sidecar for detached sandbox host",
+            "[sandbox-create][at={}][runId={}][stage=spawn] launched aiwork sidecar for detached sandbox host",
             now_ms(),
             sandbox_run_id
         );
@@ -867,9 +867,9 @@ pub fn orchestrator_start_detached(
         &app,
         &sandbox_run_id,
         "spawned",
-        "Sandbox process launched. Waiting for OpenWork server...",
+        "Sandbox process launched. Waiting for AiWork server...",
         json!({
-            "openworkUrl": openwork_url,
+            "aiworkUrl": aiwork_url,
         }),
     );
 
@@ -931,15 +931,15 @@ pub fn orchestrator_start_detached(
             }
         }
 
-        match ureq::get(&format!("{}/health", openwork_url.trim_end_matches('/'))).call() {
+        match ureq::get(&format!("{}/health", aiwork_url.trim_end_matches('/'))).call() {
             Ok(response) if response.status() >= 200 && response.status() < 300 => {
                 emit_sandbox_progress(
                     &app,
                     &sandbox_run_id,
-                    "openwork.healthy",
-                    "OpenWork server is ready.",
+                    "aiwork.healthy",
+                    "AiWork server is ready.",
                     json!({
-                        "openworkUrl": openwork_url,
+                        "aiworkUrl": aiwork_url,
                         "elapsedMs": elapsed_ms,
                         "containerState": last_container_state,
                     }),
@@ -960,10 +960,10 @@ pub fn orchestrator_start_detached(
             emit_sandbox_progress(
                 &app,
                 &sandbox_run_id,
-                "openwork.waiting",
-                "Waiting for OpenWork server...",
+                "aiwork.waiting",
+                "Waiting for AiWork server...",
                 json!({
-                    "openworkUrl": openwork_url,
+                    "aiworkUrl": aiwork_url,
                     "elapsedMs": elapsed_ms,
                     "lastError": last_error,
                     "containerState": last_container_state,
@@ -979,7 +979,7 @@ pub fn orchestrator_start_detached(
         let elapsed_ms = start.elapsed().as_millis() as u64;
         let message = format_sandbox_start_timeout_error(
             elapsed_ms,
-            &openwork_url,
+            &aiwork_url,
             last_error.as_deref(),
             last_container_state.as_deref(),
             last_container_probe_error.as_deref(),
@@ -992,7 +992,7 @@ pub fn orchestrator_start_detached(
             json!({
                 "error": message,
                 "elapsedMs": elapsed_ms,
-                "openworkUrl": openwork_url,
+                "aiworkUrl": aiwork_url,
                 "containerState": last_container_state,
                 "containerProbeError": last_container_probe_error,
             }),
@@ -1012,13 +1012,13 @@ pub fn orchestrator_start_detached(
         now_ms(),
         sandbox_run_id,
         start.elapsed().as_millis(),
-        openwork_url
+        aiwork_url
     );
 
-    let owner_token = issue_owner_token(&openwork_url, &host_token).ok();
+    let owner_token = issue_owner_token(&aiwork_url, &host_token).ok();
 
     Ok(OrchestratorDetachedHost {
-        openwork_url,
+        aiwork_url,
         token,
         owner_token,
         host_token,
@@ -1218,9 +1218,9 @@ pub fn sandbox_stop(container_name: String) -> Result<ExecResult, String> {
     if name.is_empty() {
         return Err("containerName is required".to_string());
     }
-    if !name.starts_with("openwork-orchestrator-") {
+    if !name.starts_with("aiwork-orchestrator-") {
         return Err(
-            "Refusing to stop container: expected name starting with 'openwork-orchestrator-'"
+            "Refusing to stop container: expected name starting with 'aiwork-orchestrator-'"
                 .to_string(),
         );
     }
@@ -1241,10 +1241,10 @@ pub fn sandbox_stop(container_name: String) -> Result<ExecResult, String> {
 }
 
 #[tauri::command]
-pub fn sandbox_cleanup_openwork_containers() -> Result<OpenworkDockerCleanupResult, String> {
-    let candidates = list_openwork_managed_containers()?;
+pub fn sandbox_cleanup_aiwork_containers() -> Result<AiWorkDockerCleanupResult, String> {
+    let candidates = list_aiwork_managed_containers()?;
     if candidates.is_empty() {
-        return Ok(OpenworkDockerCleanupResult {
+        return Ok(AiWorkDockerCleanupResult {
             candidates,
             removed: Vec::new(),
             errors: Vec::new(),
@@ -1275,7 +1275,7 @@ pub fn sandbox_cleanup_openwork_containers() -> Result<OpenworkDockerCleanupResu
         }
     }
 
-    Ok(OpenworkDockerCleanupResult {
+    Ok(AiWorkDockerCleanupResult {
         candidates,
         removed,
         errors,
@@ -1286,7 +1286,7 @@ pub fn sandbox_cleanup_openwork_containers() -> Result<OpenworkDockerCleanupResu
 pub fn sandbox_debug_probe(app: AppHandle) -> SandboxDebugProbeResult {
     let started_at = now_ms();
     let run_id = format!("probe-{}", Uuid::new_v4());
-    let workspace_dir = env::temp_dir().join(format!("openwork-sandbox-probe-{}", Uuid::new_v4()));
+    let workspace_dir = env::temp_dir().join(format!("aiwork-sandbox-probe-{}", Uuid::new_v4()));
     let workspace_path = workspace_dir.to_string_lossy().to_string();
 
     let mut cleanup_errors: Vec<String> = Vec::new();
@@ -1494,7 +1494,7 @@ mod tests {
             .unwrap_or_else(|poisoned| poisoned.into_inner());
 
         let tmp =
-            std::env::temp_dir().join(format!("openwork-docker-timeout-test-{}", Uuid::new_v4()));
+            std::env::temp_dir().join(format!("aiwork-docker-timeout-test-{}", Uuid::new_v4()));
         fs::create_dir_all(&tmp).expect("create tmp dir");
 
         let slow = tmp.join("slow-docker");
@@ -1517,7 +1517,7 @@ exit 0
         );
 
         let _path = EnvGuard::set("PATH", tmp.to_string_lossy().to_string());
-        let _docker = EnvGuard::set("OPENWORK_DOCKER_BIN", slow.to_string_lossy().to_string());
+        let _docker = EnvGuard::set("AIWORK_DOCKER_BIN", slow.to_string_lossy().to_string());
         let _docker_alt = EnvGuard::unset("OPENWRK_DOCKER_BIN");
         let _docker_bin = EnvGuard::unset("DOCKER_BIN");
 
@@ -1534,7 +1534,7 @@ exit 0
     #[cfg(unix)]
     fn local_command_timeout_returns_when_descendant_keeps_pipe_open() {
         let tmp =
-            std::env::temp_dir().join(format!("openwork-timeout-pipe-test-{}", Uuid::new_v4()));
+            std::env::temp_dir().join(format!("aiwork-timeout-pipe-test-{}", Uuid::new_v4()));
         fs::create_dir_all(&tmp).expect("create tmp dir");
 
         let pid_file = tmp.join("descendant.pid");
@@ -1579,7 +1579,7 @@ exit 0
             Some("No such container"),
         );
 
-        assert!(message.contains("stage=openwork.healthcheck"));
+        assert!(message.contains("stage=aiwork.healthcheck"));
         assert!(message.contains("elapsed_ms=90000"));
         assert!(message.contains("url=http://127.0.0.1:43210"));
         assert!(message.contains("last_error=Connection refused (os error 61)"));
@@ -1596,7 +1596,7 @@ exit 0
             .unwrap_or_else(|poisoned| poisoned.into_inner());
 
         let tmp =
-            std::env::temp_dir().join(format!("openwork-docker-doctor-test-{}", Uuid::new_v4()));
+            std::env::temp_dir().join(format!("aiwork-docker-doctor-test-{}", Uuid::new_v4()));
         fs::create_dir_all(&tmp).expect("create tmp dir");
 
         let fast = tmp.join("docker");
@@ -1616,7 +1616,7 @@ exit 0
         );
 
         let _path = EnvGuard::set("PATH", tmp.to_string_lossy().to_string());
-        let _docker = EnvGuard::set("OPENWORK_DOCKER_BIN", fast.to_string_lossy().to_string());
+        let _docker = EnvGuard::set("AIWORK_DOCKER_BIN", fast.to_string_lossy().to_string());
         let _docker_alt = EnvGuard::unset("OPENWRK_DOCKER_BIN");
         let _docker_bin = EnvGuard::unset("DOCKER_BIN");
 

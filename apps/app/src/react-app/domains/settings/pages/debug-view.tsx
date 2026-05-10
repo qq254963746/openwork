@@ -10,10 +10,10 @@ import {
 } from "lucide-react";
 
 import type {
-  OpenworkAuditEntry,
-  OpenworkServerCapabilities,
-  OpenworkServerDiagnostics,
-} from "../../../../app/lib/openwork-server";
+  AiWorkAuditEntry,
+  AiWorkServerCapabilities,
+  AiWorkServerDiagnostics,
+} from "../../../../app/lib/aiwork-server";
 import type { SandboxDebugProbeResult } from "../../../../app/lib/desktop";
 import type { OpencodeConnectStatus, StartupPreference } from "../../../../app/types";
 import { formatRelativeTime, isDesktopRuntime } from "../../../../app/utils";
@@ -37,7 +37,7 @@ type RuntimeSummary = {
   appVersionLabel: string;
   appCommitLabel: string;
   opencodeVersionLabel: string;
-  openworkServerVersionLabel: string;
+  aiworkServerVersionLabel: string;
 };
 
 type StatusPill = {
@@ -110,41 +110,41 @@ export type DebugViewProps = {
   resetModalBusy: boolean;
   resetStatus: string | null;
   opencodeRestarting: boolean;
-  openworkServerRestarting: boolean;
+  aiworkServerRestarting: boolean;
   opencodeServiceStatus: ServiceStatus;
-  openworkServiceStatus: ServiceStatus;
+  aiworkServiceStatus: ServiceStatus;
   opencodeLogStatus: string | null;
-  openworkLogStatus: string | null;
+  aiworkLogStatus: string | null;
   onCopyOpencodeLogs: () => void | Promise<void>;
   onExportOpencodeLogs: () => void | Promise<void>;
-  onCopyOpenworkLogs: () => void | Promise<void>;
-  onExportOpenworkLogs: () => void | Promise<void>;
+  onCopyAiWorkLogs: () => void | Promise<void>;
+  onExportAiWorkLogs: () => void | Promise<void>;
   serviceRestartError: string | null;
   onRestartOpencode: () => void | Promise<void>;
-  onRestartOpenworkServer: () => void | Promise<void>;
+  onRestartAiWorkServer: () => void | Promise<void>;
   engineCard: RuntimeServiceCard;
   opencodeConnectCard: OpenCodeConnectDebugCard;
-  openworkCard: RuntimeServiceCard;
-  openworkServerDiagnostics: OpenworkServerDiagnostics | null;
+  aiworkCard: RuntimeServiceCard;
+  aiworkServerDiagnostics: AiWorkServerDiagnostics | null;
   runtimeWorkspaceId: string | null;
-  openworkServerCapabilities: OpenworkServerCapabilities | null;
+  aiworkServerCapabilities: AiWorkServerCapabilities | null;
   pendingPermissions: unknown;
   events: unknown;
   workspaceDebugEvents: unknown;
   workspaceDebugEventsStatus: string | null;
   safeStringify: (value: unknown) => string;
   onClearWorkspaceDebugEvents: () => void | Promise<void>;
-  openworkAuditEntries: OpenworkAuditEntry[];
-  openworkAuditStatus: StatusPill;
-  openworkAuditError: string | null;
+  aiworkAuditEntries: AiWorkAuditEntry[];
+  aiworkAuditStatus: StatusPill;
+  aiworkAuditError: string | null;
   opencodeConnectStatus: OpencodeConnectStatus | null;
   opencodeDevModeEnabled: boolean;
   nukeConfigBusy: boolean;
   nukeConfigStatus: string | null;
-  onNukeOpenworkAndOpencodeConfig: () => void | Promise<void>;
+  onNukeAiWorkAndOpencodeConfig: () => void | Promise<void>;
 };
 
-function formatActor(entry: OpenworkAuditEntry) {
+function formatActor(entry: AiWorkAuditEntry) {
   if (entry.actor.type === "host") return t("settings.audit_actor_host");
   if (entry.actor.clientId) return entry.actor.clientId;
   if (entry.actor.tokenHash) return entry.actor.tokenHash;
@@ -335,8 +335,8 @@ export function DebugView(props: DebugViewProps) {
             {t("settings.debug_opencode_version", { version: props.runtimeSummary.opencodeVersionLabel })}
           </div>
           <div>
-            {t("settings.debug_openwork_server_version", {
-              version: props.runtimeSummary.openworkServerVersionLabel,
+            {t("settings.debug_aiwork_server_version", {
+              version: props.runtimeSummary.aiworkServerVersionLabel,
             })}
           </div>
         </div>
@@ -358,20 +358,20 @@ export function DebugView(props: DebugViewProps) {
 
         <div className="grid gap-3 lg:grid-cols-2">
           <ServiceCard
-            title={t("settings.openwork_server_label")}
-            description={t("settings.openwork_config_sidecar_desc")}
-            pill={props.openworkCard}
-            lines={props.openworkCard.lines}
-            stdout={props.openworkCard.stdout ?? null}
-            stderr={props.openworkCard.stderr ?? null}
-            error={props.openworkCard.error ?? null}
-            restarting={props.openworkServerRestarting}
-            restartLabel={t("settings.restart_openwork_server")}
-            onRestart={props.onRestartOpenworkServer}
-            serviceStatus={props.openworkServiceStatus}
-            logStatus={props.openworkLogStatus}
-            onCopyLogs={props.onCopyOpenworkLogs}
-            onExportLogs={props.onExportOpenworkLogs}
+            title={t("settings.aiwork_server_label")}
+            description={t("settings.aiwork_config_sidecar_desc")}
+            pill={props.aiworkCard}
+            lines={props.aiworkCard.lines}
+            stdout={props.aiworkCard.stdout ?? null}
+            stderr={props.aiworkCard.stderr ?? null}
+            error={props.aiworkCard.error ?? null}
+            restarting={props.aiworkServerRestarting}
+            restartLabel={t("settings.restart_aiwork_server")}
+            onRestart={props.onRestartAiWorkServer}
+            serviceStatus={props.aiworkServiceStatus}
+            logStatus={props.aiworkLogStatus}
+            onCopyLogs={props.onCopyAiWorkLogs}
+            onExportLogs={props.onExportAiWorkLogs}
             isDesktop={isDesktop}
           />
 
@@ -430,52 +430,52 @@ export function DebugView(props: DebugViewProps) {
       {/* Section: Diagnostics */}
       <div className={cardClass}>
         <div className={sectionHeaderClass}>
-          <div className={sectionTitleClass}>{t("settings.openwork_diagnostics_title")}</div>
+          <div className={sectionTitleClass}>{t("settings.aiwork_diagnostics_title")}</div>
           <div className={sectionDescClass}>
             <span className="font-mono text-[11px] text-dls-secondary">
-              {props.openworkServerDiagnostics?.version ?? "—"}
+              {props.aiworkServerDiagnostics?.version ?? "—"}
             </span>
           </div>
         </div>
 
-        {props.openworkServerDiagnostics ? (
+        {props.aiworkServerDiagnostics ? (
           <div className="grid gap-2 text-[12px] text-dls-secondary md:grid-cols-2">
-            <div>{t("settings.diag_started", { time: formatUptime(props.openworkServerDiagnostics.uptimeMs) })}</div>
+            <div>{t("settings.diag_started", { time: formatUptime(props.aiworkServerDiagnostics.uptimeMs) })}</div>
             <div>
               {t("settings.diag_read_only", {
-                value: props.openworkServerDiagnostics.readOnly ? "true" : "false",
+                value: props.aiworkServerDiagnostics.readOnly ? "true" : "false",
               })}
             </div>
             <div>
               {t("settings.diag_approval", {
-                mode: props.openworkServerDiagnostics.approval.mode,
-                ms: String(props.openworkServerDiagnostics.approval.timeoutMs),
+                mode: props.aiworkServerDiagnostics.approval.mode,
+                ms: String(props.aiworkServerDiagnostics.approval.timeoutMs),
               })}
             </div>
-            <div>{t("settings.diag_workspaces", { count: String(props.openworkServerDiagnostics.workspaceCount) })}</div>
+            <div>{t("settings.diag_workspaces", { count: String(props.aiworkServerDiagnostics.workspaceCount) })}</div>
             <div>
               {t("settings.diag_selected_workspace", {
-                id: props.openworkServerDiagnostics.selectedWorkspaceId ?? "—",
+                id: props.aiworkServerDiagnostics.selectedWorkspaceId ?? "—",
               })}
             </div>
             <div>
               {t("settings.diag_runtime_workspace", {
-                id: props.openworkServerDiagnostics.activeWorkspaceId ?? "—",
+                id: props.aiworkServerDiagnostics.activeWorkspaceId ?? "—",
               })}
             </div>
             <div>
               {t("settings.diag_config_path", {
-                path: props.openworkServerDiagnostics.server.configPath ?? t("settings.diag_default"),
+                path: props.aiworkServerDiagnostics.server.configPath ?? t("settings.diag_default"),
               })}
             </div>
             <div>
               {t("settings.diag_token_source", {
-                source: props.openworkServerDiagnostics.tokenSource.client,
+                source: props.aiworkServerDiagnostics.tokenSource.client,
               })}
             </div>
             <div>
               {t("settings.diag_host_token_source", {
-                source: props.openworkServerDiagnostics.tokenSource.host,
+                source: props.aiworkServerDiagnostics.tokenSource.host,
               })}
             </div>
           </div>
@@ -494,17 +494,17 @@ export function DebugView(props: DebugViewProps) {
                 : t("settings.worker_unresolved")}
             </div>
           </div>
-          {props.openworkServerCapabilities ? (
+          {props.aiworkServerCapabilities ? (
             <div className="grid gap-2 text-[12px] text-dls-secondary md:grid-cols-2">
-              <div>{t("settings.cap_skills", { value: formatCapability(props.openworkServerCapabilities.skills) })}</div>
-              <div>{t("settings.cap_plugins", { value: formatCapability(props.openworkServerCapabilities.plugins) })}</div>
-              <div>{t("settings.cap_mcp", { value: formatCapability(props.openworkServerCapabilities.mcp) })}</div>
-              <div>{t("settings.cap_commands", { value: formatCapability(props.openworkServerCapabilities.commands) })}</div>
-              <div>{t("settings.cap_config", { value: formatCapability(props.openworkServerCapabilities.config) })}</div>
+              <div>{t("settings.cap_skills", { value: formatCapability(props.aiworkServerCapabilities.skills) })}</div>
+              <div>{t("settings.cap_plugins", { value: formatCapability(props.aiworkServerCapabilities.plugins) })}</div>
+              <div>{t("settings.cap_mcp", { value: formatCapability(props.aiworkServerCapabilities.mcp) })}</div>
+              <div>{t("settings.cap_commands", { value: formatCapability(props.aiworkServerCapabilities.commands) })}</div>
+              <div>{t("settings.cap_config", { value: formatCapability(props.aiworkServerCapabilities.config) })}</div>
               <div>
                 {t("settings.cap_browser_tools", {
                   value: (() => {
-                    const browser = props.openworkServerCapabilities.toolProviders?.browser;
+                    const browser = props.aiworkServerCapabilities.toolProviders?.browser;
                     if (!browser?.enabled) return t("settings.disabled");
                     return `${browser.mode} · ${browser.placement}`;
                   })(),
@@ -513,7 +513,7 @@ export function DebugView(props: DebugViewProps) {
               <div>
                 {t("settings.cap_file_tools", {
                   value: (() => {
-                    const files = props.openworkServerCapabilities.toolProviders?.files;
+                    const files = props.aiworkServerCapabilities.toolProviders?.files;
                     if (!files) return t("config.unavailable");
                     return [
                       files.injection ? t("settings.cap_inbox_on") : t("settings.cap_inbox_off"),
@@ -524,8 +524,8 @@ export function DebugView(props: DebugViewProps) {
               </div>
               <div>
                 {t("settings.cap_sandbox", {
-                  value: props.openworkServerCapabilities.sandbox
-                    ? `${props.openworkServerCapabilities.sandbox.backend} (${props.openworkServerCapabilities.sandbox.enabled ? t("settings.on") : t("settings.off")})`
+                  value: props.aiworkServerCapabilities.sandbox
+                    ? `${props.aiworkServerCapabilities.sandbox.backend} (${props.aiworkServerCapabilities.sandbox.enabled ? t("settings.on") : t("settings.off")})`
                     : t("config.unavailable"),
                 })}
               </div>
@@ -548,14 +548,14 @@ export function DebugView(props: DebugViewProps) {
             <div className="text-sm font-semibold tracking-[-0.1px] text-dls-text">
               {t("settings.audit_log_title")}
             </div>
-            <div className={`rounded-full border px-2 py-1 text-[11px] font-medium ${props.openworkAuditStatus.className}`}>
-              {props.openworkAuditStatus.label}
+            <div className={`rounded-full border px-2 py-1 text-[11px] font-medium ${props.aiworkAuditStatus.className}`}>
+              {props.aiworkAuditStatus.label}
             </div>
           </div>
-          {props.openworkAuditError ? <StatusBanner tone="error" message={props.openworkAuditError} /> : null}
-          {props.openworkAuditEntries.length > 0 ? (
+          {props.aiworkAuditError ? <StatusBanner tone="error" message={props.aiworkAuditError} /> : null}
+          {props.aiworkAuditEntries.length > 0 ? (
             <div className="divide-y divide-dls-border/60">
-              {props.openworkAuditEntries.map((entry) => (
+              {props.aiworkAuditEntries.map((entry) => (
                 <div key={entry.id} className="flex items-start justify-between gap-4 py-2">
                   <div className="min-w-0">
                     <div className="truncate text-sm text-dls-text">{entry.summary}</div>
@@ -868,7 +868,7 @@ export function DebugView(props: DebugViewProps) {
           <div className="rounded-xl border border-green-7/25 bg-green-3/10 px-3 py-2 text-[12px] leading-relaxed text-green-11">
             Safe default: use <strong>Prepare migration data</strong> first. It writes the Electron snapshot only and does
             not replace, quit, or delete the Tauri app. The install handoff keeps rollback backup at{" "}
-            <code className="font-mono">OpenWork.app.migrate-bak</code>.
+            <code className="font-mono">AiWork.app.migrate-bak</code>.
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -941,7 +941,7 @@ export function DebugView(props: DebugViewProps) {
               className="h-9 border-amber-7/50 px-3 py-0 text-xs text-amber-11 hover:bg-amber-3/40"
               onClick={() => void props.onInstallElectronPreviewFromTauri()}
               disabled={props.electronMigrationBusy || !props.electronMigrationUrl.trim()}
-              title="Requires a trusted artifact URL. macOS keeps OpenWork.app.migrate-bak for rollback."
+              title="Requires a trusted artifact URL. macOS keeps AiWork.app.migrate-bak for rollback."
             >
               Start install handoff…
             </Button>
@@ -977,12 +977,12 @@ export function DebugView(props: DebugViewProps) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-sm font-semibold tracking-[-0.1px] text-dls-text">
-                {t("settings.reset_openwork_title")}
+                {t("settings.reset_aiwork_title")}
               </div>
               <div className="text-[12px] text-dls-secondary">
                 {props.opencodeDevModeEnabled
-                  ? t("settings.reset_openwork_desc_dev")
-                  : t("settings.reset_openwork_desc_prod")}
+                  ? t("settings.reset_aiwork_desc_dev")
+                  : t("settings.reset_aiwork_desc_prod")}
               </div>
             </div>
             <div
@@ -1004,7 +1004,7 @@ export function DebugView(props: DebugViewProps) {
             <button
               type="button"
               className={compactDangerActionClass}
-              onClick={() => void props.onNukeOpenworkAndOpencodeConfig()}
+              onClick={() => void props.onNukeAiWorkAndOpencodeConfig()}
               disabled={props.busy || props.nukeConfigBusy}
             >
               <CircleAlert size={14} />

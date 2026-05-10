@@ -57,7 +57,7 @@ cargo test --manifest-path packages/desktop/src-tauri/Cargo.toml --offline
 
 No setup required. This skill assumes:
 - Rust/Cargo is installed
-- You're in the openwork repository
+- You're in the aiwork repository
 - The Tauri app is in `packages/desktop/src-tauri/`
 
 ## Prevention Tips

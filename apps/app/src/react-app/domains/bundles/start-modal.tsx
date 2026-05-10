@@ -85,7 +85,7 @@ export function BundleStartModal(props: BundleStartModalProps) {
                 </h3>
                 <p className="mt-1 text-sm leading-relaxed text-dls-secondary">
                   {props.description?.trim() ||
-                    "Pick a folder and OpenWork will create a workspace from this template."}
+                    "Pick a folder and AiWork will create a workspace from this template."}
                 </p>
               </div>
             </div>
@@ -125,7 +125,7 @@ export function BundleStartModal(props: BundleStartModalProps) {
               Workspace folder
             </div>
             <p className="mt-1 text-sm text-dls-secondary">
-              Choose where this template should live. OpenWork will create the
+              Choose where this template should live. AiWork will create the
               workspace and bring in the template automatically.
             </p>
             <div className="mt-4 rounded-xl border border-dls-border bg-dls-surface px-4 py-3 text-sm text-dls-text">

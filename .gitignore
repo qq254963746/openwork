@@ -32,7 +32,7 @@ apps/desktop/resources/sidecars/
 *.bun-build
 apps/server/cli
 apps/server-v2/openapi/openapi.json
-packages/openwork-server-sdk/generated/
+packages/aiwork-server-sdk/generated/
 
 # pnpm store (created by Docker volume mounts)
 .pnpm-store/
@@ -47,8 +47,8 @@ vendor/opencode/
 .opencode/node_modules/
 .opencode/bun.lock
 
-# OpenWork workspace-local artifacts
-.opencode/openwork/
+# AiWork workspace-local artifacts
+.opencode/aiwork/
 .vercel
 .env*.local
 .claude/*

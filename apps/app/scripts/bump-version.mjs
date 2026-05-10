@@ -83,9 +83,9 @@ const updatePackageJson = async (nextVersion) => {
   tauriData.opencodeRouterVersion = nextVersion;
   orchestratorData.version = nextVersion;
 
-  // Ensure openwork-orchestrator uses the same openwork-server/opencode-router versions.
+  // Ensure aiwork-orchestrator uses the same aiwork-server/opencode-router versions.
   orchestratorData.dependencies = orchestratorData.dependencies ?? {};
-  orchestratorData.dependencies["openwork-server"] = nextVersion;
+  orchestratorData.dependencies["aiwork-server"] = nextVersion;
   orchestratorData.dependencies["opencode-router"] = nextVersion;
 
   serverData.version = nextVersion;

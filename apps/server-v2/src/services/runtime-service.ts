@@ -174,7 +174,7 @@ function resolveBootstrapPolicy(environment: string, explicit?: RuntimeBootstrap
     return explicit;
   }
 
-  const fromEnv = process.env.OPENWORK_SERVER_V2_RUNTIME_BOOTSTRAP?.trim().toLowerCase();
+  const fromEnv = process.env.AIWORK_SERVER_V2_RUNTIME_BOOTSTRAP?.trim().toLowerCase();
   if (fromEnv === "disabled" || fromEnv === "manual" || fromEnv === "eager") {
     return fromEnv;
   }
@@ -187,9 +187,9 @@ function resolveBootstrapPolicy(environment: string, explicit?: RuntimeBootstrap
 }
 
 function resolveRestartPolicy(overrides?: Partial<RuntimeRestartPolicy>): RuntimeRestartPolicy {
-  const maxAttempts = Number.parseInt(process.env.OPENWORK_SERVER_V2_RUNTIME_RESTART_MAX_ATTEMPTS ?? "2", 10);
-  const backoffMs = Number.parseInt(process.env.OPENWORK_SERVER_V2_RUNTIME_RESTART_BACKOFF_MS ?? "750", 10);
-  const windowMs = Number.parseInt(process.env.OPENWORK_SERVER_V2_RUNTIME_RESTART_WINDOW_MS ?? "30000", 10);
+  const maxAttempts = Number.parseInt(process.env.AIWORK_SERVER_V2_RUNTIME_RESTART_MAX_ATTEMPTS ?? "2", 10);
+  const backoffMs = Number.parseInt(process.env.AIWORK_SERVER_V2_RUNTIME_RESTART_BACKOFF_MS ?? "750", 10);
+  const windowMs = Number.parseInt(process.env.AIWORK_SERVER_V2_RUNTIME_RESTART_WINDOW_MS ?? "30000", 10);
 
   return {
     backoffMs: overrides?.backoffMs ?? (Number.isFinite(backoffMs) ? backoffMs : 750),
@@ -529,7 +529,7 @@ export function createRuntimeService(options: CreateRuntimeServiceOptions): Runt
     const bindings = options.repositories.routerBindings.listByServer(options.serverId);
     const enabledIdentityCount = identities.filter((identity) => identity.isEnabled).length;
     const enabledBindingCount = bindings.filter((binding) => binding.isEnabled).length;
-    const forced = isTruthy(process.env.OPENWORK_SERVER_V2_ROUTER_FORCE) || isTruthy(process.env.OPENWORK_SERVER_V2_ROUTER_REQUIRED);
+    const forced = isTruthy(process.env.AIWORK_SERVER_V2_ROUTER_FORCE) || isTruthy(process.env.AIWORK_SERVER_V2_ROUTER_REQUIRED);
 
     if (forced) {
       return {
@@ -749,7 +749,7 @@ export function createRuntimeService(options: CreateRuntimeServiceOptions): Runt
     routerState.lastError = null;
     routerState.lastStartedAt = nowIso();
     materializeRouterConfig();
-    const healthPort = Number.parseInt(process.env.OPENWORK_SERVER_V2_ROUTER_HEALTH_PORT ?? "0", 10) || await getFreePort();
+    const healthPort = Number.parseInt(process.env.AIWORK_SERVER_V2_ROUTER_HEALTH_PORT ?? "0", 10) || await getFreePort();
     const healthUrl = `http://127.0.0.1:${healthPort}`;
     routerState.healthUrl = healthUrl;
     persistState();
@@ -775,7 +775,7 @@ export function createRuntimeService(options: CreateRuntimeServiceOptions): Runt
             OPENCODE_URL: opencodeState.baseUrl,
           },
           readinessUrl: `${healthUrl}/health`,
-          timeoutMs: Number.parseInt(process.env.OPENWORK_SERVER_V2_ROUTER_START_TIMEOUT_MS ?? "10000", 10) || 10_000,
+          timeoutMs: Number.parseInt(process.env.AIWORK_SERVER_V2_ROUTER_START_TIMEOUT_MS ?? "10000", 10) || 10_000,
         },
       );
       routerHandle = handle;
@@ -848,7 +848,7 @@ export function createRuntimeService(options: CreateRuntimeServiceOptions): Runt
     opencodeState.lastStartedAt = nowIso();
     persistState();
 
-    const configuredPort = Number.parseInt(process.env.OPENWORK_SERVER_V2_OPENCODE_PORT ?? "0", 10);
+    const configuredPort = Number.parseInt(process.env.AIWORK_SERVER_V2_OPENCODE_PORT ?? "0", 10);
     const handle = await createLocalOpencode({
       binary: bundle.opencode.absolutePath,
       client: {
@@ -858,9 +858,9 @@ export function createRuntimeService(options: CreateRuntimeServiceOptions): Runt
       },
       config: {},
       cwd: options.workingDirectory.rootDir,
-      hostname: process.env.OPENWORK_SERVER_V2_OPENCODE_HOST?.trim() || "127.0.0.1",
+      hostname: process.env.AIWORK_SERVER_V2_OPENCODE_HOST?.trim() || "127.0.0.1",
       port: configuredPort > 0 ? configuredPort : await getFreePort(),
-      timeout: Number.parseInt(process.env.OPENWORK_SERVER_V2_OPENCODE_START_TIMEOUT_MS ?? "10000", 10) || 10_000,
+      timeout: Number.parseInt(process.env.AIWORK_SERVER_V2_OPENCODE_START_TIMEOUT_MS ?? "10000", 10) || 10_000,
     });
 
     try {

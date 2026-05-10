@@ -1,11 +1,11 @@
-# OpenWork Design System
+# AiWork Design System
 
 This document turns the visual direction in `DESIGN-LANGUAGE.md` into an implementation system that can unify:
 
-- `apps/app` (OpenWork app)
-- hosted OpenWork Cloud web surfaces (maintained outside this monorepo when shipped)
+- `apps/app` (AiWork app)
+- hosted AiWork Cloud web surfaces (maintained outside this monorepo when shipped)
 
-The goal is not to create several divergent styles. The goal is one OpenWork design system with a few environment-specific expressions.
+The goal is not to create several divergent styles. The goal is one AiWork design system with a few environment-specific expressions.
 
 ---
 
@@ -30,7 +30,7 @@ This file defines the missing structure.
 
 ## 2. System model
 
-OpenWork should use a three-layer design system:
+AiWork should use a three-layer design system:
 
 ### Layer 1: Foundations
 
@@ -93,7 +93,7 @@ If there is a conflict:
 
 ## 4. Core principle: one system, three expressions
 
-OpenWork has three main UI contexts:
+AiWork has three main UI contexts:
 
 1. **App expression** — denser, flatter, operational
 2. **Cloud expression** — still operational, slightly more editorial and roomy
@@ -193,7 +193,7 @@ Typography should be systemized into roles, not ad hoc text sizes.
 
 ## 7. Spacing system
 
-OpenWork should use a consistent spacing scale instead of one-off values.
+AiWork should use a consistent spacing scale instead of one-off values.
 
 Recommended base scale:
 
@@ -321,7 +321,7 @@ They should not invent new button styles, new shadow rules, or new selection pat
 ### Rule 3: Radix stays underneath the system
 
 Radix is the palette source.
-OpenWork tokens are the product API.
+AiWork tokens are the product API.
 
 ### Rule 4: app and Cloud should share primitives even if frameworks differ
 
@@ -374,7 +374,7 @@ Standardize:
 Prioritize:
 
 - workspace/session surfaces in `apps/app`
-- Cloud dashboard shells in hosted OpenWork Cloud web
+- Cloud dashboard shells in hosted AiWork Cloud web
 - share/package/connect flows in `apps/app`
 
 ### Phase 5: remove local style drift
@@ -417,7 +417,7 @@ Refactor `Button`, `Card`, and `TextInput` to consume shared semantic tokens.
 
 ### Step C
 
-Use hosted OpenWork Cloud dashboard shells as the reference for:
+Use hosted AiWork Cloud dashboard shells as the reference for:
 
 - sidebar shell
 - row selection
@@ -425,7 +425,7 @@ Use hosted OpenWork Cloud dashboard shells as the reference for:
 
 ### Step D
 
-Restyle one OpenWork app screen fully using the system to prove the direction.
+Restyle one AiWork app screen fully using the system to prove the direction.
 
 Recommended pilot screens:
 
@@ -452,7 +452,7 @@ We will know this is working when:
 This system should not:
 
 - introduce a trendy visual reboot disconnected from the current product
-- replace the OpenWork mood described in `DESIGN-LANGUAGE.md`
+- replace the AiWork mood described in `DESIGN-LANGUAGE.md`
 - depend on a large new dependency just to manage styling
 - force a shared package too early
 - block incremental improvements until a perfect system exists

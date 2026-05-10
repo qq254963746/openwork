@@ -120,7 +120,7 @@ let sawChromeQuickstartPrompt = false;
 const mockSockets = new Set();
 
 try {
-  tmpdir = await mkdtemp(path.join(os.tmpdir(), "openwork-browser-entry-"));
+  tmpdir = await mkdtemp(path.join(os.tmpdir(), "aiwork-browser-entry-"));
 
   const templateUrl = new URL("../src/app/data/commands/browser-setup.md", import.meta.url);
   const template = await readFile(templateUrl, "utf8");
@@ -230,7 +230,7 @@ try {
   let sessionId;
 
   await step("session.create", async () => {
-    const session = await client.session.create({ title: "OpenWork browser-entry test" });
+    const session = await client.session.create({ title: "AiWork browser-entry test" });
     sessionId = session.id;
     assert.ok(sessionId);
     return { id: session.id };

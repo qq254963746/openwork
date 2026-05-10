@@ -12,20 +12,20 @@ export const sessionStatusSchema = z.discriminatedUnion("type", [
     message: z.string(),
     next: z.number(),
   }),
-]).meta({ ref: "OpenWorkServerV2SessionStatus" });
+]).meta({ ref: "AiWorkServerV2SessionStatus" });
 
 const sessionTimeSchema = z.object({
   archived: z.number().optional(),
   completed: z.number().optional(),
   created: z.number().optional(),
   updated: z.number().optional(),
-}).passthrough().meta({ ref: "OpenWorkServerV2SessionTime" });
+}).passthrough().meta({ ref: "AiWorkServerV2SessionTime" });
 
 const sessionSummarySchema = z.object({
   additions: z.number().optional(),
   deletions: z.number().optional(),
   files: z.number().optional(),
-}).passthrough().meta({ ref: "OpenWorkServerV2SessionSummary" });
+}).passthrough().meta({ ref: "AiWorkServerV2SessionSummary" });
 
 export const sessionSchema = z.object({
   directory: z.string().nullish(),
@@ -38,7 +38,7 @@ export const sessionSchema = z.object({
   summary: sessionSummarySchema.optional(),
   time: sessionTimeSchema.optional(),
   title: z.string().nullish(),
-}).passthrough().meta({ ref: "OpenWorkServerV2Session" });
+}).passthrough().meta({ ref: "AiWorkServerV2Session" });
 
 const sessionMessageInfoSchema = z.object({
   id: identifierSchema,
@@ -46,84 +46,84 @@ const sessionMessageInfoSchema = z.object({
   role: z.string(),
   sessionID: identifierSchema,
   time: sessionTimeSchema.optional(),
-}).passthrough().meta({ ref: "OpenWorkServerV2SessionMessageInfo" });
+}).passthrough().meta({ ref: "AiWorkServerV2SessionMessageInfo" });
 
 export const sessionMessagePartSchema = z.object({
   id: identifierSchema,
   messageID: identifierSchema,
   sessionID: identifierSchema,
   type: z.string().optional(),
-}).passthrough().meta({ ref: "OpenWorkServerV2SessionMessagePart" });
+}).passthrough().meta({ ref: "AiWorkServerV2SessionMessagePart" });
 
 export const sessionMessageSchema = z.object({
   info: sessionMessageInfoSchema,
   parts: z.array(sessionMessagePartSchema),
-}).passthrough().meta({ ref: "OpenWorkServerV2SessionMessage" });
+}).passthrough().meta({ ref: "AiWorkServerV2SessionMessage" });
 
 export const sessionTodoSchema = z.object({
   content: z.string(),
   priority: z.string(),
   status: z.string(),
-}).passthrough().meta({ ref: "OpenWorkServerV2SessionTodo" });
+}).passthrough().meta({ ref: "AiWorkServerV2SessionTodo" });
 
 export const sessionSnapshotSchema = z.object({
   messages: z.array(sessionMessageSchema),
   session: sessionSchema,
   status: sessionStatusSchema,
   todos: z.array(sessionTodoSchema),
-}).meta({ ref: "OpenWorkServerV2SessionSnapshot" });
+}).meta({ ref: "AiWorkServerV2SessionSnapshot" });
 
 export const workspaceEventSchema = z.object({
   properties: z.unknown().optional(),
   type: z.string(),
-}).meta({ ref: "OpenWorkServerV2WorkspaceEvent" });
+}).meta({ ref: "AiWorkServerV2WorkspaceEvent" });
 
 export const sessionListQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(500).optional(),
   roots: z.coerce.boolean().optional(),
   search: z.string().trim().min(1).optional(),
   start: z.coerce.number().int().nonnegative().optional(),
-}).meta({ ref: "OpenWorkServerV2SessionListQuery" });
+}).meta({ ref: "AiWorkServerV2SessionListQuery" });
 
 export const sessionMessagesQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(500).optional(),
-}).meta({ ref: "OpenWorkServerV2SessionMessagesQuery" });
+}).meta({ ref: "AiWorkServerV2SessionMessagesQuery" });
 
 export const sessionIdParamsSchema = workspaceIdParamsSchema.extend({
   sessionId: identifierSchema.describe("Stable session identifier within the resolved workspace backend."),
-}).meta({ ref: "OpenWorkServerV2SessionIdParams" });
+}).meta({ ref: "AiWorkServerV2SessionIdParams" });
 
 export const messageIdParamsSchema = sessionIdParamsSchema.extend({
   messageId: identifierSchema.describe("Stable message identifier within the resolved session."),
-}).meta({ ref: "OpenWorkServerV2MessageIdParams" });
+}).meta({ ref: "AiWorkServerV2MessageIdParams" });
 
 export const messagePartParamsSchema = messageIdParamsSchema.extend({
   partId: identifierSchema.describe("Stable message part identifier within the resolved message."),
-}).meta({ ref: "OpenWorkServerV2MessagePartParams" });
+}).meta({ ref: "AiWorkServerV2MessagePartParams" });
 
 export const sessionCreateRequestSchema = z.object({
   parentSessionId: identifierSchema.optional(),
   title: z.string().trim().min(1).max(300).optional(),
-}).passthrough().meta({ ref: "OpenWorkServerV2SessionCreateRequest" });
+}).passthrough().meta({ ref: "AiWorkServerV2SessionCreateRequest" });
 
 export const sessionUpdateRequestSchema = z.object({
   archived: z.boolean().optional(),
   title: z.string().trim().min(1).max(300).optional(),
-}).passthrough().meta({ ref: "OpenWorkServerV2SessionUpdateRequest" });
+}).passthrough().meta({ ref: "AiWorkServerV2SessionUpdateRequest" });
 
 export const sessionForkRequestSchema = z.object({
   title: z.string().trim().min(1).max(300).optional(),
-}).passthrough().meta({ ref: "OpenWorkServerV2SessionForkRequest" });
+}).passthrough().meta({ ref: "AiWorkServerV2SessionForkRequest" });
 
 export const sessionSummarizeRequestSchema = z.object({
   modelID: z.string().trim().min(1).optional(),
   providerID: z.string().trim().min(1).optional(),
-}).passthrough().meta({ ref: "OpenWorkServerV2SessionSummarizeRequest" });
+}).passthrough().meta({ ref: "AiWorkServerV2SessionSummarizeRequest" });
 
 export const messageSendRequestSchema = z.object({
   parts: z.array(z.unknown()).optional(),
   role: z.string().optional(),
-}).passthrough().meta({ ref: "OpenWorkServerV2MessageSendRequest" });
+}).passthrough().meta({ ref: "AiWorkServerV2MessageSendRequest" });
 
 export const promptAsyncRequestSchema = z.object({
   agent: z.string().optional(),
@@ -138,7 +138,7 @@ export const promptAsyncRequestSchema = z.object({
   system: z.string().optional(),
   tools: z.record(z.string(), z.boolean()).optional(),
   variant: z.string().optional(),
-}).passthrough().meta({ ref: "OpenWorkServerV2PromptAsyncRequest" });
+}).passthrough().meta({ ref: "AiWorkServerV2PromptAsyncRequest" });
 
 export const commandRequestSchema = z.object({
   agent: z.string().optional(),
@@ -149,67 +149,67 @@ export const commandRequestSchema = z.object({
   parts: z.array(z.unknown()).optional(),
   reasoning_effort: z.string().optional(),
   variant: z.string().optional(),
-}).passthrough().meta({ ref: "OpenWorkServerV2CommandRequest" });
+}).passthrough().meta({ ref: "AiWorkServerV2CommandRequest" });
 
 export const shellRequestSchema = z.object({
   command: z.string().min(1),
-}).passthrough().meta({ ref: "OpenWorkServerV2ShellRequest" });
+}).passthrough().meta({ ref: "AiWorkServerV2ShellRequest" });
 
 export const revertRequestSchema = z.object({
   messageID: identifierSchema,
-}).meta({ ref: "OpenWorkServerV2RevertRequest" });
+}).meta({ ref: "AiWorkServerV2RevertRequest" });
 
 export const messagePartUpdateRequestSchema = z.object({
   text: z.string().optional(),
-}).passthrough().meta({ ref: "OpenWorkServerV2MessagePartUpdateRequest" });
+}).passthrough().meta({ ref: "AiWorkServerV2MessagePartUpdateRequest" });
 
 export const sessionListDataSchema = z.object({
   items: z.array(sessionSchema),
-}).meta({ ref: "OpenWorkServerV2SessionListData" });
+}).meta({ ref: "AiWorkServerV2SessionListData" });
 
 export const sessionStatusesDataSchema = z.object({
   items: z.record(z.string(), sessionStatusSchema),
-}).meta({ ref: "OpenWorkServerV2SessionStatusesData" });
+}).meta({ ref: "AiWorkServerV2SessionStatusesData" });
 
 export const sessionTodoListDataSchema = z.object({
   items: z.array(sessionTodoSchema),
-}).meta({ ref: "OpenWorkServerV2SessionTodoListData" });
+}).meta({ ref: "AiWorkServerV2SessionTodoListData" });
 
 export const messageListDataSchema = z.object({
   items: z.array(sessionMessageSchema),
-}).meta({ ref: "OpenWorkServerV2MessageListData" });
+}).meta({ ref: "AiWorkServerV2MessageListData" });
 
 export const acceptedActionDataSchema = z.object({
   accepted: z.literal(true),
-}).meta({ ref: "OpenWorkServerV2AcceptedActionData" });
+}).meta({ ref: "AiWorkServerV2AcceptedActionData" });
 
 export const deletedActionDataSchema = z.object({
   deleted: z.literal(true),
-}).meta({ ref: "OpenWorkServerV2DeletedActionData" });
+}).meta({ ref: "AiWorkServerV2DeletedActionData" });
 
-export const sessionResponseSchema = successResponseSchema("OpenWorkServerV2SessionResponse", sessionSchema);
-export const sessionListResponseSchema = successResponseSchema("OpenWorkServerV2SessionListResponse", sessionListDataSchema);
+export const sessionResponseSchema = successResponseSchema("AiWorkServerV2SessionResponse", sessionSchema);
+export const sessionListResponseSchema = successResponseSchema("AiWorkServerV2SessionListResponse", sessionListDataSchema);
 export const sessionStatusesResponseSchema = successResponseSchema(
-  "OpenWorkServerV2SessionStatusesResponse",
+  "AiWorkServerV2SessionStatusesResponse",
   sessionStatusesDataSchema,
 );
-export const sessionStatusResponseSchema = successResponseSchema("OpenWorkServerV2SessionStatusResponse", sessionStatusSchema);
+export const sessionStatusResponseSchema = successResponseSchema("AiWorkServerV2SessionStatusResponse", sessionStatusSchema);
 export const sessionTodoListResponseSchema = successResponseSchema(
-  "OpenWorkServerV2SessionTodoListResponse",
+  "AiWorkServerV2SessionTodoListResponse",
   sessionTodoListDataSchema,
 );
 export const sessionSnapshotResponseSchema = successResponseSchema(
-  "OpenWorkServerV2SessionSnapshotResponse",
+  "AiWorkServerV2SessionSnapshotResponse",
   sessionSnapshotSchema,
 );
-export const messageResponseSchema = successResponseSchema("OpenWorkServerV2MessageResponse", sessionMessageSchema);
-export const messageListResponseSchema = successResponseSchema("OpenWorkServerV2MessageListResponse", messageListDataSchema);
+export const messageResponseSchema = successResponseSchema("AiWorkServerV2MessageResponse", sessionMessageSchema);
+export const messageListResponseSchema = successResponseSchema("AiWorkServerV2MessageListResponse", messageListDataSchema);
 export const acceptedActionResponseSchema = successResponseSchema(
-  "OpenWorkServerV2AcceptedActionResponse",
+  "AiWorkServerV2AcceptedActionResponse",
   acceptedActionDataSchema,
 );
 export const deletedActionResponseSchema = successResponseSchema(
-  "OpenWorkServerV2DeletedActionResponse",
+  "AiWorkServerV2DeletedActionResponse",
   deletedActionDataSchema,
 );
 

@@ -17,9 +17,9 @@ import { createClient, unwrap } from "../../../../app/lib/opencode";
 import { abortSessionSafe } from "../../../../app/lib/opencode-session";
 import { readWorkspaceCloudImports, type CloudImportedPlugin } from "../../../../app/cloud/import-state";
 import type {
-  OpenworkServerClient,
-  OpenworkSessionSnapshot,
-} from "../../../../app/lib/openwork-server";
+  AiWorkServerClient,
+  AiWorkSessionSnapshot,
+} from "../../../../app/lib/aiwork-server";
 import type {
   ComposerAttachment,
   ComposerDraft,
@@ -32,7 +32,7 @@ import {
   publishInspectorSlice,
   recordInspectorEvent,
 } from "../../../shell/app-inspector";
-import { useControlAction, type OpenworkControlAction } from "../../../shell/control/control-provider";
+import { useControlAction, type AiWorkControlAction } from "../../../shell/control/control-provider";
 import { getReactQueryClient } from "../../../infra/query-client";
 import { ReactSessionComposer } from "./composer/composer";
 import { DevProfiler } from "../../../shell/dev-profiler";
@@ -67,7 +67,7 @@ import type { TodoItem } from "../../../../app/types";
 
 const EMPTY_TRANSCRIPT: UIMessage[] = [];
 const IDLE_STATUS: SessionStatus = { type: "idle" };
-const DEFAULT_COMPOSER_CONTROL_TEXT = "Help me outline the next OpenWork task.";
+const DEFAULT_COMPOSER_CONTROL_TEXT = "Help me outline the next AiWork task.";
 const JUMP_TO_LATEST_BOX_SHADOW =
   "0 2px 4px 0 rgba(0,0,0,0.03), 0 4px 10px 0 rgba(0,0,0,0.05), 0 4px 16px 0 rgba(0,0,0,0.05)";
 
@@ -107,12 +107,12 @@ type SessionError = {
 };
 
 export type SessionSurfaceProps = {
-  client: OpenworkServerClient;
+  client: AiWorkServerClient;
   workspaceId: string;
   workspaceRoot: string;
   sessionId: string;
   opencodeBaseUrl: string;
-  openworkToken: string;
+  aiworkToken: string;
   developerMode: boolean;
   /** When true, assistant `reasoning` parts render in the Thinking collapsible (Settings → Show model reasoning). */
   showThinking?: boolean;
@@ -149,7 +149,7 @@ export type SessionSurfaceProps = {
 };
 
 function messageToReadableText(message: UIMessage) {
-  const header = message.role === "user" ? "You" : message.role === "assistant" ? "OpenWork" : message.role;
+  const header = message.role === "user" ? "You" : message.role === "assistant" ? "AiWork" : message.role;
   const body = message.parts
     .flatMap((part) => {
       if (part.type === "text") return [part.text];
@@ -172,7 +172,7 @@ function transcriptToText(messages: UIMessage[]) {
     .join("\n\n---\n\n");
 }
 
-function statusLabel(snapshot: OpenworkSessionSnapshot | undefined, busy: boolean) {
+function statusLabel(snapshot: AiWorkSessionSnapshot | undefined, busy: boolean) {
   if (busy) return "Running...";
   if (snapshot?.status.type === "busy") return "Running...";
   if (snapshot?.status.type === "retry") return `Retrying: ${snapshot.status.message}`;
@@ -488,7 +488,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   const [sending, setSending] = useState(false);
   const [showDelayedLoading, setShowDelayedLoading] = useState(false);
   const [awaitingAssistantBaseline, setAwaitingAssistantBaseline] = useState<number | null>(null);
-  const [rendered, setRendered] = useState<{ sessionId: string; snapshot: OpenworkSessionSnapshot } | null>(null);
+  const [rendered, setRendered] = useState<{ sessionId: string; snapshot: AiWorkSessionSnapshot } | null>(null);
   const [toolSkills, setToolSkills] = useState<SkillCard[]>([]);
   const [toolMcpServers, setToolMcpServers] = useState<McpServerEntry[]>([]);
   const [toolMcpStatus, setToolMcpStatus] = useState<string | null>(null);
@@ -503,11 +503,11 @@ export function SessionSurface(props: SessionSurfaceProps) {
   const attachmentsRef = useRef<ComposerAttachment[]>([]);
   attachmentsRef.current = attachments;
   const opencodeClient = useMemo(
-    () => createClient(props.opencodeBaseUrl, undefined, { token: props.openworkToken, mode: "openwork" }),
-    [props.opencodeBaseUrl, props.openworkToken],
+    () => createClient(props.opencodeBaseUrl, undefined, { token: props.aiworkToken, mode: "aiwork" }),
+    [props.opencodeBaseUrl, props.aiworkToken],
   );
 
-  const openWorkspaceRelativePath = useCallback(
+  const AiWorkspaceRelativePath = useCallback(
     (relativePath: string) => {
       const normalized = relativePath.trim().replace(/\\/g, "/");
       if (!normalized) return;
@@ -553,7 +553,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     () => reactStatusKey(props.workspaceId, props.sessionId),
     [props.workspaceId, props.sessionId],
   );
-  const snapshotQuery = useQuery<OpenworkSessionSnapshot>({
+  const snapshotQuery = useQuery<AiWorkSessionSnapshot>({
     queryKey: snapshotQueryKey,
     queryFn: async () => (await props.client.getSessionSnapshot(props.workspaceId, props.sessionId, { limit: 140 })).item,
     staleTime: 500,
@@ -903,12 +903,12 @@ export function SessionSurface(props: SessionSurfaceProps) {
   };
 
   const typeComposerText = useCallback(async (text: string) => {
-    window.dispatchEvent(new Event("openwork:focusPrompt"));
+    window.dispatchEvent(new Event("aiwork:focusPrompt"));
     setDraft(text);
     await waitForControl(40);
   }, []);
 
-  const composerSetTextControlAction = useMemo<OpenworkControlAction>(() => ({
+  const composerSetTextControlAction = useMemo<AiWorkControlAction>(() => ({
     id: "composer.set_text",
     label: "Type into the composer",
     description: "Replace the current session draft and type the supplied text visibly.",
@@ -927,7 +927,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   }), [attachments, buildDraft, props.onDraftChange, typeComposerText]);
   useControlAction(composerSetTextControlAction);
 
-  const composerSendControlAction = useMemo<OpenworkControlAction>(() => ({
+  const composerSendControlAction = useMemo<AiWorkControlAction>(() => ({
     id: "composer.send",
     label: "Send the composer prompt",
     description: "Send the currently visible composer draft to the active session.",
@@ -941,7 +941,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   }), [attachments.length, draft, handleSend, model.transitionState]);
   useControlAction(composerSendControlAction);
 
-  const composerStopControlAction = useMemo<OpenworkControlAction>(() => ({
+  const composerStopControlAction = useMemo<AiWorkControlAction>(() => ({
     id: "composer.stop",
     label: "Stop the current run",
     description: "Stop the current streaming session run.",
@@ -992,7 +992,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
 
   const listImportedPlugins = async (): Promise<CloudImportedPlugin[]> => {
     const response = await props.client.getConfig(props.workspaceId);
-    const plugins = Object.values(readWorkspaceCloudImports(response.openwork).plugins)
+    const plugins = Object.values(readWorkspaceCloudImports(response.aiwork).plugins)
       .sort((left, right) => left.name.localeCompare(right.name));
     setToolImportedPlugins(plugins);
     return plugins;
@@ -1041,7 +1041,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   // Cast so we can still pass live todo state to the transcript renderer.
   const SessionTranscriptUnsafe = SessionTranscript as unknown as (props: any) => any;
 
-  const sessionScrollTopControlAction = useMemo<OpenworkControlAction>(() => ({
+  const sessionScrollTopControlAction = useMemo<AiWorkControlAction>(() => ({
     id: "session.scroll_top",
     label: "Go to the top of the session",
     description: "Scroll the visible session transcript to the first messages.",
@@ -1055,7 +1055,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   }), []);
   useControlAction(sessionScrollTopControlAction);
 
-  const sessionScrollBottomControlAction = useMemo<OpenworkControlAction>(() => ({
+  const sessionScrollBottomControlAction = useMemo<AiWorkControlAction>(() => ({
     id: "session.scroll_bottom",
     label: "Go to the bottom of the session",
     description: "Scroll the visible session transcript to the newest messages and composer area.",
@@ -1067,7 +1067,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   }), [sessionScroll.jumpToLatest]);
   useControlAction(sessionScrollBottomControlAction);
 
-  const sessionLatestMessageControlAction = useMemo<OpenworkControlAction>(() => ({
+  const sessionLatestMessageControlAction = useMemo<AiWorkControlAction>(() => ({
     id: "session.latest_message",
     label: "Read the latest session message",
     description: "Return the latest visible message in the current session transcript.",
@@ -1086,7 +1086,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   }), [props.sessionId, renderedMessages]);
   useControlAction(sessionLatestMessageControlAction);
 
-  const sessionReadTranscriptControlAction = useMemo<OpenworkControlAction>(() => ({
+  const sessionReadTranscriptControlAction = useMemo<AiWorkControlAction>(() => ({
     id: "session.read_transcript",
     label: "Read the current session transcript",
     description: "Return the last messages from the current session transcript as readable text, including the session ID, title, and message count.",
@@ -1213,7 +1213,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
                     todos={todos}
                     scrollElement={() => scrollRef.current}
                     workspaceRoot={props.workspaceRoot}
-                    onOpenWorkspaceRelativePath={openWorkspaceRelativePath}
+                    onAiWorkspaceRelativePath={AiWorkspaceRelativePath}
                     fetchWorkspaceFileText={fetchWorkspaceFileText}
                     writtenFileSvgQueryKey={props.workspaceId}
                     assistantReplyMetaById={assistantReplyMetaById}

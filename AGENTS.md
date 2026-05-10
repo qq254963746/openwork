@@ -1,35 +1,35 @@
 # AGENTS.md
 
-OpenWork helps users run agents, skills, and MCP. It is an open-source alternative to Claude Cowork/Codex as a desktop app.
+AiWork helps users run agents, skills, and MCP. It is an open-source alternative to Claude Cowork/Codex as a desktop app.
 
-## What OpenWork Is
+## What AiWork Is
 
-OpenWork is a practical control surface for agentic work:
+AiWork is a practical control surface for agentic work:
 
 * Run local and remote agent workflows from one place.
-* Use OpenCode capabilities directly through OpenWork.
+* Use OpenCode capabilities directly through AiWork.
 * Compose desktop app, server, and messaging connectors without lock-in.
-* Treat the OpenWork app as a client of the OpenWork server API surface.
+* Treat the AiWork app as a client of the AiWork server API surface.
 * Connect to hosted workers through a simple user flow: `Add a worker` -> `Connect remote`.
 
 ## Core Philosophy
 
-* **Local-first, cloud-ready**: OpenWork runs on your machine in one click and can connect to cloud workflows when needed.
-* **Server-consumption first**: the app should consume OpenWork server surfaces (self-hosted or hosted), not invent parallel behavior.
+* **Local-first, cloud-ready**: AiWork runs on your machine in one click and can connect to cloud workflows when needed.
+* **Server-consumption first**: the app should consume AiWork server surfaces (self-hosted or hosted), not invent parallel behavior.
 * **Composable**: use the desktop app, WhatsApp/Slack/Telegram connectors, or server mode based on the task.
-* **Ejectable**: OpenWork is powered by OpenCode, so anything OpenCode can do is available in OpenWork, even before a dedicated UI exists.
+* **Ejectable**: AiWork is powered by OpenCode, so anything OpenCode can do is available in AiWork, even before a dedicated UI exists.
 * **Sharing is caring**: start solo, then share quickly; one CLI or desktop command can spin up an instantly shareable instance.
 
 ## Core Runtime Model (Updated)
 
-OpenWork now has three production-grade ways to run the same product surface:
+AiWork now has three production-grade ways to run the same product surface:
 
 1. **Desktop-hosted app/server**
-   - OpenWork app runs locally and can host server functionality on-device.
-2. **CLI-hosted server (openwork-orchestrator)**
-   - OpenWork server surfaces can be provided by the orchestrator/CLI on a trusted machine.
-3. **Hosted OpenWork Cloud server**
-   - OpenWork-hosted infrastructure provisions workers and exposes the same remote-connect semantics.
+   - AiWork app runs locally and can host server functionality on-device.
+2. **CLI-hosted server (aiwork-orchestrator)**
+   - AiWork server surfaces can be provided by the orchestrator/CLI on a trusted machine.
+3. **Hosted AiWork Cloud server**
+   - AiWork-hosted infrastructure provisions workers and exposes the same remote-connect semantics.
 
 User mental model:
 
@@ -40,7 +40,7 @@ User mental model:
 
 Read `ARCHITECTURE.md` for runtime flow, server-vs-shell ownership, and architecture behavior. Read `INFRASTRUCTURE.md` for deployment and control-plane details.
 
-## Why OpenWork Exists
+## Why AiWork Exists
 
 **Cowork is closed-source and locked to Claude Max.** We need an open alternative.
 **Mobile-first matters.** People want to run tasks from their phones, including via messaging surfaces like WhatsApp and Telegram through OpenCode Router.
@@ -51,13 +51,13 @@ Read `ARCHITECTURE.md` for runtime flow, server-vs-shell ownership, and architec
 * **Purpose-first UI**: prioritize clarity, safety, and approachability for non-technical users.
 * **Parity with OpenCode**: anything the UI can do must map cleanly to OpenCode tools.
 * **Prefer OpenCode primitives**: represent concepts using OpenCode's native surfaces first (folders/projects, `.opencode`, `opencode.json`, skills, plugins) before introducing new abstractions.
-* **Web parity**: anything that mutates `.opencode/` should be expressible via the OpenWork server API; Tauri-only filesystem calls are a fallback for host mode, not a separate capability set.
+* **Web parity**: anything that mutates `.opencode/` should be expressible via the AiWork server API; Tauri-only filesystem calls are a fallback for host mode, not a separate capability set.
 * **Self-referential**: maintain a gitignored mirror of OpenCode at `vendor/opencode` for inspection.
 * **Self-building**: prefer prompts, skills, and composable primitives over bespoke logic.
 * **Open source**: keep the repo portable; no secrets committed.
 * **Slick and fluid**: 60fps animations, micro-interactions, premium feel.
 * **Mobile-native**: touch targets, gestures, and layouts optimized for small screens.
-* **Provider-neutral control**: expose app actions through OpenWork-owned control surfaces first; provider-specific controllers should drive those surfaces rather than hardwiring provider logic into the app UI.
+* **Provider-neutral control**: expose app actions through AiWork-owned control surfaces first; provider-specific controllers should drive those surfaces rather than hardwiring provider logic into the app UI.
 
 ## Task Intake (Required)
 
@@ -65,7 +65,7 @@ Before making changes, explicitly confirm the target repository in your first ta
 
 Required format:
 
-1. `Target repo: <path>` (for example: `_repos/openwork`)
+1. `Target repo: <path>` (for example: `_repos/aiwork`)
 2. `Out of scope repos: <list>` (for example: `_repos/opencode`)
 3. `Planned output: <what will be changed/tested>`
 
@@ -103,14 +103,14 @@ If you cannot run tests or capture the video, say so explicitly and explain why,
 
 ## Living Systems
 
-OpenWork aims to be a **living system**: agents, skills, commands, and config are hot-reloadable while sessions are running. This enables agents to create new skills or update their own configuration and have changes take effect immediately, without tearing down active sessions.
+AiWork aims to be a **living system**: agents, skills, commands, and config are hot-reloadable while sessions are running. This enables agents to create new skills or update their own configuration and have changes take effect immediately, without tearing down active sessions.
 
 Design principles for hot reload:
 
-* **Conservative triggers**: only reload when a file that OpenCode reads at startup actually changes inside `.opencode/` or `opencode.json`. Ignore metadata files like `openwork.json`, `.DS_Store`, etc.
+* **Conservative triggers**: only reload when a file that OpenCode reads at startup actually changes inside `.opencode/` or `opencode.json`. Ignore metadata files like `aiwork.json`, `.DS_Store`, etc.
 * **Workspace-scoped**: reload state is keyed per workspace. Switching workspaces never leaks reload signals from one workspace to another.
 * **Session-aware**: when sessions are actively running, queue reload signals. Promote to visible reload (toast or auto-reload) only after all active sessions finish. This avoids interrupting in-flight tool calls.
-* **Auto-reload setting**: each workspace can opt into automatic reload via `.opencode/openwork.json` (`reload.auto`). When enabled, the engine reloads automatically once queued signals are ready and no sessions are active.
+* **Auto-reload setting**: each workspace can opt into automatic reload via `.opencode/aiwork.json` (`reload.auto`). When enabled, the engine reloads automatically once queued signals are ready and no sessions are active.
 * **Session continuity**: before reload, capture running session IDs, agents, and models. After reload, optionally relaunch those sessions so the user experiences seamless continuity.
 * **Per-workspace isolation**: the desktop file watcher only watches the runtime-connected workspace root and its `.opencode/` directory. This can differ briefly from the UI-selected workspace while the user browses another workspace. The server reload event store is already keyed by `workspaceId`.
 
@@ -128,8 +128,8 @@ Design principles for hot reload:
 
 * Use `VISION.md`, `PRINCIPLES.md`, `PRODUCT.md`, `ARCHITECTURE.md`, and `INFRASTRUCTURE.md` to understand the "why" and requirements so you can guide your decisions.
 * Treat `ARCHITECTURE.md` as the authoritative system design source for runtime flow, server ownership, filesystem mutation policy, and agent/runtime boundaries. If those behaviors change, update `ARCHITECTURE.md` in the same task.
-* Use `DESIGN-LANGUAGE.md` as the default visual reference for OpenWork app work.
-* For OpenWork session-surface details, also reference `packages/docs/orbita-layout-style.mdx`.
+* Use `DESIGN-LANGUAGE.md` as the default visual reference for AiWork app work.
+* For AiWork session-surface details, also reference `packages/docs/orbita-layout-style.mdx`.
 
 ## App Architecture (CUPID)
 
@@ -146,12 +146,12 @@ For `apps/app/src/app/**`, use CUPID: small public surfaces, intention-revealing
 
 ## Dev Debugging
 
-* If you change `apps/server/src`, rebuild the OpenWork server binary (`pnpm --filter openwork-server build:bin`) because `openwork` (openwork-orchestrator) runs the compiled server, not the TS sources.
+* If you change `apps/server/src`, rebuild the AiWork server binary (`pnpm --filter aiwork-server build:bin`) because `aiwork` (aiwork-orchestrator) runs the compiled server, not the TS sources.
 
 ## Local Structure
 
 ```
-openwork/
+aiwork/
   AGENTS.md                    # This file
   VISION.md                     # Product vision and positioning
   PRINCIPLES.md                 # Decision framework and guardrails
@@ -176,7 +176,7 @@ openwork/
 
 ## OpenCode SDK Usage
 
-OpenWork integrates with OpenCode via:
+AiWork integrates with OpenCode via:
 
 1.  **Non-interactive mode**: `opencode -p "prompt" -f json -q`
 2.  **Database access**: Read `.opencode/opencode.db` for sessions and messages.
@@ -212,12 +212,12 @@ When editing SolidJS UI (`apps/app/src/**/*.tsx`), consult:
 
 * `.opencode/skills/solidjs-patterns/SKILL.md`
 
-This captures OpenWork’s preferred reactivity + UI state patterns (avoid global `busy()` deadlocks; use scoped async state).
+This captures AiWork’s preferred reactivity + UI state patterns (avoid global `busy()` deadlocks; use scoped async state).
 
 ## Skill: Trigger a Release
 
-OpenWork releases are built by GitHub Actions (`Release App`). A release is triggered by pushing a `v*` tag (e.g. `v0.1.6`).
-`Release App` can also publish openwork-orchestrator sidecars and npm packages when enabled via workflow inputs or repo vars (`RELEASE_PUBLISH_SIDECARS`, `RELEASE_PUBLISH_NPM`).
+AiWork releases are built by GitHub Actions (`Release App`). A release is triggered by pushing a `v*` tag (e.g. `v0.1.6`).
+`Release App` can also publish aiwork-orchestrator sidecars and npm packages when enabled via workflow inputs or repo vars (`RELEASE_PUBLISH_SIDECARS`, `RELEASE_PUBLISH_NPM`).
 
 ### Standard release (recommended)
 
@@ -226,7 +226,7 @@ OpenWork releases are built by GitHub Actions (`Release App`). A release is trig
 
 * `apps/app/package.json` (`version`)
 * `apps/desktop/package.json` (`version`)
-* `apps/orchestrator/package.json` (`version`, publishes as `openwork-orchestrator`)
+* `apps/orchestrator/package.json` (`version`, publishes as `aiwork-orchestrator`)
 * `apps/desktop/src-tauri/tauri.conf.json` (`version`)
 * `apps/desktop/src-tauri/Cargo.toml` (`version`)
 
@@ -248,26 +248,26 @@ This triggers the workflow automatically (`on: push.tags: v*`).
 
 If the workflow needs to be re-run for an existing tag (e.g. notarization retry), use workflow dispatch:
 
-* `gh workflow run "Release App" --repo fengai/openwork -f tag=vX.Y.Z`
+* `gh workflow run "Release App" --repo fengai/aiwork -f tag=vX.Y.Z`
 
 ### Verify
 
-* Runs: `gh run list --repo fengai/openwork --workflow "Release App" --limit 5`
-* Release: `gh release view vX.Y.Z --repo fengai/openwork`
+* Runs: `gh run list --repo fengai/aiwork --workflow "Release App" --limit 5`
+* Release: `gh release view vX.Y.Z --repo fengai/aiwork`
 
 Confirm the DMG assets are attached and versioned correctly.
 
-## Skill: Publish openwork-orchestrator (npm)
+## Skill: Publish aiwork-orchestrator (npm)
 
-This is usually covered by `Release App` when `publish_sidecars` + `publish_npm` are enabled. Use `.opencode/skills/openwork-orchestrator-npm-publish/SKILL.md` for manual recovery or one-off publishing.
+This is usually covered by `Release App` when `publish_sidecars` + `publish_npm` are enabled. Use `.opencode/skills/aiwork-orchestrator-npm-publish/SKILL.md` for manual recovery or one-off publishing.
 
 1.  Ensure the default branch is up to date and clean.
 2.  Bump `apps/orchestrator/package.json` (`version`).
 3.  Commit the bump.
 4.  Build and upload sidecar assets for the same version tag:
-    * `pnpm --filter openwork-orchestrator build:sidecars`
-    * `gh release create openwork-orchestrator-vX.Y.Z apps/orchestrator/dist/sidecars/* --repo fengai/openwork`
+    * `pnpm --filter aiwork-orchestrator build:sidecars`
+    * `gh release create aiwork-orchestrator-vX.Y.Z apps/orchestrator/dist/sidecars/* --repo fengai/aiwork`
 5.  Publish:
-    * `pnpm --filter openwork-orchestrator publish --access public`
+    * `pnpm --filter aiwork-orchestrator publish --access public`
 6.  Verify:
-    * `npm view openwork-orchestrator version`
+    * `npm view aiwork-orchestrator version`

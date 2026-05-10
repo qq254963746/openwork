@@ -26,7 +26,7 @@ async function writeIfChanged(filePath: string, contents: string) {
 }
 
 async function main() {
-  const workingDirectory = await mkdtemp(join(os.tmpdir(), "openwork-server-v2-openapi-"));
+  const workingDirectory = await mkdtemp(join(os.tmpdir(), "aiwork-server-v2-openapi-"));
   const dependencies = createAppDependencies({
     environment: "test",
     inMemory: true,
@@ -35,7 +35,7 @@ async function main() {
   });
   try {
     const app = createApp({ dependencies });
-    const response = await app.request("http://openwork.local/openapi.json");
+    const response = await app.request("http://aiwork.local/openapi.json");
 
     if (!response.ok) {
       throw new Error(`Failed to generate OpenAPI document: ${response.status} ${response.statusText}`);
@@ -45,7 +45,7 @@ async function main() {
     const contents = `${JSON.stringify(document, null, 2)}\n`;
     const changed = await writeIfChanged(outputPath, contents);
 
-    process.stdout.write(`[openwork-server-v2] ${changed ? "wrote" : "verified"} ${outputPath}\n`);
+    process.stdout.write(`[aiwork-server-v2] ${changed ? "wrote" : "verified"} ${outputPath}\n`);
   } finally {
     await dependencies.close();
     await rm(workingDirectory, { force: true, recursive: true });

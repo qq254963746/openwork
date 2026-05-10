@@ -1,13 +1,13 @@
 ---
 name: tauri-solidjs
-description: Tauri 2.x + SolidJS stack for OpenWork native app
+description: Tauri 2.x + SolidJS stack for AiWork native app
 ---
 
 ## Quick Usage (Already Configured)
 
 ### Create new Tauri + SolidJS project
 ```bash
-pnpm create tauri-app openwork --template solid-ts
+pnpm create tauri-app aiwork --template solid-ts
 ```
 
 ### Development
@@ -34,7 +34,7 @@ pnpm tauri android build
 ## Project Structure
 
 ```
-openwork/
+aiwork/
   packages/
     desktop/
       src-tauri/

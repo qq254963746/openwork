@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-const NATIVE_DEEP_LINK_EVENT = "openwork:deep-link-native";
+const NATIVE_DEEP_LINK_EVENT = "aiwork:deep-link-native";
 
 function normalizePlatform(value) {
   if (value === "darwin" || value === "linux") return value;
@@ -8,24 +8,24 @@ function normalizePlatform(value) {
   return "linux";
 }
 
-contextBridge.exposeInMainWorld("__OPENWORK_ELECTRON__", {
+contextBridge.exposeInMainWorld("__AIWORK_ELECTRON__", {
   invokeDesktop(command, ...args) {
-    return ipcRenderer.invoke("openwork:desktop", command, ...args);
+    return ipcRenderer.invoke("aiwork:desktop", command, ...args);
   },
   shell: {
     openExternal(url) {
-      return ipcRenderer.invoke("openwork:shell:openExternal", url);
+      return ipcRenderer.invoke("aiwork:shell:openExternal", url);
     },
     relaunch() {
-      return ipcRenderer.invoke("openwork:shell:relaunch");
+      return ipcRenderer.invoke("aiwork:shell:relaunch");
     },
   },
   migration: {
     readSnapshot() {
-      return ipcRenderer.invoke("openwork:migration:read");
+      return ipcRenderer.invoke("aiwork:migration:read");
     },
     ackSnapshot() {
-      return ipcRenderer.invoke("openwork:migration:ack");
+      return ipcRenderer.invoke("aiwork:migration:ack");
     },
   },
   meta: {

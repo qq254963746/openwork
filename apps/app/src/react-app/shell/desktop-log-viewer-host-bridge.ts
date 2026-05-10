@@ -1,22 +1,22 @@
 import type {
   EngineInfo,
   OpencodeEngineDiskLogsSnapshot,
-  OpenworkServerInfo,
+  AiWorkServerInfo,
 } from "../../app/lib/desktop-tauri";
-import { engineInfo, openworkServerInfo, readOpencodeEngineDiskLogs } from "../../app/lib/desktop";
+import { engineInfo, aiworkServerInfo, readOpencodeEngineDiskLogs } from "../../app/lib/desktop";
 import { isDesktopRuntime } from "../../app/utils";
 
 export type DesktopLogViewerHostBridge = {
   engineInfo: () => Promise<EngineInfo>;
   /** Added after disk-backed OpenCode logs; older host shells may omit this. */
   readOpencodeEngineDiskLogs?: () => Promise<OpencodeEngineDiskLogsSnapshot>;
-  openworkServerInfo: () => Promise<OpenworkServerInfo>;
+  aiworkServerInfo: () => Promise<AiWorkServerInfo>;
 };
 
 declare global {
   interface Window {
     /** Pop-out log viewer (no Tauri/Electron prelude) calls these on `window.opener`. */
-    __openworkDesktopLogBridge?: DesktopLogViewerHostBridge;
+    __aiworkDesktopLogBridge?: DesktopLogViewerHostBridge;
   }
 }
 
@@ -24,11 +24,11 @@ declare global {
 export function installDesktopLogViewerHostBridge(): void {
   if (typeof window === "undefined") return;
   if (!isDesktopRuntime()) return;
-  if (window.__openworkDesktopLogBridge) return;
-  window.__openworkDesktopLogBridge = {
+  if (window.__aiworkDesktopLogBridge) return;
+  window.__aiworkDesktopLogBridge = {
     engineInfo: () => engineInfo(),
     readOpencodeEngineDiskLogs: () => readOpencodeEngineDiskLogs(),
-    openworkServerInfo: () => openworkServerInfo(),
+    aiworkServerInfo: () => aiworkServerInfo(),
   };
 }
 
@@ -36,11 +36,11 @@ export function resolveDesktopLogViewerBridge(): DesktopLogViewerHostBridge | nu
   if (typeof window === "undefined") return null;
   try {
     if (isDesktopRuntime()) {
-      return window.__openworkDesktopLogBridge ?? null;
+      return window.__aiworkDesktopLogBridge ?? null;
     }
     const openerWindow = window.opener as Window | null;
     if (!openerWindow || openerWindow.closed) return null;
-    return openerWindow.__openworkDesktopLogBridge ?? null;
+    return openerWindow.__aiworkDesktopLogBridge ?? null;
   } catch {
     return null;
   }
@@ -76,9 +76,9 @@ export async function fetchOpencodeEngineDiskLogsForLogViewer(): Promise<Opencod
   return reader();
 }
 
-export async function fetchOpenworkServerInfoForLogViewer(): Promise<OpenworkServerInfo> {
-  if (isDesktopRuntime()) return openworkServerInfo();
+export async function fetchAiWorkServerInfoForLogViewer(): Promise<AiWorkServerInfo> {
+  if (isDesktopRuntime()) return aiworkServerInfo();
   const bridge = resolveDesktopLogViewerBridge();
   if (!bridge) throw new Error("desktop_log_bridge_missing");
-  return bridge.openworkServerInfo();
+  return bridge.aiworkServerInfo();
 }

@@ -16,7 +16,7 @@ if not defined VSDEVCMD if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\In
 if not defined VSDEVCMD if exist "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat" set "VSDEVCMD=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\Tools\VsDevCmd.bat"
 
 if not defined VSDEVCMD (
-  echo [openwork] Could not find VsDevCmd.bat. Install Visual Studio Build Tools with Desktop development with C++.
+  echo [aiwork] Could not find VsDevCmd.bat. Install Visual Studio Build Tools with Desktop development with C++.
   exit /b 1
 )
 
@@ -24,7 +24,7 @@ call "%VSDEVCMD%" -arch=%VS_ARCH% -host_arch=%HOST_ARCH% >nul
 if errorlevel 1 exit /b %errorlevel%
 
 if /I "%TARGET_ARCH%"=="x64" (
-  call corepack pnpm --filter @openwork/desktop dev:windows:x64
+  call corepack pnpm --filter @aiwork/desktop dev:windows:x64
 ) else (
-  call corepack pnpm --filter @openwork/desktop dev:windows
+  call corepack pnpm --filter @aiwork/desktop dev:windows
 )

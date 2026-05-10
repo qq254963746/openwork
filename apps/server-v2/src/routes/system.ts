@@ -82,10 +82,10 @@ function createOpenApiDocumentation(version: string) {
   return {
     openapi: "3.1.0",
     info: {
-        title: "OpenWork Server V2",
+        title: "AiWork Server V2",
         version,
         description: [
-          "OpenAPI contract for the standalone OpenWork Server V2 runtime and durable registry state.",
+          "OpenAPI contract for the standalone AiWork Server V2 runtime and durable registry state.",
           "",
           "Phase 10 makes Server V2 the default runtime, keeps release/runtime assets in a managed extracted directory, and closes the remaining cutover tooling around the standalone contract.",
         ].join("\n"),
@@ -106,7 +106,7 @@ function createOpenApiDocumentation(version: string) {
       },
       {
         name: "Sessions",
-        description: "Workspace-first session and streaming primitives backed by OpenCode or remote OpenWork servers.",
+        description: "Workspace-first session and streaming primitives backed by OpenCode or remote AiWork servers.",
       },
       {
         name: "Messages",
@@ -233,10 +233,10 @@ export function registerSystemRoutes(app: ServerV2App, dependencies: AppDependen
     routePaths.system.serverConnect,
     describeRoute({
       tags: ["System"],
-      summary: "Connect a remote OpenWork server",
-      description: "Validates a remote OpenWork server through the local Server V2 process, stores the remote connection metadata, and syncs the discovered remote workspaces into the local canonical registry.",
+      summary: "Connect a remote AiWork server",
+      description: "Validates a remote AiWork server through the local Server V2 process, stores the remote connection metadata, and syncs the discovered remote workspaces into the local canonical registry.",
       responses: withCommonErrorResponses({
-        200: jsonResponse("Remote OpenWork server connected successfully.", remoteServerConnectResponseSchema),
+        200: jsonResponse("Remote AiWork server connected successfully.", remoteServerConnectResponseSchema),
       }, { includeForbidden: true, includeInvalidRequest: true, includeUnauthorized: true }),
     }),
     async (c) => {
@@ -265,10 +265,10 @@ export function registerSystemRoutes(app: ServerV2App, dependencies: AppDependen
     routePaths.system.serverSync(),
     describeRoute({
       tags: ["System"],
-      summary: "Sync a remote OpenWork server",
-      description: "Refreshes the remote workspace inventory for a stored remote OpenWork server and updates the local canonical registry mapping.",
+      summary: "Sync a remote AiWork server",
+      description: "Refreshes the remote workspace inventory for a stored remote AiWork server and updates the local canonical registry mapping.",
       responses: withCommonErrorResponses({
-        200: jsonResponse("Remote OpenWork server synced successfully.", remoteServerConnectResponseSchema),
+        200: jsonResponse("Remote AiWork server synced successfully.", remoteServerConnectResponseSchema),
       }, { includeForbidden: true, includeInvalidRequest: true, includeNotFound: true, includeUnauthorized: true }),
     }),
     async (c) => {

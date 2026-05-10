@@ -58,12 +58,12 @@ pub fn normalize_local_workspace_path_fast(path: &str) -> String {
     expanded.to_string_lossy().to_string()
 }
 
-pub fn openwork_state_paths(app: &tauri::AppHandle) -> Result<(PathBuf, PathBuf), String> {
+pub fn aiwork_state_paths(app: &tauri::AppHandle) -> Result<(PathBuf, PathBuf), String> {
     let data_dir = app
         .path()
         .app_data_dir()
         .map_err(|e| format!("Failed to resolve app data dir: {e}"))?;
-    let file_path = data_dir.join("openwork-workspaces.json");
+    let file_path = data_dir.join("aiwork-workspaces.json");
     Ok((data_dir, file_path))
 }
 
@@ -89,10 +89,10 @@ pub fn repair_workspace_state(state: &mut WorkspaceState) {
                 stable_workspace_id(&workspace.path)
             }
             WorkspaceType::Remote => {
-                if workspace.remote_type == Some(crate::types::RemoteType::Openwork) {
-                    stable_workspace_id_for_openwork(
-                        workspace.openwork_host_url.as_deref().unwrap_or(""),
-                        workspace.openwork_workspace_id.as_deref(),
+                if workspace.remote_type == Some(crate::types::RemoteType::AiWork) {
+                    stable_workspace_id_for_aiwork(
+                        workspace.aiwork_host_url.as_deref().unwrap_or(""),
+                        workspace.aiwork_workspace_id.as_deref(),
                     )
                 } else {
                     stable_workspace_id_for_remote(
@@ -142,7 +142,7 @@ pub fn repair_workspace_state(state: &mut WorkspaceState) {
 }
 
 pub fn load_workspace_state(app: &tauri::AppHandle) -> Result<WorkspaceState, String> {
-    let (_, path) = openwork_state_paths(app)?;
+    let (_, path) = aiwork_state_paths(app)?;
     if !path.exists() {
         return Ok(WorkspaceState::default());
     }
@@ -157,7 +157,7 @@ pub fn load_workspace_state(app: &tauri::AppHandle) -> Result<WorkspaceState, St
 }
 
 pub fn load_workspace_state_fast(app: &tauri::AppHandle) -> Result<WorkspaceState, String> {
-    let (_, path) = openwork_state_paths(app)?;
+    let (_, path) = aiwork_state_paths(app)?;
     if !path.exists() {
         return Ok(WorkspaceState::default());
     }
@@ -168,7 +168,7 @@ pub fn load_workspace_state_fast(app: &tauri::AppHandle) -> Result<WorkspaceStat
 }
 
 pub fn save_workspace_state(app: &tauri::AppHandle, state: &WorkspaceState) -> Result<(), String> {
-    let (dir, path) = openwork_state_paths(app)?;
+    let (dir, path) = aiwork_state_paths(app)?;
     fs::create_dir_all(&dir).map_err(|e| format!("Failed to create {}: {e}", dir.display()))?;
     fs::write(
         &path,
@@ -189,8 +189,8 @@ pub fn stable_workspace_id_for_remote(base_url: &str, directory: Option<&str>) -
     stable_workspace_id(&key)
 }
 
-pub fn stable_workspace_id_for_openwork(host_url: &str, workspace_id: Option<&str>) -> String {
-    let mut key = format!("openwork::{host_url}");
+pub fn stable_workspace_id_for_aiwork(host_url: &str, workspace_id: Option<&str>) -> String {
+    let mut key = format!("aiwork::{host_url}");
     if let Some(id) = workspace_id {
         if !id.trim().is_empty() {
             key.push_str("::");
@@ -209,15 +209,15 @@ mod tests {
     #[test]
     fn normalize_local_workspace_path_expands_home_prefix() {
         let home = crate::paths::home_dir().expect("home dir");
-        let expected = home.join("OpenWork").join("openwork-state-test-expand");
-        let actual = normalize_local_workspace_path("~/OpenWork/openwork-state-test-expand");
+        let expected = home.join("AiWork").join("aiwork-state-test-expand");
+        let actual = normalize_local_workspace_path("~/AiWork/aiwork-state-test-expand");
         assert_eq!(actual, expected.to_string_lossy());
     }
 
     #[test]
     fn normalize_local_workspace_path_keeps_canonical_id_stable() {
         let temp = std::env::temp_dir().join(format!(
-            "openwork-workspace-state-{}-{}",
+            "aiwork-workspace-state-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -243,7 +243,7 @@ mod tests {
     #[test]
     fn repair_workspace_state_preserves_selected_and_watched_ids_independently() {
         let temp = std::env::temp_dir().join(format!(
-            "openwork-workspace-state-selected-watched-{}-{}",
+            "aiwork-workspace-state-selected-watched-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -270,12 +270,12 @@ mod tests {
                     base_url: None,
                     directory: None,
                     display_name: None,
-                    openwork_host_url: None,
-                    openwork_token: None,
-                    openwork_client_token: None,
-                    openwork_host_token: None,
-                    openwork_workspace_id: None,
-                    openwork_workspace_name: None,
+                    aiwork_host_url: None,
+                    aiwork_token: None,
+                    aiwork_client_token: None,
+                    aiwork_host_token: None,
+                    aiwork_workspace_id: None,
+                    aiwork_workspace_name: None,
                     sandbox_backend: None,
                     sandbox_run_id: None,
                     sandbox_container_name: None,
@@ -290,12 +290,12 @@ mod tests {
                     base_url: None,
                     directory: None,
                     display_name: None,
-                    openwork_host_url: None,
-                    openwork_token: None,
-                    openwork_client_token: None,
-                    openwork_host_token: None,
-                    openwork_workspace_id: None,
-                    openwork_workspace_name: None,
+                    aiwork_host_url: None,
+                    aiwork_token: None,
+                    aiwork_client_token: None,
+                    aiwork_host_token: None,
+                    aiwork_workspace_id: None,
+                    aiwork_workspace_name: None,
                     sandbox_backend: None,
                     sandbox_run_id: None,
                     sandbox_container_name: None,
@@ -315,7 +315,7 @@ mod tests {
     #[test]
     fn repair_workspace_state_defaults_watched_id_to_selected_when_missing() {
         let temp = std::env::temp_dir().join(format!(
-            "openwork-workspace-state-default-watch-{}-{}",
+            "aiwork-workspace-state-default-watch-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -339,12 +339,12 @@ mod tests {
                 base_url: None,
                 directory: None,
                 display_name: None,
-                openwork_host_url: None,
-                openwork_token: None,
-                openwork_client_token: None,
-                openwork_host_token: None,
-                openwork_workspace_id: None,
-                openwork_workspace_name: None,
+                aiwork_host_url: None,
+                aiwork_token: None,
+                aiwork_client_token: None,
+                aiwork_host_token: None,
+                aiwork_workspace_id: None,
+                aiwork_workspace_name: None,
                 sandbox_backend: None,
                 sandbox_run_id: None,
                 sandbox_container_name: None,

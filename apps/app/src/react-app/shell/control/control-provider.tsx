@@ -11,67 +11,67 @@ import {
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-export type OpenworkControlSideEffect = "none" | "navigation" | "mutation" | "external";
+export type AiWorkControlSideEffect = "none" | "navigation" | "mutation" | "external";
 
-export type OpenworkControlActionArg = {
+export type AiWorkControlActionArg = {
   name: string;
   type?: "string" | "number" | "boolean" | "object" | "array" | "unknown";
   required?: boolean;
   description?: string;
 };
 
-export type OpenworkControlActionMetadata = {
+export type AiWorkControlActionMetadata = {
   id: string;
   label: string;
   description?: string;
-  sideEffect: OpenworkControlSideEffect;
+  sideEffect: AiWorkControlSideEffect;
   requiresConfirmation: boolean;
   requiresArgs: boolean;
   hasPreviewArgs: boolean;
   previewArgs?: unknown;
-  args?: OpenworkControlActionArg[];
+  args?: AiWorkControlActionArg[];
   disabled: boolean;
   busy: boolean;
 };
 
-export type OpenworkControlSnapshot = {
+export type AiWorkControlSnapshot = {
   version: number;
   enabled: boolean;
   route: string;
   status: "off" | "ready" | "acting";
   busyActionId: string | null;
   narration: string;
-  actions: OpenworkControlActionMetadata[];
+  actions: AiWorkControlActionMetadata[];
 };
 
-export type OpenworkControlResult =
+export type AiWorkControlResult =
   | { ok: true; actionId: string; result?: unknown }
   | { ok: false; actionId: string; error: string };
 
-export type OpenworkControlHelpers = {
+export type AiWorkControlHelpers = {
   setNarration: (text: string) => void;
 };
 
-export type OpenworkControlTargetRef = {
+export type AiWorkControlTargetRef = {
   readonly current: HTMLElement | null;
 };
 
-export type OpenworkControlAction = {
+export type AiWorkControlAction = {
   id: string;
   label: string;
   description?: string;
-  sideEffect?: OpenworkControlSideEffect;
+  sideEffect?: AiWorkControlSideEffect;
   requiresConfirmation?: boolean;
   requiresArgs?: boolean;
-  args?: OpenworkControlActionArg[];
+  args?: AiWorkControlActionArg[];
   previewArgs?: unknown;
   disabled?: boolean;
-  targetRef?: OpenworkControlTargetRef;
-  execute: (args: unknown, helpers: OpenworkControlHelpers) => unknown | Promise<unknown>;
+  targetRef?: AiWorkControlTargetRef;
+  execute: (args: unknown, helpers: AiWorkControlHelpers) => unknown | Promise<unknown>;
 };
 
 type ControlActionRef = {
-  readonly current: OpenworkControlAction | null;
+  readonly current: AiWorkControlAction | null;
 };
 
 type RegisteredAction = {
@@ -87,35 +87,35 @@ type SpotlightState = {
   rect: { x: number; y: number; width: number; height: number } | null;
 };
 
-type OpenworkControlContextValue = {
+type AiWorkControlContextValue = {
   enabled: boolean;
   setEnabled: (enabled: boolean) => void;
   route: string;
   narration: string;
   busyActionId: string | null;
-  actions: OpenworkControlActionMetadata[];
+  actions: AiWorkControlActionMetadata[];
   registerAction: (actionId: string, actionRef: ControlActionRef) => () => void;
-  executeAction: (actionId: string, args?: unknown) => Promise<OpenworkControlResult>;
-  snapshot: () => OpenworkControlSnapshot;
+  executeAction: (actionId: string, args?: unknown) => Promise<AiWorkControlResult>;
+  snapshot: () => AiWorkControlSnapshot;
 };
 
-type OpenworkControlAPI = {
+type AiWorkControlAPI = {
   version: number;
-  snapshot: () => OpenworkControlSnapshot;
-  listActions: () => OpenworkControlActionMetadata[];
-  execute: (actionId: string, args?: unknown) => Promise<OpenworkControlResult>;
+  snapshot: () => AiWorkControlSnapshot;
+  listActions: () => AiWorkControlActionMetadata[];
+  execute: (actionId: string, args?: unknown) => Promise<AiWorkControlResult>;
   setEnabled: (enabled: boolean) => void;
-  subscribe: (listener: (snapshot: OpenworkControlSnapshot) => void) => () => void;
+  subscribe: (listener: (snapshot: AiWorkControlSnapshot) => void) => () => void;
 };
 
 declare global {
   interface Window {
-    __openworkControl?: OpenworkControlAPI;
+    __aiworkControl?: AiWorkControlAPI;
   }
 }
 
 const CONTROL_API_VERSION = 1;
-const OpenworkControlContext = createContext<OpenworkControlContextValue | null>(null);
+const AiWorkControlContext = createContext<AiWorkControlContextValue | null>(null);
 const SPOTLIGHT_TIMING_MS = Object.freeze({
   missingTarget: 80,
   scrollIntoView: 180,
@@ -144,7 +144,7 @@ function isBrowser() {
   return typeof window !== "undefined" && typeof document !== "undefined";
 }
 
-function metadataForAction(registered: RegisteredAction, busyActionId: string | null): OpenworkControlActionMetadata {
+function metadataForAction(registered: RegisteredAction, busyActionId: string | null): AiWorkControlActionMetadata {
   const action = registered.ref.current;
   return {
     id: registered.id,
@@ -180,10 +180,10 @@ function ControlModeSpotlight({ spotlight }: { spotlight: SpotlightState }) {
   );
 }
 
-export function OpenworkControlProvider({ children }: { children: ReactNode }) {
+export function AiWorkControlProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const actionsRef = useRef(new Map<string, RegisteredAction>());
-  const listenersRef = useRef(new Set<(snapshot: OpenworkControlSnapshot) => void>());
+  const listenersRef = useRef(new Set<(snapshot: AiWorkControlSnapshot) => void>());
   const nextOrderRef = useRef(1);
   const [version, setVersion] = useState(0);
   const [enabledState, setEnabledState] = useState(false);
@@ -195,7 +195,7 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
 
   const route = `${location.pathname}${location.search}${location.hash}`;
   const enabled = enabledState;
-  const status: OpenworkControlSnapshot["status"] = !enabled ? "off" : busyActionId ? "acting" : "ready";
+  const status: AiWorkControlSnapshot["status"] = !enabled ? "off" : busyActionId ? "acting" : "ready";
 
   const setEnabled = useCallback((nextEnabled: boolean) => {
     setEnabledState(nextEnabled);
@@ -211,7 +211,7 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
     return listActionMetadata();
   }, [listActionMetadata]);
 
-  const snapshot = useCallback((): OpenworkControlSnapshot => ({
+  const snapshot = useCallback((): AiWorkControlSnapshot => ({
     version: CONTROL_API_VERSION,
     enabled,
     route,
@@ -241,7 +241,7 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const playTargetChoreography = useCallback(async (action: OpenworkControlAction, runId: number) => {
+  const playTargetChoreography = useCallback(async (action: AiWorkControlAction, runId: number) => {
     if (!isBrowser()) return;
     const stillCurrent = () => spotlightRunRef.current === runId;
     const target = action.targetRef?.current;
@@ -273,7 +273,7 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
     await wait(SPOTLIGHT_TIMING_MS.release);
   }, []);
 
-  const executeAction = useCallback(async (actionId: string, args?: unknown): Promise<OpenworkControlResult> => {
+  const executeAction = useCallback(async (actionId: string, args?: unknown): Promise<AiWorkControlResult> => {
     const registered = actionsRef.current.get(actionId);
     const action = registered?.ref.current;
     if (!registered || !action) return { ok: false, actionId, error: `Unknown action: ${actionId}` };
@@ -324,7 +324,7 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
     }
   }, [playTargetChoreography, setEnabled]);
 
-  const value = useMemo<OpenworkControlContextValue>(() => ({
+  const value = useMemo<AiWorkControlContextValue>(() => ({
     enabled,
     setEnabled,
     route,
@@ -347,7 +347,7 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isBrowser()) return;
 
-    const api: OpenworkControlAPI = {
+    const api: AiWorkControlAPI = {
       version: CONTROL_API_VERSION,
       snapshot,
       listActions: () => snapshot().actions,
@@ -362,10 +362,10 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
       },
     };
 
-    window.__openworkControl = api;
+    window.__aiworkControl = api;
     return () => {
-      if (window.__openworkControl === api) {
-        delete window.__openworkControl;
+      if (window.__aiworkControl === api) {
+        delete window.__aiworkControl;
       }
     };
   }, [executeAction, setEnabled, snapshot]);
@@ -380,21 +380,21 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
   }, [snapshot, version]);
 
   return (
-    <OpenworkControlContext.Provider value={value}>
+    <AiWorkControlContext.Provider value={value}>
       {children}
       <ControlModeSpotlight spotlight={spotlight} />
-    </OpenworkControlContext.Provider>
+    </AiWorkControlContext.Provider>
   );
 }
 
-export function useOpenworkControl() {
-  return useContext(OpenworkControlContext);
+export function useAiWorkControl() {
+  return useContext(AiWorkControlContext);
 }
 
-export function useControlAction(action: OpenworkControlAction | null | false | undefined) {
-  const control = useOpenworkControl();
+export function useControlAction(action: AiWorkControlAction | null | false | undefined) {
+  const control = useAiWorkControl();
   const registerAction = control?.registerAction;
-  const latestActionRef = useRef<OpenworkControlAction | null>(action || null);
+  const latestActionRef = useRef<AiWorkControlAction | null>(action || null);
   latestActionRef.current = action || null;
   const actionId = action ? action.id : null;
 
@@ -404,10 +404,10 @@ export function useControlAction(action: OpenworkControlAction | null | false | 
   }, [actionId, registerAction]);
 }
 
-export function OpenworkRouteControlActions() {
+export function AiWorkRouteControlActions() {
   const navigate = useNavigate();
 
-  const actions = useMemo<OpenworkControlAction[]>(() => [
+  const actions = useMemo<AiWorkControlAction[]>(() => [
     {
       id: "route.session",
       label: "Open sessions",

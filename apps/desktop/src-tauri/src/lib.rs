@@ -5,7 +5,7 @@ mod desktop_bootstrap;
 mod engine;
 mod env_file;
 mod fs;
-mod openwork_server;
+mod aiwork_server;
 mod orchestrator;
 mod paths;
 mod platform;
@@ -25,12 +25,12 @@ use commands::engine::{
 };
 use commands::migration::{migrate_to_electron, write_migration_snapshot};
 use commands::misc::{
-    app_build_info, desktop_app_paths, nuke_openwork_and_opencode_config_and_exit, opencode_mcp_auth,
-    read_opencode_engine_disk_logs, reset_opencode_cache, reset_openwork_state,
+    app_build_info, desktop_app_paths, nuke_aiwork_and_opencode_config_and_exit, opencode_mcp_auth,
+    read_opencode_engine_disk_logs, reset_opencode_cache, reset_aiwork_state,
 };
-use commands::openwork_server::{openwork_server_info, openwork_server_restart};
+use commands::aiwork_server::{aiwork_server_info, aiwork_server_restart};
 use commands::orchestrator::{
-    orchestrator_start_detached, sandbox_cleanup_openwork_containers, sandbox_debug_probe,
+    orchestrator_start_detached, sandbox_cleanup_aiwork_containers, sandbox_debug_probe,
     sandbox_doctor, sandbox_stop,
 };
 use commands::skills::{
@@ -45,21 +45,21 @@ use commands::shell_events_bridge::{
 use commands::window::set_window_decorations;
 use commands::workspace::{
     workspace_add_authorized_root, workspace_bootstrap, workspace_create, workspace_create_remote,
-    workspace_export_config, workspace_forget, workspace_import_config, workspace_openwork_read,
-    workspace_openwork_write, workspace_reorder, workspace_set_active, workspace_set_runtime_active,
+    workspace_export_config, workspace_forget, workspace_import_config, workspace_aiwork_read,
+    workspace_aiwork_write, workspace_reorder, workspace_set_active, workspace_set_runtime_active,
     workspace_set_selected, workspace_update_display_name, workspace_update_remote,
 };
 use engine::manager::EngineManager;
-use openwork_server::manager::OpenworkServerManager;
+use aiwork_server::manager::AiWorkServerManager;
 use orchestrator::manager::OrchestratorManager;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 use workspace::watch::WorkspaceWatchState;
 
-const NATIVE_DEEP_LINK_EVENT: &str = "openwork:deep-link-native";
+const NATIVE_DEEP_LINK_EVENT: &str = "aiwork:deep-link-native";
 
 #[cfg(target_os = "macos")]
 fn set_dev_app_name() {
-    if std::env::var("OPENWORK_DEV_MODE").ok().as_deref() != Some("1") {
+    if std::env::var("AIWORK_DEV_MODE").ok().as_deref() != Some("1") {
         return;
     }
 
@@ -68,7 +68,7 @@ fn set_dev_app_name() {
     };
 
     objc2_foundation::NSProcessInfo::processInfo()
-        .setProcessName(&objc2_foundation::NSString::from_str("OpenWork - Dev"));
+        .setProcessName(&objc2_foundation::NSString::from_str("AiWork - Dev"));
 }
 
 #[cfg(not(target_os = "macos"))]
@@ -79,8 +79,8 @@ fn forwarded_deep_links(args: &[String]) -> Vec<String> {
         .skip(1)
         .filter_map(|arg| {
             let trimmed = arg.trim();
-            if trimmed.starts_with("openwork://")
-                || trimmed.starts_with("openwork-dev://")
+            if trimmed.starts_with("aiwork://")
+                || trimmed.starts_with("aiwork-dev://")
                 || trimmed.starts_with("https://")
                 || trimmed.starts_with("http://")
             {
@@ -120,8 +120,8 @@ fn stop_managed_services(app_handle: &tauri::AppHandle) {
     if let Ok(mut orchestrator) = app_handle.state::<OrchestratorManager>().inner.lock() {
         OrchestratorManager::stop_locked(&mut orchestrator);
     }
-    if let Ok(mut openwork_server) = app_handle.state::<OpenworkServerManager>().inner.lock() {
-        OpenworkServerManager::stop_locked(&mut openwork_server);
+    if let Ok(mut aiwork_server) = app_handle.state::<AiWorkServerManager>().inner.lock() {
+        AiWorkServerManager::stop_locked(&mut aiwork_server);
     }
 }
 
@@ -148,7 +148,7 @@ pub fn run() {
         })
         .manage(EngineManager::default())
         .manage(OrchestratorManager::default())
-        .manage(OpenworkServerManager::default())
+        .manage(AiWorkServerManager::default())
         .manage(WorkspaceWatchState::default())
         .manage(ShellEventsBridge::default())
         .invoke_handler(tauri::generate_handler![
@@ -162,9 +162,9 @@ pub fn run() {
             sandbox_doctor,
             sandbox_debug_probe,
             sandbox_stop,
-            sandbox_cleanup_openwork_containers,
-            openwork_server_info,
-            openwork_server_restart,
+            sandbox_cleanup_aiwork_containers,
+            aiwork_server_info,
+            aiwork_server_restart,
             workspace_bootstrap,
             workspace_reorder,
             workspace_set_selected,
@@ -181,8 +181,8 @@ pub fn run() {
             opencode_command_list,
             opencode_command_write,
             opencode_command_delete,
-            workspace_openwork_read,
-            workspace_openwork_write,
+            workspace_aiwork_read,
+            workspace_aiwork_write,
             import_skill,
             install_skill_template,
             list_local_skills,
@@ -198,8 +198,8 @@ pub fn run() {
             migrate_to_electron,
             write_migration_snapshot,
             app_build_info,
-            nuke_openwork_and_opencode_config_and_exit,
-            reset_openwork_state,
+            nuke_aiwork_and_opencode_config_and_exit,
+            reset_aiwork_state,
             reset_opencode_cache,
             read_opencode_engine_disk_logs,
             opencode_mcp_auth,
@@ -213,7 +213,7 @@ pub fn run() {
             shell_events_clear_bridge_ack
         ])
         .build(tauri::generate_context!())
-        .expect("error while building OpenWork");
+        .expect("error while building AiWork");
 
     // Best-effort cleanup on app exit. Without this, background sidecars can keep
     // running after the UI quits (especially during dev), leading to stale ports.

@@ -12,8 +12,8 @@ import {
   readOpencodeAuthJson,
   readOpencodeConfig,
   writeOpencodeConfig,
-  workspaceOpenworkRead,
-  workspaceOpenworkWrite,
+  workspaceAiWorkRead,
+  workspaceAiWorkWrite,
 } from "../../../../app/lib/desktop";
 import type {
   Client,
@@ -27,7 +27,7 @@ import {
   mapConfigProvidersToList,
   resolveProviderInitialApiBaseUrl,
 } from "../../../../app/utils/providers";
-import type { OpenworkServerStore } from "../openwork-server-store";
+import type { AiWorkServerStore } from "../aiwork-server-store";
 import {
   readWorkspaceCloudImports,
   withWorkspaceCloudImports,
@@ -37,7 +37,7 @@ import {
 const DEFAULT_PROJECT_CONFIG_HEADER =
   '{\n  "$schema": "https://opencode.ai/config.json"\n}\n';
 
-const STORED_PROVIDER_API_BASE_URL_PREFIX = "openwork:providerApiBaseUrl:v1:";
+const STORED_PROVIDER_API_BASE_URL_PREFIX = "aiwork:providerApiBaseUrl:v1:";
 
 function storedProviderApiBaseUrlKey(providerId: string) {
   return `${STORED_PROVIDER_API_BASE_URL_PREFIX}${providerId.trim().toLowerCase()}`;
@@ -361,7 +361,7 @@ type CreateProviderAuthStoreOptions = {
   selectedWorkspaceDisplay: () => WorkspaceDisplay;
   selectedWorkspaceRoot: () => string;
   runtimeWorkspaceId: () => string | null;
-  openworkServer: OpenworkServerStore;
+  aiworkServer: AiWorkServerStore;
   setProviders: (value: ProviderListItem[]) => void;
   setProviderDefaults: (value: Record<string, string>) => void;
   setProviderConnectedIds: (value: string[]) => void;
@@ -463,31 +463,31 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     mutateState((current) => ({ ...current, [key]: value }));
   };
 
-  const readWorkspaceOpenworkConfigRecord = async (): Promise<
+  const readWorkspaceAiWorkConfigRecord = async (): Promise<
     Record<string, unknown>
   > => {
     const root = options.selectedWorkspaceRoot().trim();
     const isLocalWorkspace =
       options.selectedWorkspaceDisplay().workspaceType === "local";
-    const openworkSnapshot = options.openworkServer.getSnapshot();
-    const openworkClient = openworkSnapshot.openworkServerClient;
-    const openworkWorkspaceId =
+    const aiworkSnapshot = options.aiworkServer.getSnapshot();
+    const aiworkClient = aiworkSnapshot.aiworkServerClient;
+    const aiworkWorkspaceId =
       options.runtimeWorkspaceId() ??
       (options.selectedWorkspaceId().trim() || null);
-    const openworkCapabilities = openworkSnapshot.openworkServerCapabilities;
-    const canUseOpenworkServer =
-      openworkSnapshot.openworkServerStatus === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.config?.read;
+    const aiworkCapabilities = aiworkSnapshot.aiworkServerCapabilities;
+    const canUseAiWorkServer =
+      aiworkSnapshot.aiworkServerStatus === "connected" &&
+      aiworkClient &&
+      aiworkWorkspaceId &&
+      aiworkCapabilities?.config?.read;
 
-    if (canUseOpenworkServer) {
-      const config = await openworkClient.getConfig(openworkWorkspaceId);
-      return config.openwork ?? {};
+    if (canUseAiWorkServer) {
+      const config = await aiworkClient.getConfig(aiworkWorkspaceId);
+      return config.aiwork ?? {};
     }
 
     if (isLocalWorkspace && isDesktopRuntime() && root) {
-      return (await workspaceOpenworkRead({
+      return (await workspaceAiWorkRead({
         workspacePath: root,
       })) as unknown as Record<string, unknown>;
     }
@@ -495,37 +495,37 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     return {};
   };
 
-  const writeWorkspaceOpenworkConfigRecord = async (
+  const writeWorkspaceAiWorkConfigRecord = async (
     config: Record<string, unknown>,
   ) => {
     const root = options.selectedWorkspaceRoot().trim();
     const isLocalWorkspace =
       options.selectedWorkspaceDisplay().workspaceType === "local";
-    const openworkSnapshot = options.openworkServer.getSnapshot();
-    const openworkClient = openworkSnapshot.openworkServerClient;
-    const openworkWorkspaceId =
+    const aiworkSnapshot = options.aiworkServer.getSnapshot();
+    const aiworkClient = aiworkSnapshot.aiworkServerClient;
+    const aiworkWorkspaceId =
       options.runtimeWorkspaceId() ??
       (options.selectedWorkspaceId().trim() || null);
-    const openworkCapabilities = openworkSnapshot.openworkServerCapabilities;
-    const canUseOpenworkServer =
-      openworkSnapshot.openworkServerStatus === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.config?.write;
+    const aiworkCapabilities = aiworkSnapshot.aiworkServerCapabilities;
+    const canUseAiWorkServer =
+      aiworkSnapshot.aiworkServerStatus === "connected" &&
+      aiworkClient &&
+      aiworkWorkspaceId &&
+      aiworkCapabilities?.config?.write;
 
-    if (canUseOpenworkServer) {
-      await openworkClient.patchConfig(openworkWorkspaceId, { openwork: config });
+    if (canUseAiWorkServer) {
+      await aiworkClient.patchConfig(aiworkWorkspaceId, { aiwork: config });
       return true;
     }
 
     if (isLocalWorkspace && isDesktopRuntime() && root) {
-      const result = await workspaceOpenworkWrite({
+      const result = await workspaceAiWorkWrite({
         workspacePath: root,
         config: config as never,
       });
       if (!result.ok) {
         throw new Error(
-          result.stderr || result.stdout || "Failed to write .opencode/openwork.json",
+          result.stderr || result.stdout || "Failed to write .opencode/aiwork.json",
         );
       }
       return true;
@@ -536,7 +536,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
 
   const refreshImportedCloudProviders = async () => {
     try {
-      const config = await readWorkspaceOpenworkConfigRecord();
+      const config = await readWorkspaceAiWorkConfigRecord();
       const cloudImports = readWorkspaceCloudImports(config);
       setStateField("importedCloudProviders", cloudImports.providers);
       return cloudImports.providers;
@@ -549,16 +549,16 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
   const persistImportedCloudProviders = async (
     nextProviders: Record<string, CloudImportedProvider>,
   ) => {
-    const config = await readWorkspaceOpenworkConfigRecord();
+    const config = await readWorkspaceAiWorkConfigRecord();
     const cloudImports = readWorkspaceCloudImports(config);
     const nextConfig = withWorkspaceCloudImports(config, {
       ...cloudImports,
       providers: nextProviders,
     });
-    const persisted = await writeWorkspaceOpenworkConfigRecord(nextConfig);
+    const persisted = await writeWorkspaceAiWorkConfigRecord(nextConfig);
     if (!persisted) {
       throw new Error(
-        "OpenWork server unavailable. Connect to manage imported cloud providers.",
+        "AiWork server unavailable. Connect to manage imported cloud providers.",
       );
     }
     setStateField("importedCloudProviders", nextProviders);
@@ -568,21 +568,21 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     const root = options.selectedWorkspaceRoot().trim();
     const isLocalWorkspace =
       options.selectedWorkspaceDisplay().workspaceType === "local";
-    const openworkSnapshot = options.openworkServer.getSnapshot();
-    const openworkClient = openworkSnapshot.openworkServerClient;
-    const openworkWorkspaceId =
+    const aiworkSnapshot = options.aiworkServer.getSnapshot();
+    const aiworkClient = aiworkSnapshot.aiworkServerClient;
+    const aiworkWorkspaceId =
       options.runtimeWorkspaceId() ??
       (options.selectedWorkspaceId().trim() || null);
-    const openworkCapabilities = openworkSnapshot.openworkServerCapabilities;
-    const canUseOpenworkServer =
-      openworkSnapshot.openworkServerStatus === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.config?.read &&
-      typeof openworkClient.readOpencodeConfigFile === "function";
+    const aiworkCapabilities = aiworkSnapshot.aiworkServerCapabilities;
+    const canUseAiWorkServer =
+      aiworkSnapshot.aiworkServerStatus === "connected" &&
+      aiworkClient &&
+      aiworkWorkspaceId &&
+      aiworkCapabilities?.config?.read &&
+      typeof aiworkClient.readOpencodeConfigFile === "function";
 
-    if (canUseOpenworkServer) {
-      return await openworkClient.readOpencodeConfigFile(openworkWorkspaceId, "project");
+    if (canUseAiWorkServer) {
+      return await aiworkClient.readOpencodeConfigFile(aiworkWorkspaceId, "project");
     }
 
     if (isLocalWorkspace && isDesktopRuntime() && root) {
@@ -596,21 +596,21 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     const root = options.selectedWorkspaceRoot().trim();
     const isLocalWorkspace =
       options.selectedWorkspaceDisplay().workspaceType === "local";
-    const openworkSnapshot = options.openworkServer.getSnapshot();
-    const openworkClient = openworkSnapshot.openworkServerClient;
-    const openworkWorkspaceId =
+    const aiworkSnapshot = options.aiworkServer.getSnapshot();
+    const aiworkClient = aiworkSnapshot.aiworkServerClient;
+    const aiworkWorkspaceId =
       options.runtimeWorkspaceId() ??
       (options.selectedWorkspaceId().trim() || null);
-    const openworkCapabilities = openworkSnapshot.openworkServerCapabilities;
-    const canUseOpenworkServer =
-      openworkSnapshot.openworkServerStatus === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.config?.read &&
-      typeof openworkClient.readOpencodeConfigFile === "function";
+    const aiworkCapabilities = aiworkSnapshot.aiworkServerCapabilities;
+    const canUseAiWorkServer =
+      aiworkSnapshot.aiworkServerStatus === "connected" &&
+      aiworkClient &&
+      aiworkWorkspaceId &&
+      aiworkCapabilities?.config?.read &&
+      typeof aiworkClient.readOpencodeConfigFile === "function";
 
-    if (canUseOpenworkServer) {
-      return await openworkClient.readOpencodeConfigFile(openworkWorkspaceId, "global");
+    if (canUseAiWorkServer) {
+      return await aiworkClient.readOpencodeConfigFile(aiworkWorkspaceId, "global");
     }
 
     if (isLocalWorkspace && isDesktopRuntime() && root) {
@@ -624,22 +624,22 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     const root = options.selectedWorkspaceRoot().trim();
     const isLocalWorkspace =
       options.selectedWorkspaceDisplay().workspaceType === "local";
-    const openworkSnapshot = options.openworkServer.getSnapshot();
-    const openworkClient = openworkSnapshot.openworkServerClient;
-    const openworkWorkspaceId =
+    const aiworkSnapshot = options.aiworkServer.getSnapshot();
+    const aiworkClient = aiworkSnapshot.aiworkServerClient;
+    const aiworkWorkspaceId =
       options.runtimeWorkspaceId() ??
       (options.selectedWorkspaceId().trim() || null);
-    const openworkCapabilities = openworkSnapshot.openworkServerCapabilities;
-    const canUseOpenworkServer =
-      openworkSnapshot.openworkServerStatus === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.config?.write &&
-      typeof openworkClient.writeOpencodeConfigFile === "function";
+    const aiworkCapabilities = aiworkSnapshot.aiworkServerCapabilities;
+    const canUseAiWorkServer =
+      aiworkSnapshot.aiworkServerStatus === "connected" &&
+      aiworkClient &&
+      aiworkWorkspaceId &&
+      aiworkCapabilities?.config?.write &&
+      typeof aiworkClient.writeOpencodeConfigFile === "function";
 
-    if (canUseOpenworkServer) {
-      const result = await openworkClient.writeOpencodeConfigFile(
-        openworkWorkspaceId,
+    if (canUseAiWorkServer) {
+      const result = await aiworkClient.writeOpencodeConfigFile(
+        aiworkWorkspaceId,
         "project",
         content,
       );
@@ -664,22 +664,22 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     const root = options.selectedWorkspaceRoot().trim();
     const isLocalWorkspace =
       options.selectedWorkspaceDisplay().workspaceType === "local";
-    const openworkSnapshot = options.openworkServer.getSnapshot();
-    const openworkClient = openworkSnapshot.openworkServerClient;
-    const openworkWorkspaceId =
+    const aiworkSnapshot = options.aiworkServer.getSnapshot();
+    const aiworkClient = aiworkSnapshot.aiworkServerClient;
+    const aiworkWorkspaceId =
       options.runtimeWorkspaceId() ??
       (options.selectedWorkspaceId().trim() || null);
-    const openworkCapabilities = openworkSnapshot.openworkServerCapabilities;
-    const canUseOpenworkServer =
-      openworkSnapshot.openworkServerStatus === "connected" &&
-      openworkClient &&
-      openworkWorkspaceId &&
-      openworkCapabilities?.config?.write &&
-      typeof openworkClient.writeOpencodeConfigFile === "function";
+    const aiworkCapabilities = aiworkSnapshot.aiworkServerCapabilities;
+    const canUseAiWorkServer =
+      aiworkSnapshot.aiworkServerStatus === "connected" &&
+      aiworkClient &&
+      aiworkWorkspaceId &&
+      aiworkCapabilities?.config?.write &&
+      typeof aiworkClient.writeOpencodeConfigFile === "function";
 
-    if (canUseOpenworkServer) {
-      const result = await openworkClient.writeOpencodeConfigFile(
-        openworkWorkspaceId,
+    if (canUseAiWorkServer) {
+      const result = await aiworkClient.writeOpencodeConfigFile(
+        aiworkWorkspaceId,
         "global",
         content,
       );
@@ -748,7 +748,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
   const removeCloudProviderComment = (raw: string, providerId: string) =>
     raw.replace(
       new RegExp(
-        `(^[ \t]*)// OpenWork Cloud import:.*\\n\\1(?="${escapeRegExp(providerId)}":)`,
+        `(^[ \t]*)// AiWork Cloud import:.*\\n\\1(?="${escapeRegExp(providerId)}":)`,
         "m",
       ),
       "$1",
@@ -1213,7 +1213,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       }
       if (trimmedBase && !persisted && typeof console !== "undefined") {
         console.warn(
-          "[OpenWork] Provider base URL was not saved (global.config API, global file, project file). Inference may use the vendor default URL.",
+          "[AiWork] Provider base URL was not saved (global.config API, global file, project file). Inference may use the vendor default URL.",
         );
       }
       if (persisted) {

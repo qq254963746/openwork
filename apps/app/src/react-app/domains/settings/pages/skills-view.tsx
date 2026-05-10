@@ -50,7 +50,7 @@ const sectionTitleClass = "text-[15px] font-medium tracking-[-0.2px] text-dls-te
 const panelCardClass =
   "rounded-[20px] border border-dls-border bg-dls-surface p-5 transition-all hover:border-dls-border hover:shadow-[0_2px_12px_-4px_rgba(0,0,0,0.06)]";
 
-const OPENWORK_DEFAULT_SKILL_NAMES = new Set([
+const AIWORK_DEFAULT_SKILL_NAMES = new Set([
   "workspace-guide",
   "get-started",
   "skill-creator",
@@ -182,7 +182,7 @@ export function SkillsView(props: SkillsViewProps) {
   );
 
   const hasDefaultHubRepo = useMemo(
-    () => hubRepos.some((repo) => `${repo.owner}/${repo.repo}@${repo.ref}` === "fengai/openwork-hub@main"),
+    () => hubRepos.some((repo) => `${repo.owner}/${repo.repo}@${repo.ref}` === "fengai/aiwork-hub@main"),
     [hubRepos],
   );
 
@@ -329,11 +329,11 @@ export function SkillsView(props: SkillsViewProps) {
     closeCustomRepoModal();
   }, [closeCustomRepoModal, customRepoName, customRepoOwner, customRepoRef, extensions]);
 
-  const isOpenworkInjectedSkill = (skill: SkillCard) => {
+  const isAiWorkInjectedSkill = (skill: SkillCard) => {
     const normalizedName = skill.name.trim().toLowerCase();
     const normalizedPath = skill.path.replace(/\\/g, "/").toLowerCase();
     return normalizedPath.includes("/.opencode/skills/") &&
-      (OPENWORK_DEFAULT_SKILL_NAMES.has(normalizedName) || normalizedName.endsWith("-creator"));
+      (AIWORK_DEFAULT_SKILL_NAMES.has(normalizedName) || normalizedName.endsWith("-creator"));
   };
 
   const handleSkillCardKeyDown = (
@@ -467,7 +467,7 @@ export function SkillsView(props: SkillsViewProps) {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <h4 className="truncate text-[14px] font-semibold text-dls-text">{skill.name}</h4>
-                          {isOpenworkInjectedSkill(skill) ? <span className={tagClass}>OpenWork</span> : null}
+                          {isAiWorkInjectedSkill(skill) ? <span className={tagClass}>AiWork</span> : null}
                         </div>
                         <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-dls-secondary">
                           {skill.description || t("skills.no_description")}
@@ -531,7 +531,7 @@ export function SkillsView(props: SkillsViewProps) {
               <button
                 type="button"
                 onClick={() => {
-                  void Promise.resolve(extensions.addHubRepo({ owner: "fengai", repo: "openwork-hub", ref: "main" })).then(() => {
+                  void Promise.resolve(extensions.addHubRepo({ owner: "fengai", repo: "aiwork-hub", ref: "main" })).then(() => {
                     void extensions.refreshHubSkills({ force: true });
                   });
                 }}
@@ -539,7 +539,7 @@ export function SkillsView(props: SkillsViewProps) {
                 disabled={props.busy || hasDefaultHubRepo}
               >
                 <Plus size={14} />
-                {t("skills.add_openwork_hub")}
+                {t("skills.add_aiwork_hub")}
               </button>
               <button type="button" onClick={openCustomRepoModal} disabled={props.busy} className={pillSecondaryClass}>
                 <Plus size={14} />
@@ -753,7 +753,7 @@ export function SkillsView(props: SkillsViewProps) {
                     type="text"
                     value={customRepoName}
                     onChange={(event) => setCustomRepoName(event.currentTarget.value)}
-                    placeholder="openwork-hub"
+                    placeholder="aiwork-hub"
                     className="w-full rounded-lg border border-dls-border bg-dls-hover px-3 py-2 text-xs font-mono text-dls-text focus:outline-none"
                     spellCheck={false}
                   />

@@ -75,7 +75,7 @@ export function isTauriRuntime() {
 }
 
 export function isElectronRuntime() {
-  return typeof window !== "undefined" && (window as Window).__OPENWORK_ELECTRON__ != null;
+  return typeof window !== "undefined" && (window as Window).__AIWORK_ELECTRON__ != null;
 }
 
 export function isDesktopRuntime() {
@@ -110,9 +110,9 @@ export function isMacPlatform() {
   return /mac/i.test(platform) || /macintosh|mac os x/i.test(ua);
 }
 
-const STARTUP_PREF_KEY = "openwork.startupPref";
-const LEGACY_PREF_KEY = "openwork.modePref";
-const LEGACY_PREF_KEY_ALT = "openwork_mode_pref";
+const STARTUP_PREF_KEY = "aiwork.startupPref";
+const LEGACY_PREF_KEY = "aiwork.modePref";
+const LEGACY_PREF_KEY_ALT = "aiwork_mode_pref";
 
 export function readStartupPreference(): "local" | "server" | null {
   if (typeof window === "undefined") return null;
@@ -361,7 +361,7 @@ export function getWorkspaceTaskLoadErrorDisplay(workspace: WorkspaceInfo, error
   const normalized = raw.toLowerCase();
   const hasDockerHint = SANDBOX_DOCKER_OFFLINE_HINTS.some((hint) => normalized.includes(hint));
   const hasNetworkHint = SANDBOX_NETWORK_HINTS.some((hint) => normalized.includes(hint));
-  const host = `${workspace.baseUrl ?? ""} ${workspace.openworkHostUrl ?? ""}`.toLowerCase();
+  const host = `${workspace.baseUrl ?? ""} ${workspace.aiworkHostUrl ?? ""}`.toLowerCase();
   const localHost = host.includes("localhost") || host.includes("127.0.0.1");
 
   if (!hasDockerHint && !(localHost && hasNetworkHint)) {

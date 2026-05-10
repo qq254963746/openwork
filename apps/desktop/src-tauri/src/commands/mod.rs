@@ -5,7 +5,7 @@ pub mod engine;
 pub mod host_desktop;
 pub mod migration;
 pub mod misc;
-pub mod openwork_server;
+pub mod aiwork_server;
 pub mod orchestrator;
 pub mod shell_events_bridge;
 pub mod skills;

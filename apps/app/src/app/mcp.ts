@@ -17,7 +17,7 @@ let _resolvedBundledCommand: string[] | null | undefined;
 /**
  * Resolve the chrome-devtools-mcp command for the current runtime.
  *
- * In Electron, the package is bundled as a dependency of `@openwork/desktop`,
+ * In Electron, the package is bundled as a dependency of `@aiwork/desktop`,
  * so we ask the main process for the absolute path to the bin and use
  * `["node", "<path>"]` — no npm/npx required.
  *
@@ -26,7 +26,7 @@ let _resolvedBundledCommand: string[] | null | undefined;
 export async function resolveChromeDevtoolsMcpCommand(): Promise<string[]> {
   if (isElectronRuntime() && _resolvedBundledCommand === undefined) {
     try {
-      const resolved = await (window as Window).__OPENWORK_ELECTRON__!.invokeDesktop(
+      const resolved = await (window as Window).__AIWORK_ELECTRON__!.invokeDesktop(
         "resolveChromeDevtoolsMcpBin",
       );
       _resolvedBundledCommand = Array.isArray(resolved) && resolved.length > 0

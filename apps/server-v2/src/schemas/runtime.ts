@@ -11,7 +11,7 @@ const runtimeOutputSnapshotSchema = z.object({
   stdout: z.array(z.string()),
   totalLines: z.number().int().nonnegative(),
   truncated: z.boolean(),
-}).meta({ ref: "OpenWorkServerV2RuntimeOutputSnapshot" });
+}).meta({ ref: "AiWorkServerV2RuntimeOutputSnapshot" });
 
 const runtimeTargetSchema = z.enum([
   "darwin-arm64",
@@ -20,7 +20,7 @@ const runtimeTargetSchema = z.enum([
   "linux-x64",
   "windows-arm64",
   "windows-x64",
-]).meta({ ref: "OpenWorkServerV2RuntimeTarget" });
+]).meta({ ref: "AiWorkServerV2RuntimeTarget" });
 
 const runtimeManifestSchema = z.object({
   files: z.object({
@@ -43,7 +43,7 @@ const runtimeManifestSchema = z.object({
   serverVersion: z.string(),
   source: z.enum(["development", "release"]),
   target: runtimeTargetSchema,
-}).meta({ ref: "OpenWorkServerV2RuntimeManifest" });
+}).meta({ ref: "AiWorkServerV2RuntimeManifest" });
 
 const lastExitSchema = z.object({
   at: isoTimestampSchema,
@@ -51,7 +51,7 @@ const lastExitSchema = z.object({
   output: runtimeOutputSnapshotSchema,
   reason: z.string(),
   signal: z.string().nullable(),
-}).meta({ ref: "OpenWorkServerV2RuntimeLastExit" });
+}).meta({ ref: "AiWorkServerV2RuntimeLastExit" });
 
 const routerEnablementSchema = z.object({
   enabled: z.boolean(),
@@ -59,7 +59,7 @@ const routerEnablementSchema = z.object({
   enabledIdentityCount: z.number().int().nonnegative(),
   forced: z.boolean(),
   reason: z.string(),
-}).meta({ ref: "OpenWorkServerV2RouterEnablement" });
+}).meta({ ref: "AiWorkServerV2RouterEnablement" });
 
 const routerMaterializationSchema = z.object({
   bindingCount: z.number().int().nonnegative(),
@@ -68,7 +68,7 @@ const routerMaterializationSchema = z.object({
   dbPath: z.string(),
   identityCount: z.number().int().nonnegative(),
   logFile: z.string(),
-}).meta({ ref: "OpenWorkServerV2RouterMaterialization" });
+}).meta({ ref: "AiWorkServerV2RouterMaterialization" });
 
 const runtimeChildStatusSchema = z.enum(["crashed", "disabled", "error", "restart_scheduled", "running", "starting", "stopped"]);
 
@@ -77,7 +77,7 @@ const runtimeUpgradeStateSchema = z.object({
   finishedAt: isoTimestampSchema.nullable(),
   startedAt: isoTimestampSchema.nullable(),
   status: z.enum(["completed", "failed", "idle", "running"]),
-}).meta({ ref: "OpenWorkServerV2RuntimeUpgradeState" });
+}).meta({ ref: "AiWorkServerV2RuntimeUpgradeState" });
 
 export const opencodeHealthDataSchema = z.object({
   baseUrl: z.string().nullable(),
@@ -93,7 +93,7 @@ export const opencodeHealthDataSchema = z.object({
   source: z.enum(["development", "release"]),
   status: runtimeChildStatusSchema,
   version: z.string().nullable(),
-}).meta({ ref: "OpenWorkServerV2OpencodeHealthData" });
+}).meta({ ref: "AiWorkServerV2OpencodeHealthData" });
 
 export const routerHealthDataSchema = z.object({
   baseUrl: z.string().nullable(),
@@ -112,7 +112,7 @@ export const routerHealthDataSchema = z.object({
   source: z.enum(["development", "release"]),
   status: runtimeChildStatusSchema,
   version: z.string().nullable(),
-}).meta({ ref: "OpenWorkServerV2RouterHealthData" });
+}).meta({ ref: "AiWorkServerV2RouterHealthData" });
 
 export const runtimeSummaryDataSchema = z.object({
   bootstrapPolicy: z.enum(["disabled", "eager", "manual"]),
@@ -127,12 +127,12 @@ export const runtimeSummaryDataSchema = z.object({
   upgrade: runtimeUpgradeStateSchema,
   source: z.enum(["development", "release"]),
   target: runtimeTargetSchema,
-}).meta({ ref: "OpenWorkServerV2RuntimeSummaryData" });
+}).meta({ ref: "AiWorkServerV2RuntimeSummaryData" });
 
 export const runtimeUpgradeDataSchema = z.object({
   state: runtimeUpgradeStateSchema,
   summary: runtimeSummaryDataSchema,
-}).meta({ ref: "OpenWorkServerV2RuntimeUpgradeData" });
+}).meta({ ref: "AiWorkServerV2RuntimeUpgradeData" });
 
 export const runtimeVersionsDataSchema = z.object({
   active: z.object({
@@ -147,10 +147,10 @@ export const runtimeVersionsDataSchema = z.object({
     serverVersion: z.string(),
   }),
   target: runtimeTargetSchema,
-}).meta({ ref: "OpenWorkServerV2RuntimeVersionsData" });
+}).meta({ ref: "AiWorkServerV2RuntimeVersionsData" });
 
-export const opencodeHealthResponseSchema = successResponseSchema("OpenWorkServerV2OpencodeHealthResponse", opencodeHealthDataSchema);
-export const routerHealthResponseSchema = successResponseSchema("OpenWorkServerV2RouterHealthResponse", routerHealthDataSchema);
-export const runtimeSummaryResponseSchema = successResponseSchema("OpenWorkServerV2RuntimeSummaryResponse", runtimeSummaryDataSchema);
-export const runtimeVersionsResponseSchema = successResponseSchema("OpenWorkServerV2RuntimeVersionsResponse", runtimeVersionsDataSchema);
-export const runtimeUpgradeResponseSchema = successResponseSchema("OpenWorkServerV2RuntimeUpgradeResponse", runtimeUpgradeDataSchema);
+export const opencodeHealthResponseSchema = successResponseSchema("AiWorkServerV2OpencodeHealthResponse", opencodeHealthDataSchema);
+export const routerHealthResponseSchema = successResponseSchema("AiWorkServerV2RouterHealthResponse", routerHealthDataSchema);
+export const runtimeSummaryResponseSchema = successResponseSchema("AiWorkServerV2RuntimeSummaryResponse", runtimeSummaryDataSchema);
+export const runtimeVersionsResponseSchema = successResponseSchema("AiWorkServerV2RuntimeVersionsResponse", runtimeVersionsDataSchema);
+export const runtimeUpgradeResponseSchema = successResponseSchema("AiWorkServerV2RuntimeUpgradeResponse", runtimeUpgradeDataSchema);

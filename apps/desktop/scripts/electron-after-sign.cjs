@@ -28,7 +28,7 @@ async function afterSign(context) {
 
   const appName = `${context.packager.appInfo.productFilename}.app`;
   const appPath = path.join(context.appOutDir, appName);
-  const notaryTempDir = mkdtempSync(path.join(tmpdir(), "openwork-electron-notary-"));
+  const notaryTempDir = mkdtempSync(path.join(tmpdir(), "aiwork-electron-notary-"));
   const notaryZipPath = path.join(notaryTempDir, `${context.packager.appInfo.productFilename}-notary.zip`);
   const keyPath = requireEnv("APPLE_API_KEY_PATH");
   const keyId = requireEnv("APPLE_API_KEY");

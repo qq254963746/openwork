@@ -47,8 +47,8 @@ const versions = {
   opencodeRouter: opencodeRouterPkg.version ?? null,
   opencode: pinnedOpencodeVersion || null,
   opencodeRouterVersionPinned: desktopPkg.opencodeRouterVersion ?? null,
-  orchestratorOpenworkServerRange:
-    orchestratorPkg.dependencies?.["openwork-server"] ?? null,
+  orchestratorAiWorkServerRange:
+    orchestratorPkg.dependencies?.["aiwork-server"] ?? null,
 };
 
 const checks = [];
@@ -68,14 +68,14 @@ addCheck(
   `${versions.app ?? "?"} vs ${versions.desktop ?? "?"}`,
 );
 addCheck(
-  "App/openwork-orchestrator versions match",
+  "App/aiwork-orchestrator versions match",
   versions.app &&
     versions.orchestrator &&
     versions.app === versions.orchestrator,
   `${versions.app ?? "?"} vs ${versions.orchestrator ?? "?"}`,
 );
 addCheck(
-  "App/openwork-server versions match",
+  "App/aiwork-server versions match",
   versions.app && versions.server && versions.app === versions.server,
   `${versions.app ?? "?"} vs ${versions.server ?? "?"}`,
 );
@@ -115,19 +115,19 @@ if (versions.opencode) {
   );
 }
 
-const openworkServerRange = versions.orchestratorOpenworkServerRange ?? "";
-const openworkServerPinned = /^\d+\.\d+\.\d+/.test(openworkServerRange);
-if (!openworkServerRange) {
-  addWarning("openwork-orchestrator is missing an openwork-server dependency.");
-} else if (!openworkServerPinned) {
+const aiworkServerRange = versions.orchestratorAiWorkServerRange ?? "";
+const aiworkServerPinned = /^\d+\.\d+\.\d+/.test(aiworkServerRange);
+if (!aiworkServerRange) {
+  addWarning("aiwork-orchestrator is missing an aiwork-server dependency.");
+} else if (!aiworkServerPinned) {
   addWarning(
-    `openwork-orchestrator openwork-server dependency is not pinned (${openworkServerRange}).`,
+    `aiwork-orchestrator aiwork-server dependency is not pinned (${aiworkServerRange}).`,
   );
 } else {
   addCheck(
-    "Openwork-server dependency matches server version",
-    versions.server && openworkServerRange === versions.server,
-    `${openworkServerRange} vs ${versions.server ?? "?"}`,
+    "AiWork-server dependency matches server version",
+    versions.server && aiworkServerRange === versions.server,
+    `${aiworkServerRange} vs ${versions.server ?? "?"}`,
   );
 }
 
@@ -137,20 +137,20 @@ const sidecarManifestPath = resolve(
   "orchestrator",
   "dist",
   "sidecars",
-  "openwork-orchestrator-sidecars.json",
+  "aiwork-orchestrator-sidecars.json",
 );
 if (existsSync(sidecarManifestPath)) {
   const manifest = readJson(sidecarManifestPath);
   addCheck(
-    "Sidecar manifest version matches openwork-orchestrator",
+    "Sidecar manifest version matches aiwork-orchestrator",
     versions.orchestrator && manifest.version === versions.orchestrator,
     `${manifest.version ?? "?"} vs ${versions.orchestrator ?? "?"}`,
   );
-  const serverEntry = manifest.entries?.["openwork-server"]?.version;
+  const serverEntry = manifest.entries?.["aiwork-server"]?.version;
   const routerEntry = manifest.entries?.["opencode-router"]?.version;
   if (serverEntry) {
     addCheck(
-      "Sidecar manifest openwork-server version matches",
+      "Sidecar manifest aiwork-server version matches",
       versions.server && serverEntry === versions.server,
       `${serverEntry ?? "?"} vs ${versions.server ?? "?"}`,
     );
@@ -164,7 +164,7 @@ if (existsSync(sidecarManifestPath)) {
   }
 } else {
   addWarning(
-    "Sidecar manifest missing (run pnpm --filter openwork-orchestrator build:sidecars).",
+    "Sidecar manifest missing (run pnpm --filter aiwork-orchestrator build:sidecars).",
   );
 }
 

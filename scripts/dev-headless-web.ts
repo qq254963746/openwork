@@ -64,9 +64,9 @@ const readBool = (value: string | undefined) => {
 const silent = process.argv.includes("--silent");
 
 const autoBuildEnabled =
-  process.env.OPENWORK_DEV_HEADLESS_WEB_AUTOBUILD == null
+  process.env.AIWORK_DEV_HEADLESS_WEB_AUTOBUILD == null
     ? true
-    : readBool(process.env.OPENWORK_DEV_HEADLESS_WEB_AUTOBUILD);
+    : readBool(process.env.AIWORK_DEV_HEADLESS_WEB_AUTOBUILD);
 
 const runCommand = (command: string, args: string[]) =>
   new Promise<void>((resolve, reject) => {
@@ -116,54 +116,54 @@ const shutdown = (
 
 await ensureTmp();
 
-const remoteAccessEnabled = readBool(process.env.OPENWORK_REMOTE_ACCESS);
+const remoteAccessEnabled = readBool(process.env.AIWORK_REMOTE_ACCESS);
 const host = remoteAccessEnabled ? "0.0.0.0" : "127.0.0.1";
 const viteHost = process.env.VITE_HOST ?? process.env.HOST ?? host;
-const publicHost = process.env.OPENWORK_PUBLIC_HOST ?? null;
+const publicHost = process.env.AIWORK_PUBLIC_HOST ?? null;
 const clientHost = publicHost ?? (host === "0.0.0.0" ? "127.0.0.1" : host);
-const workspace = process.env.OPENWORK_WORKSPACE ?? cwd;
-const openworkPort = await resolvePort(process.env.OPENWORK_PORT, "127.0.0.1");
-const webPort = await resolvePort(process.env.OPENWORK_WEB_PORT, "127.0.0.1");
-const openworkToken = process.env.OPENWORK_TOKEN ?? randomUUID();
-const openworkHostToken = process.env.OPENWORK_HOST_TOKEN ?? randomUUID();
-const openworkServerBin = path.join(
+const workspace = process.env.AIWORK_WORKSPACE ?? cwd;
+const aiworkPort = await resolvePort(process.env.AIWORK_PORT, "127.0.0.1");
+const webPort = await resolvePort(process.env.AIWORK_WEB_PORT, "127.0.0.1");
+const aiworkToken = process.env.AIWORK_TOKEN ?? randomUUID();
+const aiworkHostToken = process.env.AIWORK_HOST_TOKEN ?? randomUUID();
+const aiworkServerBin = path.join(
   cwd,
-  "apps/server/dist/bin/openwork-server",
+  "apps/server/dist/bin/aiwork-server",
 );
 const opencodeRouterBin = path.join(
   cwd,
   "apps/opencode-router/dist/bin/opencode-router",
 );
 
-const ensureOpenworkServer = async () => {
+const ensureAiWorkServer = async () => {
   try {
-    await access(openworkServerBin);
+    await access(aiworkServerBin);
   } catch {
     if (!autoBuildEnabled) {
       logLine(
-        `[dev:headless-web] Missing OpenWork server binary at ${openworkServerBin}`,
+        `[dev:headless-web] Missing AiWork server binary at ${aiworkServerBin}`,
       );
       logLine(
-        "[dev:headless-web] Auto-build disabled (OPENWORK_DEV_HEADLESS_WEB_AUTOBUILD=0)",
+        "[dev:headless-web] Auto-build disabled (AIWORK_DEV_HEADLESS_WEB_AUTOBUILD=0)",
       );
       logLine(
-        "[dev:headless-web] Run: pnpm --filter openwork-server build:bin",
+        "[dev:headless-web] Run: pnpm --filter aiwork-server build:bin",
       );
       logLine(
-        "[dev:headless-web] Or unset/enable OPENWORK_DEV_HEADLESS_WEB_AUTOBUILD to auto-build.",
+        "[dev:headless-web] Or unset/enable AIWORK_DEV_HEADLESS_WEB_AUTOBUILD to auto-build.",
       );
       process.exit(1);
     }
 
     logLine(
-      `[dev:headless-web] Missing OpenWork server binary at ${openworkServerBin}`,
+      `[dev:headless-web] Missing AiWork server binary at ${aiworkServerBin}`,
     );
     logLine(
-      "[dev:headless-web] Auto-building: pnpm --filter openwork-server build:bin",
+      "[dev:headless-web] Auto-building: pnpm --filter aiwork-server build:bin",
     );
     try {
-      await runCommand("pnpm", ["--filter", "openwork-server", "build:bin"]);
-      await access(openworkServerBin);
+      await runCommand("pnpm", ["--filter", "aiwork-server", "build:bin"]);
+      await access(aiworkServerBin);
     } catch (error) {
       logLine(
         `[dev:headless-web] Auto-build failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -182,13 +182,13 @@ const ensureOpencodeRouter = async () => {
         `[dev:headless-web] Missing opencode-router binary at ${opencodeRouterBin}`,
       );
       logLine(
-        "[dev:headless-web] Auto-build disabled (OPENWORK_DEV_HEADLESS_WEB_AUTOBUILD=0)",
+        "[dev:headless-web] Auto-build disabled (AIWORK_DEV_HEADLESS_WEB_AUTOBUILD=0)",
       );
       logLine(
         "[dev:headless-web] Run: pnpm --filter opencode-router build:bin",
       );
       logLine(
-        "[dev:headless-web] Or unset/enable OPENWORK_DEV_HEADLESS_WEB_AUTOBUILD to auto-build.",
+        "[dev:headless-web] Or unset/enable AIWORK_DEV_HEADLESS_WEB_AUTOBUILD to auto-build.",
       );
       process.exit(1);
     }
@@ -211,54 +211,54 @@ const ensureOpencodeRouter = async () => {
   }
 };
 
-const openworkUrl = `http://${clientHost}:${openworkPort}`;
+const aiworkUrl = `http://${clientHost}:${aiworkPort}`;
 const webUrl = `http://${clientHost}:${webPort}`;
 // In practice we want opencode-router on for end-to-end messaging tests.
-// Allow opt-out via OPENWORK_DEV_OPENCODE_ROUTER=0.
+// Allow opt-out via AIWORK_DEV_OPENCODE_ROUTER=0.
 const opencodeRouterEnabled =
-  process.env.OPENWORK_DEV_OPENCODE_ROUTER == null
+  process.env.AIWORK_DEV_OPENCODE_ROUTER == null
     ? true
-    : readBool(process.env.OPENWORK_DEV_OPENCODE_ROUTER);
+    : readBool(process.env.AIWORK_DEV_OPENCODE_ROUTER);
 const opencodeRouterRequired = readBool(
-  process.env.OPENWORK_DEV_OPENCODE_ROUTER_REQUIRED,
+  process.env.AIWORK_DEV_OPENCODE_ROUTER_REQUIRED,
 );
 const viteEnv = {
   ...process.env,
   HOST: viteHost,
   PORT: String(webPort),
-  VITE_OPENWORK_URL: process.env.VITE_OPENWORK_URL ?? openworkUrl,
-  VITE_OPENWORK_PORT: process.env.VITE_OPENWORK_PORT ?? String(openworkPort),
-  VITE_OPENWORK_TOKEN: process.env.VITE_OPENWORK_TOKEN ?? openworkToken,
+  VITE_AIWORK_URL: process.env.VITE_AIWORK_URL ?? aiworkUrl,
+  VITE_AIWORK_PORT: process.env.VITE_AIWORK_PORT ?? String(aiworkPort),
+  VITE_AIWORK_TOKEN: process.env.VITE_AIWORK_TOKEN ?? aiworkToken,
 };
 const headlessEnv = {
   ...process.env,
-  OPENWORK_WORKSPACE: workspace,
-  OPENWORK_HOST: host,
-  OPENWORK_REMOTE_ACCESS: remoteAccessEnabled ? "1" : "0",
-  OPENWORK_PORT: String(openworkPort),
-  OPENWORK_TOKEN: openworkToken,
-  OPENWORK_HOST_TOKEN: openworkHostToken,
-  OPENWORK_SERVER_BIN: openworkServerBin,
-  OPENWORK_SIDECAR_SOURCE: process.env.OPENWORK_SIDECAR_SOURCE ?? "external",
+  AIWORK_WORKSPACE: workspace,
+  AIWORK_HOST: host,
+  AIWORK_REMOTE_ACCESS: remoteAccessEnabled ? "1" : "0",
+  AIWORK_PORT: String(aiworkPort),
+  AIWORK_TOKEN: aiworkToken,
+  AIWORK_HOST_TOKEN: aiworkHostToken,
+  AIWORK_SERVER_BIN: aiworkServerBin,
+  AIWORK_SIDECAR_SOURCE: process.env.AIWORK_SIDECAR_SOURCE ?? "external",
   OPENCODE_ROUTER_BIN: process.env.OPENCODE_ROUTER_BIN ?? opencodeRouterBin,
 };
 
-await ensureOpenworkServer();
+await ensureAiWorkServer();
 if (opencodeRouterEnabled) {
   await ensureOpencodeRouter();
 }
 
 logLine("[dev:headless-web] Starting services");
 logLine(`[dev:headless-web] Workspace: ${workspace}`);
-logLine(`[dev:headless-web] OpenWork server: ${openworkUrl}`);
+logLine(`[dev:headless-web] AiWork server: ${aiworkUrl}`);
 logLine(`[dev:headless-web] Web host: ${viteHost}`);
 logLine(`[dev:headless-web] Web port: ${webPort}`);
 logLine(`[dev:headless-web] Web URL: ${webUrl}`);
 logLine(
-  `[dev:headless-web] OpenCodeRouter: ${opencodeRouterEnabled ? "on" : "off"} (set OPENWORK_DEV_OPENCODE_ROUTER=0 to disable)`,
+  `[dev:headless-web] OpenCodeRouter: ${opencodeRouterEnabled ? "on" : "off"} (set AIWORK_DEV_OPENCODE_ROUTER=0 to disable)`,
 );
-logLine("[dev:headless-web] OPENWORK_TOKEN: [REDACTED]");
-logLine("[dev:headless-web] OPENWORK_HOST_TOKEN: [REDACTED]");
+logLine("[dev:headless-web] AIWORK_TOKEN: [REDACTED]");
+logLine("[dev:headless-web] AIWORK_HOST_TOKEN: [REDACTED]");
 logLine(
   `[dev:headless-web] Web logs: ${path.relative(cwd, path.join(tmpDir, "dev-web.log"))}`,
 );
@@ -270,7 +270,7 @@ const webProcess = spawnLogged(
   "pnpm",
   [
     "--filter",
-    "@openwork/app",
+    "@aiwork/app",
     "exec",
     "vite",
     "--host",
@@ -287,7 +287,7 @@ const headlessProcess = spawnLogged(
   "pnpm",
   [
     "--filter",
-    "openwork-orchestrator",
+    "aiwork-orchestrator",
     "dev",
     "--",
     "start",
@@ -300,8 +300,8 @@ const headlessProcess = spawnLogged(
     opencodeRouterEnabled ? "true" : "false",
     ...(opencodeRouterRequired ? ["--opencode-router-required"] : []),
     ...(remoteAccessEnabled ? ["--remote-access"] : []),
-    "--openwork-port",
-    String(openworkPort),
+    "--aiwork-port",
+    String(aiworkPort),
   ],
   path.join(tmpDir, "dev-headless.log"),
   headlessEnv,

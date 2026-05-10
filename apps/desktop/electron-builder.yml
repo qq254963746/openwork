@@ -1,12 +1,12 @@
 # IMPORTANT: appId intentionally matches the Tauri shell so both builds share
 # the same macOS bundle identifier, keychain entries, Launchpad slot, and TCC
 # permissions. In-place migration from Tauri to Electron depends on this.
-appId: com.fengai.openwork
-productName: OpenWork
+appId: com.fengai.aiwork
+productName: AiWork
 protocols:
-  - name: OpenWork
+  - name: AiWork
     schemes:
-      - openwork
+      - aiwork
 directories:
   output: dist-electron
 files:
@@ -32,12 +32,12 @@ mac:
         - opencode
         - opencode-aarch64-apple-darwin
         - opencode-x86_64-apple-darwin
-        - openwork-server
-        - openwork-server-aarch64-apple-darwin
-        - openwork-server-x86_64-apple-darwin
-        - openwork-orchestrator
-        - openwork-orchestrator-aarch64-apple-darwin
-        - openwork-orchestrator-x86_64-apple-darwin
+        - aiwork-server
+        - aiwork-server-aarch64-apple-darwin
+        - aiwork-server-x86_64-apple-darwin
+        - aiwork-orchestrator
+        - aiwork-orchestrator-aarch64-apple-darwin
+        - aiwork-orchestrator-x86_64-apple-darwin
         - chrome-devtools-mcp
         - chrome-devtools-mcp-aarch64-apple-darwin
         - chrome-devtools-mcp-x86_64-apple-darwin
@@ -56,12 +56,12 @@ linux:
         - opencode
         - opencode-aarch64-unknown-linux-gnu
         - opencode-x86_64-unknown-linux-gnu
-        - openwork-server
-        - openwork-server-aarch64-unknown-linux-gnu
-        - openwork-server-x86_64-unknown-linux-gnu
-        - openwork-orchestrator
-        - openwork-orchestrator-aarch64-unknown-linux-gnu
-        - openwork-orchestrator-x86_64-unknown-linux-gnu
+        - aiwork-server
+        - aiwork-server-aarch64-unknown-linux-gnu
+        - aiwork-server-x86_64-unknown-linux-gnu
+        - aiwork-orchestrator
+        - aiwork-orchestrator-aarch64-unknown-linux-gnu
+        - aiwork-orchestrator-x86_64-unknown-linux-gnu
         - chrome-devtools-mcp
         - chrome-devtools-mcp-aarch64-unknown-linux-gnu
         - chrome-devtools-mcp-x86_64-unknown-linux-gnu
@@ -80,12 +80,12 @@ win:
         - opencode.exe
         - opencode-aarch64-pc-windows-msvc.exe
         - opencode-x86_64-pc-windows-msvc.exe
-        - openwork-server.exe
-        - openwork-server-aarch64-pc-windows-msvc.exe
-        - openwork-server-x86_64-pc-windows-msvc.exe
-        - openwork-orchestrator.exe
-        - openwork-orchestrator-aarch64-pc-windows-msvc.exe
-        - openwork-orchestrator-x86_64-pc-windows-msvc.exe
+        - aiwork-server.exe
+        - aiwork-server-aarch64-pc-windows-msvc.exe
+        - aiwork-server-x86_64-pc-windows-msvc.exe
+        - aiwork-orchestrator.exe
+        - aiwork-orchestrator-aarch64-pc-windows-msvc.exe
+        - aiwork-orchestrator-x86_64-pc-windows-msvc.exe
         - chrome-devtools-mcp.exe
         - chrome-devtools-mcp-aarch64-pc-windows-msvc.exe
         - chrome-devtools-mcp-x86_64-pc-windows-msvc.exe
@@ -94,4 +94,4 @@ win:
         - versions.json-x86_64-pc-windows-msvc.exe
   target:
     - nsis
-artifactName: openwork-${os}-${arch}-${version}.${ext}
+artifactName: aiwork-${os}-${arch}-${version}.${ext}

@@ -28,12 +28,12 @@ function detect() {
 
 function packageName() {
   const { platform, arch } = detect()
-  return `openwork-orchestrator-${platform}-${arch}`
+  return `aiwork-orchestrator-${platform}-${arch}`
 }
 
 function binaryName() {
   const { platform } = detect()
-  return platform === "windows" ? "openwork.exe" : "openwork"
+  return platform === "windows" ? "aiwork.exe" : "aiwork"
 }
 
 function fallbackBinaryPath() {
@@ -44,11 +44,11 @@ async function main() {
   try {
     const pkg = packageName()
     require.resolve(`${pkg}/package.json`)
-    console.log(`openwork-orchestrator: verified platform package: ${pkg}`)
+    console.log(`aiwork-orchestrator: verified platform package: ${pkg}`)
     return
   } catch {
     if (existsSync(fallbackBinaryPath())) {
-      console.log(`openwork-orchestrator: using existing fallback binary at ${fallbackBinaryPath()}`)
+      console.log(`aiwork-orchestrator: using existing fallback binary at ${fallbackBinaryPath()}`)
       return
     }
   }

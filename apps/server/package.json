@@ -1,16 +1,16 @@
 {
-  "name": "openwork-server",
+  "name": "aiwork-server",
   "version": "0.13.29",
-  "description": "Filesystem-backed API for OpenWork remote clients",
+  "description": "Filesystem-backed API for AiWork remote clients",
   "type": "module",
   "bin": {
-    "openwork-server": "bin/openwork-server.mjs"
+    "aiwork-server": "bin/aiwork-server.mjs"
   },
   "scripts": {
-    "dev": "OPENWORK_DEV_MODE=1 bun src/cli.ts",
+    "dev": "AIWORK_DEV_MODE=1 bun src/cli.ts",
     "test": "bun test",
     "build": "tsc -p tsconfig.json",
-    "build:bin": "bun build --compile src/cli.ts --outfile dist/bin/openwork-server",
+    "build:bin": "bun build --compile src/cli.ts --outfile dist/bin/aiwork-server",
     "build:bin:all": "bun ./script/build.ts --outdir dist/bin --target bun-darwin-arm64 --target bun-darwin-x64 --target bun-linux-x64 --target bun-linux-arm64 --target bun-windows-x64",
     "start": "bun dist/cli.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -23,15 +23,15 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/qq254963746/openwork.git",
+    "url": "git+https://github.com/qq254963746/aiwork.git",
     "directory": "apps/server"
   },
-  "homepage": "https://github.com/qq254963746/openwork/tree/dev/apps/server",
+  "homepage": "https://github.com/qq254963746/aiwork/tree/dev/apps/server",
   "bugs": {
-    "url": "https://github.com/qq254963746/openwork/issues"
+    "url": "https://github.com/qq254963746/aiwork/issues"
   },
   "keywords": [
-    "openwork",
+    "aiwork",
     "server",
     "opencode",
     "headless",

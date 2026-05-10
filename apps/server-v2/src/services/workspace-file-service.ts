@@ -8,7 +8,7 @@ import type { WorkspaceRecord } from "../database/types.js";
 import type { RuntimeService } from "./runtime-service.js";
 import type { ConfigMaterializationService } from "./config-materialization-service.js";
 import { RouteError } from "../http.js";
-import { requestRemoteOpenwork, requestRemoteOpenworkRaw, resolveRemoteWorkspaceTarget } from "../adapters/remote-openwork.js";
+import { requestRemoteAiWork, requestRemoteAiWorkRaw, resolveRemoteWorkspaceTarget } from "../adapters/remote-aiwork.js";
 
 const FILE_SESSION_DEFAULT_TTL_MS = 15 * 60 * 1000;
 const FILE_SESSION_MIN_TTL_MS = 30 * 1000;
@@ -143,11 +143,11 @@ function nowIso() {
 }
 
 function recordAuditEntry(workspaceId: string, workspaceRoot: string, action: string, target: string, summary: string) {
-  const auditRoot = process.env.OPENWORK_DATA_DIR?.trim()
-    ? path.join(process.env.OPENWORK_DATA_DIR.trim(), "audit")
-    : path.join(workspaceRoot, ".opencode", "openwork");
+  const auditRoot = process.env.AIWORK_DATA_DIR?.trim()
+    ? path.join(process.env.AIWORK_DATA_DIR.trim(), "audit")
+    : path.join(workspaceRoot, ".opencode", "aiwork");
   fs.mkdirSync(auditRoot, { recursive: true });
-  const filePath = process.env.OPENWORK_DATA_DIR?.trim()
+  const filePath = process.env.AIWORK_DATA_DIR?.trim()
     ? path.join(auditRoot, `${workspaceId}.jsonl`)
     : path.join(auditRoot, "audit.jsonl");
   const entry = {
@@ -164,7 +164,7 @@ function recordAuditEntry(workspaceId: string, workspaceRoot: string, action: st
 
 function initializeWorkspaceFiles(workspaceRoot: string) {
   fs.mkdirSync(path.join(workspaceRoot, ".opencode"), { recursive: true });
-  fs.mkdirSync(path.join(workspaceRoot, ".opencode", "openwork"), { recursive: true });
+  fs.mkdirSync(path.join(workspaceRoot, ".opencode", "aiwork"), { recursive: true });
 }
 
 function resolveWorkspaceOrThrow(repositories: ServerRepositories, workspaceId: string) {
@@ -311,11 +311,11 @@ function parseOperations(input: unknown) {
 }
 
 function resolveInboxDir(workspaceRoot: string) {
-  return path.join(workspaceRoot, ".opencode", "openwork", "inbox");
+  return path.join(workspaceRoot, ".opencode", "aiwork", "inbox");
 }
 
 function resolveOutboxDir(workspaceRoot: string) {
-  return path.join(workspaceRoot, ".opencode", "openwork", "outbox");
+  return path.join(workspaceRoot, ".opencode", "aiwork", "outbox");
 }
 
 function encodeArtifactId(relativePath: string) {
@@ -623,7 +623,7 @@ export function createWorkspaceFileService(input: {
       const workspace = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspace.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspace, "/engine/reload");
-        await requestRemoteOpenwork<{ reloadedAt: number }>({
+        await requestRemoteAiWork<{ reloadedAt: number }>({
           method: "POST",
           path: remote.path,
           server: remote.server,
@@ -668,7 +668,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, "/file-sessions");
-        return requestRemoteOpenwork<{
+        return requestRemoteAiWork<{
           canWrite: boolean;
           createdAt: number;
           expiresAt: number;
@@ -724,7 +724,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, `/artifacts/${encodeURIComponent(artifactId)}`);
-        const response = await requestRemoteOpenworkRaw({
+        const response = await requestRemoteAiWorkRaw({
           path: remote.path,
           server: remote.server,
           timeoutMs: 30_000,
@@ -750,7 +750,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, `/inbox/${encodeURIComponent(inboxId)}`);
-        const response = await requestRemoteOpenworkRaw({
+        const response = await requestRemoteAiWorkRaw({
           path: remote.path,
           server: remote.server,
           timeoutMs: 30_000,
@@ -776,7 +776,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, `/reload-events${typeof since === "number" ? `?since=${since}` : ""}`);
-        return requestRemoteOpenwork<{ cursor: number; items: ReloadEvent[] }>({
+        return requestRemoteAiWork<{ cursor: number; items: ReloadEvent[] }>({
           path: remote.path,
           server: remote.server,
           timeoutMs: 10_000,
@@ -798,7 +798,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, "/artifacts");
-        return requestRemoteOpenwork<{ items: Array<Record<string, unknown>> }>({
+        return requestRemoteAiWork<{ items: Array<Record<string, unknown>> }>({
           path: remote.path,
           server: remote.server,
           timeoutMs: 15_000,
@@ -817,7 +817,7 @@ export function createWorkspaceFileService(input: {
         if (inputValue.limit) query.set("limit", inputValue.limit);
         if (inputValue.prefix) query.set("prefix", inputValue.prefix);
         const remote = getRemoteWorkspacePath(workspaceRecord, `/file-sessions/${encodeURIComponent(sessionId)}/catalog/snapshot${query.size ? `?${query.toString()}` : ""}`);
-        return requestRemoteOpenwork<{
+        return requestRemoteAiWork<{
           cursor: number;
           generatedAt: number;
           items: FileCatalogEntry[];
@@ -861,7 +861,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, `/file-sessions/${encodeURIComponent(sessionId)}/catalog/events${since?.trim() ? `?since=${encodeURIComponent(since.trim())}` : ""}`);
-        return requestRemoteOpenwork<{ cursor: number; items: FileSessionEvent[] }>({
+        return requestRemoteAiWork<{ cursor: number; items: FileSessionEvent[] }>({
           path: remote.path,
           server: remote.server,
           timeoutMs: 10_000,
@@ -875,7 +875,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, "/inbox");
-        return requestRemoteOpenwork<{ items: Array<Record<string, unknown>> }>({
+        return requestRemoteAiWork<{ items: Array<Record<string, unknown>> }>({
           path: remote.path,
           server: remote.server,
           timeoutMs: 15_000,
@@ -892,7 +892,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, `/files/content?path=${encodeURIComponent(relativePathInput)}`);
-        return requestRemoteOpenwork<{ bytes: number; content: string; path: string; updatedAt: number; revision?: string }>({
+        return requestRemoteAiWork<{ bytes: number; content: string; path: string; updatedAt: number; revision?: string }>({
           path: remote.path,
           server: remote.server,
           timeoutMs: 15_000,
@@ -923,7 +923,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, `/file-sessions/${encodeURIComponent(sessionId)}/read-batch`);
-        return requestRemoteOpenwork<{ items: Array<Record<string, unknown>> }>({
+        return requestRemoteAiWork<{ items: Array<Record<string, unknown>> }>({
           body: { paths },
           method: "POST",
           path: remote.path,
@@ -962,7 +962,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, "/engine/reload");
-        return requestRemoteOpenwork<{ reloadedAt: number }>({
+        return requestRemoteAiWork<{ reloadedAt: number }>({
           method: "POST",
           path: remote.path,
           server: remote.server,
@@ -994,7 +994,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, `/file-sessions/${encodeURIComponent(sessionId)}/renew`);
-        return requestRemoteOpenwork<{
+        return requestRemoteAiWork<{
           canWrite: boolean;
           createdAt: number;
           expiresAt: number;
@@ -1028,7 +1028,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, `/file-sessions/${encodeURIComponent(sessionId)}`);
-        return requestRemoteOpenwork<{ closed?: boolean }>({
+        return requestRemoteAiWork<{ closed?: boolean }>({
           method: "DELETE",
           path: remote.path,
           server: remote.server,
@@ -1049,7 +1049,7 @@ export function createWorkspaceFileService(input: {
           form.append("path", requestedPath.trim());
         }
         const remote = getRemoteWorkspacePath(workspaceRecord, "/inbox");
-        const response = await requestRemoteOpenworkRaw({
+        const response = await requestRemoteAiWorkRaw({
           body: form,
           method: "POST",
           path: remote.path,
@@ -1076,7 +1076,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, "/files/content");
-        return requestRemoteOpenwork<{ bytes: number; path: string; revision?: string; updatedAt: number }>({
+        return requestRemoteAiWork<{ bytes: number; path: string; revision?: string; updatedAt: number }>({
           body: inputValue,
           method: "POST",
           path: remote.path,
@@ -1113,7 +1113,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, `/file-sessions/${encodeURIComponent(sessionId)}/write-batch`);
-        return requestRemoteOpenwork<{ cursor: number; items: Array<Record<string, unknown>> }>({
+        return requestRemoteAiWork<{ cursor: number; items: Array<Record<string, unknown>> }>({
           body: { writes },
           method: "POST",
           path: remote.path,
@@ -1159,7 +1159,7 @@ export function createWorkspaceFileService(input: {
       const workspaceRecord = resolveWorkspaceRecordOrThrow(input.repositories, workspaceId);
       if (workspaceRecord.kind === "remote") {
         const remote = getRemoteWorkspacePath(workspaceRecord, `/file-sessions/${encodeURIComponent(sessionId)}/operations`);
-        return requestRemoteOpenwork<{ cursor: number; items: Array<Record<string, unknown>> }>({
+        return requestRemoteAiWork<{ cursor: number; items: Array<Record<string, unknown>> }>({
           body: { operations },
           method: "POST",
           path: remote.path,

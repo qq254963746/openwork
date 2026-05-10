@@ -21,7 +21,7 @@ const orchestratorPkg = JSON.parse(
 const orchestratorVersion = String(orchestratorPkg.version ?? "").trim();
 if (!orchestratorVersion) {
   throw new Error(
-    "openwork-orchestrator version missing in apps/orchestrator/package.json",
+    "aiwork-orchestrator version missing in apps/orchestrator/package.json",
   );
 }
 
@@ -38,7 +38,7 @@ const serverPkg = JSON.parse(
 const serverVersion = String(serverPkg.version ?? "").trim();
 if (!serverVersion) {
   throw new Error(
-    "openwork-server version missing in apps/server/package.json",
+    "aiwork-server version missing in apps/server/package.json",
   );
 }
 
@@ -62,7 +62,7 @@ const run = (command, args, cwd) => {
   }
 };
 
-run("pnpm", ["--filter", "openwork-server", "build:bin:all"], repoRoot);
+run("pnpm", ["--filter", "aiwork-server", "build:bin:all"], repoRoot);
 run("pnpm", ["--filter", "opencode-router", "build:bin:all"], repoRoot);
 
 const targets = [
@@ -84,17 +84,17 @@ const routerDir = resolve(repoRoot, "apps", "opencode-router", "dist", "bin");
 mkdirSync(outdir, { recursive: true });
 
 const entries = {
-  "openwork-server": { version: serverVersion, targets: {} },
+  "aiwork-server": { version: serverVersion, targets: {} },
   "opencode-router": { version: routerVersion, targets: {} },
 };
 
 for (const target of targets) {
   const ext = target.id.startsWith("windows") ? ".exe" : "";
-  const serverSrc = join(serverDir, `openwork-server-${target.bun}${ext}`);
+  const serverSrc = join(serverDir, `aiwork-server-${target.bun}${ext}`);
   if (!existsSync(serverSrc)) {
-    throw new Error(`Missing openwork-server binary at ${serverSrc}`);
+    throw new Error(`Missing aiwork-server binary at ${serverSrc}`);
   }
-  const serverDest = join(outdir, `openwork-server-${target.id}${ext}`);
+  const serverDest = join(outdir, `aiwork-server-${target.id}${ext}`);
   copyFileSync(serverSrc, serverDest);
 
   const routerSrc = join(routerDir, `opencode-router-${target.bun}${ext}`);
@@ -104,7 +104,7 @@ for (const target of targets) {
   const routerDest = join(outdir, `opencode-router-${target.id}${ext}`);
   copyFileSync(routerSrc, routerDest);
 
-  entries["openwork-server"].targets[target.id] = {
+  entries["aiwork-server"].targets[target.id] = {
     asset: basename(serverDest),
     sha256: sha256File(serverDest),
     size: statSync(serverDest).size,
@@ -123,7 +123,7 @@ const manifest = {
 };
 
 writeFileSync(
-  join(outdir, "openwork-orchestrator-sidecars.json"),
+  join(outdir, "aiwork-orchestrator-sidecars.json"),
   `${JSON.stringify(manifest, null, 2)}\n`,
   "utf8",
 );

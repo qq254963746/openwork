@@ -10,7 +10,7 @@ use serde::Deserialize;
 // If any of those change their path resolution or reserved-prefix policy,
 // update this file in the same PR.
 
-const RESERVED_PREFIXES: &[&str] = &["OPENWORK_", "OPENCODE_"];
+const RESERVED_PREFIXES: &[&str] = &["AIWORK_", "OPENCODE_"];
 
 #[derive(Debug, Deserialize)]
 struct EnvFile {
@@ -25,7 +25,7 @@ struct EnvRecord {
 }
 
 fn resolve_user_env_file_path() -> Option<PathBuf> {
-    if let Ok(override_path) = std::env::var("OPENWORK_ENV_STORE") {
+    if let Ok(override_path) = std::env::var("AIWORK_ENV_STORE") {
         let trimmed = override_path.trim();
         if !trimmed.is_empty() {
             return Some(PathBuf::from(trimmed));
@@ -39,12 +39,12 @@ fn resolve_user_env_file_path() -> Option<PathBuf> {
             .filter(|value| !value.trim().is_empty())
             .map(PathBuf::from)
             .or_else(|| dirs::home_dir().map(|home| home.join("AppData").join("Roaming")));
-        return root.map(|base| base.join("openwork").join("env.json"));
+        return root.map(|base| base.join("aiwork").join("env.json"));
     }
 
     #[cfg(not(target_os = "windows"))]
     {
-        dirs::home_dir().map(|home| home.join(".config").join("openwork").join("env.json"))
+        dirs::home_dir().map(|home| home.join(".config").join("aiwork").join("env.json"))
     }
 }
 
@@ -63,7 +63,7 @@ fn is_reserved_env_key(key: &str) -> bool {
 
 /// Best-effort load of the user-level env file. Absent, unreadable, or
 /// malformed files return an empty vector; reserved-prefix keys are always
-/// stripped so a tampered file cannot shadow OpenWork / OpenCode internals.
+/// stripped so a tampered file cannot shadow AiWork / OpenCode internals.
 pub fn load_user_env_file() -> Vec<(String, String)> {
     let Some(path) = resolve_user_env_file_path() else {
         return Vec::new();
@@ -100,7 +100,7 @@ mod tests {
             .map(|d| d.as_nanos())
             .unwrap_or(0);
         let dir = std::env::temp_dir()
-            .join(format!("openwork-env-file-{epoch}-{nonce}"));
+            .join(format!("aiwork-env-file-{epoch}-{nonce}"));
         fs::create_dir_all(&dir).expect("mkdir tmp");
         dir.join("env.json")
     }
@@ -112,8 +112,8 @@ mod tests {
 
     impl EnvStoreGuard {
         fn set(path: PathBuf) -> Self {
-            let original = std::env::var("OPENWORK_ENV_STORE").ok();
-            std::env::set_var("OPENWORK_ENV_STORE", &path);
+            let original = std::env::var("AIWORK_ENV_STORE").ok();
+            std::env::set_var("AIWORK_ENV_STORE", &path);
             Self { path, original }
         }
     }
@@ -121,8 +121,8 @@ mod tests {
     impl Drop for EnvStoreGuard {
         fn drop(&mut self) {
             match &self.original {
-                Some(value) => std::env::set_var("OPENWORK_ENV_STORE", value),
-                None => std::env::remove_var("OPENWORK_ENV_STORE"),
+                Some(value) => std::env::set_var("AIWORK_ENV_STORE", value),
+                None => std::env::remove_var("AIWORK_ENV_STORE"),
             }
             if let Some(parent) = self.path.parent() {
                 let _ = fs::remove_dir_all(parent);
@@ -176,7 +176,7 @@ mod tests {
         fs::write(
             &path,
             r#"{"schemaVersion":1,"updatedAt":0,"variables":[
-                {"key":"OPENWORK_TOKEN","value":"stolen","updatedAt":0},
+                {"key":"AIWORK_TOKEN","value":"stolen","updatedAt":0},
                 {"key":"OPENCODE_SERVER_PASSWORD","value":"stolen","updatedAt":0},
                 {"key":"has-dash","value":"nope","updatedAt":0},
                 {"key":"1BAD","value":"nope","updatedAt":0},

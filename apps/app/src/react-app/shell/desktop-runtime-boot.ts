@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import {
   engineInfo,
   engineStart,
-  openworkServerInfo,
+  aiworkServerInfo,
   resolveWorkspaceListSelectedId,
   runtimeBootstrap,
   workspaceBootstrap,
@@ -13,10 +13,10 @@ import {
 } from "../../app/lib/desktop";
 import { ingestMigrationSnapshotOnElectronBoot } from "../../app/lib/migration";
 import {
-  hydrateOpenworkServerSettingsFromEnv,
-  readOpenworkServerSettings,
-  writeOpenworkServerSettings,
-} from "../../app/lib/openwork-server";
+  hydrateAiWorkServerSettingsFromEnv,
+  readAiWorkServerSettings,
+  writeAiWorkServerSettings,
+} from "../../app/lib/aiwork-server";
 import { isDesktopRuntime, isElectronRuntime, safeStringify } from "../../app/utils";
 import { useServer } from "../kernel/server-provider";
 import { useBootState } from "./boot-state";
@@ -26,7 +26,7 @@ import { useBootState } from "./boot-state";
 // keeps running across the transient unmount.
 let BOOT_STARTED = false;
 
-function isOpenworkServerReady(info?: {
+function isAiWorkServerReady(info?: {
   running?: boolean | null;
   baseUrl?: string | null;
   ownerToken?: string | null;
@@ -42,12 +42,12 @@ function isOpenworkServerReady(info?: {
 /**
  * On desktop (Tauri) startup:
  *   1) bootstrap the workspace list
- *   2) if a local workspace is selected, restart the embedded OpenWork server
+ *   2) if a local workspace is selected, restart the embedded AiWork server
  *   3) start the OpenCode engine pointed at the workspace
- *   4) activate the workspace on the running OpenWork server
+ *   4) activate the workspace on the running AiWork server
  *   5) notify React routes that fresh desktop runtime info is available. Electron
  *      routes read live runtime info directly instead of persisting ephemeral
- *      localhost ports/tokens into OpenWork settings.
+ *      localhost ports/tokens into AiWork settings.
  *
  * Safe to call multiple times — gated by a `didBoot` ref so it runs once per mount.
  */
@@ -78,7 +78,7 @@ export function useDesktopRuntimeBoot() {
             console.info(`[migration] hydrated ${hydrated} localStorage keys from Tauri snapshot`);
           }
         }
-        hydrateOpenworkServerSettingsFromEnv();
+        hydrateAiWorkServerSettingsFromEnv();
 
         setPhase("bootstrapping-workspaces");
         const list = await workspaceBootstrap().catch(() => null);
@@ -112,7 +112,7 @@ export function useDesktopRuntimeBoot() {
             skipped?: boolean;
             error?: string;
             engine?: { baseUrl?: string | null };
-            openworkServer?: {
+            aiworkServer?: {
               running?: boolean | null;
               baseUrl?: string | null;
               ownerToken?: string | null;
@@ -123,22 +123,22 @@ export function useDesktopRuntimeBoot() {
           };
 
           if (boot.ok === false) {
-            setError(boot.error || "Failed to start OpenWork runtime");
+            setError(boot.error || "Failed to start AiWork runtime");
             return;
           }
 
-          if (!boot.skipped && !isOpenworkServerReady(boot.openworkServer)) {
-            setError("OpenWork server did not finish starting. Please restart OpenWork.");
+          if (!boot.skipped && !isAiWorkServerReady(boot.aiworkServer)) {
+            setError("AiWork server did not finish starting. Please restart AiWork.");
             return;
           }
 
           if (boot.engine?.baseUrl) {
             setActive(boot.engine.baseUrl);
           }
-          const serverInfo = boot.openworkServer;
+          const serverInfo = boot.aiworkServer;
           if (serverInfo?.baseUrl) {
             try {
-              window.dispatchEvent(new CustomEvent("openwork-server-settings-changed"));
+              window.dispatchEvent(new CustomEvent("aiwork-server-settings-changed"));
             } catch {
               /* ignore */
             }
@@ -149,16 +149,16 @@ export function useDesktopRuntimeBoot() {
 
         // FAST PATH ─────────────────────────────────────────────────────
         // Cheap status probe: if engine is already running just publish the
-        // current openwork-server base URL + token and finish in <1s.
+        // current aiwork-server base URL + token and finish in <1s.
         // This mirrors Solid's bootstrap at context/workspace.ts:3883-3907
         // ("localAttachExisting"), which never restarts a running stack.
         try {
           const engine = await engineInfo();
           if (engine?.running && engine.baseUrl) {
             setActive(engine.baseUrl);
-            const fresh = await openworkServerInfo().catch(() => null);
+            const fresh = await aiworkServerInfo().catch(() => null);
             if (fresh?.baseUrl) {
-              writeOpenworkServerSettings({
+              writeAiWorkServerSettings({
                 urlOverride: fresh.baseUrl,
                 token:
                   fresh.ownerToken?.trim() ||
@@ -170,7 +170,7 @@ export function useDesktopRuntimeBoot() {
               });
               try {
                 window.dispatchEvent(
-                  new CustomEvent("openwork-server-settings-changed"),
+                  new CustomEvent("aiwork-server-settings-changed"),
                 );
               } catch {
                 /* ignore */
@@ -185,7 +185,7 @@ export function useDesktopRuntimeBoot() {
 
         // SLOW PATH ─────────────────────────────────────────────────────
         // No running engine. Tauri now mirrors Electron: engine_start boots
-        // openwork-server and lets that server manage OpenCode.
+        // aiwork-server and lets that server manage OpenCode.
         const localPaths = list.workspaces
           .filter((entry) => entry.workspaceType !== "remote")
           .map((entry) => entry.path?.trim() ?? "")
@@ -202,7 +202,7 @@ export function useDesktopRuntimeBoot() {
         let engineStartResult = await engineStart(workspaceRoot, {
           runtime: "direct",
           workspacePaths: workspacePathsFor(workspaceRoot),
-          openworkRemoteAccess: readOpenworkServerSettings().remoteAccessEnabled === true,
+          aiworkRemoteAccess: readAiWorkServerSettings().remoteAccessEnabled === true,
         }).catch((error) => {
           console.warn("[desktop-boot] engineStart failed:", error);
           return null;
@@ -223,7 +223,7 @@ export function useDesktopRuntimeBoot() {
             engineStartResult = await engineStart(fallbackRoot, {
               runtime: "direct",
               workspacePaths: workspacePathsFor(fallbackRoot).filter((path) => path !== workspaceRoot),
-              openworkRemoteAccess: readOpenworkServerSettings().remoteAccessEnabled === true,
+              aiworkRemoteAccess: readAiWorkServerSettings().remoteAccessEnabled === true,
             }).catch((error) => {
               console.warn("[desktop-boot] fallback engineStart failed:", error);
               setError(error instanceof Error ? error.message : safeStringify(error));
@@ -243,9 +243,9 @@ export function useDesktopRuntimeBoot() {
             setActive(engineStartResult.baseUrl);
           }
           try {
-            const freshInfo = await openworkServerInfo();
+            const freshInfo = await aiworkServerInfo();
             if (freshInfo?.baseUrl) {
-              writeOpenworkServerSettings({
+              writeAiWorkServerSettings({
                 urlOverride: freshInfo.baseUrl,
                 token:
                   freshInfo.ownerToken?.trim() ||
@@ -256,13 +256,13 @@ export function useDesktopRuntimeBoot() {
                 remoteAccessEnabled: freshInfo.remoteAccessEnabled === true,
               });
               try {
-                window.dispatchEvent(new CustomEvent("openwork-server-settings-changed"));
+                window.dispatchEvent(new CustomEvent("aiwork-server-settings-changed"));
               } catch {
                 /* ignore */
               }
             }
           } catch (error) {
-            console.warn("[desktop-boot] post-engineStart openworkServerInfo failed:", error);
+            console.warn("[desktop-boot] post-engineStart aiworkServerInfo failed:", error);
           }
         }
 

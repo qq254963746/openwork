@@ -1,16 +1,16 @@
 import type { WorkspaceConnectionState } from "../../../app/types";
 import type { WorkspaceInfo } from "../../../app/lib/desktop";
 import {
-  buildOpenworkWorkspaceBaseUrl,
-  createOpenworkServerClient,
-  normalizeOpenworkServerUrl,
-  parseOpenworkWorkspaceIdFromUrl,
-  type OpenworkServerClient,
-} from "../../../app/lib/openwork-server";
+  buildAiWorkWorkspaceBaseUrl,
+  createAiWorkServerClient,
+  normalizeAiWorkServerUrl,
+  parseAiWorkWorkspaceIdFromUrl,
+  type AiWorkServerClient,
+} from "../../../app/lib/aiwork-server";
 import { redactTokenLikeText } from "../../../app/utils";
 
 export type RemoteWorkspaceConnectionTarget = {
-  kind: "openwork";
+  kind: "aiwork";
   baseUrl: string;
   endpointLabel: string;
   token: string;
@@ -30,9 +30,9 @@ export type RemoteWorkspaceConnectionResult = {
 type TestOptions = {
   now?: () => number;
   createClient?: (target: RemoteWorkspaceConnectionTarget) => Pick<
-    OpenworkServerClient,
+    AiWorkServerClient,
     "health" | "capabilities" | "status" | "listWorkspaces"
-  > | Promise<Pick<OpenworkServerClient, "health" | "capabilities" | "status" | "listWorkspaces">>;
+  > | Promise<Pick<AiWorkServerClient, "health" | "capabilities" | "status" | "listWorkspaces">>;
 };
 
 function trim(value: string | null | undefined) {
@@ -96,11 +96,11 @@ export function getRemoteWorkspaceConnectionKey(workspace: WorkspaceInfo): strin
     workspace.workspaceType,
     workspace.remoteType ?? "",
     trim(workspace.baseUrl),
-    trim(workspace.openworkHostUrl),
-    trim(workspace.openworkWorkspaceId),
-    trim(workspace.openworkToken),
-    trim(workspace.openworkClientToken),
-    trim(workspace.openworkHostToken),
+    trim(workspace.aiworkHostUrl),
+    trim(workspace.aiworkWorkspaceId),
+    trim(workspace.aiworkToken),
+    trim(workspace.aiworkClientToken),
+    trim(workspace.aiworkHostToken),
   ].join("\u001f");
 }
 
@@ -108,20 +108,20 @@ function displayWorkspaceName(workspace: unknown) {
   if (!workspace || typeof workspace !== "object") return "";
   const value = workspace as {
     displayName?: string | null;
-    openworkWorkspaceName?: string | null;
+    aiworkWorkspaceName?: string | null;
     name?: string | null;
     id?: string | null;
   };
   return (
     trim(value.displayName) ||
-    trim(value.openworkWorkspaceName) ||
+    trim(value.aiworkWorkspaceName) ||
     trim(value.name) ||
     trim(value.id)
   );
 }
 
 function defaultCreateClient(target: RemoteWorkspaceConnectionTarget) {
-  return createOpenworkServerClient({
+  return createAiWorkServerClient({
     baseUrl: target.baseUrl,
     token: target.token || undefined,
   });
@@ -139,18 +139,18 @@ export function resolveRemoteWorkspaceConnectionTarget(workspace: WorkspaceInfo)
     };
   }
 
-  if (workspace.remoteType && workspace.remoteType !== "openwork") {
+  if (workspace.remoteType && workspace.remoteType !== "aiwork") {
     return {
       ok: false,
       state: {
         status: "error",
-        message: "Connection diagnostics are only available for OpenWork remote workers.",
+        message: "Connection diagnostics are only available for AiWork remote workers.",
         checkedAt: Date.now(),
       },
     };
   }
 
-  const rawHostUrl = trim(workspace.openworkHostUrl) || trim(workspace.baseUrl);
+  const rawHostUrl = trim(workspace.aiworkHostUrl) || trim(workspace.baseUrl);
   if (!rawHostUrl) {
     return {
       ok: false,
@@ -162,7 +162,7 @@ export function resolveRemoteWorkspaceConnectionTarget(workspace: WorkspaceInfo)
     };
   }
 
-  const normalizedHostUrl = normalizeOpenworkServerUrl(rawHostUrl);
+  const normalizedHostUrl = normalizeAiWorkServerUrl(rawHostUrl);
   if (!normalizedHostUrl || !isValidHttpEndpoint(normalizedHostUrl)) {
     return {
       ok: false,
@@ -175,22 +175,22 @@ export function resolveRemoteWorkspaceConnectionTarget(workspace: WorkspaceInfo)
   }
 
   const workspaceId =
-    trim(workspace.openworkWorkspaceId) ||
-    parseOpenworkWorkspaceIdFromUrl(normalizedHostUrl) ||
-    parseOpenworkWorkspaceIdFromUrl(trim(workspace.baseUrl)) ||
+    trim(workspace.aiworkWorkspaceId) ||
+    parseAiWorkWorkspaceIdFromUrl(normalizedHostUrl) ||
+    parseAiWorkWorkspaceIdFromUrl(trim(workspace.baseUrl)) ||
     null;
   const baseUrl = workspaceId
-    ? buildOpenworkWorkspaceBaseUrl(normalizedHostUrl, workspaceId) ?? normalizedHostUrl
+    ? buildAiWorkWorkspaceBaseUrl(normalizedHostUrl, workspaceId) ?? normalizedHostUrl
     : normalizedHostUrl;
   const token =
-    trim(workspace.openworkToken) ||
-    trim(workspace.openworkClientToken) ||
-    trim(workspace.openworkHostToken);
+    trim(workspace.aiworkToken) ||
+    trim(workspace.aiworkClientToken) ||
+    trim(workspace.aiworkHostToken);
 
   return {
     ok: true,
     target: {
-      kind: "openwork",
+      kind: "aiwork",
       baseUrl,
       endpointLabel: endpointLabel(baseUrl),
       token,
@@ -235,7 +235,7 @@ export async function testRemoteWorkspaceConnection(
 
   if (!target.token) {
     return fail(
-      `Token is missing for ${target.endpointLabel}. Edit connection and paste a valid OpenWork token.`,
+      `Token is missing for ${target.endpointLabel}. Edit connection and paste a valid AiWork token.`,
       checkedAt,
     );
   }

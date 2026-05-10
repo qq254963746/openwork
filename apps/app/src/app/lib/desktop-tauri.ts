@@ -24,7 +24,7 @@ export async function openAppLogWebviewWindow(): Promise<void> {
   await invoke<void>("open_app_log_window");
 }
 
-/** Fetches `window.__openwork.events` from the main shell webview (detached log window has no `window.opener`). */
+/** Fetches `window.__aiwork.events` from the main shell webview (detached log window has no `window.opener`). */
 export async function pullShellEventsFromMain(limit: number): Promise<string> {
   return invoke<string>("pull_shell_events_from_main", { limit });
 }
@@ -112,7 +112,7 @@ export type OpencodeEngineDiskLogsSnapshot = {
   error?: string | null;
 };
 
-export type OpenworkServerInfo = {
+export type AiWorkServerInfo = {
   running: boolean;
   remoteAccessEnabled: boolean;
   host: string | null;
@@ -150,16 +150,16 @@ export type WorkspaceInfo = {
   path: string;
   preset: string;
   workspaceType: "local" | "remote";
-  remoteType?: "openwork" | "opencode" | null;
+  remoteType?: "aiwork" | "opencode" | null;
   baseUrl?: string | null;
   directory?: string | null;
   displayName?: string | null;
-  openworkHostUrl?: string | null;
-  openworkToken?: string | null;
-  openworkClientToken?: string | null;
-  openworkHostToken?: string | null;
-  openworkWorkspaceId?: string | null;
-  openworkWorkspaceName?: string | null;
+  aiworkHostUrl?: string | null;
+  aiworkToken?: string | null;
+  aiworkClientToken?: string | null;
+  aiworkHostToken?: string | null;
+  aiworkWorkspaceId?: string | null;
+  aiworkWorkspaceName?: string | null;
 
   // Sandbox lifecycle metadata (desktop-managed)
   sandboxBackend?: "docker" | "microsandbox" | null;
@@ -197,7 +197,7 @@ export async function engineStart(
     workspacePaths?: string[];
     opencodeBinPath?: string | null;
     opencodeEnableExa?: boolean;
-    openworkRemoteAccess?: boolean;
+    aiworkRemoteAccess?: boolean;
   },
 ): Promise<EngineInfo> {
   return invoke<EngineInfo>("engine_start", {
@@ -205,7 +205,7 @@ export async function engineStart(
     preferSidecar: options?.preferSidecar ?? true,
     opencodeBinPath: options?.opencodeBinPath ?? null,
     opencodeEnableExa: options?.opencodeEnableExa ?? null,
-    openworkRemoteAccess: options?.openworkRemoteAccess ?? null,
+    aiworkRemoteAccess: options?.aiworkRemoteAccess ?? null,
     runtime: options?.runtime ?? null,
     workspacePaths: options?.workspacePaths ?? null,
   });
@@ -243,13 +243,13 @@ export async function workspaceCreateRemote(input: {
   baseUrl: string;
   directory?: string | null;
   displayName?: string | null;
-  remoteType?: "openwork" | "opencode" | null;
-  openworkHostUrl?: string | null;
-  openworkToken?: string | null;
-  openworkClientToken?: string | null;
-  openworkHostToken?: string | null;
-  openworkWorkspaceId?: string | null;
-  openworkWorkspaceName?: string | null;
+  remoteType?: "aiwork" | "opencode" | null;
+  aiworkHostUrl?: string | null;
+  aiworkToken?: string | null;
+  aiworkClientToken?: string | null;
+  aiworkHostToken?: string | null;
+  aiworkWorkspaceId?: string | null;
+  aiworkWorkspaceName?: string | null;
 
   // Sandbox lifecycle metadata (desktop-managed)
   sandboxBackend?: "docker" | "microsandbox" | null;
@@ -261,12 +261,12 @@ export async function workspaceCreateRemote(input: {
     directory: input.directory ?? null,
     displayName: input.displayName ?? null,
     remoteType: input.remoteType ?? null,
-    openworkHostUrl: input.openworkHostUrl ?? null,
-    openworkToken: input.openworkToken ?? null,
-    openworkClientToken: input.openworkClientToken ?? null,
-    openworkHostToken: input.openworkHostToken ?? null,
-    openworkWorkspaceId: input.openworkWorkspaceId ?? null,
-    openworkWorkspaceName: input.openworkWorkspaceName ?? null,
+    aiworkHostUrl: input.aiworkHostUrl ?? null,
+    aiworkToken: input.aiworkToken ?? null,
+    aiworkClientToken: input.aiworkClientToken ?? null,
+    aiworkHostToken: input.aiworkHostToken ?? null,
+    aiworkWorkspaceId: input.aiworkWorkspaceId ?? null,
+    aiworkWorkspaceName: input.aiworkWorkspaceName ?? null,
     sandboxBackend: input.sandboxBackend ?? null,
     sandboxRunId: input.sandboxRunId ?? null,
     sandboxContainerName: input.sandboxContainerName ?? null,
@@ -278,13 +278,13 @@ export async function workspaceUpdateRemote(input: {
   baseUrl?: string | null;
   directory?: string | null;
   displayName?: string | null;
-  remoteType?: "openwork" | "opencode" | null;
-  openworkHostUrl?: string | null;
-  openworkToken?: string | null;
-  openworkClientToken?: string | null;
-  openworkHostToken?: string | null;
-  openworkWorkspaceId?: string | null;
-  openworkWorkspaceName?: string | null;
+  remoteType?: "aiwork" | "opencode" | null;
+  aiworkHostUrl?: string | null;
+  aiworkToken?: string | null;
+  aiworkClientToken?: string | null;
+  aiworkHostToken?: string | null;
+  aiworkWorkspaceId?: string | null;
+  aiworkWorkspaceName?: string | null;
 
   // Sandbox lifecycle metadata (desktop-managed)
   sandboxBackend?: "docker" | "microsandbox" | null;
@@ -297,12 +297,12 @@ export async function workspaceUpdateRemote(input: {
     directory: input.directory ?? null,
     displayName: input.displayName ?? null,
     remoteType: input.remoteType ?? null,
-    openworkHostUrl: input.openworkHostUrl ?? null,
-    openworkToken: input.openworkToken ?? null,
-    openworkClientToken: input.openworkClientToken ?? null,
-    openworkHostToken: input.openworkHostToken ?? null,
-    openworkWorkspaceId: input.openworkWorkspaceId ?? null,
-    openworkWorkspaceName: input.openworkWorkspaceName ?? null,
+    aiworkHostUrl: input.aiworkHostUrl ?? null,
+    aiworkToken: input.aiworkToken ?? null,
+    aiworkClientToken: input.aiworkClientToken ?? null,
+    aiworkHostToken: input.aiworkHostToken ?? null,
+    aiworkWorkspaceId: input.aiworkWorkspaceId ?? null,
+    aiworkWorkspaceName: input.aiworkWorkspaceName ?? null,
     sandboxBackend: input.sandboxBackend ?? null,
     sandboxRunId: input.sandboxRunId ?? null,
     sandboxContainerName: input.sandboxContainerName ?? null,
@@ -364,7 +364,7 @@ export type OpencodeCommandDraft = {
   subtask?: boolean;
 };
 
-export type WorkspaceOpenworkConfig = {
+export type WorkspaceAiWorkConfig = {
   version: number;
   workspace?: {
     name?: string | null;
@@ -378,19 +378,19 @@ export type WorkspaceOpenworkConfig = {
   } | null;
 };
 
-export async function workspaceOpenworkRead(input: {
+export async function workspaceAiWorkRead(input: {
   workspacePath: string;
-}): Promise<WorkspaceOpenworkConfig> {
-  return invoke<WorkspaceOpenworkConfig>("workspace_openwork_read", {
+}): Promise<WorkspaceAiWorkConfig> {
+  return invoke<WorkspaceAiWorkConfig>("workspace_aiwork_read", {
     workspacePath: input.workspacePath,
   });
 }
 
-export async function workspaceOpenworkWrite(input: {
+export async function workspaceAiWorkWrite(input: {
   workspacePath: string;
-  config: WorkspaceOpenworkConfig;
+  config: WorkspaceAiWorkConfig;
 }): Promise<ExecResult> {
-  return invoke<ExecResult>("workspace_openwork_write", {
+  return invoke<ExecResult>("workspace_aiwork_write", {
     workspacePath: input.workspacePath,
     config: input.config,
   });
@@ -436,11 +436,11 @@ export async function engineStop(): Promise<EngineInfo> {
 
 export async function engineRestart(options?: {
   opencodeEnableExa?: boolean;
-  openworkRemoteAccess?: boolean;
+  aiworkRemoteAccess?: boolean;
 }): Promise<EngineInfo> {
   return invoke<EngineInfo>("engine_restart", {
     opencodeEnableExa: options?.opencodeEnableExa ?? null,
-    openworkRemoteAccess: options?.openworkRemoteAccess ?? null,
+    aiworkRemoteAccess: options?.aiworkRemoteAccess ?? null,
   });
 }
 
@@ -448,7 +448,7 @@ export type AppBuildInfo = {
   version: string;
   gitSha?: string | null;
   buildEpoch?: string | null;
-  openworkDevMode?: boolean;
+  aiworkDevMode?: boolean;
   os?: string | null;
   arch?: string | null;
 };
@@ -473,12 +473,12 @@ export async function setDesktopBootstrapConfig(
   return invoke<DesktopBootstrapConfig>("set_desktop_bootstrap_config", { config });
 }
 
-export async function nukeOpenworkAndOpencodeConfigAndExit(): Promise<void> {
-  return invoke<void>("nuke_openwork_and_opencode_config_and_exit");
+export async function nukeAiWorkAndOpencodeConfigAndExit(): Promise<void> {
+  return invoke<void>("nuke_aiwork_and_opencode_config_and_exit");
 }
 
 export type OrchestratorDetachedHost = {
-  openworkUrl: string;
+  aiworkUrl: string;
   token: string;
   ownerToken?: string | null;
   hostToken: string;
@@ -493,16 +493,16 @@ export async function orchestratorStartDetached(input: {
   sandboxBackend?: "none" | "docker" | "microsandbox" | null;
   sandboxImageRef?: string | null;
   runId?: string | null;
-  openworkToken?: string | null;
-  openworkHostToken?: string | null;
+  aiworkToken?: string | null;
+  aiworkHostToken?: string | null;
 }): Promise<OrchestratorDetachedHost> {
   return invoke<OrchestratorDetachedHost>("orchestrator_start_detached", {
     workspacePath: input.workspacePath,
     sandboxBackend: input.sandboxBackend ?? null,
     sandboxImageRef: input.sandboxImageRef ?? null,
     runId: input.runId ?? null,
-    openworkToken: input.openworkToken ?? null,
-    openworkHostToken: input.openworkHostToken ?? null,
+    aiworkToken: input.aiworkToken ?? null,
+    aiworkHostToken: input.aiworkHostToken ?? null,
   });
 }
 
@@ -538,14 +538,14 @@ export async function sandboxStop(containerName: string): Promise<ExecResult> {
   return invoke<ExecResult>("sandbox_stop", { containerName });
 }
 
-export type OpenworkDockerCleanupResult = {
+export type AiWorkDockerCleanupResult = {
   candidates: string[];
   removed: string[];
   errors: string[];
 };
 
-export async function sandboxCleanupOpenworkContainers(): Promise<OpenworkDockerCleanupResult> {
-  return invoke<OpenworkDockerCleanupResult>("sandbox_cleanup_openwork_containers");
+export async function sandboxCleanupAiWorkContainers(): Promise<AiWorkDockerCleanupResult> {
+  return invoke<AiWorkDockerCleanupResult>("sandbox_cleanup_aiwork_containers");
 }
 
 export type SandboxDebugProbeResult = {
@@ -584,14 +584,14 @@ export async function sandboxDebugProbe(): Promise<SandboxDebugProbeResult> {
   return invoke<SandboxDebugProbeResult>("sandbox_debug_probe");
 }
 
-export async function openworkServerInfo(): Promise<OpenworkServerInfo> {
-  return invoke<OpenworkServerInfo>("openwork_server_info");
+export async function aiworkServerInfo(): Promise<AiWorkServerInfo> {
+  return invoke<AiWorkServerInfo>("aiwork_server_info");
 }
 
-export async function openworkServerRestart(options?: {
+export async function aiworkServerRestart(options?: {
   remoteAccessEnabled?: boolean;
-}): Promise<OpenworkServerInfo> {
-  return invoke<OpenworkServerInfo>("openwork_server_restart", {
+}): Promise<AiWorkServerInfo> {
+  return invoke<AiWorkServerInfo>("aiwork_server_restart", {
     remoteAccessEnabled: options?.remoteAccessEnabled ?? null,
   });
 }
@@ -770,8 +770,8 @@ export async function readOpencodeAuthJson(): Promise<OpencodeAuthJsonFile> {
   return invoke<OpencodeAuthJsonFile>("read_opencode_auth_json");
 }
 
-export async function resetOpenworkState(mode: "onboarding" | "all"): Promise<void> {
-  return invoke<void>("reset_openwork_state", { mode });
+export async function resetAiWorkState(mode: "onboarding" | "all"): Promise<void> {
+  return invoke<void>("reset_aiwork_state", { mode });
 }
 
 export type CacheResetResult = {

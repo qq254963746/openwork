@@ -5,12 +5,12 @@ use std::path::{Path, PathBuf};
 
 use crate::engine::doctor::resolve_engine_path;
 use crate::engine::manager::EngineManager;
-use crate::openwork_server::manager::OpenworkServerManager;
+use crate::aiwork_server::manager::AiWorkServerManager;
 use crate::orchestrator;
 use crate::orchestrator::manager::OrchestratorManager;
 use crate::paths::{candidate_xdg_config_dirs, candidate_xdg_data_dirs, home_dir};
 use crate::platform::command_for_program;
-use crate::types::{DesktopAppPaths, ExecResult, WorkspaceOpenworkConfig};
+use crate::types::{DesktopAppPaths, ExecResult, WorkspaceAiWorkConfig};
 use crate::workspace::state::load_workspace_state;
 use tauri::{AppHandle, Manager, State};
 
@@ -55,7 +55,7 @@ pub struct AppBuildInfo {
     pub version: String,
     pub git_sha: Option<String>,
     pub build_epoch: Option<String>,
-    pub openwork_dev_mode: bool,
+    pub aiwork_dev_mode: bool,
     pub os: &'static str,
     pub arch: &'static str,
 }
@@ -73,13 +73,13 @@ fn env_truthy(key: &str) -> bool {
 fn macos_dev_application_support_opencode_log_dir() -> Option<PathBuf> {
     let home = home_dir()?;
     Some(
-        home.join("Library/Application Support/com.fengai.openwork.dev/openwork-dev-data/xdg/data/opencode/log"),
+        home.join("Library/Application Support/com.fengai.aiwork.dev/aiwork-dev-data/xdg/data/opencode/log"),
     )
 }
 
 fn isolated_dev_opencode_log_dir(app: &AppHandle) -> Option<PathBuf> {
     let root = app.path().app_local_data_dir().ok()?;
-    Some(root.join("openwork-dev-data/xdg/data/opencode/log"))
+    Some(root.join("aiwork-dev-data/xdg/data/opencode/log"))
 }
 
 fn standard_opencode_log_dir() -> PathBuf {
@@ -107,15 +107,15 @@ fn collect_opencode_disk_log_dir_candidates(app: &AppHandle) -> Vec<(String, Pat
     let mut ordered = Vec::new();
 
     #[cfg(target_os = "macos")]
-    if env_truthy("OPENWORK_DEV_MODE") {
+    if env_truthy("AIWORK_DEV_MODE") {
         if let Some(path) = macos_dev_application_support_opencode_log_dir() {
             ordered.push(("macos_electron_dev".into(), path));
         }
     }
 
-    if env_truthy("OPENWORK_DEV_MODE") {
+    if env_truthy("AIWORK_DEV_MODE") {
         if let Some(path) = isolated_dev_opencode_log_dir(app) {
-            ordered.push(("openwork_dev_isolated".into(), path));
+            ordered.push(("aiwork_dev_isolated".into(), path));
         }
     }
 
@@ -321,7 +321,7 @@ fn opencode_standard_state_paths() -> Vec<PathBuf> {
         .collect()
 }
 
-fn current_openwork_state_paths(app: &AppHandle) -> Result<Vec<PathBuf>, String> {
+fn current_aiwork_state_paths(app: &AppHandle) -> Result<Vec<PathBuf>, String> {
     let mut paths = vec![
         app.path()
             .app_cache_dir()
@@ -340,10 +340,10 @@ fn current_openwork_state_paths(app: &AppHandle) -> Result<Vec<PathBuf>, String>
 
     if let Some(home) = home_dir() {
         paths.push(
-            home.join("OpenWork")
+            home.join("AiWork")
                 .join("Welcome")
                 .join(".opencode")
-                .join("openwork.json"),
+                .join("aiwork.json"),
         );
     }
 
@@ -353,7 +353,7 @@ fn current_openwork_state_paths(app: &AppHandle) -> Result<Vec<PathBuf>, String>
 fn stop_host_services(
     engine_manager: &State<EngineManager>,
     orchestrator_manager: &State<OrchestratorManager>,
-    openwork_manager: &State<OpenworkServerManager>,
+    aiwork_manager: &State<AiWorkServerManager>,
 ) {
     if let Ok(mut engine) = engine_manager.inner.lock() {
         EngineManager::stop_locked(&mut engine);
@@ -361,8 +361,8 @@ fn stop_host_services(
     if let Ok(mut orchestrator_state) = orchestrator_manager.inner.lock() {
         OrchestratorManager::stop_locked(&mut orchestrator_state);
     }
-    if let Ok(mut openwork_state) = openwork_manager.inner.lock() {
-        OpenworkServerManager::stop_locked(&mut openwork_state);
+    if let Ok(mut aiwork_state) = aiwork_manager.inner.lock() {
+        AiWorkServerManager::stop_locked(&mut aiwork_state);
     }
 }
 
@@ -399,12 +399,12 @@ fn validate_server_name(name: &str) -> Result<String, String> {
     Ok(trimmed.to_string())
 }
 
-fn read_workspace_openwork_config(
+fn read_workspace_aiwork_config(
     workspace_path: &Path,
-) -> Result<WorkspaceOpenworkConfig, String> {
-    let openwork_path = workspace_path.join(".opencode").join("openwork.json");
-    if !openwork_path.exists() {
-        let mut cfg = WorkspaceOpenworkConfig::default();
+) -> Result<WorkspaceAiWorkConfig, String> {
+    let aiwork_path = workspace_path.join(".opencode").join("aiwork.json");
+    if !aiwork_path.exists() {
+        let mut cfg = WorkspaceAiWorkConfig::default();
         let workspace_value = workspace_path.to_string_lossy().to_string();
         if !workspace_value.trim().is_empty() {
             cfg.authorized_roots.push(workspace_value);
@@ -412,11 +412,11 @@ fn read_workspace_openwork_config(
         return Ok(cfg);
     }
 
-    let raw = fs::read_to_string(&openwork_path)
-        .map_err(|e| format!("Failed to read {}: {e}", openwork_path.display()))?;
+    let raw = fs::read_to_string(&aiwork_path)
+        .map_err(|e| format!("Failed to read {}: {e}", aiwork_path.display()))?;
 
-    serde_json::from_str::<WorkspaceOpenworkConfig>(&raw)
-        .map_err(|e| format!("Failed to parse {}: {e}", openwork_path.display()))
+    serde_json::from_str::<WorkspaceAiWorkConfig>(&raw)
+        .map_err(|e| format!("Failed to parse {}: {e}", aiwork_path.display()))
 }
 
 fn load_authorized_roots(app: &AppHandle) -> Result<Vec<PathBuf>, String> {
@@ -425,7 +425,7 @@ fn load_authorized_roots(app: &AppHandle) -> Result<Vec<PathBuf>, String> {
 
     for workspace in state.workspaces {
         let workspace_path = PathBuf::from(&workspace.path);
-        let mut config = read_workspace_openwork_config(&workspace_path)?;
+        let mut config = read_workspace_aiwork_config(&workspace_path)?;
 
         if config.authorized_roots.is_empty() {
             config.authorized_roots.push(workspace.path.clone());
@@ -542,19 +542,19 @@ pub fn reset_opencode_cache() -> Result<CacheResetResult, String> {
 }
 
 #[tauri::command]
-pub fn reset_openwork_state(
+pub fn reset_aiwork_state(
     app: tauri::AppHandle,
     mode: String,
     engine_manager: State<EngineManager>,
     orchestrator_manager: State<OrchestratorManager>,
-    openwork_manager: State<OpenworkServerManager>,
+    aiwork_manager: State<AiWorkServerManager>,
 ) -> Result<(), String> {
     let mode = mode.trim();
     if mode != "onboarding" && mode != "all" {
         return Err("mode must be 'onboarding' or 'all'".to_string());
     }
 
-    stop_host_services(&engine_manager, &orchestrator_manager, &openwork_manager);
+    stop_host_services(&engine_manager, &orchestrator_manager, &aiwork_manager);
 
     let mut paths = vec![
         app.path()
@@ -607,32 +607,32 @@ pub fn desktop_app_paths() -> DesktopAppPaths {
 #[tauri::command]
 pub fn app_build_info(app: AppHandle) -> AppBuildInfo {
     let version = app.package_info().version.to_string();
-    let git_sha = option_env!("OPENWORK_GIT_SHA").map(|value| value.to_string());
-    let build_epoch = option_env!("OPENWORK_BUILD_EPOCH").map(|value| value.to_string());
+    let git_sha = option_env!("AIWORK_GIT_SHA").map(|value| value.to_string());
+    let build_epoch = option_env!("AIWORK_BUILD_EPOCH").map(|value| value.to_string());
     AppBuildInfo {
         version,
         git_sha,
         build_epoch,
-        openwork_dev_mode: env_truthy("OPENWORK_DEV_MODE"),
+        aiwork_dev_mode: env_truthy("AIWORK_DEV_MODE"),
         os: std::env::consts::OS,
         arch: std::env::consts::ARCH,
     }
 }
 
 #[tauri::command]
-pub fn nuke_openwork_and_opencode_config_and_exit(
+pub fn nuke_aiwork_and_opencode_config_and_exit(
     app: AppHandle,
     engine_manager: State<EngineManager>,
     orchestrator_manager: State<OrchestratorManager>,
-    openwork_manager: State<OpenworkServerManager>,
+    aiwork_manager: State<AiWorkServerManager>,
 ) -> Result<(), String> {
-    stop_host_services(&engine_manager, &orchestrator_manager, &openwork_manager);
+    stop_host_services(&engine_manager, &orchestrator_manager, &aiwork_manager);
 
-    let dev_mode = env_truthy("OPENWORK_DEV_MODE");
-    let mut paths = current_openwork_state_paths(&app)?;
+    let dev_mode = env_truthy("AIWORK_DEV_MODE");
+    let mut paths = current_aiwork_state_paths(&app)?;
     if dev_mode {
         // In dev mode, the current app + orchestrator directories are already isolated
-        // by the dev app identity and OPENWORK_DATA_DIR, so only clear those dev paths.
+        // by the dev app identity and AIWORK_DATA_DIR, so only clear those dev paths.
     } else {
         // In production, clear the normal app/orchestrator paths plus the standard
         // user OpenCode config/data/cache/state locations.

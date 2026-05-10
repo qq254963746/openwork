@@ -3,7 +3,7 @@ use tauri::{AppHandle, Manager, State};
 use crate::config::{read_opencode_config, write_opencode_config};
 use crate::engine::doctor::{opencode_serve_help, opencode_version, resolve_engine_path};
 use crate::engine::manager::EngineManager;
-use crate::openwork_server::{manager::OpenworkServerManager, start_openwork_server};
+use crate::aiwork_server::{manager::AiWorkServerManager, start_aiwork_server};
 use crate::types::{EngineDoctorResult, EngineInfo, EngineRuntime, ExecResult};
 use crate::utils::truncate_output;
 use serde::Deserialize;
@@ -61,19 +61,19 @@ fn pinned_opencode_install_command() -> String {
 }
 
 #[derive(Debug, Deserialize)]
-struct OpenworkWorkspaceListResponse {
+struct AiWorkWorkspaceListResponse {
     #[serde(default)]
-    items: Vec<OpenworkWorkspaceEntry>,
+    items: Vec<AiWorkWorkspaceEntry>,
 }
 
 #[derive(Debug, Deserialize)]
-struct OpenworkWorkspaceEntry {
-    opencode: Option<OpenworkWorkspaceOpencode>,
+struct AiWorkWorkspaceEntry {
+    opencode: Option<AiWorkWorkspaceOpencode>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct OpenworkWorkspaceOpencode {
+struct AiWorkWorkspaceOpencode {
     base_url: String,
     directory: Option<String>,
     username: Option<String>,
@@ -131,10 +131,10 @@ fn opencode_bin_source(notes: &[String], in_path: bool) -> Option<String> {
     None
 }
 
-fn probe_openwork_managed_opencode(
+fn probe_aiwork_managed_opencode(
     server_base_url: &str,
     owner_token: &str,
-) -> Result<Option<OpenworkWorkspaceOpencode>, String> {
+) -> Result<Option<AiWorkWorkspaceOpencode>, String> {
     let response = ureq::get(&format!(
         "{}/workspaces",
         server_base_url.trim_end_matches('/')
@@ -142,9 +142,9 @@ fn probe_openwork_managed_opencode(
     .set("Authorization", &format!("Bearer {owner_token}"))
     .call()
     .map_err(|error| error.to_string())?;
-    let payload: OpenworkWorkspaceListResponse = response
+    let payload: AiWorkWorkspaceListResponse = response
         .into_json()
-        .map_err(|error| format!("Failed to parse OpenWork workspaces response: {error}"))?;
+        .map_err(|error| format!("Failed to parse AiWork workspaces response: {error}"))?;
 
     Ok(payload.items.into_iter().find_map(|entry| {
         entry
@@ -162,12 +162,12 @@ pub fn engine_info(manager: State<EngineManager>) -> EngineInfo {
 #[tauri::command]
 pub fn engine_stop(
     manager: State<EngineManager>,
-    openwork_manager: State<OpenworkServerManager>,
+    aiwork_manager: State<AiWorkServerManager>,
 ) -> EngineInfo {
     let mut state = manager.inner.lock().expect("engine mutex poisoned");
     EngineManager::stop_locked(&mut state);
-    if let Ok(mut openwork_state) = openwork_manager.inner.lock() {
-        OpenworkServerManager::stop_locked(&mut openwork_state);
+    if let Ok(mut aiwork_state) = aiwork_manager.inner.lock() {
+        AiWorkServerManager::stop_locked(&mut aiwork_state);
     }
     EngineManager::snapshot_locked(&mut state)
 }
@@ -176,9 +176,9 @@ pub fn engine_stop(
 pub fn engine_restart(
     app: AppHandle,
     manager: State<EngineManager>,
-    openwork_manager: State<OpenworkServerManager>,
+    aiwork_manager: State<AiWorkServerManager>,
     opencode_enable_exa: Option<bool>,
-    openwork_remote_access: Option<bool>,
+    aiwork_remote_access: Option<bool>,
 ) -> Result<EngineInfo, String> {
     let project_dir = {
         let state = manager.inner.lock().expect("engine mutex poisoned");
@@ -192,12 +192,12 @@ pub fn engine_restart(
     engine_start(
         app,
         manager,
-        openwork_manager,
+        aiwork_manager,
         project_dir,
         None,
         None,
         opencode_enable_exa,
-        openwork_remote_access,
+        aiwork_remote_access,
         None,
         Some(workspace_paths),
     )
@@ -262,7 +262,7 @@ pub fn engine_install() -> Result<ExecResult, String> {
       ok: false,
       status: -1,
       stdout: String::new(),
-      stderr: "Guided install is not supported on Windows yet. Install the OpenWork-pinned OpenCode version manually, then restart OpenWork.".to_string(),
+      stderr: "Guided install is not supported on Windows yet. Install the AiWork-pinned OpenCode version manually, then restart AiWork.".to_string(),
     });
     }
 
@@ -294,12 +294,12 @@ pub fn engine_install() -> Result<ExecResult, String> {
 pub fn engine_start(
     app: AppHandle,
     manager: State<EngineManager>,
-    openwork_manager: State<OpenworkServerManager>,
+    aiwork_manager: State<AiWorkServerManager>,
     project_dir: String,
     prefer_sidecar: Option<bool>,
     opencode_bin_path: Option<String>,
     _opencode_enable_exa: Option<bool>,
-    openwork_remote_access: Option<bool>,
+    aiwork_remote_access: Option<bool>,
     _runtime: Option<EngineRuntime>,
     workspace_paths: Option<Vec<String>>,
 ) -> Result<EngineInfo, String> {
@@ -331,7 +331,7 @@ pub fn engine_start(
     workspace_paths.retain(|path| path.trim() != project_dir);
     workspace_paths.insert(0, project_dir.clone());
 
-    let openwork_remote_access_enabled = openwork_remote_access.unwrap_or(false);
+    let aiwork_remote_access_enabled = aiwork_remote_access.unwrap_or(false);
 
     let mut state = manager.inner.lock().expect("engine mutex poisoned");
     EngineManager::stop_locked(&mut state);
@@ -361,31 +361,31 @@ pub fn engine_start(
     let opencode_bin_path = Some(opencode_bin.clone());
     drop(state);
 
-    if let Ok(mut openwork_state) = openwork_manager.inner.lock() {
-        OpenworkServerManager::stop_locked(&mut openwork_state);
+    if let Ok(mut aiwork_state) = aiwork_manager.inner.lock() {
+        AiWorkServerManager::stop_locked(&mut aiwork_state);
     }
 
-    let openwork_info = start_openwork_server(
+    let aiwork_info = start_aiwork_server(
         &app,
-        &openwork_manager,
+        &aiwork_manager,
         &workspace_paths,
         None,
         None,
         None,
-        openwork_remote_access_enabled,
+        aiwork_remote_access_enabled,
         true,
         Some(&opencode_bin),
         opencode_bin_source.as_deref(),
     )?;
 
     let managed_opencode = match (
-        openwork_info.base_url.as_deref(),
-        openwork_info.owner_token.as_deref(),
+        aiwork_info.base_url.as_deref(),
+        aiwork_info.owner_token.as_deref(),
     ) {
         (Some(server_base_url), Some(owner_token)) => {
-            probe_openwork_managed_opencode(server_base_url, owner_token)
+            probe_aiwork_managed_opencode(server_base_url, owner_token)
         }
-        _ => Err("OpenWork server did not report a base URL and owner token".to_string()),
+        _ => Err("AiWork server did not report a base URL and owner token".to_string()),
     };
 
     match managed_opencode {
@@ -413,7 +413,7 @@ pub fn engine_start(
                 state.opencode_bin_path = opencode_bin_path.clone();
                 state.opencode_bin_source = opencode_bin_source.clone();
                 state.last_stderr = Some(truncate_output(
-                    "OpenWork server did not report a managed OpenCode workspace",
+                    "AiWork server did not report a managed OpenCode workspace",
                     8000,
                 ));
             }
@@ -425,7 +425,7 @@ pub fn engine_start(
                 state.opencode_bin_path = opencode_bin_path.clone();
                 state.opencode_bin_source = opencode_bin_source.clone();
                 state.last_stderr = Some(truncate_output(
-                    &format!("OpenWork server workspace probe: {error}"),
+                    &format!("AiWork server workspace probe: {error}"),
                     8000,
                 ));
             }

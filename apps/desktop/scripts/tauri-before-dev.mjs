@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const useCorepackPnpm = process.platform === "win32" && process.env.OPENWORK_USE_COREPACK_PNPM === "1";
+const useCorepackPnpm = process.platform === "win32" && process.env.AIWORK_USE_COREPACK_PNPM === "1";
 const pnpmCmd = useCorepackPnpm ? "corepack.cmd" : process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const pnpmArgs = useCorepackPnpm ? ["pnpm"] : [];
 
@@ -12,7 +12,7 @@ const readPort = () => {
   return Number.isFinite(value) && value > 0 ? value : 5173;
 };
 
-const hostOverride = process.env.OPENWORK_DEV_HOST?.trim() || null;
+const hostOverride = process.env.AIWORK_DEV_HOST?.trim() || null;
 const port = readPort();
 const baseUrls = (hostOverride ? [hostOverride] : ["127.0.0.1", "localhost"]).map((host) => `http://${host}:${port}`);
 const expectedAppRoot = resolve(fileURLToPath(new URL("../../app", import.meta.url)));
@@ -98,7 +98,7 @@ const holdOpenUntilSignal = ({ uiChild, watchedViteUrl } = {}) => {
       try {
         if (!(await looksLikeVite(watchedViteUrl))) {
           console.error(
-            `[openwork] Reused UI dev server at ${watchedViteUrl} is no longer reachable; stopping desktop dev.`
+            `[aiwork] Reused UI dev server at ${watchedViteUrl} is no longer reachable; stopping desktop dev.`
           );
           stop(1);
         }
@@ -136,9 +136,9 @@ const looksLikeVite = async (baseUrl) => {
   }
 };
 
-const fetchOpenWorkDevServerId = async (baseUrl) => {
+const fetchAiWorkDevServerId = async (baseUrl) => {
   try {
-    const res = await fetchWithTimeout(`${baseUrl}/__openwork_dev_server_id`, { timeoutMs: 1200 });
+    const res = await fetchWithTimeout(`${baseUrl}/__aiwork_dev_server_id`, { timeoutMs: 1200 });
     if (!res.ok) return null;
     const data = await res.json();
     return typeof data?.appRoot === "string" ? resolve(data.appRoot) : null;
@@ -150,7 +150,7 @@ const fetchOpenWorkDevServerId = async (baseUrl) => {
 const runPrepareSidecars = () => {
   const prepareScript = resolve(fileURLToPath(new URL("./prepare-sidecar.mjs", import.meta.url)));
   const args = [prepareScript];
-  if (process.env.OPENWORK_SIDECAR_FORCE_BUILD !== "0") {
+  if (process.env.AIWORK_SIDECAR_FORCE_BUILD !== "0") {
     args.push("--force");
   }
   const result = spawnSync(process.execPath, args, {
@@ -220,7 +220,7 @@ const ensureLinuxDesktopDependencies = () => {
   if (missing.length === 0) return;
 
   console.error(
-    "[openwork] Missing Linux desktop system dependencies required by Tauri:\n" +
+    "[aiwork] Missing Linux desktop system dependencies required by Tauri:\n" +
       `  ${missing.join(", ")}\n\n` +
       `${getLinuxDesktopDependencyHint()}\n\n` +
       "If you only need the web UI, run `pnpm dev:ui`."
@@ -231,7 +231,7 @@ const ensureLinuxDesktopDependencies = () => {
 const runUiDevServer = () => {
   const uiArgs =
     process.platform === "win32"
-      ? [...pnpmArgs, "--filter", "@openwork/app", "dev:windows"]
+      ? [...pnpmArgs, "--filter", "@aiwork/app", "dev:windows"]
       : [...pnpmArgs, "-w", "dev:ui"];
   const child = spawn(pnpmCmd, uiArgs, {
     stdio: "inherit",
@@ -241,7 +241,7 @@ const runUiDevServer = () => {
       ...process.env,
       // Make sure vite sees the intended port.
       PORT: String(port),
-      OPENWORK_DEV_MODE: process.env.OPENWORK_DEV_MODE || "1",
+      AIWORK_DEV_MODE: process.env.AIWORK_DEV_MODE || "1",
     },
   });
 
@@ -273,7 +273,7 @@ const main = async () => {
   for (const candidate of baseUrls) {
     if (await looksLikeVite(candidate)) {
       detectedViteUrl = candidate;
-      detectedViteAppRoot = await fetchOpenWorkDevServerId(candidate);
+      detectedViteAppRoot = await fetchAiWorkDevServerId(candidate);
       break;
     }
   }
@@ -281,7 +281,7 @@ const main = async () => {
   if (detectedViteUrl) {
     if (detectedViteAppRoot && detectedViteAppRoot !== expectedAppRoot) {
       console.error(
-        `[openwork] Found a Vite dev server at ${detectedViteUrl}, but it serves a different checkout:\n` +
+        `[aiwork] Found a Vite dev server at ${detectedViteUrl}, but it serves a different checkout:\n` +
           `  running app root: ${detectedViteAppRoot}\n` +
           `  expected app root: ${expectedAppRoot}\n\n` +
           `Stop the other dev server or run with a different PORT (for example: PORT=5174 pnpm dev).`
@@ -290,12 +290,12 @@ const main = async () => {
     }
     if (!detectedViteAppRoot) {
       console.error(
-        `[openwork] Found a Vite dev server at ${detectedViteUrl}, but could not verify which checkout it belongs to.\n` +
+        `[aiwork] Found a Vite dev server at ${detectedViteUrl}, but could not verify which checkout it belongs to.\n` +
           `Stop the other dev server or run with a different PORT (for example: PORT=5174 pnpm dev).`
       );
       process.exit(1);
     }
-    console.log(`[openwork] UI dev server already running at ${detectedViteUrl} (reusing).`);
+    console.log(`[aiwork] UI dev server already running at ${detectedViteUrl} (reusing).`);
     holdOpenUntilSignal({ watchedViteUrl: detectedViteUrl });
     return;
   }
@@ -310,13 +310,13 @@ const main = async () => {
 
   if (portInUse) {
     console.error(
-      `[openwork] Port ${port} is in use, but it does not look like a Vite dev server.\n` +
+      `[aiwork] Port ${port} is in use, but it does not look like a Vite dev server.\n` +
         `Set PORT to a free port (e.g. PORT=5174) or stop the process using port ${port}.`
     );
     process.exit(1);
   }
 
-  console.log(`[openwork] Starting UI dev server on port ${port}...`);
+  console.log(`[aiwork] Starting UI dev server on port ${port}...`);
   const uiChild = runUiDevServer();
   holdOpenUntilSignal({ uiChild });
 };

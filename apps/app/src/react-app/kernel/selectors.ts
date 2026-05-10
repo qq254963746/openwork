@@ -1,12 +1,12 @@
-import type { OpenworkStore } from "./store";
+import type { AiWorkStore } from "./store";
 
-export const selectActiveWorkspace = (state: OpenworkStore) =>
+export const selectActiveWorkspace = (state: AiWorkStore) =>
   state.workspaces.find(
     (workspace) => workspace.id === state.activeWorkspaceId,
   ) ?? null;
 
-export const selectServerStatus = (state: OpenworkStore) => state.server.status;
+export const selectServerStatus = (state: AiWorkStore) => state.server.status;
 
-export const selectServerUrl = (state: OpenworkStore) => state.server.url;
+export const selectServerUrl = (state: AiWorkStore) => state.server.url;
 
-export const selectErrorBanner = (state: OpenworkStore) => state.errorBanner;
+export const selectErrorBanner = (state: AiWorkStore) => state.errorBanner;

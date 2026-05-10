@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "OpenWork",
+  "productName": "AiWork",
   "version": "0.13.29",
-  "identifier": "com.fengai.openwork",
+  "identifier": "com.fengai.aiwork",
   "build": {
     "beforeDevCommand": "node ./scripts/tauri-before-dev.mjs",
     "beforeBuildCommand": "node ./scripts/tauri-before-build.mjs",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "OpenWork",
+        "title": "AiWork",
         "width": 1180,
         "height": 820,
         "minWidth": 1024,
@@ -47,8 +47,8 @@
     },
     "externalBin": [
       "sidecars/opencode",
-      "sidecars/openwork-server",
-      "sidecars/openwork-orchestrator",
+      "sidecars/aiwork-server",
+      "sidecars/aiwork-orchestrator",
       "sidecars/chrome-devtools-mcp"
     ]
   },
@@ -56,7 +56,7 @@
     "deep-link": {
       "desktop": {
         "schemes": [
-          "openwork"
+          "aiwork"
         ]
       }
     }

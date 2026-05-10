@@ -1,7 +1,7 @@
 import { createOpencodeClient, type Message, type Part, type Session, type Todo } from "@opencode-ai/sdk/v2/client";
 
 import { desktopFetch } from "./desktop";
-import { createOpenworkServerClient, OpenworkServerError } from "./openwork-server";
+import { createAiWorkServerClient, AiWorkServerError } from "./aiwork-server";
 import { isDesktopRuntime } from "../utils";
 
 type FieldsResult<T> =
@@ -58,7 +58,7 @@ export type OpencodeAuth = {
   username?: string;
   password?: string;
   token?: string;
-  mode?: "basic" | "openwork";
+  mode?: "basic" | "aiwork";
 };
 
 const DEFAULT_OPENCODE_REQUEST_TIMEOUT_MS = 10_000;
@@ -136,7 +136,7 @@ async function postSessionRequest<T>(
   return { error, request, response };
 }
 
-function resolveOpenworkWorkspaceMount(baseUrl: string): { baseUrl: string; workspaceId: string } | null {
+function resolveAiWorkWorkspaceMount(baseUrl: string): { baseUrl: string; workspaceId: string } | null {
   try {
     const url = new URL(baseUrl);
     const match = url.pathname.replace(/\/+$/, "").match(/^(.*\/w\/([^/]+))\/opencode$/);
@@ -170,7 +170,7 @@ function createSyntheticResult<T>(
   return { error: input.error, request, response };
 }
 
-async function wrapOpenworkRead<T>(
+async function wrapAiWorkRead<T>(
   url: string,
   read: () => Promise<T>,
   options?: { throwOnError?: boolean },
@@ -182,17 +182,17 @@ async function wrapOpenworkRead<T>(
     return createSyntheticResult(url, "GET", {
       ok: false,
       error,
-      status: error instanceof OpenworkServerError ? error.status : 500,
+      status: error instanceof AiWorkServerError ? error.status : 500,
     });
   }
 }
 
 function shouldFallbackToLegacySessionRead(error: unknown): boolean {
-  if (!(error instanceof OpenworkServerError)) return false;
+  if (!(error instanceof AiWorkServerError)) return false;
   return error.status === 404 || error.status === 405 || error.status === 501;
 }
 
-async function wrapOpenworkReadWithFallback<T>(
+async function wrapAiWorkReadWithFallback<T>(
   url: string,
   read: () => Promise<T>,
   fallback: () => Promise<FieldsResult<T>>,
@@ -206,7 +206,7 @@ async function wrapOpenworkReadWithFallback<T>(
       return createSyntheticResult(url, "GET", {
         ok: false,
         error,
-        status: error instanceof OpenworkServerError ? error.status : 500,
+        status: error instanceof AiWorkServerError ? error.status : 500,
       });
     }
     return fallback();
@@ -263,7 +263,7 @@ const encodeBasicAuth = (auth?: OpencodeAuth) => {
 };
 
 const resolveAuthHeader = (auth?: OpencodeAuth) => {
-  if (auth?.mode === "openwork" && auth.token) {
+  if (auth?.mode === "aiwork" && auth.token) {
     return `Bearer ${auth.token}`;
   }
   const encoded = encodeBasicAuth(auth);
@@ -276,7 +276,7 @@ const resolveAuthHeader = (auth?: OpencodeAuth) => {
  * `fetch_read_body` IPC call blocks until the entire body is delivered, so
  * pointing it at an infinite stream freezes the webview's main thread for
  * minutes. For these endpoints we always use the webview's native fetch —
- * CORS is already wide open on the openwork/opencode stack, so there's no
+ * CORS is already wide open on the aiwork/opencode stack, so there's no
  * reason to route them through the plugin.
  */
 const STREAM_URL_RE = /\/(event|stream)(\b|\/|$|\?)/;
@@ -369,13 +369,13 @@ export function createClient(baseUrl: string, directory?: string, auth?: Opencod
   });
 
   const session = client.session as typeof client.session;
-  const openworkMount = auth?.mode === "openwork" ? resolveOpenworkWorkspaceMount(baseUrl) : null;
-  const openworkSessionClient =
-    openworkMount && auth?.token
-      ? createOpenworkServerClient({ baseUrl: openworkMount.baseUrl, token: auth.token })
+  const aiworkMount = auth?.mode === "aiwork" ? resolveAiWorkWorkspaceMount(baseUrl) : null;
+  const aiworkSessionClient =
+    aiworkMount && auth?.token
+      ? createAiWorkServerClient({ baseUrl: aiworkMount.baseUrl, token: auth.token })
       : null;
   // TODO(2026-04-12): remove the old-server compatibility path here once all
-  // OpenWork servers expose the workspace-scoped session read APIs.
+  // AiWork servers expose the workspace-scoped session read APIs.
   const sessionOverrides = session as any as {
     list: (parameters?: SessionListParameters, options?: { throwOnError?: boolean }) => Promise<FieldsResult<Session[]>>;
     get: (parameters: SessionLookupParameters, options?: { throwOnError?: boolean }) => Promise<FieldsResult<Session>>;
@@ -387,7 +387,7 @@ export function createClient(baseUrl: string, directory?: string, auth?: Opencod
 
   const listOriginal = sessionOverrides.list.bind(session);
   sessionOverrides.list = (parameters?: SessionListParameters, options?: { throwOnError?: boolean }) => {
-    if (!openworkMount || !openworkSessionClient) {
+    if (!aiworkMount || !aiworkSessionClient) {
       return listOriginal(parameters, options);
     }
     const query = new URLSearchParams();
@@ -395,10 +395,10 @@ export function createClient(baseUrl: string, directory?: string, auth?: Opencod
     if (typeof parameters?.start === "number") query.set("start", String(parameters.start));
     if (parameters?.search?.trim()) query.set("search", parameters.search.trim());
     if (typeof parameters?.limit === "number") query.set("limit", String(parameters.limit));
-    const url = `${openworkMount.baseUrl}/workspace/${encodeURIComponent(openworkMount.workspaceId)}/sessions${query.size ? `?${query.toString()}` : ""}`;
-    return wrapOpenworkReadWithFallback(
+    const url = `${aiworkMount.baseUrl}/workspace/${encodeURIComponent(aiworkMount.workspaceId)}/sessions${query.size ? `?${query.toString()}` : ""}`;
+    return wrapAiWorkReadWithFallback(
       url,
-      async () => (await openworkSessionClient.listSessions(openworkMount.workspaceId, parameters)).items,
+      async () => (await aiworkSessionClient.listSessions(aiworkMount.workspaceId, parameters)).items,
       () => listOriginal(parameters, options),
       options,
     );
@@ -406,13 +406,13 @@ export function createClient(baseUrl: string, directory?: string, auth?: Opencod
 
   const getOriginal = sessionOverrides.get.bind(session);
   sessionOverrides.get = (parameters: SessionLookupParameters, options?: { throwOnError?: boolean }) => {
-    if (!openworkMount || !openworkSessionClient) {
+    if (!aiworkMount || !aiworkSessionClient) {
       return getOriginal(parameters, options);
     }
-    const url = `${openworkMount.baseUrl}/workspace/${encodeURIComponent(openworkMount.workspaceId)}/sessions/${encodeURIComponent(parameters.sessionID)}`;
-    return wrapOpenworkReadWithFallback(
+    const url = `${aiworkMount.baseUrl}/workspace/${encodeURIComponent(aiworkMount.workspaceId)}/sessions/${encodeURIComponent(parameters.sessionID)}`;
+    return wrapAiWorkReadWithFallback(
       url,
-      async () => (await openworkSessionClient.getSession(openworkMount.workspaceId, parameters.sessionID)).item,
+      async () => (await aiworkSessionClient.getSession(aiworkMount.workspaceId, parameters.sessionID)).item,
       () => getOriginal(parameters, options),
       options,
     );
@@ -420,16 +420,16 @@ export function createClient(baseUrl: string, directory?: string, auth?: Opencod
 
   const messagesOriginal = sessionOverrides.messages.bind(session);
   sessionOverrides.messages = (parameters: SessionMessagesParameters, options?: { throwOnError?: boolean }) => {
-    if (!openworkMount || !openworkSessionClient) {
+    if (!aiworkMount || !aiworkSessionClient) {
       return messagesOriginal(parameters, options);
     }
     const query = new URLSearchParams();
     if (typeof parameters.limit === "number") query.set("limit", String(parameters.limit));
-    const url = `${openworkMount.baseUrl}/workspace/${encodeURIComponent(openworkMount.workspaceId)}/sessions/${encodeURIComponent(parameters.sessionID)}/messages${query.size ? `?${query.toString()}` : ""}`;
-    return wrapOpenworkReadWithFallback(
+    const url = `${aiworkMount.baseUrl}/workspace/${encodeURIComponent(aiworkMount.workspaceId)}/sessions/${encodeURIComponent(parameters.sessionID)}/messages${query.size ? `?${query.toString()}` : ""}`;
+    return wrapAiWorkReadWithFallback(
       url,
       async () =>
-        (await openworkSessionClient.getSessionMessages(openworkMount.workspaceId, parameters.sessionID, {
+        (await aiworkSessionClient.getSessionMessages(aiworkMount.workspaceId, parameters.sessionID, {
           limit: parameters.limit,
         })).items,
       () => messagesOriginal(parameters, options),
@@ -439,13 +439,13 @@ export function createClient(baseUrl: string, directory?: string, auth?: Opencod
 
   const todoOriginal = sessionOverrides.todo.bind(session);
   sessionOverrides.todo = (parameters: SessionLookupParameters, options?: { throwOnError?: boolean }) => {
-    if (!openworkMount || !openworkSessionClient) {
+    if (!aiworkMount || !aiworkSessionClient) {
       return todoOriginal(parameters, options);
     }
-    const url = `${openworkMount.baseUrl}/workspace/${encodeURIComponent(openworkMount.workspaceId)}/sessions/${encodeURIComponent(parameters.sessionID)}/snapshot`;
-    return wrapOpenworkReadWithFallback(
+    const url = `${aiworkMount.baseUrl}/workspace/${encodeURIComponent(aiworkMount.workspaceId)}/sessions/${encodeURIComponent(parameters.sessionID)}/snapshot`;
+    return wrapAiWorkReadWithFallback(
       url,
-      async () => (await openworkSessionClient.getSessionSnapshot(openworkMount.workspaceId, parameters.sessionID)).item.todos,
+      async () => (await aiworkSessionClient.getSessionSnapshot(aiworkMount.workspaceId, parameters.sessionID)).item.todos,
       () => todoOriginal(parameters, options),
       options,
     );
@@ -497,13 +497,13 @@ export function createClient(baseUrl: string, directory?: string, auth?: Opencod
       path?: string,
       options?: { throwOnError?: boolean },
     ) => {
-      if (!openworkMount || !openworkSessionClient || workspaceId !== openworkMount.workspaceId) {
+      if (!aiworkMount || !aiworkSessionClient || workspaceId !== aiworkMount.workspaceId) {
         return listWorkspaceDirectoryOriginal(workspaceId, path, options);
       }
-      const url = `${openworkMount.baseUrl}/workspace/${encodeURIComponent(openworkMount.workspaceId)}/files/list${path?.trim() ? `?path=${encodeURIComponent(path.trim())}` : ""}`;
-      return wrapOpenworkRead(
+      const url = `${aiworkMount.baseUrl}/workspace/${encodeURIComponent(aiworkMount.workspaceId)}/files/list${path?.trim() ? `?path=${encodeURIComponent(path.trim())}` : ""}`;
+      return wrapAiWorkRead(
         url,
-        () => openworkSessionClient.listWorkspaceDirectory(openworkMount.workspaceId, path),
+        () => aiworkSessionClient.listWorkspaceDirectory(aiworkMount.workspaceId, path),
         options,
       );
     };
@@ -516,13 +516,13 @@ export function createClient(baseUrl: string, directory?: string, auth?: Opencod
       path: string,
       options?: { throwOnError?: boolean },
     ) => {
-      if (!openworkMount || !openworkSessionClient || workspaceId !== openworkMount.workspaceId) {
+      if (!aiworkMount || !aiworkSessionClient || workspaceId !== aiworkMount.workspaceId) {
         return readWorkspaceFileOriginal(workspaceId, path, options);
       }
-      const url = `${openworkMount.baseUrl}/workspace/${encodeURIComponent(openworkMount.workspaceId)}/files/content?path=${encodeURIComponent(path)}`;
-      return wrapOpenworkRead(
+      const url = `${aiworkMount.baseUrl}/workspace/${encodeURIComponent(aiworkMount.workspaceId)}/files/content?path=${encodeURIComponent(path)}`;
+      return wrapAiWorkRead(
         url,
-        () => openworkSessionClient.readWorkspaceFile(openworkMount.workspaceId, path),
+        () => aiworkSessionClient.readWorkspaceFile(aiworkMount.workspaceId, path),
         options,
       );
     };

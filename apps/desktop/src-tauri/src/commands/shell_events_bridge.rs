@@ -25,8 +25,8 @@ impl Default for ShellEventsBridge {
     }
 }
 
-const EVENT_SHELL_EVENTS_REQUEST: &str = "openwork-shell-events-request";
-const EVENT_SHELL_CLEAR_REQUEST: &str = "openwork-shell-clear-request";
+const EVENT_SHELL_EVENTS_REQUEST: &str = "aiwork-shell-events-request";
+const EVENT_SHELL_CLEAR_REQUEST: &str = "aiwork-shell-clear-request";
 
 #[derive(Clone, Serialize)]
 struct ShellEventsRequestPayload {

@@ -18,12 +18,12 @@ export const MIGRATION_SNAPSHOT_VERSION = 1;
 // Keep this list tiny and strict. Adding keys here expands blast radius
 // if a later release renames them.
 export const MIGRATION_KEY_PATTERNS: Array<RegExp> = [
-  /^openwork\.react\.activeWorkspace$/,
-  /^openwork\.react\.sessionByWorkspace$/,
-  /^openwork\.server\.list$/,
-  /^openwork\.server\.active$/,
-  /^openwork\.server\.urlOverride$/,
-  /^openwork\.server\.token$/,
+  /^aiwork\.react\.activeWorkspace$/,
+  /^aiwork\.react\.sessionByWorkspace$/,
+  /^aiwork\.server\.list$/,
+  /^aiwork\.server\.active$/,
+  /^aiwork\.server\.urlOverride$/,
+  /^aiwork\.server\.token$/,
 ];
 
 export type MigrationSnapshot = {
@@ -88,8 +88,8 @@ type ElectronMigrationBridge = {
 function electronMigrationBridge(): ElectronMigrationBridge | null {
   if (typeof window === "undefined") return null;
   const bridge = (window as unknown as {
-    __OPENWORK_ELECTRON__?: { migration?: ElectronMigrationBridge };
-  }).__OPENWORK_ELECTRON__;
+    __AIWORK_ELECTRON__?: { migration?: ElectronMigrationBridge };
+  }).__AIWORK_ELECTRON__;
   return bridge?.migration ?? null;
 }
 

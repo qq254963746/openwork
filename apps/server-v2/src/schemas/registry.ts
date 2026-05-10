@@ -11,7 +11,7 @@ export const authSummarySchema = z.object({
   }),
   headers: z.object({
     authorization: z.literal("Authorization"),
-    hostToken: z.literal("X-OpenWork-Host-Token"),
+    hostToken: z.literal("X-AiWork-Host-Token"),
   }),
   required: z.boolean(),
   scopes: z.object({
@@ -19,7 +19,7 @@ export const authSummarySchema = z.object({
     serverInventory: z.literal("host"),
     visibleRead: z.literal("client_or_host"),
   }),
-}).meta({ ref: "OpenWorkServerV2AuthSummary" });
+}).meta({ ref: "AiWorkServerV2AuthSummary" });
 
 export const serverInventoryItemSchema = z.object({
   auth: z.object({
@@ -37,7 +37,7 @@ export const serverInventoryItemSchema = z.object({
   lastSeenAt: isoTimestampSchema.nullable(),
   source: z.string(),
   updatedAt: isoTimestampSchema,
-}).meta({ ref: "OpenWorkServerV2ServerInventoryItem" });
+}).meta({ ref: "AiWorkServerV2ServerInventoryItem" });
 
 export const registrySummarySchema = z.object({
   hiddenWorkspaceCount: z.number().int().nonnegative(),
@@ -45,7 +45,7 @@ export const registrySummarySchema = z.object({
   remoteServerCount: z.number().int().nonnegative(),
   totalServers: z.number().int().nonnegative(),
   visibleWorkspaceCount: z.number().int().nonnegative(),
-}).meta({ ref: "OpenWorkServerV2RegistrySummary" });
+}).meta({ ref: "AiWorkServerV2RegistrySummary" });
 
 export const capabilitiesDataSchema = z.object({
   auth: authSummarySchema,
@@ -125,13 +125,13 @@ export const capabilitiesDataSchema = z.object({
   }),
   transport: z.object({
     rootMounted: z.literal(true),
-    sdkPackage: z.literal("@openwork/server-sdk"),
+    sdkPackage: z.literal("@aiwork/server-sdk"),
     v2: z.literal(true),
   }),
-}).meta({ ref: "OpenWorkServerV2CapabilitiesData" });
+}).meta({ ref: "AiWorkServerV2CapabilitiesData" });
 
 const workspaceBackendSchema = z.object({
-  kind: z.enum(["local_opencode", "remote_openwork"]),
+  kind: z.enum(["local_opencode", "remote_aiwork"]),
   local: z.object({
     configDir: z.string().nullable(),
     dataDir: z.string().nullable(),
@@ -140,21 +140,21 @@ const workspaceBackendSchema = z.object({
   remote: z.object({
     directory: z.string().nullable(),
     hostUrl: z.string().nullable(),
-    remoteType: z.enum(["openwork", "opencode"]),
+    remoteType: z.enum(["aiwork", "opencode"]),
     remoteWorkspaceId: z.string().nullable(),
     workspaceName: z.string().nullable(),
   }).nullable(),
   serverId: identifierSchema,
-}).meta({ ref: "OpenWorkServerV2WorkspaceBackend" });
+}).meta({ ref: "AiWorkServerV2WorkspaceBackend" });
 
 const workspaceRuntimeSummarySchema = z.object({
-  backendKind: z.enum(["local_opencode", "remote_openwork"]),
+  backendKind: z.enum(["local_opencode", "remote_aiwork"]),
   health: jsonObjectSchema.nullable(),
   lastError: jsonObjectSchema.nullable(),
   lastSessionRefreshAt: isoTimestampSchema.nullable(),
   lastSyncAt: isoTimestampSchema.nullable(),
   updatedAt: isoTimestampSchema.nullable(),
-}).meta({ ref: "OpenWorkServerV2WorkspaceRuntimeSummary" });
+}).meta({ ref: "AiWorkServerV2WorkspaceRuntimeSummary" });
 
 export const workspaceSummaryDataSchema = z.object({
   backend: workspaceBackendSchema,
@@ -169,19 +169,19 @@ export const workspaceSummaryDataSchema = z.object({
   slug: z.string(),
   status: z.enum(["ready", "imported", "attention"]),
   updatedAt: isoTimestampSchema,
-}).meta({ ref: "OpenWorkServerV2WorkspaceSummaryData" });
+}).meta({ ref: "AiWorkServerV2WorkspaceSummaryData" });
 
 export const workspaceDetailDataSchema = workspaceSummaryDataSchema.extend({
   notes: jsonObjectSchema.nullable(),
-}).meta({ ref: "OpenWorkServerV2WorkspaceDetailData" });
+}).meta({ ref: "AiWorkServerV2WorkspaceDetailData" });
 
 export const workspaceListDataSchema = z.object({
   items: z.array(workspaceSummaryDataSchema),
-}).meta({ ref: "OpenWorkServerV2WorkspaceListData" });
+}).meta({ ref: "AiWorkServerV2WorkspaceListData" });
 
 export const serverInventoryListDataSchema = z.object({
   items: z.array(serverInventoryItemSchema),
-}).meta({ ref: "OpenWorkServerV2ServerInventoryListData" });
+}).meta({ ref: "AiWorkServerV2ServerInventoryListData" });
 
 export const remoteServerConnectRequestSchema = z.object({
   baseUrl: z.string().min(1),
@@ -190,18 +190,18 @@ export const remoteServerConnectRequestSchema = z.object({
   label: z.string().nullable().optional(),
   token: z.string().nullable().optional(),
   workspaceId: z.string().nullable().optional(),
-}).meta({ ref: "OpenWorkServerV2RemoteServerConnectRequest" });
+}).meta({ ref: "AiWorkServerV2RemoteServerConnectRequest" });
 
 export const remoteServerSyncRequestSchema = z.object({
   directory: z.string().nullable().optional(),
   workspaceId: z.string().nullable().optional(),
-}).meta({ ref: "OpenWorkServerV2RemoteServerSyncRequest" });
+}).meta({ ref: "AiWorkServerV2RemoteServerSyncRequest" });
 
 export const remoteServerConnectDataSchema = z.object({
   selectedWorkspaceId: identifierSchema.nullable(),
   server: serverInventoryItemSchema,
   workspaces: z.array(workspaceSummaryDataSchema),
-}).meta({ ref: "OpenWorkServerV2RemoteServerConnectData" });
+}).meta({ ref: "AiWorkServerV2RemoteServerConnectData" });
 
 export const systemStatusDataSchema = z.object({
   auth: authSummarySchema,
@@ -240,22 +240,22 @@ export const systemStatusDataSchema = z.object({
     source: z.enum(["development", "release"]),
     target: z.enum(["darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64", "windows-arm64", "windows-x64"]),
   }),
-  service: z.literal("openwork-server-v2"),
+  service: z.literal("aiwork-server-v2"),
   startedAt: isoTimestampSchema,
   status: z.literal("ok"),
   uptimeMs: z.number().int().nonnegative(),
   version: z.string(),
-}).meta({ ref: "OpenWorkServerV2SystemStatusData" });
+}).meta({ ref: "AiWorkServerV2SystemStatusData" });
 
-export const capabilitiesResponseSchema = successResponseSchema("OpenWorkServerV2CapabilitiesResponse", capabilitiesDataSchema);
+export const capabilitiesResponseSchema = successResponseSchema("AiWorkServerV2CapabilitiesResponse", capabilitiesDataSchema);
 export const serverInventoryListResponseSchema = successResponseSchema(
-  "OpenWorkServerV2ServerInventoryListResponse",
+  "AiWorkServerV2ServerInventoryListResponse",
   serverInventoryListDataSchema,
 );
 export const remoteServerConnectResponseSchema = successResponseSchema(
-  "OpenWorkServerV2RemoteServerConnectResponse",
+  "AiWorkServerV2RemoteServerConnectResponse",
   remoteServerConnectDataSchema,
 );
-export const systemStatusResponseSchema = successResponseSchema("OpenWorkServerV2SystemStatusResponse", systemStatusDataSchema);
-export const workspaceDetailResponseSchema = successResponseSchema("OpenWorkServerV2WorkspaceDetailResponse", workspaceDetailDataSchema);
-export const workspaceListResponseSchema = successResponseSchema("OpenWorkServerV2WorkspaceListResponse", workspaceListDataSchema);
+export const systemStatusResponseSchema = successResponseSchema("AiWorkServerV2SystemStatusResponse", systemStatusDataSchema);
+export const workspaceDetailResponseSchema = successResponseSchema("AiWorkServerV2WorkspaceDetailResponse", workspaceDetailDataSchema);
+export const workspaceListResponseSchema = successResponseSchema("AiWorkServerV2WorkspaceListResponse", workspaceListDataSchema);

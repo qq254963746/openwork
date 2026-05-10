@@ -1,5 +1,5 @@
 import { desktopFetch } from "../lib/desktop";
-import type { OpenworkServerClient } from "../lib/openwork-server";
+import type { AiWorkServerClient } from "../lib/aiwork-server";
 import { isDesktopRuntime, safeStringify } from "../utils";
 import { parseBundlePayload } from "./schema";
 import type { BundleImportIntent, BundleRequest, BundleV1 } from "./types";
@@ -7,7 +7,7 @@ import { extractBundleId, isConfiguredBundlePublisherUrl } from "./url-policy";
 
 function isSupportedDeepLinkProtocol(protocol: string): boolean {
   const normalized = protocol.toLowerCase();
-  return normalized === "openwork:" || normalized === "openwork-dev:" || normalized === "https:" || normalized === "http:";
+  return normalized === "aiwork:" || normalized === "aiwork-dev:" || normalized === "https:" || normalized === "http:";
 }
 
 export function normalizeBundleImportIntent(value: string | null | undefined): BundleImportIntent {
@@ -95,7 +95,7 @@ export function stripBundleQuery(rawUrl: string): string | null {
 
 export async function fetchBundle(
   bundleUrl: string,
-  serverClient?: OpenworkServerClient | null,
+  serverClient?: AiWorkServerClient | null,
   options?: { forceClientFetch?: boolean },
 ): Promise<BundleV1> {
   let targetUrl: URL;

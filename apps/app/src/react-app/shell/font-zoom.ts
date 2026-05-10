@@ -24,7 +24,7 @@ export function useDesktopFontZoomBehavior() {
       void setDesktopZoomFactor(next)
         .then((applied) => {
           if (applied) {
-            document.documentElement.style.removeProperty("--openwork-font-size");
+            document.documentElement.style.removeProperty("--aiwork-font-size");
             return;
           }
           applyFontZoom(document.documentElement.style, next);

@@ -5,8 +5,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, HashRouter } from "react-router-dom";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { initializeOpenworkBootstrapConfig } from "./app/lib/openwork-bootstrap";
-import { getOpenWorkDeployment } from "./app/lib/openwork-deployment";
+import { initializeAiWorkBootstrapConfig } from "./app/lib/aiwork-bootstrap";
+import { getAiWorkDeployment } from "./app/lib/aiwork-deployment";
 import { bootstrapTheme } from "./app/theme";
 import { isDesktopRuntime } from "./app/utils";
 import { initLocale } from "./i18n";
@@ -26,7 +26,7 @@ import "./app/index.css";
 bootstrapTheme();
 initLocale();
 startDeepLinkBridge();
-await initializeOpenworkBootstrapConfig();
+await initializeAiWorkBootstrapConfig();
 
 applyLogViewerPopupNavigationFromStorage();
 installDesktopLogViewerHostBridge();
@@ -38,7 +38,7 @@ if (!root) {
   throw new Error("Root element not found");
 }
 
-root.dataset.openworkDeployment = getOpenWorkDeployment();
+root.dataset.aiworkDeployment = getAiWorkDeployment();
 
 const platform = createDefaultPlatform();
 const queryClient = getReactQueryClient();

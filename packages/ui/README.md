@@ -1,17 +1,17 @@
-# @openwork/ui
+# @aiwork/ui
 
-Shared UI primitives for OpenWork apps.
+Shared UI primitives for AiWork apps.
 
 This package intentionally ships two framework-specific entrypoints:
 
-- `@openwork/ui/react` for React apps that consume the published `@openwork/ui` workspace package
-- `@openwork/ui/solid` for Solid apps like `apps/app`
+- `@aiwork/ui/react` for React apps that consume the published `@aiwork/ui` workspace package
+- `@aiwork/ui/solid` for Solid apps like `apps/app`
 
 The public API should stay aligned across both entrypoints. If you add a new component, add both implementations in the same task unless there is a documented blocker.
 
 ## Paper components
 
-The first shared components live under the `paper` namespace and wrap Paper Design shaders with OpenWork-specific defaults and deterministic seed support.
+The first shared components live under the `paper` namespace and wrap Paper Design shaders with AiWork-specific defaults and deterministic seed support.
 
 Current components:
 
@@ -22,7 +22,7 @@ Both accept a `seed` prop. Pass a TypeID-like string such as `om_01kmhbscaze02vp
 
 Explicit props still work and override the seeded values, so the merge order is:
 
-1. OpenWork defaults
+1. AiWork defaults
 2. Seed-derived values from `seed`
 3. Explicit props passed by the caller
 

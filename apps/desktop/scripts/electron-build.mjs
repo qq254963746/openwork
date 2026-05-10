@@ -25,11 +25,11 @@ function run(command, args, cwd, env) {
 }
 
 run(nodeCmd, [resolve(__dirname, "prepare-sidecar.mjs"), "--force", "--outdir", electronSidecarDir], desktopRoot);
-// OPENWORK_ELECTRON_BUILD tells Vite to emit relative asset paths so
+// AIWORK_ELECTRON_BUILD tells Vite to emit relative asset paths so
 // index.html resolves /assets/* correctly when loaded via file:// from
 // inside the packaged .app bundle.
-run(pnpmCmd, ["--filter", "@openwork/app", "build"], repoRoot, {
-  OPENWORK_ELECTRON_BUILD: "1",
+run(pnpmCmd, ["--filter", "@aiwork/app", "build"], repoRoot, {
+  AIWORK_ELECTRON_BUILD: "1",
 });
 for (const fileName of readdirSync(electronRoot).filter((name) => name.endsWith(".mjs")).sort()) {
   run(nodeCmd, ["--check", resolve(electronRoot, fileName)], repoRoot);

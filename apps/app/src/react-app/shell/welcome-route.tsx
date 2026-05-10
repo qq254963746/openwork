@@ -14,8 +14,8 @@ import { isDesktopRuntime } from "../../app/utils";
 import { useLocal } from "../kernel/local-provider";
 import { WelcomePage } from "../domains/onboarding/welcome-page";
 import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-modal";
-import { resolveOpenworkConnection } from "./openwork-connection";
-import { createOpenworkServerClient } from "../../app/lib/openwork-server";
+import { resolveAiWorkConnection } from "./aiwork-connection";
+import { createAiWorkServerClient } from "../../app/lib/aiwork-server";
 import { writeActiveWorkspaceId } from "./session-memory";
 import { workspaceSettingsRoute } from "./workspace-routes";
 
@@ -72,17 +72,17 @@ export function WelcomeRoute() {
           await workspaceSetRuntimeActive(createdId).catch(() => undefined);
           writeActiveWorkspaceId(createdId);
         }
-        // Register with the running openwork-server if available.
+        // Register with the running aiwork-server if available.
         try {
           const { normalizedBaseUrl, resolvedToken, resolvedHostToken } =
-            await resolveOpenworkConnection();
+            await resolveAiWorkConnection();
           if (normalizedBaseUrl && resolvedToken) {
-            const openworkClient = createOpenworkServerClient({
+            const aiworkClient = createAiWorkServerClient({
               baseUrl: normalizedBaseUrl,
               token: resolvedToken,
               hostToken: resolvedHostToken || undefined,
             });
-            await openworkClient
+            await aiworkClient
               .createLocalWorkspace({
                 folderPath: folder,
                 name: workspaceName,

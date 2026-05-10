@@ -20,7 +20,7 @@ export type WorkspaceBackend = {
   remote: null | {
     directory: string | null;
     hostUrl: string | null;
-    remoteType: "openwork" | "opencode";
+    remoteType: "aiwork" | "opencode";
     remoteWorkspaceId: string | null;
     workspaceName: string | null;
   };
@@ -80,14 +80,14 @@ function readRemoteDirectory(workspace: WorkspaceRecord) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function readRemoteType(workspace: WorkspaceRecord): "openwork" | "opencode" {
+function readRemoteType(workspace: WorkspaceRecord): "aiwork" | "opencode" {
   const explicit = workspace.notes?.remoteType;
-  return explicit === "opencode" ? "opencode" : "openwork";
+  return explicit === "opencode" ? "opencode" : "aiwork";
 }
 
 function readRemoteWorkspaceName(workspace: WorkspaceRecord) {
   const legacyDesktop = asJsonObject(workspace.notes?.legacyDesktop);
-  const value = legacyDesktop?.openworkWorkspaceName;
+  const value = legacyDesktop?.aiworkWorkspaceName;
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
@@ -110,9 +110,9 @@ export function createWorkspaceRegistryService(input: {
 
   function resolveBackend(workspace: WorkspaceRecord): WorkspaceBackend {
     const runtimeState = repositories.workspaceRuntimeState.getByWorkspaceId(workspace.id);
-    const backendKind = runtimeState?.backendKind ?? (workspace.kind === "remote" ? "remote_openwork" : "local_opencode");
+    const backendKind = runtimeState?.backendKind ?? (workspace.kind === "remote" ? "remote_aiwork" : "local_opencode");
 
-    if (backendKind === "remote_openwork") {
+    if (backendKind === "remote_aiwork") {
       const server = input.servers.getById(workspace.serverId);
       return {
         kind: backendKind,

@@ -1,5 +1,5 @@
-export const deepLinkBridgeEvent = "openwork:deep-link";
-export const nativeDeepLinkEvent = "openwork:deep-link-native";
+export const deepLinkBridgeEvent = "aiwork:deep-link";
+export const nativeDeepLinkEvent = "aiwork:deep-link-native";
 
 export type DeepLinkBridgeDetail = {
   urls: string[];
@@ -7,7 +7,7 @@ export type DeepLinkBridgeDetail = {
 
 declare global {
   interface Window {
-    __OPENWORK__?: {
+    __AIWORK__?: {
       deepLinks?: string[];
     };
   }
@@ -23,9 +23,9 @@ export function pushPendingDeepLinks(target: Window, urls: readonly string[]): s
     return [];
   }
 
-  target.__OPENWORK__ ??= {};
-  const pending = target.__OPENWORK__.deepLinks ?? [];
-  target.__OPENWORK__.deepLinks = [...pending, ...normalized];
+  target.__AIWORK__ ??= {};
+  const pending = target.__AIWORK__.deepLinks ?? [];
+  target.__AIWORK__.deepLinks = [...pending, ...normalized];
   target.dispatchEvent(
     new CustomEvent<DeepLinkBridgeDetail>(deepLinkBridgeEvent, {
       detail: { urls: normalized },
@@ -35,9 +35,9 @@ export function pushPendingDeepLinks(target: Window, urls: readonly string[]): s
 }
 
 export function drainPendingDeepLinks(target: Window): string[] {
-  const pending = target.__OPENWORK__?.deepLinks ?? [];
-  if (target.__OPENWORK__) {
-    target.__OPENWORK__.deepLinks = [];
+  const pending = target.__AIWORK__?.deepLinks ?? [];
+  if (target.__AIWORK__) {
+    target.__AIWORK__.deepLinks = [];
   }
   return [...pending];
 }

@@ -23,9 +23,9 @@ export function CreateRemoteWorkspaceModal(
 ) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const [openworkHostUrl, setOpenworkHostUrl] = useState("");
-  const [openworkToken, setOpenworkToken] = useState("");
-  const [openworkTokenVisible, setOpenworkTokenVisible] = useState(false);
+  const [aiworkHostUrl, setAiWorkHostUrl] = useState("");
+  const [aiworkToken, setAiWorkToken] = useState("");
+  const [aiworkTokenVisible, setAiWorkTokenVisible] = useState(false);
   const [directory, setDirectory] = useState("");
   const [displayName, setDisplayName] = useState("");
 
@@ -40,8 +40,8 @@ export function CreateRemoteWorkspaceModal(
 
   const canSubmit = useMemo(() => {
     if (submitting) return false;
-    return openworkHostUrl.trim().length > 0;
-  }, [openworkHostUrl, submitting]);
+    return aiworkHostUrl.trim().length > 0;
+  }, [aiworkHostUrl, submitting]);
 
   useEffect(() => {
     if (!props.open) return;
@@ -52,9 +52,9 @@ export function CreateRemoteWorkspaceModal(
   useEffect(() => {
     if (!props.open) return;
     const defaults = props.initialValues ?? {};
-    setOpenworkHostUrl(defaults.openworkHostUrl?.trim() ?? "");
-    setOpenworkToken(defaults.openworkToken?.trim() ?? "");
-    setOpenworkTokenVisible(false);
+    setAiWorkHostUrl(defaults.aiworkHostUrl?.trim() ?? "");
+    setAiWorkToken(defaults.aiworkToken?.trim() ?? "");
+    setAiWorkTokenVisible(false);
     setDirectory(defaults.directory?.trim() ?? "");
     setDisplayName(defaults.displayName?.trim() ?? "");
   }, [props.initialValues, props.open]);
@@ -83,13 +83,13 @@ export function CreateRemoteWorkspaceModal(
 
       <div className={modalBodyClass}>
         <RemoteWorkspaceFields
-          hostUrl={openworkHostUrl}
-          onHostUrlInput={setOpenworkHostUrl}
-          token={openworkToken}
-          tokenVisible={openworkTokenVisible}
-          onTokenInput={setOpenworkToken}
+          hostUrl={aiworkHostUrl}
+          onHostUrlInput={setAiWorkHostUrl}
+          token={aiworkToken}
+          tokenVisible={aiworkTokenVisible}
+          onTokenInput={setAiWorkToken}
           onToggleTokenVisible={() =>
-            setOpenworkTokenVisible((prev) => !prev)
+            setAiWorkTokenVisible((prev) => !prev)
           }
           displayName={displayName}
           onDisplayNameInput={setDisplayName}
@@ -99,7 +99,7 @@ export function CreateRemoteWorkspaceModal(
           submitting={submitting}
           hostInputRef={inputRef}
           title="Remote server details"
-          description="Use the URL your OpenWork server shared with you. Add a token only if the server needs one."
+          description="Use the URL your AiWork server shared with you. Add a token only if the server needs one."
         />
       </div>
 
@@ -122,15 +122,15 @@ export function CreateRemoteWorkspaceModal(
             type="button"
             onClick={() =>
               props.onConfirm({
-                openworkHostUrl: openworkHostUrl.trim(),
-                openworkToken: openworkToken.trim(),
+                aiworkHostUrl: aiworkHostUrl.trim(),
+                aiworkToken: aiworkToken.trim(),
                 directory: directory.trim() ? directory.trim() : null,
                 displayName: displayName.trim() ? displayName.trim() : null,
               })
             }
             disabled={!canSubmit}
             title={
-              !openworkHostUrl.trim()
+              !aiworkHostUrl.trim()
                 ? t("dashboard.remote_base_url_required")
                 : undefined
             }

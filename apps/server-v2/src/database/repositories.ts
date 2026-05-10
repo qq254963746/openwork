@@ -93,7 +93,7 @@ type RawServerConfigStateRow = {
 };
 
 type RawWorkspaceConfigStateRow = {
-  openwork_json: string;
+  aiwork_json: string;
   opencode_json: string;
   updated_at: string;
   workspace_id: string;
@@ -261,7 +261,7 @@ function mapWorkspaceConfigState(row: RawWorkspaceConfigStateRow | null | undefi
   }
 
   return {
-    openwork: parseJsonValue(row.openwork_json, {}),
+    aiwork: parseJsonValue(row.aiwork_json, {}),
     opencode: parseJsonValue(row.opencode_json, {}),
     updatedAt: row.updated_at,
     workspaceId: row.workspace_id,
@@ -651,17 +651,17 @@ export class WorkspaceConfigStateRepository {
     this.database
       .query(
         `
-          INSERT INTO workspace_config_state (workspace_id, openwork_json, opencode_json, updated_at)
+          INSERT INTO workspace_config_state (workspace_id, aiwork_json, opencode_json, updated_at)
           VALUES (?1, ?2, ?3, ?4)
           ON CONFLICT(workspace_id) DO UPDATE SET
-            openwork_json = excluded.openwork_json,
+            aiwork_json = excluded.aiwork_json,
             opencode_json = excluded.opencode_json,
             updated_at = excluded.updated_at
         `,
       )
       .run(
         input.workspaceId,
-        stringifyJsonValue(input.openwork),
+        stringifyJsonValue(input.aiwork),
         stringifyJsonValue(input.opencode),
         updatedAt,
       );

@@ -9,9 +9,9 @@ pnpm release:review
 pnpm -C apps/desktop prepare:sidecar
 
 查看版本是否对
-apps/desktop/src-tauri/sidecars/openwork-server --version
+apps/desktop/src-tauri/sidecars/aiwork-server --version
 
-pnpm --filter @openwork/desktop exec tauri build \
+pnpm --filter @aiwork/desktop exec tauri build \
   --target aarch64-apple-darwin \
   --bundles dmg,app \
   --config '{"bundle":{"createUpdaterArtifacts":false}}'
@@ -19,7 +19,7 @@ pnpm --filter @openwork/desktop exec tauri build \
 
 # Release checklist
 
-OpenWork releases should be deterministic, easy to reproduce, and fully verifiable with CLI tooling.
+AiWork releases should be deterministic, easy to reproduce, and fully verifiable with CLI tooling.
 
 ## Preflight
 
@@ -33,39 +33,39 @@ OpenWork releases should be deterministic, easy to reproduce, and fully verifiab
     - `pnpm bump:patch` or `pnpm bump:minor` or `pnpm bump:major`
 2. Re-run `pnpm release:review`.
 3. Build sidecars for the desktop bundle:
-   - `pnpm --filter @fengai/openwork prepare:sidecar`
+   - `pnpm --filter @fengai/aiwork prepare:sidecar`
 4. Commit the version bump.
 5. Tag and push:
    - `git tag vX.Y.Z`
    - `git push origin vX.Y.Z`
 
-## openwork-orchestrator (npm + sidecars)
+## aiwork-orchestrator (npm + sidecars)
 
 1. Bump versions (includes `packages/orchestrator/package.json`):
    - `pnpm bump:patch` or `pnpm bump:minor` or `pnpm bump:major`
 2. Build sidecar assets and manifest:
-   - `pnpm --filter openwork-orchestrator build:sidecars`
+   - `pnpm --filter aiwork-orchestrator build:sidecars`
 3. Create the GitHub release for sidecars:
-   - `gh release create openwork-orchestrator-vX.Y.Z packages/orchestrator/dist/sidecars/* --repo fengai/openwork`
+   - `gh release create aiwork-orchestrator-vX.Y.Z packages/orchestrator/dist/sidecars/* --repo fengai/aiwork`
 4. Publish the package:
-   - `pnpm --filter openwork-orchestrator publish --access public`
+   - `pnpm --filter aiwork-orchestrator publish --access public`
 
-## openwork-server + opencode-router (if version changed)
+## aiwork-server + opencode-router (if version changed)
 
-- `pnpm --filter openwork-server publish --access public`
+- `pnpm --filter aiwork-server publish --access public`
 - `pnpm --filter opencode-router publish --access public`
 
 ## Verification
 
-- `openwork start --workspace /path/to/workspace --check --check-events`
-- `gh run list --repo fengai/openwork --workflow "Release App" --limit 5`
-- `gh release view vX.Y.Z --repo fengai/openwork`
+- `aiwork start --workspace /path/to/workspace --check --check-events`
+- `gh run list --repo fengai/aiwork --workflow "Release App" --limit 5`
+- `gh release view vX.Y.Z --repo fengai/aiwork`
 
 Use `pnpm release:review --json` when automating these checks in scripts or agents.
 
 ## npm publishing
 
-If you want `Release App` to publish `openwork-orchestrator`, `openwork-server`, and `opencode-router` to npm, configure:
+If you want `Release App` to publish `aiwork-orchestrator`, `aiwork-server`, and `opencode-router` to npm, configure:
 
 - GitHub Actions secret: `NPM_TOKEN` (npm automation token)
 

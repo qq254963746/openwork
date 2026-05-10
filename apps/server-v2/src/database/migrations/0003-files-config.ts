@@ -9,7 +9,7 @@ export const phase7FilesConfigMigration = {
 
     CREATE TABLE IF NOT EXISTS workspace_config_state (
       workspace_id TEXT PRIMARY KEY REFERENCES workspaces(id) ON DELETE CASCADE,
-      openwork_json TEXT NOT NULL DEFAULT '{}',
+      aiwork_json TEXT NOT NULL DEFAULT '{}',
       opencode_json TEXT NOT NULL DEFAULT '{}',
       updated_at TEXT NOT NULL
     );

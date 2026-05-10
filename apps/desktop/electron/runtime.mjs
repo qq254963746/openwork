@@ -7,9 +7,9 @@ import os from "node:os";
 import path from "node:path";
 
 const DIRECT_RUNTIME = "direct";
-const ORCHESTRATOR_RUNTIME = "openwork-orchestrator";
-const OPENWORK_SERVER_PORT_RANGE_START = 48_000;
-const OPENWORK_SERVER_PORT_RANGE_END = 51_000;
+const ORCHESTRATOR_RUNTIME = "aiwork-orchestrator";
+const AIWORK_SERVER_PORT_RANGE_START = 48_000;
+const AIWORK_SERVER_PORT_RANGE_END = 51_000;
 
 function truncateOutput(value, limit = 8000) {
   const text = String(value ?? "");
@@ -68,7 +68,7 @@ function snapshotEngineState(state) {
   };
 }
 
-function createOpenworkServerState() {
+function createAiWorkServerState() {
   return {
     child: null,
     childExited: true,
@@ -89,7 +89,7 @@ function createOpenworkServerState() {
   };
 }
 
-function snapshotOpenworkServerState(state) {
+function snapshotAiWorkServerState(state) {
   const child = state.childExited ? null : state.child;
   return {
     running: Boolean(child && child.exitCode === null && !child.killed),
@@ -111,15 +111,15 @@ function snapshotOpenworkServerState(state) {
   };
 }
 
-function assertOpenworkServerReady(snapshot) {
+function assertAiWorkServerReady(snapshot) {
   if (!snapshot?.running) {
-    throw new Error("OpenWork server did not stay running after startup.");
+    throw new Error("AiWork server did not stay running after startup.");
   }
   if (!snapshot.baseUrl) {
-    throw new Error("OpenWork server did not report a base URL after startup.");
+    throw new Error("AiWork server did not report a base URL after startup.");
   }
   if (!snapshot.ownerToken && !snapshot.clientToken) {
-    throw new Error("OpenWork server did not report an access token after startup.");
+    throw new Error("AiWork server did not report an access token after startup.");
   }
   return snapshot;
 }
@@ -365,25 +365,25 @@ async function fetchJson(url, options = {}, timeoutMs = 3000) {
   }
 }
 
-// Resolves ~/.config/openwork/env.json (or %APPDATA%\openwork\env.json on
+// Resolves ~/.config/aiwork/env.json (or %APPDATA%\aiwork\env.json on
 // Windows) — must agree byte-for-byte with apps/server/src/env-file.ts and
-// apps/desktop/src-tauri/src/env_file.rs. Honor OPENWORK_ENV_STORE override.
+// apps/desktop/src-tauri/src/env_file.rs. Honor AIWORK_ENV_STORE override.
 function resolveUserEnvFilePath() {
-  const override = String(process.env.OPENWORK_ENV_STORE ?? "").trim();
+  const override = String(process.env.AIWORK_ENV_STORE ?? "").trim();
   if (override) return path.resolve(override);
   if (process.platform === "win32") {
     const appData = String(process.env.APPDATA ?? "").trim();
     const root = appData || path.join(os.homedir(), "AppData", "Roaming");
-    return path.join(root, "openwork", "env.json");
+    return path.join(root, "aiwork", "env.json");
   }
-  return path.join(os.homedir(), ".config", "openwork", "env.json");
+  return path.join(os.homedir(), ".config", "aiwork", "env.json");
 }
 
 const USER_ENV_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const USER_ENV_RESERVED_PREFIXES = ["OPENWORK_", "OPENCODE_"];
+const USER_ENV_RESERVED_PREFIXES = ["AIWORK_", "OPENCODE_"];
 
 // Synchronous, best-effort; absent or malformed returns {}. Reserved prefixes
-// are stripped so a tampered file can never shadow OPENWORK_* / OPENCODE_*.
+// are stripped so a tampered file can never shadow AIWORK_* / OPENCODE_*.
 function loadUserEnvFile() {
   try {
     const raw = readFileSync(resolveUserEnvFilePath(), "utf8");
@@ -406,7 +406,7 @@ function loadUserEnvFile() {
 
 export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths }) {
   const engineState = createEngineState();
-  const openworkServerState = createOpenworkServerState();
+  const aiworkServerState = createAiWorkServerState();
   const orchestratorState = createOrchestratorState();
 
   // Serialize engine lifecycle operations. Without this, concurrent renderer
@@ -428,12 +428,12 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     path.join(path.dirname(app.getPath("exe")), "sidecars"),
   ].filter(Boolean);
 
-  function openworkServerTokenStorePath() {
-    return path.join(userDataDir, "openwork-server-tokens.json");
+  function aiworkServerTokenStorePath() {
+    return path.join(userDataDir, "aiwork-server-tokens.json");
   }
 
-  function openworkServerStatePath() {
-    return path.join(userDataDir, "openwork-server-state.json");
+  function aiworkServerStatePath() {
+    return path.join(userDataDir, "aiwork-server-state.json");
   }
 
   function managedOpencodeWorkdir() {
@@ -441,17 +441,17 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
   }
 
   function orchestratorDataDir() {
-    const envDir = process.env.OPENWORK_DATA_DIR?.trim();
+    const envDir = process.env.AIWORK_DATA_DIR?.trim();
     if (envDir) return envDir;
-    return path.join(app.getPath("home"), ".openwork", "openwork-orchestrator");
+    return path.join(app.getPath("home"), ".aiwork", "aiwork-orchestrator");
   }
 
   function orchestratorStatePath(dataDir) {
-    return path.join(dataDir, "openwork-orchestrator-state.json");
+    return path.join(dataDir, "aiwork-orchestrator-state.json");
   }
 
   function orchestratorAuthPath(dataDir) {
-    return path.join(dataDir, "openwork-orchestrator-auth.json");
+    return path.join(dataDir, "aiwork-orchestrator-auth.json");
   }
 
   async function readOrchestratorStateFile(dataDir) {
@@ -488,17 +488,17 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
   }
 
   async function loadTokenStore() {
-    return readJsonFile(openworkServerTokenStorePath(), { version: 1, workspaces: {} });
+    return readJsonFile(aiworkServerTokenStorePath(), { version: 1, workspaces: {} });
   }
 
   async function saveTokenStore(store) {
-    const filePath = openworkServerTokenStorePath();
+    const filePath = aiworkServerTokenStorePath();
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, `${JSON.stringify(store, null, 2)}\n`, "utf8");
   }
 
   async function loadPortState() {
-    return readJsonFile(openworkServerStatePath(), {
+    return readJsonFile(aiworkServerStatePath(), {
       version: 3,
       workspacePorts: {},
       preferredPort: null,
@@ -506,7 +506,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
   }
 
   async function savePortState(state) {
-    const filePath = openworkServerStatePath();
+    const filePath = aiworkServerStatePath();
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
   }
@@ -538,7 +538,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     await saveTokenStore(store);
   }
 
-  async function readPreferredOpenworkPort(workspaceKey) {
+  async function readPreferredAiWorkPort(workspaceKey) {
     const state = await loadPortState();
     const normalized = normalizeWorkspaceKey(workspaceKey);
     if (normalized && state.workspacePorts?.[normalized]) {
@@ -547,7 +547,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     return state.preferredPort ?? null;
   }
 
-  async function persistPreferredOpenworkPort(workspaceKey, port) {
+  async function persistPreferredAiWorkPort(workspaceKey, port) {
     const state = await loadPortState();
     const normalized = normalizeWorkspaceKey(workspaceKey);
     state.version = 3;
@@ -561,7 +561,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     await savePortState(state);
   }
 
-  async function resolveOpenworkPort(host, workspaceKey) {
+  async function resolveAiWorkPort(host, workspaceKey) {
     // Use a fresh port every boot. Persisted preferred ports made prod starts
     // fragile when an old sidecar held the previous port or shutdown was
     // unclean; Electron publishes the chosen URL to React after boot.
@@ -569,7 +569,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
   }
 
   async function ensureDevModePaths() {
-    const root = path.join(userDataDir, "openwork-dev-data");
+    const root = path.join(userDataDir, "aiwork-dev-data");
     const paths = {
       homeDir: path.join(root, "home"),
       xdgConfigHome: path.join(root, "xdg", "config"),
@@ -606,9 +606,9 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     if (pathEnv) {
       env[pathKey] = pathEnv;
     }
-    if (process.env.OPENWORK_DEV_MODE === "1") {
+    if (process.env.AIWORK_DEV_MODE === "1") {
       const devPaths = await ensureDevModePaths();
-      env.OPENWORK_DEV_MODE = "1";
+      env.AIWORK_DEV_MODE = "1";
       env.HOME = devPaths.homeDir;
       env.USERPROFILE = devPaths.homeDir;
       env.XDG_CONFIG_HOME = devPaths.xdgConfigHome;
@@ -628,19 +628,19 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     const candidates = [];
     const home = app.getPath("home");
 
-    if (process.env.OPENWORK_DEV_MODE === "1") {
+    if (process.env.AIWORK_DEV_MODE === "1") {
       if (process.platform === "darwin") {
         candidates.push({
           variant: "macos_electron_dev",
           dir: path.join(
             home,
-            "Library/Application Support/com.fengai.openwork.dev/openwork-dev-data/xdg/data/opencode/log",
+            "Library/Application Support/com.fengai.aiwork.dev/aiwork-dev-data/xdg/data/opencode/log",
           ),
         });
       }
       candidates.push({
-        variant: "openwork_dev_isolated",
-        dir: path.join(userDataDir, "openwork-dev-data", "xdg", "data", "opencode", "log"),
+        variant: "aiwork_dev_isolated",
+        dir: path.join(userDataDir, "aiwork-dev-data", "xdg", "data", "opencode", "log"),
       });
     }
 
@@ -801,7 +801,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     const candidates = [];
     const seen = new Set();
 
-    for (const key of ["OPENWORK_DOCKER_BIN", "OPENWRK_DOCKER_BIN", "DOCKER_BIN"]) {
+    for (const key of ["AIWORK_DOCKER_BIN", "OPENWRK_DOCKER_BIN", "DOCKER_BIN"]) {
       const value = process.env[key]?.trim();
       if (value && !seen.has(value)) {
         seen.add(value);
@@ -854,7 +854,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     }
 
     throw new Error(
-      `Failed to run docker: ${errors.join("; ")} (Set OPENWORK_DOCKER_BIN to your docker binary if needed)`,
+      `Failed to run docker: ${errors.join("; ")} (Set AIWORK_DOCKER_BIN to your docker binary if needed)`,
     );
   }
 
@@ -877,10 +877,10 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     const sanitized = String(runId ?? "")
       .replace(/[^a-zA-Z0-9_.-]+/g, "-")
       .slice(0, 24);
-    return `openwork-orchestrator-${sanitized}`;
+    return `aiwork-orchestrator-${sanitized}`;
   }
 
-  async function listOpenworkManagedContainers() {
+  async function listAiWorkManagedContainers() {
     const result = runDockerCommandDetailed(["ps", "-a", "--format", "{{.Names}}"], 8000);
     if (result.status !== 0) {
       const combined = `${result.stdout.trim()}\n${result.stderr.trim()}`.trim();
@@ -889,7 +889,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     return result.stdout
       .split(/\r?\n/)
       .map((line) => line.trim())
-      .filter((name) => name && (name.startsWith("openwork-orchestrator-") || name.startsWith("openwork-dev-") || name.startsWith("openwrk-")))
+      .filter((name) => name && (name.startsWith("aiwork-orchestrator-") || name.startsWith("aiwork-dev-") || name.startsWith("openwrk-")))
       .sort();
   }
 
@@ -994,8 +994,8 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     const value = String(command ?? "");
     return sidecarDirs.some((dir) => value.includes(dir)) &&
       (
-        value.includes("openwork-orchestrator") ||
-        value.includes("openwork-server") ||
+        value.includes("aiwork-orchestrator") ||
+        value.includes("aiwork-server") ||
         value.includes("opencode serve")
       );
   }
@@ -1087,9 +1087,9 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-OpenWork-Host-Token": hostToken,
+          "X-AiWork-Host-Token": hostToken,
         },
-        body: JSON.stringify({ scope: "owner", label: "OpenWork desktop owner token" }),
+        body: JSON.stringify({ scope: "owner", label: "AiWork desktop owner token" }),
       },
       5000,
     );
@@ -1097,18 +1097,18 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     return token || null;
   }
 
-  async function startOpenworkServer(options) {
-    await stopChild(openworkServerState);
+  async function startAiWorkServer(options) {
+    await stopChild(aiworkServerState);
 
     const workspacePaths = options.workspacePaths.filter((value) => value.trim().length > 0);
     const activeWorkspace = workspacePaths[0] ?? "";
     const host = options.remoteAccessEnabled ? "0.0.0.0" : "127.0.0.1";
-    const port = await resolveOpenworkPort(host, activeWorkspace);
+    const port = await resolveAiWorkPort(host, activeWorkspace);
     const baseUrl = `http://127.0.0.1:${port}`;
     const tokens = await loadOrCreateWorkspaceTokens(activeWorkspace);
-    const program = resolveBinary("openwork-server");
+    const program = resolveBinary("aiwork-server");
     if (!program) {
-      throw new Error("Failed to locate openwork-server.");
+      throw new Error("Failed to locate aiwork-server.");
     }
 
     const args = [
@@ -1126,48 +1126,48 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     ];
 
     const managedOpencode = options.manageOpencode ? resolveOpencodeBinary(options.opencodeBinPath) : null;
-    openworkServerState.managedOpencodeBinPath = managedOpencode?.path ?? null;
-    openworkServerState.managedOpencodeBinSource = managedOpencode?.source ?? null;
+    aiworkServerState.managedOpencodeBinPath = managedOpencode?.path ?? null;
+    aiworkServerState.managedOpencodeBinSource = managedOpencode?.source ?? null;
     if (options.manageOpencode) {
       engineState.opencodeBinPath = managedOpencode?.path ?? null;
       engineState.opencodeBinSource = managedOpencode?.source ?? null;
     }
 
     const env = await buildChildEnv({
-      OPENWORK_TOKEN: tokens.clientToken,
-      OPENWORK_HOST_TOKEN: tokens.hostToken,
-      ...(options.manageOpencode ? { OPENWORK_MANAGE_OPENCODE: "1" } : {}),
-      ...(options.manageOpencode ? { OPENWORK_OPENCODE_BIN: managedOpencode?.path ?? "" } : {}),
-      ...(options.manageOpencode ? { OPENWORK_MANAGED_OPENCODE_CWD: managedOpencodeWorkdir() } : {}),
-      ...(options.opencodeUsername ? { OPENWORK_OPENCODE_USERNAME: options.opencodeUsername } : {}),
-      ...(options.opencodePassword ? { OPENWORK_OPENCODE_PASSWORD: options.opencodePassword } : {}),
+      AIWORK_TOKEN: tokens.clientToken,
+      AIWORK_HOST_TOKEN: tokens.hostToken,
+      ...(options.manageOpencode ? { AIWORK_MANAGE_OPENCODE: "1" } : {}),
+      ...(options.manageOpencode ? { AIWORK_OPENCODE_BIN: managedOpencode?.path ?? "" } : {}),
+      ...(options.manageOpencode ? { AIWORK_MANAGED_OPENCODE_CWD: managedOpencodeWorkdir() } : {}),
+      ...(options.opencodeUsername ? { AIWORK_OPENCODE_USERNAME: options.opencodeUsername } : {}),
+      ...(options.opencodePassword ? { AIWORK_OPENCODE_PASSWORD: options.opencodePassword } : {}),
     });
 
-    spawnManagedChild(openworkServerState, program, args, {
+    spawnManagedChild(aiworkServerState, program, args, {
       cwd: activeWorkspace || desktopRoot,
       env,
     });
 
-    openworkServerState.remoteAccessEnabled = options.remoteAccessEnabled;
-    openworkServerState.host = host;
-    openworkServerState.port = port;
-    openworkServerState.baseUrl = baseUrl;
-    openworkServerState.clientToken = tokens.clientToken;
-    openworkServerState.hostToken = tokens.hostToken;
+    aiworkServerState.remoteAccessEnabled = options.remoteAccessEnabled;
+    aiworkServerState.host = host;
+    aiworkServerState.port = port;
+    aiworkServerState.baseUrl = baseUrl;
+    aiworkServerState.clientToken = tokens.clientToken;
+    aiworkServerState.hostToken = tokens.hostToken;
 
     const connectUrls = options.remoteAccessEnabled ? buildConnectUrls(port) : { connectUrl: null, mdnsUrl: null, lanUrl: null };
-    openworkServerState.connectUrl = connectUrls.connectUrl;
-    openworkServerState.mdnsUrl = connectUrls.mdnsUrl;
-    openworkServerState.lanUrl = connectUrls.lanUrl;
+    aiworkServerState.connectUrl = connectUrls.connectUrl;
+    aiworkServerState.mdnsUrl = connectUrls.mdnsUrl;
+    aiworkServerState.lanUrl = connectUrls.lanUrl;
 
     await waitForHttpOk(`${baseUrl}/health`, 10_000);
-    // Owner tokens live in the OpenWork server token store, which can be reset
+    // Owner tokens live in the AiWork server token store, which can be reset
     // independently from the desktop runtime token cache. Always mint a fresh
     // owner token for the newly-started server instead of trusting the cached
     // value; otherwise the renderer can receive a stale bearer token and all
     // workspace calls fail with 401.
     const ownerToken = await issueOwnerToken(baseUrl, tokens.hostToken);
-    openworkServerState.ownerToken = ownerToken;
+    aiworkServerState.ownerToken = ownerToken;
     if (ownerToken) {
       await persistWorkspaceOwnerToken(activeWorkspace, ownerToken);
     }
@@ -1190,11 +1190,11 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
           engineState.childExited = false;
         }
       } catch (error) {
-        appendOutput(openworkServerState, "lastStderr", `OpenWork server workspace probe: ${error instanceof Error ? error.message : String(error)}\n`);
+        appendOutput(aiworkServerState, "lastStderr", `AiWork server workspace probe: ${error instanceof Error ? error.message : String(error)}\n`);
       }
     }
-    await persistPreferredOpenworkPort(activeWorkspace, port);
-    return snapshotOpenworkServerState(openworkServerState);
+    await persistPreferredAiWorkPort(activeWorkspace, port);
+    return snapshotAiWorkServerState(aiworkServerState);
   }
 
   async function resolveOrchestratorBaseUrl() {
@@ -1216,9 +1216,9 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     const opencodePort = await findFreePort("127.0.0.1");
     const [username, password] = generateManagedCredentials();
 
-    const orchestratorProgram = resolveBinary("openwork-orchestrator") ?? resolveBinary("openwork");
+    const orchestratorProgram = resolveBinary("aiwork-orchestrator") ?? resolveBinary("aiwork");
     if (!orchestratorProgram) {
-      throw new Error("Failed to locate openwork-orchestrator.");
+      throw new Error("Failed to locate aiwork-orchestrator.");
     }
 
     const opencodeBinary = resolveOpencodeBinary(options.opencodeBinPath);
@@ -1227,9 +1227,9 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     }
 
     const env = await buildChildEnv({
-      OPENWORK_INTERNAL_ALLOW_OPENCODE_CREDENTIALS: "1",
-      OPENWORK_OPENCODE_USERNAME: username,
-      OPENWORK_OPENCODE_PASSWORD: password,
+      AIWORK_INTERNAL_ALLOW_OPENCODE_CREDENTIALS: "1",
+      AIWORK_OPENCODE_USERNAME: username,
+      AIWORK_OPENCODE_PASSWORD: password,
       ...(options.opencodeEnableExa === true ? { OPENCODE_ENABLE_EXA: "1" } : {}),
     });
 
@@ -1323,7 +1323,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
   }
 
   async function stopAllRuntimeChildren() {
-    await stopChild(openworkServerState);
+    await stopChild(aiworkServerState);
     await stopChild(orchestratorState, {
       requestShutdown: () => requestOrchestratorShutdown(orchestratorState.dataDir || orchestratorDataDir()),
     });
@@ -1331,7 +1331,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     await stopChild(engineState);
 
     Object.assign(engineState, createEngineState());
-    Object.assign(openworkServerState, createOpenworkServerState());
+    Object.assign(aiworkServerState, createAiWorkServerState());
     Object.assign(orchestratorState, createOrchestratorState());
   }
 
@@ -1342,10 +1342,10 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     lifecycleState = "idle";
   }
 
-  async function ensureOpenwork(options) {
-    let openworkServer;
+  async function ensureAiWork(options) {
+    let aiworkServer;
     try {
-      openworkServer = await startOpenworkServer({
+      aiworkServer = await startAiWorkServer({
         workspacePaths: options.workspacePaths,
         opencodeBaseUrl: engineState.baseUrl,
         opencodeUsername: engineState.opencodeUsername,
@@ -1355,11 +1355,11 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
         opencodeBinPath: options.opencodeBinPath,
       });
     } catch (error) {
-      appendOutput(engineState, "lastStderr", `OpenWork server: ${error instanceof Error ? error.message : String(error)}\n`);
+      appendOutput(engineState, "lastStderr", `AiWork server: ${error instanceof Error ? error.message : String(error)}\n`);
       throw error;
     }
 
-    assertOpenworkServerReady(openworkServer);
+    assertAiWorkServerReady(aiworkServer);
   }
 
   async function engineStart(projectDir, options = {}) {
@@ -1383,10 +1383,10 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       engineState.child = null;
       engineState.childExited = true;
 
-      await ensureOpenwork({
+      await ensureAiWork({
         projectDir: safeProjectDir,
         workspacePaths,
-        remoteAccessEnabled: options.openworkRemoteAccess === true,
+        remoteAccessEnabled: options.aiworkRemoteAccess === true,
         manageOpencode: true,
         opencodeBinPath: options.opencodeBinPath,
       });
@@ -1415,7 +1415,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       runtime: engineState.runtime,
       workspacePaths: [projectDir],
       opencodeEnableExa: options.opencodeEnableExa,
-      openworkRemoteAccess: options.openworkRemoteAccess,
+      aiworkRemoteAccess: options.aiworkRemoteAccess,
     });
   }
 
@@ -1427,17 +1427,17 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     return {
       lifecycleState,
       engine: await engineInfo(),
-      openworkServer: snapshotOpenworkServerState(openworkServerState),
+      aiworkServer: snapshotAiWorkServerState(aiworkServerState),
     };
   }
 
-  async function openworkServerInfo() {
-    return snapshotOpenworkServerState(openworkServerState);
+  async function aiworkServerInfo() {
+    return snapshotAiWorkServerState(aiworkServerState);
   }
 
-  async function openworkServerRestart(options = {}) {
+  async function aiworkServerRestart(options = {}) {
     const workspacePaths = (await listLocalWorkspacePaths()).filter(Boolean);
-    return startOpenworkServer({
+    return startAiWorkServer({
       workspacePaths,
       opencodeBaseUrl: engineState.baseUrl,
       opencodeUsername: engineState.opencodeUsername,
@@ -1448,15 +1448,15 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
 
   async function orchestratorStatus() {
     const engine = snapshotEngineState(engineState);
-    const openworkServer = snapshotOpenworkServerState(openworkServerState);
+    const aiworkServer = snapshotAiWorkServerState(aiworkServerState);
     const workspaces = engine.projectDir
       ? [{ id: normalizeWorkspaceKey(engine.projectDir), path: engine.projectDir, name: path.basename(engine.projectDir) || "Workspace" }]
       : [];
     return {
       running: engine.running,
       dataDir: null,
-      daemon: openworkServer.running
-        ? { baseUrl: openworkServer.baseUrl, port: openworkServer.port, pid: openworkServer.pid, runtime: "direct" }
+      daemon: aiworkServer.running
+        ? { baseUrl: aiworkServer.baseUrl, port: aiworkServer.port, pid: aiworkServer.pid, runtime: "direct" }
         : null,
       opencode: engine.running
         ? { baseUrl: engine.baseUrl, port: engine.port, pid: engine.pid, projectDir: engine.projectDir, runtime: "direct" }
@@ -1504,7 +1504,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
         status: -1,
         stdout: "",
         stderr:
-          "Guided install is not supported on Windows yet. Install the OpenWork-pinned OpenCode version manually, then restart OpenWork.",
+          "Guided install is not supported on Windows yet. Install the AiWork-pinned OpenCode version manually, then restart AiWork.",
       };
     }
 
@@ -1652,8 +1652,8 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     if (!name) {
       throw new Error("containerName is required");
     }
-    if (!name.startsWith("openwork-orchestrator-")) {
-      throw new Error("Refusing to stop container: expected name starting with 'openwork-orchestrator-'");
+    if (!name.startsWith("aiwork-orchestrator-")) {
+      throw new Error("Refusing to stop container: expected name starting with 'aiwork-orchestrator-'");
     }
     if (!/^[A-Za-z0-9_.-]+$/.test(name)) {
       throw new Error("containerName contains invalid characters");
@@ -1667,8 +1667,8 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     };
   }
 
-  async function sandboxCleanupOpenworkContainers() {
-    const candidates = await listOpenworkManagedContainers().catch((error) => {
+  async function sandboxCleanupAiWorkContainers() {
+    const candidates = await listAiWorkManagedContainers().catch((error) => {
       throw error;
     });
     const removed = [];
@@ -1705,12 +1705,12 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     const runId = String(options.runId ?? randomUUID()).trim();
     const containerName = wantsDockerSandbox ? deriveOrchestratorContainerName(runId) : null;
     const port = await findFreePort("127.0.0.1");
-    const token = String(options.openworkToken ?? randomUUID()).trim();
-    const hostToken = String(options.openworkHostToken ?? randomUUID()).trim();
-    const openworkUrl = `http://127.0.0.1:${port}`;
-    const program = resolveBinary("openwork-orchestrator") ?? resolveBinary("openwork");
+    const token = String(options.aiworkToken ?? randomUUID()).trim();
+    const hostToken = String(options.aiworkHostToken ?? randomUUID()).trim();
+    const aiworkUrl = `http://127.0.0.1:${port}`;
+    const program = resolveBinary("aiwork-orchestrator") ?? resolveBinary("aiwork");
     if (!program) {
-      throw new Error("Failed to locate openwork orchestrator.");
+      throw new Error("Failed to locate aiwork orchestrator.");
     }
 
     const args = [
@@ -1720,7 +1720,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       "--approval",
       "auto",
       "--detach",
-      "--openwork-port",
+      "--aiwork-port",
       String(port),
       "--run-id",
       runId,
@@ -1729,18 +1729,18 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     ];
 
     const child = spawn(program, args, {
-      env: { ...(await buildChildEnv()), OPENWORK_TOKEN: token, OPENWORK_HOST_TOKEN: hostToken },
+      env: { ...(await buildChildEnv()), AIWORK_TOKEN: token, AIWORK_HOST_TOKEN: hostToken },
       detached: true,
       stdio: "ignore",
       windowsHide: true,
     });
     child.unref();
 
-    await waitForHttpOk(`${openworkUrl}/health`, wantsDockerSandbox ? 90_000 : 12_000);
-    const ownerToken = await issueOwnerToken(openworkUrl, hostToken).catch(() => null);
+    await waitForHttpOk(`${aiworkUrl}/health`, wantsDockerSandbox ? 90_000 : 12_000);
+    const ownerToken = await issueOwnerToken(aiworkUrl, hostToken).catch(() => null);
 
     return {
-      openworkUrl,
+      aiworkUrl,
       token,
       ownerToken,
       hostToken,
@@ -1754,7 +1754,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
   async function sandboxDebugProbe() {
     const startedAt = nowMs();
     const runId = `probe-${randomUUID()}`;
-    const workspacePath = path.join(os.tmpdir(), `openwork-sandbox-probe-${randomUUID()}`);
+    const workspacePath = path.join(os.tmpdir(), `aiwork-sandbox-probe-${randomUUID()}`);
     await mkdir(workspacePath, { recursive: true });
 
     const doctor = await sandboxDoctor();
@@ -1853,8 +1853,8 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     readOpencodeEngineDiskLogs,
     engineDoctor,
     engineInstall,
-    openworkServerInfo,
-    openworkServerRestart,
+    aiworkServerInfo,
+    aiworkServerRestart,
     orchestratorStatus,
     orchestratorWorkspaceActivate,
     orchestratorInstanceDispose,
@@ -1862,7 +1862,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     opencodeMcpAuth,
     sandboxDoctor,
     sandboxStop,
-    sandboxCleanupOpenworkContainers,
+    sandboxCleanupAiWorkContainers,
     sandboxDebugProbe,
   };
 }

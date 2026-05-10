@@ -5,19 +5,19 @@ import {
   appBuildInfo as appBuildInfoCmd,
   engineInfo as engineInfoCmd,
   engineStart as engineStartCmd,
-  nukeOpenworkAndOpencodeConfigAndExit,
+  nukeAiWorkAndOpencodeConfigAndExit,
   openDesktopUrl,
-  openworkServerInfo as openworkServerInfoCmd,
-  openworkServerRestart as openworkServerRestartCmd,
+  aiworkServerInfo as aiworkServerInfoCmd,
+  aiworkServerRestart as aiworkServerRestartCmd,
   pickFile,
   revealDesktopItemInDir,
-  resetOpenworkState,
+  resetAiWorkState,
   sandboxDebugProbe as sandboxDebugProbeCmd,
   desktopAppPaths as desktopAppPathsCmd,
   workspaceBootstrap as workspaceBootstrapCmd,
   type AppBuildInfo,
   type EngineInfo,
-  type OpenworkServerInfo,
+  type AiWorkServerInfo,
   type SandboxDebugProbeResult,
 } from "../../../../app/lib/desktop";
 import {
@@ -30,8 +30,8 @@ import {
   writeMigrationSnapshotFromTauri,
 } from "../../../../app/lib/migration";
 import {
-  writeOpenworkServerSettings,
-} from "../../../../app/lib/openwork-server";
+  writeAiWorkServerSettings,
+} from "../../../../app/lib/aiwork-server";
 import {
   clearStartupPreference,
   isDesktopRuntime,
@@ -42,19 +42,19 @@ import {
 } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import type { DebugViewProps } from "../pages/debug-view";
-import type { OpenworkServerStore, OpenworkServerStoreSnapshot } from "../../connections/openwork-server-store";
+import type { AiWorkServerStore, AiWorkServerStoreSnapshot } from "../../connections/aiwork-server-store";
 
-const STARTUP_PREFERENCE_KEY = "openwork.startupPreference";
-const ENGINE_SOURCE_KEY = "openwork.engineSource";
-const ENGINE_CUSTOM_BIN_KEY = "openwork.engineCustomBinPath";
-const OPENCODE_ENABLE_EXA_KEY = "openwork.opencodeEnableExa";
+const STARTUP_PREFERENCE_KEY = "aiwork.startupPreference";
+const ENGINE_SOURCE_KEY = "aiwork.engineSource";
+const ENGINE_CUSTOM_BIN_KEY = "aiwork.engineCustomBinPath";
+const OPENCODE_ENABLE_EXA_KEY = "aiwork.opencodeEnableExa";
 
 type ResetModalMode = "onboarding" | "all";
 
 type UseDebugViewModelOptions = {
   developerMode: boolean;
-  openworkServerStore: OpenworkServerStore;
-  openworkServerSnapshot: OpenworkServerStoreSnapshot;
+  aiworkServerStore: AiWorkServerStore;
+  aiworkServerSnapshot: AiWorkServerStoreSnapshot;
   runtimeWorkspaceId: string | null;
   selectedWorkspaceRoot: string;
   setRouteError: (value: string | null) => void;
@@ -173,7 +173,7 @@ function formatOpencodeBinary(info: EngineInfo | null) {
   return formatBinaryWithSource(info?.opencodeBinPath, info?.opencodeBinSource);
 }
 
-function formatManagedOpencodeBinary(info: OpenworkServerInfo | null) {
+function formatManagedOpencodeBinary(info: AiWorkServerInfo | null) {
   return formatBinaryWithSource(
     info?.managedOpencodeBinPath,
     info?.managedOpencodeBinSource,
@@ -187,7 +187,7 @@ function formatBinaryWithSource(path: string | null | undefined, source: string 
   return sourceLabel ? `${binary} (${sourceLabel})` : binary;
 }
 
-function describeOpenworkServer(info: OpenworkServerInfo | null) {
+function describeAiWorkServer(info: AiWorkServerInfo | null) {
   const running = Boolean(info?.running);
   return {
     ...statusPill(running),
@@ -225,8 +225,8 @@ function describeOpencodeConnect(engine: EngineInfo | null) {
 export function useDebugViewModel(options: UseDebugViewModelOptions) {
   const {
     developerMode,
-    openworkServerStore,
-    openworkServerSnapshot,
+    aiworkServerStore,
+    aiworkServerSnapshot,
     runtimeWorkspaceId,
     selectedWorkspaceRoot,
     setRouteError,
@@ -242,17 +242,17 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   const [sandboxProbeResult, setSandboxProbeResult] = useState<SandboxDebugProbeResult | null>(null);
   const [sandboxProbeStatus, setSandboxProbeStatus] = useState<string | null>(null);
   const [opencodeRestarting, setOpencodeRestarting] = useState(false);
-  const [openworkServerRestarting, setOpenworkServerRestarting] = useState(false);
+  const [aiworkServerRestarting, setAiWorkServerRestarting] = useState(false);
   const [opencodeServiceStatus, setOpencodeServiceStatus] = useState<{
     tone: "success" | "error";
     message: string;
   } | null>(null);
-  const [openworkServiceStatus, setOpenworkServiceStatus] = useState<{
+  const [aiworkServiceStatus, setAiWorkServiceStatus] = useState<{
     tone: "success" | "error";
     message: string;
   } | null>(null);
   const [opencodeLogStatus, setOpencodeLogStatus] = useState<string | null>(null);
-  const [openworkLogStatus, setOpenworkLogStatus] = useState<string | null>(null);
+  const [aiworkLogStatus, setAiWorkLogStatus] = useState<string | null>(null);
   const [serviceRestartError, setServiceRestartError] = useState<string | null>(null);
   const [resetModalBusy, setResetModalBusy] = useState(false);
   const [nukeConfigBusy, setNukeConfigBusy] = useState(false);
@@ -314,13 +314,13 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       appVersionLabel: appBuild?.version ?? "—",
       appCommitLabel: appBuild?.gitSha ?? "—",
       opencodeVersionLabel: engineInfoState?.baseUrl ? "managed" : "—",
-      openworkServerVersionLabel: openworkServerSnapshot.openworkServerDiagnostics?.version ?? "—",
+      aiworkServerVersionLabel: aiworkServerSnapshot.aiworkServerDiagnostics?.version ?? "—",
     }),
     [
       appBuild?.gitSha,
       appBuild?.version,
       engineInfoState?.baseUrl,
-      openworkServerSnapshot.openworkServerDiagnostics?.version,
+      aiworkServerSnapshot.aiworkServerDiagnostics?.version,
     ],
   );
 
@@ -329,13 +329,13 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       collectedAt: new Date().toISOString(),
       app: appBuild ?? null,
       engine: engineInfoState,
-      openworkServer: {
-        hostInfo: openworkServerSnapshot.openworkServerHostInfo,
-        diagnostics: openworkServerSnapshot.openworkServerDiagnostics,
-        capabilities: openworkServerSnapshot.openworkServerCapabilities,
-        settings: openworkServerSnapshot.openworkServerSettings,
-        status: openworkServerSnapshot.openworkServerStatus,
-        url: openworkServerSnapshot.openworkServerUrl,
+      aiworkServer: {
+        hostInfo: aiworkServerSnapshot.aiworkServerHostInfo,
+        diagnostics: aiworkServerSnapshot.aiworkServerDiagnostics,
+        capabilities: aiworkServerSnapshot.aiworkServerCapabilities,
+        settings: aiworkServerSnapshot.aiworkServerSettings,
+        status: aiworkServerSnapshot.aiworkServerStatus,
+        url: aiworkServerSnapshot.aiworkServerUrl,
       },
       runtimeWorkspaceId,
       selectedWorkspaceRoot,
@@ -343,12 +343,12 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   }, [
     appBuild,
     engineInfoState,
-    openworkServerSnapshot.openworkServerCapabilities,
-    openworkServerSnapshot.openworkServerDiagnostics,
-    openworkServerSnapshot.openworkServerHostInfo,
-    openworkServerSnapshot.openworkServerSettings,
-    openworkServerSnapshot.openworkServerStatus,
-    openworkServerSnapshot.openworkServerUrl,
+    aiworkServerSnapshot.aiworkServerCapabilities,
+    aiworkServerSnapshot.aiworkServerDiagnostics,
+    aiworkServerSnapshot.aiworkServerHostInfo,
+    aiworkServerSnapshot.aiworkServerSettings,
+    aiworkServerSnapshot.aiworkServerStatus,
+    aiworkServerSnapshot.aiworkServerUrl,
     runtimeWorkspaceId,
     selectedWorkspaceRoot,
   ]);
@@ -359,9 +359,9 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   );
 
   const engineCard = useMemo(() => describeEngine(engineInfoState), [engineInfoState]);
-  const openworkCard = useMemo(
-    () => describeOpenworkServer(openworkServerSnapshot.openworkServerHostInfo),
-    [openworkServerSnapshot.openworkServerHostInfo],
+  const aiworkCard = useMemo(
+    () => describeAiWorkServer(aiworkServerSnapshot.aiworkServerHostInfo),
+    [aiworkServerSnapshot.aiworkServerHostInfo],
   );
   const opencodeConnectCard = useMemo(
     () => describeOpencodeConnect(engineInfoState),
@@ -380,7 +380,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   const onExportRuntimeDebugReport = useCallback(async () => {
     try {
       downloadTextAsFile(
-        `openwork-runtime-${new Date().toISOString().replace(/[:.]/g, "-")}.json`,
+        `aiwork-runtime-${new Date().toISOString().replace(/[:.]/g, "-")}.json`,
         runtimeDebugReportJson,
         "application/json",
       );
@@ -407,7 +407,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   const onExportDeveloperLog = useCallback(async () => {
     try {
       downloadTextAsFile(
-        `openwork-developer-${new Date().toISOString().replace(/[:.]/g, "-")}.log`,
+        `aiwork-developer-${new Date().toISOString().replace(/[:.]/g, "-")}.log`,
         developerLog.join("\n"),
         "text/plain",
       );
@@ -478,11 +478,11 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       const env = await desktopAppPathsCmd();
       const appBundlePath = env.appBundlePath?.trim();
       if (!appBundlePath) {
-        setElectronMigrationStatus("Could not resolve the current OpenWork.app bundle path.");
+        setElectronMigrationStatus("Could not resolve the current AiWork.app bundle path.");
         return;
       }
       await revealDesktopItemInDir(`${appBundlePath}.migrate-bak`);
-      setElectronMigrationStatus("Requested Finder reveal for OpenWork.app.migrate-bak. The backup exists after an install handoff completes.");
+      setElectronMigrationStatus("Requested Finder reveal for AiWork.app.migrate-bak. The backup exists after an install handoff completes.");
     } catch (error) {
       setElectronMigrationStatus(error instanceof Error ? error.message : safeStringify(error));
     }
@@ -536,14 +536,14 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     const confirmed =
       typeof window === "undefined" ||
       window.confirm(
-        "This debug-only migration action first writes a migration snapshot, then starts the Tauri → Electron handoff. On macOS, the installer swaps OpenWork.app in place and keeps OpenWork.app.migrate-bak for rollback. Continue?",
+        "This debug-only migration action first writes a migration snapshot, then starts the Tauri → Electron handoff. On macOS, the installer swaps AiWork.app in place and keeps AiWork.app.migrate-bak for rollback. Continue?",
       );
     if (!confirmed) return;
 
     const doubleConfirmed =
       typeof window === "undefined" ||
       window.confirm(
-        "Final confirmation: quit Tauri and start installing the resolved Electron alpha now? The current app bundle will be moved to OpenWork.app.migrate-bak before replacement.",
+        "Final confirmation: quit Tauri and start installing the resolved Electron alpha now? The current app bundle will be moved to AiWork.app.migrate-bak before replacement.",
       );
     if (!doubleConfirmed) {
       setElectronMigrationStatus("Install handoff cancelled before any app replacement step.");
@@ -639,7 +639,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       );
     }
 
-    // Collect ALL local workspace paths so openwork-server is started with
+    // Collect ALL local workspace paths so aiwork-server is started with
     // --workspace <path> for every registered local workspace. Mirrors the
     // Solid reference (context/workspace.ts::resolveWorkspacePaths) so that
     // `client.listWorkspaces()` later returns the full set, not just the
@@ -660,17 +660,17 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       runtime: "direct",
       workspacePaths,
       opencodeEnableExa: readOpencodeEnableExa(),
-      openworkRemoteAccess:
-        optionsRef.current.openworkServerSnapshot.openworkServerSettings
+      aiworkRemoteAccess:
+        optionsRef.current.aiworkServerSnapshot.aiworkServerSettings
           .remoteAccessEnabled === true,
     });
 
-    // engine_start restarts openwork-server on a NEW port and lets that server
+    // engine_start restarts aiwork-server on a NEW port and lets that server
     // manage OpenCode. Re-read host info and persist the fresh URL/token.
     try {
-      const hostInfo = await openworkServerInfoCmd();
+      const hostInfo = await aiworkServerInfoCmd();
       if (hostInfo?.baseUrl) {
-        writeOpenworkServerSettings({
+        writeAiWorkServerSettings({
           urlOverride: hostInfo.baseUrl,
           token: hostInfo.ownerToken?.trim() || hostInfo.clientToken?.trim() || undefined,
           hostToken: hostInfo.hostToken?.trim() || undefined,
@@ -678,17 +678,17 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
           remoteAccessEnabled: hostInfo.remoteAccessEnabled === true,
         });
         if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("openwork-server-settings-changed"));
+          window.dispatchEvent(new CustomEvent("aiwork-server-settings-changed"));
         }
       }
     } catch {
       // best-effort: if this fails, the host-info poller will catch up in ~10s.
     }
 
-    await openworkServerStore.reconnectOpenworkServer();
+    await aiworkServerStore.reconnectAiWorkServer();
     await refreshEngineInfo();
     return info;
-  }, [openworkServerStore, refreshEngineInfo]);
+  }, [aiworkServerStore, refreshEngineInfo]);
 
   const onRestartOpencode = useCallback(async () => {
     if (!isDesktopRuntime()) return;
@@ -714,34 +714,34 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     }
   }, [bootFullEngineStack, pushDeveloperLog]);
 
-  const onRestartOpenworkServer = useCallback(async () => {
+  const onRestartAiWorkServer = useCallback(async () => {
     if (!isDesktopRuntime()) return;
-    setOpenworkServerRestarting(true);
-    setOpenworkServiceStatus(null);
+    setAiWorkServerRestarting(true);
+    setAiWorkServiceStatus(null);
     setServiceRestartError(null);
     try {
-      await openworkServerRestartCmd({
-        remoteAccessEnabled: openworkServerSnapshot.openworkServerSettings.remoteAccessEnabled === true,
+      await aiworkServerRestartCmd({
+        remoteAccessEnabled: aiworkServerSnapshot.aiworkServerSettings.remoteAccessEnabled === true,
       });
-      setOpenworkServiceStatus({
+      setAiWorkServiceStatus({
         tone: "success",
-        message: t("settings.restart_succeeded_template", { service: "OpenWork server" }),
+        message: t("settings.restart_succeeded_template", { service: "AiWork server" }),
       });
-      pushDeveloperLog("Restarted openwork-server");
-      await openworkServerStore.reconnectOpenworkServer();
+      pushDeveloperLog("Restarted aiwork-server");
+      await aiworkServerStore.reconnectAiWorkServer();
     } catch (error) {
       const message = error instanceof Error ? error.message : safeStringify(error);
-      setOpenworkServiceStatus({
+      setAiWorkServiceStatus({
         tone: "error",
-        message: `${t("settings.restart_failed_template", { service: "OpenWork server" })} ${message}`,
+        message: `${t("settings.restart_failed_template", { service: "AiWork server" })} ${message}`,
       });
       setServiceRestartError(message);
     } finally {
-      setOpenworkServerRestarting(false);
+      setAiWorkServerRestarting(false);
     }
   }, [
-    openworkServerSnapshot.openworkServerSettings.remoteAccessEnabled,
-    openworkServerStore,
+    aiworkServerSnapshot.aiworkServerSettings.remoteAccessEnabled,
+    aiworkServerStore,
     pushDeveloperLog,
   ]);
 
@@ -779,7 +779,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     }
     try {
       downloadTextAsFile(
-        `openwork-opencode-${new Date().toISOString().replace(/[:.]/g, "-")}.log`,
+        `aiwork-opencode-${new Date().toISOString().replace(/[:.]/g, "-")}.log`,
         text,
         "text/plain",
       );
@@ -789,39 +789,39 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     }
   }, [engineInfoState?.lastStderr, engineInfoState?.lastStdout, formatServiceLogs]);
 
-  const onCopyOpenworkLogs = useCallback(async () => {
-    const info = openworkServerSnapshot.openworkServerHostInfo;
+  const onCopyAiWorkLogs = useCallback(async () => {
+    const info = aiworkServerSnapshot.aiworkServerHostInfo;
     const text = formatServiceLogs(info?.lastStdout, info?.lastStderr);
     if (!text) {
-      setOpenworkLogStatus(t("settings.no_logs_captured"));
+      setAiWorkLogStatus(t("settings.no_logs_captured"));
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      setOpenworkLogStatus(t("settings.copied_service_logs", { service: "OpenWork server" }));
+      setAiWorkLogStatus(t("settings.copied_service_logs", { service: "AiWork server" }));
     } catch (error) {
-      setOpenworkLogStatus(error instanceof Error ? error.message : safeStringify(error));
+      setAiWorkLogStatus(error instanceof Error ? error.message : safeStringify(error));
     }
-  }, [formatServiceLogs, openworkServerSnapshot.openworkServerHostInfo]);
+  }, [formatServiceLogs, aiworkServerSnapshot.aiworkServerHostInfo]);
 
-  const onExportOpenworkLogs = useCallback(async () => {
-    const info = openworkServerSnapshot.openworkServerHostInfo;
+  const onExportAiWorkLogs = useCallback(async () => {
+    const info = aiworkServerSnapshot.aiworkServerHostInfo;
     const text = formatServiceLogs(info?.lastStdout, info?.lastStderr);
     if (!text) {
-      setOpenworkLogStatus(t("settings.no_logs_captured"));
+      setAiWorkLogStatus(t("settings.no_logs_captured"));
       return;
     }
     try {
       downloadTextAsFile(
-        `openwork-server-${new Date().toISOString().replace(/[:.]/g, "-")}.log`,
+        `aiwork-server-${new Date().toISOString().replace(/[:.]/g, "-")}.log`,
         text,
         "text/plain",
       );
-      setOpenworkLogStatus(t("settings.exported_developer_log"));
+      setAiWorkLogStatus(t("settings.exported_developer_log"));
     } catch (error) {
-      setOpenworkLogStatus(error instanceof Error ? error.message : safeStringify(error));
+      setAiWorkLogStatus(error instanceof Error ? error.message : safeStringify(error));
     }
-  }, [formatServiceLogs, openworkServerSnapshot.openworkServerHostInfo]);
+  }, [formatServiceLogs, aiworkServerSnapshot.aiworkServerHostInfo]);
 
   const [resetStatus, setResetStatus] = useState<string | null>(null);
 
@@ -830,21 +830,21 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       if (!isDesktopRuntime()) return;
       const message =
         mode === "all"
-          ? "Reset ALL OpenWork app data? Open sessions and workspaces will be removed."
+          ? "Reset ALL AiWork app data? Open sessions and workspaces will be removed."
           : "Reset onboarding state only?";
       if (typeof window !== "undefined" && !window.confirm(message)) {
         return;
       }
       setResetModalBusy(true);
       setResetStatus(null);
-      void resetOpenworkState(mode)
+      void resetAiWorkState(mode)
         .then(() => {
           setResetStatus(
             mode === "all"
-              ? "Reset OpenWork state. Restart the app to see changes."
+              ? "Reset AiWork state. Restart the app to see changes."
               : "Reset onboarding state.",
           );
-          pushDeveloperLog(`reset_openwork_state mode=${mode}`);
+          pushDeveloperLog(`reset_aiwork_state mode=${mode}`);
         })
         .catch((error) => {
           setRouteError(error instanceof Error ? error.message : safeStringify(error));
@@ -856,19 +856,19 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     [pushDeveloperLog, setRouteError],
   );
 
-  const onNukeOpenworkAndOpencodeConfig = useCallback(async () => {
+  const onNukeAiWorkAndOpencodeConfig = useCallback(async () => {
     if (!isDesktopRuntime()) return;
     const confirmed =
       typeof window === "undefined"
         ? true
         : window.confirm(
-            "Delete ALL local OpenWork + OpenCode config and quit? This cannot be undone.",
+            "Delete ALL local AiWork + OpenCode config and quit? This cannot be undone.",
           );
     if (!confirmed) return;
     setNukeConfigBusy(true);
     setNukeConfigStatus(null);
     try {
-      await nukeOpenworkAndOpencodeConfigAndExit();
+      await nukeAiWorkAndOpencodeConfigAndExit();
     } catch (error) {
       setNukeConfigStatus(error instanceof Error ? error.message : safeStringify(error));
     } finally {
@@ -888,8 +888,8 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       anyActiveRuns: false,
       startupPreference: "server",
       startupLabel:
-        openworkServerSnapshot.openworkServerStatus === "connected"
-          ? t("settings.openwork_server_label")
+        aiworkServerSnapshot.aiworkServerStatus === "connected"
+          ? t("settings.aiwork_server_label")
           : t("status.disconnected_label"),
       runtimeSummary,
       runtimeDebugReportJson,
@@ -936,40 +936,40 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       startupStatus,
       workspaceDebugEventsStatus,
       opencodeRestarting,
-      openworkServerRestarting,
+      aiworkServerRestarting,
       opencodeServiceStatus,
-      openworkServiceStatus,
+      aiworkServiceStatus,
       opencodeLogStatus,
-      openworkLogStatus,
+      aiworkLogStatus,
       onCopyOpencodeLogs,
       onExportOpencodeLogs,
-      onCopyOpenworkLogs,
-      onExportOpenworkLogs,
+      onCopyAiWorkLogs,
+      onExportAiWorkLogs,
       serviceRestartError,
       onRestartOpencode,
-      onRestartOpenworkServer,
+      onRestartAiWorkServer,
       engineCard,
       opencodeConnectCard,
-      openworkCard,
-      openworkServerDiagnostics: openworkServerSnapshot.openworkServerDiagnostics,
+      aiworkCard,
+      aiworkServerDiagnostics: aiworkServerSnapshot.aiworkServerDiagnostics,
       runtimeWorkspaceId,
-      openworkServerCapabilities: openworkServerSnapshot.openworkServerCapabilities,
+      aiworkServerCapabilities: aiworkServerSnapshot.aiworkServerCapabilities,
       pendingPermissions: {},
       events: [],
       workspaceDebugEvents: [],
       safeStringify,
       onClearWorkspaceDebugEvents,
-      openworkAuditEntries: openworkServerSnapshot.openworkAuditEntries,
-      openworkAuditStatus: auditStatusPill(openworkServerSnapshot.openworkAuditStatus),
-      openworkAuditError: openworkServerSnapshot.openworkAuditError,
+      aiworkAuditEntries: aiworkServerSnapshot.aiworkAuditEntries,
+      aiworkAuditStatus: auditStatusPill(aiworkServerSnapshot.aiworkAuditStatus),
+      aiworkAuditError: aiworkServerSnapshot.aiworkAuditError,
       opencodeConnectStatus: null,
-      opencodeDevModeEnabled: appBuild?.openworkDevMode === true,
+      opencodeDevModeEnabled: appBuild?.aiworkDevMode === true,
       nukeConfigBusy,
       nukeConfigStatus,
-      onNukeOpenworkAndOpencodeConfig,
+      onNukeAiWorkAndOpencodeConfig,
     }),
     [
-      appBuild?.openworkDevMode,
+      appBuild?.aiworkDevMode,
       developerLog,
       developerLogStatus,
       developerMode,
@@ -992,7 +992,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       onExportDeveloperLog,
       onExportRuntimeDebugReport,
       onInstallElectronPreviewFromTauri,
-      onNukeOpenworkAndOpencodeConfig,
+      onNukeAiWorkAndOpencodeConfig,
       onOpenElectronPreviewRelease,
       onOpenResetModal,
       onPrepareElectronMigrationSnapshot,
@@ -1001,33 +1001,33 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       onRevealElectronMigrationBackup,
       onResetStartupPreference,
       onRestartOpencode,
-      onRestartOpenworkServer,
+      onRestartAiWorkServer,
       onRunSandboxDebugProbe,
       onSetElectronMigrationSha512,
       onSetElectronMigrationUrl,
       onSetEngineSource,
       onStopHost,
       onCopyOpencodeLogs,
-      onCopyOpenworkLogs,
+      onCopyAiWorkLogs,
       onExportOpencodeLogs,
-      onExportOpenworkLogs,
+      onExportAiWorkLogs,
       opencodeConnectCard,
       opencodeLogStatus,
       opencodeRestarting,
       opencodeServiceStatus,
-      openworkCard,
-      openworkLogStatus,
-      openworkServiceStatus,
-      openworkServerRestarting,
+      aiworkCard,
+      aiworkLogStatus,
+      aiworkServiceStatus,
+      aiworkServerRestarting,
       resetStatus,
       startupStatus,
       workspaceDebugEventsStatus,
-      openworkServerSnapshot.openworkAuditEntries,
-      openworkServerSnapshot.openworkAuditError,
-      openworkServerSnapshot.openworkAuditStatus,
-      openworkServerSnapshot.openworkServerCapabilities,
-      openworkServerSnapshot.openworkServerDiagnostics,
-      openworkServerSnapshot.openworkServerStatus,
+      aiworkServerSnapshot.aiworkAuditEntries,
+      aiworkServerSnapshot.aiworkAuditError,
+      aiworkServerSnapshot.aiworkAuditStatus,
+      aiworkServerSnapshot.aiworkServerCapabilities,
+      aiworkServerSnapshot.aiworkServerDiagnostics,
+      aiworkServerSnapshot.aiworkServerStatus,
       resetModalBusy,
       runtimeDebugReportJson,
       runtimeDebugStatus,

@@ -57,7 +57,7 @@ function readActorKey(c: Context<AppBindings>) {
   const requestContext = getRequestContext(c);
   requestContext.services.auth.requireVisibleRead(requestContext.actor);
   const authorization = c.req.raw.headers.get("authorization")?.trim() ?? "";
-  const hostToken = c.req.raw.headers.get("x-openwork-host-token")?.trim() ?? "";
+  const hostToken = c.req.raw.headers.get("x-aiwork-host-token")?.trim() ?? "";
   return {
     actorKey: requestContext.actor.kind === "host" ? hostToken || authorization : authorization,
     actorKind: requestContext.actor.kind === "host" ? "host" as const : "client" as const,
@@ -211,7 +211,7 @@ export function registerFileRoutes(app: Hono<AppBindings>) {
     describeRoute({
       tags: ["Config"],
       summary: "Patch workspace config",
-      description: "Updates stored workspace OpenWork/OpenCode config, absorbs recognized managed sections into the database, and rematerializes the effective config files.",
+      description: "Updates stored workspace AiWork/OpenCode config, absorbs recognized managed sections into the database, and rematerializes the effective config files.",
       responses: withCommonErrorResponses({
         200: jsonResponse("Workspace config updated successfully.", workspaceConfigResponseSchema),
       }, { includeInvalidRequest: true, includeUnauthorized: true }),
@@ -228,18 +228,18 @@ export function registerFileRoutes(app: Hono<AppBindings>) {
           type: "config",
         });
       }
-      if (body.openwork) {
+      if (body.aiwork) {
         requestContext.services.files.emitReloadEvent(workspaceId, "config", {
           action: "updated",
-          name: "openwork.json",
-          path: snapshot.materialized.configOpenworkPath ?? undefined,
+          name: "aiwork.json",
+          path: snapshot.materialized.configAiWorkPath ?? undefined,
           type: "config",
         });
       }
       await requestContext.services.files.recordWorkspaceAudit(
         workspaceId,
         "config.patch",
-        snapshot.materialized.configOpencodePath ?? snapshot.materialized.configOpenworkPath ?? workspaceId,
+        snapshot.materialized.configOpencodePath ?? snapshot.materialized.configAiWorkPath ?? workspaceId,
         "Patched workspace config through Server V2.",
       );
       return c.json(buildSuccessResponse(requestContext.requestId, snapshot));

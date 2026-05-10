@@ -1,5 +1,5 @@
 import type { WorkspaceDisplay } from "../types";
-import { parseOpenworkWorkspaceIdFromUrl } from "../lib/openwork-server";
+import { parseAiWorkWorkspaceIdFromUrl } from "../lib/aiwork-server";
 import type { WorkspaceInfo } from "../lib/desktop";
 import type { BundleImportTarget, BundleV1 } from "./types";
 
@@ -47,7 +47,7 @@ export function isBundleImportWorkspace(workspace: WorkspaceDisplay | WorkspaceI
   if (workspace.workspaceType === "local") {
     return Boolean(workspace.path?.trim());
   }
-  return Boolean(workspace.remoteType === "openwork" || workspace.openworkHostUrl?.trim() || workspace.openworkWorkspaceId?.trim());
+  return Boolean(workspace.remoteType === "aiwork" || workspace.aiworkHostUrl?.trim() || workspace.aiworkWorkspaceId?.trim());
 }
 
 export function resolveBundleImportTargetForWorkspace(
@@ -60,9 +60,9 @@ export function resolveBundleImportTargetForWorkspace(
   }
 
   const workspaceId =
-    workspace.openworkWorkspaceId?.trim() ||
-    parseOpenworkWorkspaceIdFromUrl(workspace.openworkHostUrl ?? "") ||
-    parseOpenworkWorkspaceIdFromUrl(workspace.baseUrl ?? "") ||
+    workspace.aiworkWorkspaceId?.trim() ||
+    parseAiWorkWorkspaceIdFromUrl(workspace.aiworkHostUrl ?? "") ||
+    parseAiWorkWorkspaceIdFromUrl(workspace.baseUrl ?? "") ||
     null;
   const directoryHint = workspace.directory?.trim() || workspace.path?.trim() || null;
   if (workspaceId || directoryHint) {
@@ -77,7 +77,7 @@ export function resolveBundleImportTargetForWorkspace(
 export function describeWorkspaceForBundleToasts(workspace: WorkspaceDisplay | WorkspaceInfo | null): string {
   return (
     workspace?.displayName?.trim() ||
-    workspace?.openworkWorkspaceName?.trim() ||
+    workspace?.aiworkWorkspaceName?.trim() ||
     workspace?.name?.trim() ||
     workspace?.directory?.trim() ||
     workspace?.path?.trim() ||
