@@ -55,12 +55,10 @@ Cross-domain imports go through module boundaries, not a shared blob.
                               ▼
 ┌────────────────────────────────────────────────────────────┐
 │  react-app/shell/providers.tsx (AppProviders composition)  │
-│   ServerProvider                                           │
-│   └─ GlobalSDKProvider                                     │
-│      └─ GlobalSyncProvider                                 │
-│         └─ LocalProvider                                   │
-│            └─ (QueryClientProvider + PlatformProvider      │
-│               wrap AppProviders in index.react.tsx)        │
+│   BootStateProvider                                        │
+│   └─ ServerProvider                                        │
+│      └─ LocalProvider (+ StatusToasts, ReloadCoordinator,  │
+│         LocaleSubscription, ScrollbarOnScrollReveal)       │
 └────────────────────────────────────────────────────────────┘
                               │
                               ▼
