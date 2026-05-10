@@ -4,6 +4,6 @@ mod unix;
 mod windows;
 
 #[cfg(not(windows))]
-pub use unix::{command_for_program, configure_hidden};
+pub use unix::command_for_program;
 #[cfg(windows)]
-pub use windows::{command_for_program, configure_hidden};
+pub use windows::command_for_program;

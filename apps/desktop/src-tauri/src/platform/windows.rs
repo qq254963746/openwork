@@ -23,7 +23,3 @@ pub fn command_for_program(program: &Path) -> Command {
     command.creation_flags(CREATE_NO_WINDOW);
     command
 }
-
-pub fn configure_hidden(command: &mut Command) {
-    command.creation_flags(CREATE_NO_WINDOW);
-}
