@@ -2371,7 +2371,7 @@ function createRoutes(
       throw new ApiError(400, "not_a_directory", "Path is not a directory");
     }
 
-    const SKIP_DIR_NAMES = new Set(["node_modules", ".git"]);
+    const SKIP_DIR_NAMES = new Set(["node_modules", ".git", ".DS_Store"]);
     const rawEntries = await readdir(dirAbs, { withFileTypes: true });
     const pending = rawEntries.filter((ent) => !SKIP_DIR_NAMES.has(ent.name));
     const entries: Array<{ name: string; kind: "file" | "directory"; updatedAt?: number }> = await Promise.all(

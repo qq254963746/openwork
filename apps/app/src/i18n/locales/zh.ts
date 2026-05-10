@@ -909,7 +909,7 @@ export default {
   "settings.provider_source_custom": "自定义",
   "settings.provider_source_env": "环境变量",
   "settings.providers_desc": "连接用于模型和工具的服务。",
-  "settings.providers_title": "提供商",
+  "settings.providers_title": "模型提供商",
   "settings.quit_hint": "AiWork在清理后立即退出，以便下次启动时从此模式的全新本地状态开始。",
   "settings.recent_events": "最近的事件",
   "settings.reconnect_failed": "重新连接失败。请检查服务器URL/令牌后重试。",
