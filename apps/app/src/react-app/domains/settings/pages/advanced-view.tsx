@@ -43,8 +43,6 @@ export type AdvancedViewProps = {
   openDebugDeepLink: (rawUrl: string) => Promise<{ ok: boolean; message: string }>;
   opencodeEnableExa: boolean;
   toggleOpencodeEnableExa: () => void;
-  microsandboxCreateSandboxEnabled: boolean;
-  toggleMicrosandboxCreateSandbox: () => void;
   configView: ConfigViewProps;
 };
 
@@ -267,33 +265,6 @@ export function AdvancedView(props: AdvancedViewProps) {
         </div>
 
         <div className="text-[11px] text-gray-7">{t("settings.exa_restart_hint")}</div>
-      </div>
-
-      <div className={`${settingsPanelClass} space-y-3`}>
-        <div>
-          <div className="text-sm font-medium text-gray-12">Feature flags</div>
-          <div className="text-xs text-gray-9">
-            Experimental controls for sandbox and workspace behaviors.
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-6 bg-gray-1 p-3">
-          <div className="min-w-0">
-            <div className="text-sm text-gray-12">Create Sandbox uses microsandbox image</div>
-            <div className="text-xs text-gray-7">
-              When enabled, Create Sandbox launches the detached worker with the microsandbox image
-              flow instead of the default Docker image flow.
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            className="h-8 shrink-0 px-3 py-0 text-xs"
-            onClick={props.toggleMicrosandboxCreateSandbox}
-            disabled={props.busy || !isDesktopRuntime()}
-          >
-            {props.microsandboxCreateSandboxEnabled ? "On" : "Off"}
-          </Button>
-        </div>
       </div>
 
       <div className={`${settingsPanelClass} space-y-3`}>

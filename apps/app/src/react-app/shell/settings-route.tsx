@@ -1527,16 +1527,6 @@ export function SettingsRoute() {
             toggleOpencodeEnableExa={() => {
               setRouteError("EXA controls are not wired into the React settings route yet.");
             }}
-            microsandboxCreateSandboxEnabled={local.prefs.featureFlags.microsandboxCreateSandbox}
-            toggleMicrosandboxCreateSandbox={() => {
-              local.setPrefs((previous) => ({
-                ...previous,
-                featureFlags: {
-                  ...previous.featureFlags,
-                  microsandboxCreateSandbox: !previous.featureFlags.microsandboxCreateSandbox,
-                },
-              }));
-            }}
             configView={{
               busy,
               clientConnected: Boolean(opencodeClient),

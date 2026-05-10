@@ -8,7 +8,7 @@
 // acknowledged.
 //
 // Scope decision: we migrate *workspace* keys only. Everything else
-// (theme, font zoom, sidebar widths, feature flags) is cheap to redo and
+// (theme, font zoom, sidebar widths) is cheap to redo and
 // not worth the complexity of a cross-origin localStorage transfer.
 
 import { invoke } from "@tauri-apps/api/core";

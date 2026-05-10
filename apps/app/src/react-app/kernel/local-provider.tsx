@@ -23,9 +23,6 @@ export type LocalPreferences = {
   showThinking: boolean;
   modelVariant: string | null;
   defaultModel: ModelRef | null;
-  featureFlags: {
-    microsandboxCreateSandbox: boolean;
-  };
   /**
    * Set to true after the user completes the welcome/onboarding flow
    * (creates or connects their first workspace). When false and the
@@ -55,7 +52,6 @@ const INITIAL_PREFS: LocalPreferences = {
   showThinking: DEFAULT_SHOW_MODEL_REASONING,
   modelVariant: null,
   defaultModel: null,
-  featureFlags: { microsandboxCreateSandbox: false },
   hasCompletedOnboarding: false,
 };
 
@@ -93,11 +89,15 @@ export function LocalProvider({ children }: LocalProviderProps) {
   );
   const [prefs, setPrefsRaw] = useState<LocalPreferences>(() => {
     const persisted = readPersisted(PREFS_STORAGE_KEY, INITIAL_PREFS);
-    if (persisted.defaultModel) {
-      return persisted;
+    const { featureFlags: _legacyFeatureFlags, ...rest } = persisted as LocalPreferences & {
+      featureFlags?: unknown;
+    };
+    const normalized = rest as LocalPreferences;
+    if (normalized.defaultModel) {
+      return normalized;
     }
     return {
-      ...persisted,
+      ...normalized,
       defaultModel: readStoredDefaultModel(),
     };
   });
