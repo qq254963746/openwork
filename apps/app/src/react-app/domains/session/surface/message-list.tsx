@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
 import {
+  Fragment,
   memo,
   useEffect,
   useMemo,
@@ -26,7 +27,8 @@ import {
 } from "../../../../app/types";
 import { deriveWorkspaceWriteTouchesFromUIMessage } from "../../../../app/utils/workspace-write-touches";
 import { groupMessageParts, isDesktopRuntime, summarizeStep } from "../../../../app/utils";
-import { t } from "../../../../i18n";
+import { currentLocale, t } from "../../../../i18n";
+import type { AssistantReplyFooterMeta } from "./session-render-state";
 import { MarkdownBlock } from "./markdown";
 import { ToolStepTitleGlyph } from "./tool-step-title-glyph";
 import { applyTextHighlights } from "./text-highlights";
@@ -144,6 +146,113 @@ function blocksAreEquivalent(
   return false;
 }
 
+function formatReplyStartedAt(ms: number): string {
+  const loc = currentLocale();
+  const localeTag = loc === "zh" ? "zh-CN" : "en-US";
+  return new Date(ms).toLocaleString(localeTag, {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function formatReplyDuration(ms: number): string {
+  if (ms < 1000) return `${Math.max(0, Math.round(ms))}ms`;
+  const s = ms / 1000;
+  if (s < 60) return s < 10 ? `${s.toFixed(1)}s` : `${Math.round(s)}s`;
+  const m = Math.floor(s / 60);
+  const rs = Math.floor(s % 60);
+  return `${m}m ${rs}s`;
+}
+
+function formatReplyTokens(n: number): string {
+  const abs = Math.abs(n);
+  if (abs >= 10_000) return `${Math.round(n / 1000)}k`;
+  if (abs >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+}
+
+function AssistantReplyMetaRow(props: {
+  meta: AssistantReplyFooterMeta;
+  showDurationPending: boolean;
+}) {
+  const { meta, showDurationPending } = props;
+  const sepClass = "text-dls-secondary/50";
+
+  type Segment = { key: string; node: ReactNode };
+  const segments: Segment[] = [
+    {
+      key: "start",
+      node: <span className="whitespace-nowrap">{formatReplyStartedAt(meta.startedAtMs)}</span>,
+    },
+  ];
+
+  if (meta.durationMs !== undefined && meta.durationMs >= 0) {
+    segments.push({
+      key: "dur",
+      node: <span className="whitespace-nowrap">{formatReplyDuration(meta.durationMs)}</span>,
+    });
+  } else if (showDurationPending) {
+    segments.push({
+      key: "dur-pending",
+      node: <span className="whitespace-nowrap">{t("session.assistant_reply_duration_pending")}</span>,
+    });
+  }
+
+  if (meta.tokenTotal !== undefined && meta.tokenTotal > 0) {
+    segments.push({
+      key: "tok",
+      node: (
+        <span className="whitespace-nowrap">
+          {formatReplyTokens(meta.tokenTotal)} {t("session.assistant_reply_tokens_suffix")}
+        </span>
+      ),
+    });
+  }
+
+  segments.push({
+    key: "model",
+    node: (
+      <span className="min-w-0 max-w-[14rem] truncate font-medium text-dls-secondary" title={meta.modelKey}>
+        {meta.modelKey}
+      </span>
+    ),
+  });
+
+  const ariaParts: string[] = [
+    `${t("session.assistant_reply_meta_started")} ${formatReplyStartedAt(meta.startedAtMs)}`,
+  ];
+  if (meta.durationMs !== undefined && meta.durationMs >= 0) {
+    ariaParts.push(`${t("session.assistant_reply_meta_duration")} ${formatReplyDuration(meta.durationMs)}`);
+  } else if (showDurationPending) {
+    ariaParts.push(t("session.assistant_reply_meta_duration_pending"));
+  }
+  if (meta.tokenTotal !== undefined && meta.tokenTotal > 0) {
+    ariaParts.push(`${t("session.assistant_reply_meta_tokens")} ${meta.tokenTotal}`);
+  }
+  ariaParts.push(`${t("session.assistant_reply_meta_model")} ${meta.modelKey}`);
+
+  return (
+    <div
+      className="pointer-events-auto flex min-w-0 w-full flex-wrap items-center justify-start gap-x-1 gap-y-0.5 text-[11px] leading-snug text-dls-secondary tabular-nums"
+      aria-label={ariaParts.join(". ")}
+    >
+      {segments.map((segment, index) => (
+        <Fragment key={segment.key}>
+          {index > 0 ? (
+            <span className={`${sepClass} shrink-0`} aria-hidden>
+              ·
+            </span>
+          ) : null}
+          {segment.node}
+        </Fragment>
+      ))}
+    </div>
+  );
+}
+
 export type SessionTranscriptProps = {
   messages: UIMessage[];
   isStreaming: boolean;
@@ -169,6 +278,8 @@ export type SessionTranscriptProps = {
   fetchWorkspaceFileText?: (relativePath: string) => Promise<string | undefined>;
   /** Prefix for SVG preview cache keys (typically `workspaceId`) */
   writtenFileSvgQueryKey?: string;
+  /** Per-message timing/usage/model for assistant replies (from session snapshot). */
+  assistantReplyMetaById?: ReadonlyMap<string, AssistantReplyFooterMeta>;
 };
 
 // 500 was too high for real-world OpenWork sessions: a handful of giant
@@ -336,6 +447,29 @@ function messageToText(message: UIMessage) {
     .trim();
 }
 
+/** Last assistant message id in each QA segment → copy callback that joins every assistant bubble in that segment. */
+function buildAssistantQaCopyTextByLastId(messages: UIMessage[]): Map<string, () => string> {
+  const map = new Map<string, () => string>();
+  let group: UIMessage[] = [];
+  const flush = () => {
+    if (group.length === 0) return;
+    /** Snapshot — lazy getters must not close over `group`, which is cleared after each flush. */
+    const segment = group.slice();
+    const last = segment[segment.length - 1]!;
+    map.set(last.id, () => {
+      const segments = segment.map((m) => messageToText(m)).filter((text) => text.trim().length > 0);
+      return segments.join("\n\n");
+    });
+    group = [];
+  };
+  for (const m of messages) {
+    if (m.role === "assistant") group.push(m);
+    else flush();
+  }
+  flush();
+  return map;
+}
+
 function isImageAttachment(mime: string) {
   return mime.startsWith("image/");
 }
@@ -471,18 +605,58 @@ async function revealFileInFinder(path: string) {
   }
 }
 
-function CopyButton(props: { getText: () => string }) {
+function fallbackCopyPlainText(text: string): boolean {
+  try {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.setAttribute("readonly", "");
+    el.style.position = "fixed";
+    el.style.opacity = "0";
+    el.style.left = "-9999px";
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    el.setSelectionRange(0, text.length);
+    const ok = document.execCommand("copy");
+    document.body.removeChild(el);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+async function copyPlainTextToClipboard(text: string): Promise<boolean> {
+  const payload = text ?? "";
+  try {
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(payload);
+      return true;
+    }
+  } catch {
+    // Clipboard API can fail (permissions / embedded WebView); fall back below.
+  }
+  return fallbackCopyPlainText(payload);
+}
+
+function CopyButton(props: { getText: () => string; variant?: "bordered" | "ghost" }) {
   const [copied, setCopied] = useState(false);
+  const ghost = props.variant === "ghost";
 
   return (
     <button
       type="button"
-      className="inline-flex items-center justify-center rounded-lg border border-dls-border bg-dls-surface p-1.5 text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+      className={
+        ghost
+          ? "inline-flex items-center justify-center rounded-lg p-1.5 text-dls-secondary transition-colors hover:bg-dls-hover/90 hover:text-dls-text"
+          : "inline-flex items-center justify-center rounded-lg border border-dls-border bg-dls-surface p-1.5 text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text"
+      }
       title="Copy message"
       onClick={async () => {
-        await navigator.clipboard.writeText(props.getText());
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 1200);
+        const ok = await copyPlainTextToClipboard(props.getText());
+        if (ok) {
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1200);
+        }
       }}
     >
       {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -946,7 +1120,7 @@ const AssistantWrittenFiles = memo(function AssistantWrittenFiles(props: {
 
   return (
     <div
-      className={`mt-4 w-full space-y-2 ${props.clearFloatingCopySlot ? "pb-11 pr-14" : ""}`.trim()}
+      className={`mt-4 w-full space-y-2 ${props.clearFloatingCopySlot ? "pb-9" : ""}`.trim()}
       role="list"
       aria-label={t("session.written_files_list_aria")}
     >
@@ -1289,6 +1463,11 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
       setInternalExpandedStepIds((current) => updater(current));
     });
 
+  const assistantQaCopyByLastId = useMemo(
+    () => buildAssistantQaCopyTextByLastId(props.messages),
+    [props.messages],
+  );
+
   const transcriptMessages = useMemo<TranscriptMessage[]>(() => {
     return props.messages.map((message) => ({
       id: message.id,
@@ -1518,6 +1697,12 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
         !block.isUser && block.messageIds[0]
           ? props.messages.find((m) => m.id === block.messageIds[0])
           : undefined;
+      const clusterMsgId = block.messageIds[0] ?? "";
+      const showClusterQaFooter =
+        !isNestedVariant && !block.isUser && assistantQaCopyByLastId.has(clusterMsgId);
+      const clusterFooterMeta = showClusterQaFooter
+        ? props.assistantReplyMetaById?.get(clusterMsgId)
+        : undefined;
 
       return (
         <div
@@ -1535,7 +1720,9 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                   : "relative max-w-[85%] rounded-[12px] bg-[rgba(0,0,0,0.04)] px-4 py-[9px] text-[15px] leading-relaxed text-[rgba(0,0,0,0.85)] dark:bg-white/[0.08] dark:text-gray-12"
                 : isNestedVariant
                   ? "w-full relative text-[14px] leading-[1.65] text-dls-text group"
-                  : "w-full relative max-w-[800px] text-[15px] leading-[1.7] text-dls-text group"
+                  : `w-full relative max-w-[800px] text-[15px] leading-[1.7] text-dls-text group${
+                      showClusterQaFooter ? " pb-7" : ""
+                    }`
             } ${searchOutlineClass}`}
           >
             <StepsContainer
@@ -1557,7 +1744,35 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                 onOpenWorkspaceRelativePath={props.onOpenWorkspaceRelativePath}
                 fetchWorkspaceFileText={props.fetchWorkspaceFileText}
                 writtenFileSvgQueryKey={props.writtenFileSvgQueryKey}
+                clearFloatingCopySlot={showClusterQaFooter}
               />
+            ) : null}
+            {showClusterQaFooter ? (
+              <div className="absolute bottom-px left-0 right-2 flex items-center gap-3 opacity-0 pointer-events-none transition-opacity select-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto">
+                <div className="pointer-events-auto min-w-0 flex-1">
+                  {clusterFooterMeta ? (
+                    <AssistantReplyMetaRow
+                      meta={clusterFooterMeta}
+                      showDurationPending={
+                        props.isStreaming &&
+                        clusterMsgId === latestAssistantMessageId &&
+                        clusterFooterMeta.durationMs === undefined
+                      }
+                    />
+                  ) : (
+                    <span className="min-w-0 shrink" aria-hidden />
+                  )}
+                </div>
+                <div className="pointer-events-auto shrink-0">
+                  <CopyButton
+                    variant="ghost"
+                    getText={() =>
+                      assistantQaCopyByLastId.get(clusterMsgId)?.() ??
+                      (clusterMessage ? messageToText(clusterMessage) : "")
+                    }
+                  />
+                </div>
+              </div>
             ) : null}
           </div>
         </div>
@@ -1597,6 +1812,12 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
       );
     }
 
+    const showAssistantQaFooter =
+      !block.isUser && assistantQaCopyByLastId.has(block.messageId);
+    const assistantFooterMeta = showAssistantQaFooter
+      ? props.assistantReplyMetaById?.get(block.messageId)
+      : undefined;
+
     return (
       <div
         key={`message-${block.messageId}`}
@@ -1613,7 +1834,9 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                 : "relative max-w-[85%] rounded-[12px] bg-[rgba(0,0,0,0.04)] px-4 py-[9px] text-[15px] leading-relaxed text-[rgba(0,0,0,0.85)] dark:bg-white/[0.08] dark:text-gray-12"
               : isNestedVariant
                 ? "w-full relative text-[14px] leading-[1.65] text-dls-text antialiased group"
-                : "w-full relative max-w-[800px] text-[15px] leading-[1.72] text-dls-text antialiased group"
+                : `w-full relative max-w-[800px] text-[15px] leading-[1.72] text-dls-text antialiased group${
+                    showAssistantQaFooter ? " pb-7" : ""
+                  }`
           } ${searchOutlineClass}`}
         >
           {block.attachments.length > 0 ? (
@@ -1708,14 +1931,41 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
               onOpenWorkspaceRelativePath={props.onOpenWorkspaceRelativePath}
               fetchWorkspaceFileText={props.fetchWorkspaceFileText}
               writtenFileSvgQueryKey={props.writtenFileSvgQueryKey}
-              clearFloatingCopySlot={!isNestedVariant}
+              clearFloatingCopySlot={!isNestedVariant && showAssistantQaFooter}
             />
           ) : null}
 
           {!isNestedVariant ? (
-            <div className="absolute bottom-2 right-2 flex justify-end opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto md:group-focus-within:opacity-100 md:group-focus-within:pointer-events-auto transition-opacity select-none">
-              <CopyButton getText={() => messageToText(block.message)} />
-            </div>
+            block.isUser ? (
+              <div className="absolute bottom-2 right-2 flex justify-end opacity-0 pointer-events-none transition-opacity select-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto">
+                <CopyButton getText={() => messageToText(block.message)} />
+              </div>
+            ) : showAssistantQaFooter ? (
+              <div className="absolute bottom-px left-0 right-2 flex items-center gap-3 opacity-0 pointer-events-none transition-opacity select-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto">
+                <div className="pointer-events-auto min-w-0 flex-1">
+                  {assistantFooterMeta ? (
+                    <AssistantReplyMetaRow
+                      meta={assistantFooterMeta}
+                      showDurationPending={
+                        props.isStreaming &&
+                        block.messageId === latestAssistantMessageId &&
+                        assistantFooterMeta.durationMs === undefined
+                      }
+                    />
+                  ) : (
+                    <span className="min-w-0 shrink" aria-hidden />
+                  )}
+                </div>
+                <div className="pointer-events-auto shrink-0">
+                  <CopyButton
+                    variant="ghost"
+                    getText={() =>
+                      assistantQaCopyByLastId.get(block.messageId)?.() ?? messageToText(block.message)
+                    }
+                  />
+                </div>
+              </div>
+            ) : null
           ) : null}
         </div>
       </div>
@@ -1749,7 +1999,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                     virtualizer.measureElement(element);
                   }
                 }}
-                className="absolute left-0 top-0 w-full pb-4"
+                className="absolute left-0 top-0 w-full pb-1.5"
                 style={{
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
@@ -1760,7 +2010,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
           })}
         </div>
       ) : (
-        <div className={isNestedVariant ? "space-y-3" : "space-y-4"}>
+        <div className={isNestedVariant ? "space-y-2" : "space-y-2.5"}>
           {messageBlocks.map((block, index) => renderBlock(block, index))}
         </div>
       )}

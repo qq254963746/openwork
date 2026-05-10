@@ -4,7 +4,7 @@ import type * as React from "react";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { isElectronRuntime, isTauriRuntime } from "../../../../app/utils";
+import { isDesktopRuntime, isElectronRuntime, isTauriRuntime } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import { SettingsPage, getSettingsTabLabel } from "./settings-page";
 import { WorkspaceSessionList } from "../../session/sidebar/workspace-session-list";
@@ -102,10 +102,18 @@ export function SettingsShell(props: SettingsShellProps) {
           >
             <div className="flex min-w-0 items-center gap-3">
               {props.headerLeadingSlot}
-              <h1 className="truncate text-[15px] font-semibold text-dls-text">{title}</h1>
-              <span className="hidden truncate text-[13px] text-dls-secondary lg:inline">
-                {props.selectedWorkspaceName}
-              </span>
+              <div className="flex min-w-0 max-w-full flex-1 items-end gap-x-3">
+                <h1
+                  className={`max-w-full min-w-0 flex-1 truncate text-[15px] font-semibold leading-none text-dls-text ${isDesktopRuntime() ? "cursor-default" : ""}`}
+                >
+                  {title}
+                </h1>
+                <span
+                  className={`hidden max-w-[14rem] shrink-0 truncate text-[10px] leading-none text-[rgba(0,0,0,0.2)] lg:inline dark:text-gray-11/45 ${isDesktopRuntime() ? "cursor-default" : ""}`}
+                >
+                  {props.selectedWorkspaceName}
+                </span>
+              </div>
               {props.developerMode && props.headerStatus ? (
                 <span className="hidden text-[12px] text-dls-secondary lg:inline">
                   {props.headerStatus}

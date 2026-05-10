@@ -46,7 +46,11 @@ import {
   type SessionWorkspacePanelHandle,
 } from "./session-workspace-panel";
 import { SessionDebugPanel } from "./debug-panel";
-import { deriveRenderedSessionMessages, resolveRenderedSessionSnapshot } from "./session-render-state";
+import {
+  buildAssistantReplyFooterMetaMap,
+  deriveRenderedSessionMessages,
+  resolveRenderedSessionSnapshot,
+} from "./session-render-state";
 import { SessionTranscript } from "./message-list";
 import { deriveSessionRenderModel } from "../sync/transition-controller";
 import { useSessionScrollController } from "./scroll-controller";
@@ -657,6 +661,10 @@ export function SessionSurface(props: SessionSurfaceProps) {
     () => deriveRenderedSessionMessages({ transcriptState, snapshot, includeLiveOnlyMessages: chatStreaming || Boolean(error) }),
     [chatStreaming, error, snapshot, transcriptState],
   );
+  const assistantReplyMetaById = useMemo(
+    () => buildAssistantReplyFooterMetaMap(snapshot, renderedMessages),
+    [snapshot, renderedMessages],
+  );
 
   const workspacePanelRefreshPrevStreamingRef = useRef<boolean | null>(null);
   useEffect(() => {
@@ -1197,6 +1205,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
                     onOpenWorkspaceRelativePath={openWorkspaceRelativePath}
                     fetchWorkspaceFileText={fetchWorkspaceFileText}
                     writtenFileSvgQueryKey={props.workspaceId}
+                    assistantReplyMetaById={assistantReplyMetaById}
                   />
                   {error ? (
                     <SessionErrorCard
