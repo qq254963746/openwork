@@ -28,8 +28,8 @@
     "chrome-devtools-mcp": "0.17.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0",
-    "electron": "^35.0.0",
+    "@tauri-apps/cli": "^2.11.1",
+    "electron": "^35.7.5",
     "electron-builder": "^25.1.8",
     "electron-devtools-installer": "^4.0.0"
   },
