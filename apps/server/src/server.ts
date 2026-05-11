@@ -444,7 +444,9 @@ async function fetchOpencodeJson(
   headers.set("Content-Type", "application/json");
 
   if (directory) {
-    headers.set("x-opencode-directory", directory);
+    // Encode directory if it contains non-ASCII characters to match frontend behavior
+    const encoded = /[^\x00-\x7F]/.test(directory) ? encodeURIComponent(directory) : directory;
+    headers.set("x-opencode-directory", encoded);
   }
 
   const auth = connection.authHeader ?? null;
@@ -494,7 +496,9 @@ async function proxyOpencodeRequest(input: {
 
   const directory = workspace ? resolveOpencodeDirectory(workspace) : null;
   if (directory && !headers.has("x-opencode-directory")) {
-    headers.set("x-opencode-directory", directory);
+    // Encode directory if it contains non-ASCII characters to match frontend behavior
+    const encoded = /[^\x00-\x7F]/.test(directory) ? encodeURIComponent(directory) : directory;
+    headers.set("x-opencode-directory", encoded);
   }
 
   const auth = workspace ? resolveWorkspaceOpencodeConnection(input.config, workspace).authHeader ?? null : null;
