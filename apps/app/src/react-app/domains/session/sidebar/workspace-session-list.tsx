@@ -588,7 +588,7 @@ export function WorkspaceSessionList(props: Props) {
           </div>
         ) : null}
       </div>
-      <div className="shrink-0 border-b border-dls-border/80 pb-3 pt-2.5">
+      <div className="shrink-0 pb-4 pt-3">
         <div className="flex min-w-0 items-center gap-2 px-3.5">
           <img
             src={AIWORK_MARK_SRC}
