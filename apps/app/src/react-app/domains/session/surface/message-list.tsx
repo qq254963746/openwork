@@ -774,7 +774,7 @@ function FileCard(props: {
     <div
       className={`group relative flex items-center gap-3 rounded-2xl border px-4 py-3 transition-colors ${
         props.tone === "user"
-          ? "border-gray-6/60 bg-gray-2/40 hover:bg-gray-2/60"
+          ? "border-gray-6/60 bg-white hover:bg-gray-2/60 dark:bg-gray-2/40"
           : "border-gray-6/40 bg-gray-1/40 hover:bg-gray-2/30"
       }`}
     >

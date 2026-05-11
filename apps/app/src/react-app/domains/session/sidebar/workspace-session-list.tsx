@@ -909,7 +909,7 @@ export function WorkspaceSessionList(props: Props) {
                           {rootSessions.length > previewCount(workspace.id) ? (
                             <button
                               type="button"
-                              className="w-full rounded-[15px] border border-transparent px-3 py-2.5 text-left text-[11px] text-gray-10 transition-colors hover:bg-gray-2/60 hover:text-gray-11"
+                              className="w-full rounded-[15px] border border-transparent px-3 py-2.5 text-left text-[11px] text-[#00000059] dark:text-gray-10 transition-colors hover:bg-gray-2/60 hover:text-gray-11"
                               onClick={() => showMoreSessions(workspace.id, rootSessions.length)}
                             >
                               {showMoreLabel(workspace.id, rootSessions.length)}
