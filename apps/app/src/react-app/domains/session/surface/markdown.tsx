@@ -19,6 +19,7 @@ const MarkdownFencedBlockContext = React.createContext(false);
 
 /** Body padding + typography for fenced code: ```lang``` and plain `````` blocks stay aligned. */
 const MARKDOWN_FENCED_CODE_INNER = "px-4 py-3 text-[12px] leading-6 text-gray-12";
+const MARKDOWN_FENCED_CODE_INNER_WITH_TYPE = "text-[12px] leading-6 text-gray-12";
 
 /** GFM + LaTeX ($...$, $$...$$); KaTeX won't throw on incomplete streams */
 const remarkMarkdownPlugins = [remarkGfm, remarkMath];
@@ -46,7 +47,7 @@ function MarkdownCodeBlock(props: { className?: string; children: React.ReactNod
   return (
     <div className="my-4 overflow-hidden rounded-[18px] border border-dls-border/70 bg-[rgb(249,250,251)]">
       <div className="flex items-center justify-between gap-3 border-b border-dls-border/70 px-3 py-1.5">
-        <span className="min-w-0 truncate font-mono text-[11px] font-medium text-gray-10">{lang}</span>
+        <span className="min-w-0 truncate font-mono text-[11px] font-medium text-gray-12">{lang}</span>
         <button
           type="button"
           className="shrink-0 rounded-full border border-dls-border bg-[rgb(249,250,251)] px-3 py-1 text-[11px] font-medium text-dls-text transition-colors hover:bg-dls-hover"
@@ -59,7 +60,7 @@ function MarkdownCodeBlock(props: { className?: string; children: React.ReactNod
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <pre className={`overflow-x-auto ${MARKDOWN_FENCED_CODE_INNER} !bg-transparent`}>
+      <pre className={`overflow-x-auto ${MARKDOWN_FENCED_CODE_INNER_WITH_TYPE} !bg-transparent`}>
         <code className={props.className} style={{ backgroundColor: "transparent" }}>
           {props.children}
         </code>
