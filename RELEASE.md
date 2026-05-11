@@ -50,10 +50,9 @@ AiWork releases should be deterministic, easy to reproduce, and fully verifiable
 4. Publish the package:
    - `pnpm --filter aiwork-orchestrator publish --access public`
 
-## aiwork-server + opencode-router (if version changed)
+## aiwork-server (if version changed)
 
 - `pnpm --filter aiwork-server publish --access public`
-- `pnpm --filter opencode-router publish --access public`
 
 ## Verification
 
@@ -65,7 +64,7 @@ Use `pnpm release:review --json` when automating these checks in scripts or agen
 
 ## npm publishing
 
-If you want `Release App` to publish `aiwork-orchestrator`, `aiwork-server`, and `opencode-router` to npm, configure:
+If you want `Release App` to publish `aiwork-orchestrator`, `aiwork-server` to npm, configure:
 
 - GitHub Actions secret: `NPM_TOKEN` (npm automation token)
 

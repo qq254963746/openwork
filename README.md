@@ -3,7 +3,7 @@
 ## Core Philosophy
 
 - Local-first, cloud-ready: AiWork runs on your machine in one click. Send a message instantly.
-- Composable: desktop app, Slack/Telegram connector, or server. Use what fits, no lock-in.
+- Composable: desktop app or server. Use what fits, no lock-in.
 - Ejectable: AiWork is powered by OpenCode, so everything OpenCode can do works in AiWork, even without a UI yet.
 
 AiWork is designed around the idea that you can easily ship your agentic workflows for your team as a repeatable, productized process.
@@ -102,7 +102,7 @@ curl -fsSL https://opencode.ai/install | bash -s -- --version "$(node -e "const 
 ## Architecture (high-level)
 
 - In **Host mode**, AiWork runs a local host stack and connects the UI to it.
-  - Default runtime: `aiwork` (installed from `aiwork-orchestrator`), which orchestrates `opencode`, `aiwork-server`, and optionally `opencode-router`.
+  - Default runtime: `aiwork` (installed from `aiwork-orchestrator`), which orchestrates `opencode`, `aiwork-server`
   - Fallback runtime: `direct`, where the desktop app spawns `opencode serve --hostname 127.0.0.1 --port <free-port>` directly.
 
 When you select a project folder, AiWork runs the host stack locally using that folder and connects the desktop UI.

@@ -17,12 +17,10 @@ import { AppProviders } from "./react-app/shell/providers";
 import { AppRoot } from "./react-app/shell/app-root";
 import { installDesktopShellEventsBridgeListeners } from "./react-app/shell/desktop-shell-events-bridge";
 import { applyLogViewerPopupNavigationFromStorage } from "./react-app/shell/open-app-log-window";
-import { startDeepLinkBridge } from "./react-app/shell/startup-deep-links";
 import "./app/index.css";
 
 bootstrapTheme();
 initLocale();
-startDeepLinkBridge();
 
 applyLogViewerPopupNavigationFromStorage();
 await installDesktopShellEventsBridgeListeners();

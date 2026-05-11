@@ -58,16 +58,9 @@ export type CapabilitiesData = {
   };
   runtime: {
     opencodeHealth: true;
-    routerHealth: true;
     runtimeSummary: true;
     runtimeUpgrade: true;
     runtimeVersions: true;
-  };
-  router: {
-    bindings: true;
-    identities: true;
-    outboundSend: true;
-    productRoutes: true;
   };
   shares: {
     workspaceScoped: true;
@@ -149,16 +142,9 @@ export function createCapabilitiesService(input: {
         },
         runtime: {
           opencodeHealth: true,
-          routerHealth: true,
           runtimeSummary: true,
           runtimeUpgrade: true,
           runtimeVersions: true,
-        },
-        router: {
-          bindings: true,
-          identities: true,
-          outboundSend: true,
-          productRoutes: true,
         },
         shares: {
           workspaceScoped: true,

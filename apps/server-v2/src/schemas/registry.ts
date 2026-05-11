@@ -103,16 +103,9 @@ export const capabilitiesDataSchema = z.object({
   }),
   runtime: z.object({
     opencodeHealth: z.literal(true),
-    routerHealth: z.literal(true),
     runtimeSummary: z.literal(true),
     runtimeUpgrade: z.literal(true),
     runtimeVersions: z.literal(true),
-  }),
-  router: z.object({
-    bindings: z.literal(true),
-    identities: z.literal(true),
-    outboundSend: z.literal(true),
-    productRoutes: z.literal(true),
   }),
   shares: z.object({
     workspaceScoped: z.literal(true),
@@ -202,12 +195,6 @@ export const systemStatusDataSchema = z.object({
   registry: registrySummarySchema,
   runtime: z.object({
     opencode: z.object({
-      baseUrl: z.string().nullable(),
-      running: z.boolean(),
-      status: z.enum(["crashed", "disabled", "error", "restart_scheduled", "running", "starting", "stopped"]),
-      version: z.string().nullable(),
-    }),
-    router: z.object({
       baseUrl: z.string().nullable(),
       running: z.boolean(),
       status: z.enum(["crashed", "disabled", "error", "restart_scheduled", "running", "starting", "stopped"]),

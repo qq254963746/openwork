@@ -1,6 +1,6 @@
 # AiWork Orchestrator
 
-Host orchestrator for opencode + AiWork server + opencode-router. This is a CLI-first way to run host mode without the desktop UI.
+Host orchestrator for opencode + AiWork server. This is a CLI-first way to run host mode without the desktop UI.
 
 Published on npm as `aiwork-orchestrator` and installs the `aiwork` command.
 
@@ -24,11 +24,11 @@ If npm skips the optional platform package, `postinstall` falls back to download
 binary from the `aiwork-orchestrator-v<version>` GitHub release. Override the download host with
 `AIWORK_ORCHESTRATOR_DOWNLOAD_BASE_URL` when you need to use a mirror.
 
-`aiwork` downloads and caches the `aiwork-server`, `opencode-router`, and `opencode` sidecars on
+`aiwork` downloads and caches the `aiwork-server`, and `opencode` sidecars on
 first run using a SHA-256 manifest. Use `--sidecar-dir` or `AIWORK_SIDECAR_DIR` to control the
 cache location, and `--sidecar-base-url` / `--sidecar-manifest` to point at a custom host.
 
-Use `--sidecar-source` to control where `aiwork-server` and `opencode-router` are resolved
+Use `--sidecar-source` to control where `aiwork-server` are resolved
 (`auto` | `bundled` | `downloaded` | `external`), and `--opencode-source` to control
 `opencode` resolution. Set `AIWORK_SIDECAR_SOURCE` / `AIWORK_OPENCODE_SOURCE` to
 apply the same policies via env vars.
@@ -36,11 +36,8 @@ apply the same policies via env vars.
 By default the manifest is fetched from
 `https://github.com/qq254963746/aiwork/releases/download/aiwork-orchestrator-v<version>/aiwork-orchestrator-sidecars.json`.
 
-OpenCode Router is optional. If it exits, `aiwork` continues running unless you pass
-`--opencode-router-required` or set `AIWORK_OPENCODE_ROUTER_REQUIRED=1`.
-
 For development overrides only, set `AIWORK_ALLOW_EXTERNAL=1` or pass `--allow-external` to use
-locally installed `aiwork-server` or `opencode-router` binaries.
+locally installed `aiwork-server` binaries.
 
 Add `--verbose` (or `AIWORK_VERBOSE=1`) to print extra diagnostics about resolved binaries.
 
@@ -78,7 +75,7 @@ Docker / Apple-container sandbox mode has been removed; orchestrator always runs
 
 ## Logging
 
-`aiwork` emits a unified log stream from OpenCode, AiWork server, and opencode-router. Use JSON format for
+`aiwork` emits a unified log stream from OpenCode, AiWork server. Use JSON format for
 structured, OpenTelemetry-friendly logs and a stable run id for correlation.
 
 ```bash
@@ -192,5 +189,4 @@ aiwork start \
   --workspace /path/to/workspace \
   --allow-external \
   --aiwork-server-bin apps/server/src/cli.ts \
-  --opencode-router-bin apps/opencode-router/dist/cli.js
 ```

@@ -365,28 +365,7 @@ export function createRuntimeAssetService(options: RuntimeAssetServiceOptions) {
     throw new Error("Unable to resolve the pinned OpenCode version from constants.json.");
   };
 
-  const readRouterVersion = async () => {
-    const candidates = [
-      repoRoot ? path.join(repoRoot, "apps", "opencode-router", "package.json") : null,
-      path.resolve(dirnameFromMetaUrl(import.meta.url), "..", "..", "..", "opencode-router", "package.json"),
-    ].filter(Boolean) as string[];
-
-    for (const candidate of candidates) {
-      if (!fs.existsSync(candidate)) {
-        continue;
-      }
-
-      const parsed = await readJson<{ version?: string }>(candidate);
-      const value = parsed.version?.trim() ?? "";
-      if (value) {
-        return normalizeVersion(value);
-      }
-    }
-
-    throw new Error("Unable to resolve the local opencode-router version.");
-  };
-
-  const materializeManifest = async (source: RuntimeAssetSource, opencode: ResolvedRuntimeBinary, router: ResolvedRuntimeBinary) => {
+  const materializeManifest = async (source: RuntimeAssetSource, opencode: ResolvedRuntimeBinary) => {
     const rootDir = resolveRootDir(source);
     const manifest: RuntimeManifest = {
       files: {
@@ -394,18 +373,12 @@ export function createRuntimeAssetService(options: RuntimeAssetServiceOptions) {
           path: path.relative(rootDir, opencode.absolutePath),
           sha256: opencode.sha256,
           size: opencode.size,
-        },
-        "opencode-router": {
-          path: path.relative(rootDir, router.absolutePath),
-          sha256: router.sha256,
-          size: router.size,
-        },
+        }
       },
       generatedAt: new Date().toISOString(),
       manifestVersion: 1,
       opencodeVersion: opencode.version,
       rootDir,
-      routerVersion: router.version,
       serverVersion,
       source,
       target: runtimeTarget,
@@ -424,7 +397,7 @@ export function createRuntimeAssetService(options: RuntimeAssetServiceOptions) {
     manifestPathOverride?.trim() ? path.resolve(manifestPathOverride) : releaseManifestPath(rootDir);
 
   const validateManifestRoot = async (rootDir: string, manifest: RuntimeManifest) => {
-    for (const name of ["opencode", "opencode-router"] as const) {
+    for (const name of ["opencode"] as const) {
       const entry = manifest.files[name];
       if (!entry) {
         return false;
@@ -533,7 +506,7 @@ export function createRuntimeAssetService(options: RuntimeAssetServiceOptions) {
 
   const resolveReleaseSourceBinary = (source: ReleaseBundleSource, name: RuntimeAssetName, relativePath: string) => {
     if (source.kind === "embedded") {
-      return name === "opencode" ? source.bundle.opencodePath : source.bundle.routerPath;
+      return source.bundle.opencodePath;
     }
 
     return path.resolve(source.rootDir, relativePath);
@@ -617,7 +590,7 @@ export function createRuntimeAssetService(options: RuntimeAssetServiceOptions) {
         await rm(tempRoot, { force: true, recursive: true });
         await mkdir(tempRoot, { recursive: true });
 
-        for (const name of ["opencode", "opencode-router"] as const) {
+        for (const name of ["opencode"] as const) {
           const entry = sourceManifest.files[name];
           if (!entry) {
             throw new Error(`Release runtime manifest in ${bundleLabel} is missing the ${name} entry.`);
@@ -721,50 +694,6 @@ export function createRuntimeAssetService(options: RuntimeAssetServiceOptions) {
     }
   };
 
-  const ensureDevelopmentRouterBinary = async (version: string) => {
-    if (!repoRoot) {
-      throw new Error("Cannot build opencode-router in development mode because the repo root could not be resolved.");
-    }
-
-    const rootDir = resolveRootDir("development");
-    const targetDir = path.join(rootDir, "opencode-router", runtimeTarget, `v${version}`);
-    const targetPath = path.join(targetDir, runtimeBinaryFilename("opencode-router", runtimeTarget));
-    if (await fileExists(targetPath)) {
-      const actualVersion = await readBinaryVersion(targetPath);
-      if (!actualVersion || actualVersion === version) {
-        await ensureExecutable(targetPath);
-        return targetPath;
-      }
-      await rm(targetPath, { force: true });
-    }
-
-    await mkdir(targetDir, { recursive: true });
-    const packageDir = path.join(repoRoot, "apps", "opencode-router");
-    const entrypoint = path.join(packageDir, "src", "cli.ts");
-    const outfile = targetPath;
-    const bunCommand = [
-      process.execPath,
-      "build",
-      entrypoint,
-      "--compile",
-      "--outfile",
-      outfile,
-      "--target",
-      resolveBunTarget(runtimeTarget),
-      "--define",
-      `__OPENCODE_ROUTER_VERSION__=\"${version}\"`,
-    ];
-
-    try {
-      await captureProcess(bunCommand, { cwd: packageDir, timeoutMs: 300_000 });
-      await ensureExecutable(outfile);
-      return outfile;
-    } catch (error) {
-      throw new Error(
-        `Failed to build the local opencode-router ${version} binary for ${runtimeTarget}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  };
 
   const ensureReleaseBinary = async (name: RuntimeAssetName, version: string) => {
     const { manifest, rootDir } = await ensureReleaseRuntimeRoot();
@@ -794,21 +723,17 @@ export function createRuntimeAssetService(options: RuntimeAssetServiceOptions) {
 
   const readReleaseManifestVersion = async (name: RuntimeAssetName) => {
     const { manifest } = await ensureReleaseRuntimeRoot();
-    return name === "opencode" ? manifest.opencodeVersion : manifest.routerVersion;
+    return manifest.opencodeVersion;
   };
 
   const ensureBinary = async (name: RuntimeAssetName) => {
     const source = resolveSource();
     const version = source === "release"
       ? await readReleaseManifestVersion(name)
-      : name === "opencode"
-        ? await readPinnedOpencodeVersion()
-        : await readRouterVersion();
+      : await readPinnedOpencodeVersion()
 
     const absolutePath = source === "development"
-      ? name === "opencode"
-        ? await ensureDevelopmentOpencodeBinary(version)
-        : await ensureDevelopmentRouterBinary(version)
+      ? await ensureDevelopmentOpencodeBinary(version)
       : await ensureReleaseBinary(name, version);
     return buildResolvedBinary(source, name, absolutePath, version);
   };
@@ -818,16 +743,8 @@ export function createRuntimeAssetService(options: RuntimeAssetServiceOptions) {
       return ensureBinary("opencode");
     },
 
-    async ensureRouterBinary() {
-      return ensureBinary("opencode-router");
-    },
-
     async getPinnedOpencodeVersion() {
       return readPinnedOpencodeVersion();
-    },
-
-    async getRouterVersion() {
-      return readRouterVersion();
     },
 
     getSource() {
@@ -847,12 +764,11 @@ export function createRuntimeAssetService(options: RuntimeAssetServiceOptions) {
     },
 
     async resolveRuntimeBundle(): Promise<ResolvedRuntimeBundle> {
-      const [opencode, router] = await Promise.all([this.ensureOpencodeBinary(), this.ensureRouterBinary()]);
-      const manifest = await materializeManifest(opencode.source, opencode, router);
+      const [opencode] = await Promise.all([this.ensureOpencodeBinary()]);
+      const manifest = await materializeManifest(opencode.source, opencode);
       return {
         manifest,
-        opencode,
-        router,
+        opencode
       };
     },
   };

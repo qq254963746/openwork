@@ -2,7 +2,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { validateMcpServerName } from "../mcp";
 import { applyWebviewZoom } from "./font-zoom";
-import { nativeDeepLinkEvent } from "./deep-link-bridge";
 
 export const desktopFetch = tauriFetch as unknown as typeof globalThis.fetch;
 
@@ -57,35 +56,6 @@ export async function setDesktopZoomFactor(value: number): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-export async function subscribeDesktopDeepLinks(
-  handler: (urls: string[]) => void,
-): Promise<() => void> {
-  const [{ getCurrent, onOpenUrl }, { listen }] = await Promise.all([
-    import("@tauri-apps/plugin-deep-link"),
-    import("@tauri-apps/api/event"),
-  ]);
-
-  const startUrls = await getCurrent().catch(() => null);
-  if (Array.isArray(startUrls)) {
-    handler(startUrls);
-  }
-
-  const deepLinkUnlisten = await onOpenUrl((urls) => {
-    handler(urls);
-  }).catch(() => () => undefined);
-
-  const eventUnlisten = await listen<string[]>(nativeDeepLinkEvent, (event) => {
-    if (Array.isArray(event.payload)) {
-      handler(event.payload);
-    }
-  }).catch(() => () => undefined);
-
-  return () => {
-    void deepLinkUnlisten();
-    void eventUnlisten();
-  };
 }
 
 export type EngineInfo = {

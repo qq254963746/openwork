@@ -445,8 +445,6 @@ export function createServerPersistence(options: CreateServerPersistenceOptions)
         opencodeVersion:
           parsed.binaries?.opencode?.actualVersion ?? parsed.cliVersion ?? existingRuntimeState?.opencodeVersion ?? null,
         restartPolicy: existingRuntimeState?.restartPolicy ?? null,
-        routerStatus: existingRuntimeState?.routerStatus ?? "disabled",
-        routerVersion: existingRuntimeState?.routerVersion ?? null,
         runtimeVersion: parsed.cliVersion ?? existingRuntimeState?.runtimeVersion ?? options.version,
         serverId: registry.localServerId,
       });
@@ -499,57 +497,6 @@ export function createServerPersistence(options: CreateServerPersistenceOptions)
     }
   }
 
-  const cloudSigninFile =
-    options.legacy?.cloudSigninPath?.trim() ||
-    resolveExistingFile(legacyDesktopDataDirCandidates(options.legacy?.desktopDataDir), "aiwork-cloud-signin.json");
-  const cloudSigninReport = options.legacy?.cloudSigninJson?.trim() || cloudSigninFile
-    ? createEmptyReport("imported", cloudSigninFile ?? "env:AIWORK_SERVER_V2_CLOUD_SIGNIN_JSON")
-    : createEmptyReport(
-        "unavailable",
-        null,
-        {
-          reason:
-            "No server-readable cloud signin snapshot was found. The current desktop app still persists cloud auth in browser localStorage, so later phases need an explicit handoff path.",
-        },
-      );
-
-  const cloudSigninRaw = options.legacy?.cloudSigninJson?.trim() || readTextIfExists(cloudSigninFile ?? null);
-  if (cloudSigninRaw) {
-    try {
-      const parsed = cloudSigninSchema.parse(JSON.parse(cloudSigninRaw));
-      const cloudBaseUrl = normalizeUrl(parsed.cloudBaseUrl ?? parsed.baseUrl ?? "");
-      if (!cloudBaseUrl) {
-        throw new Error("Cloud signin snapshot did not include a valid base URL.");
-      }
-
-      repositories.cloudSignin.upsert({
-        auth: parsed.authToken?.trim() ? { authToken: parsed.authToken.trim() } : null,
-        cloudBaseUrl,
-        id: "cloud_primary",
-        lastValidatedAt: parsed.lastValidatedAt?.trim() || null,
-        metadata: {
-          activeOrgName: parsed.activeOrgName?.trim() || null,
-          activeOrgSlug: parsed.activeOrgSlug?.trim() || null,
-        },
-        orgId: parsed.orgId?.trim() || parsed.activeOrgId?.trim() || null,
-        serverId: registry.localServerId,
-        userId: parsed.userId?.trim() || null,
-      });
-
-      cloudSigninReport.details = {
-        cloudBaseUrl,
-        imported: true,
-        orgId: parsed.orgId?.trim() || parsed.activeOrgId?.trim() || null,
-        userId: parsed.userId?.trim() || null,
-      };
-    } catch (error) {
-      cloudSigninReport.status = "error";
-      cloudSigninReport.details = {
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  }
-
   const legacyWorkspaceImportCompletedAt = priorLegacyWorkspaceImportCompletedAt
     ?? (desktopWorkspaceReport.status !== "error" && orchestratorStateReport.status !== "error"
       ? new Date().toISOString()
@@ -557,7 +504,6 @@ export function createServerPersistence(options: CreateServerPersistenceOptions)
   const diagnostics: StartupDiagnostics = {
     completedAt: new Date().toISOString(),
     importReports: {
-      cloudSignin: cloudSigninReport,
       desktopWorkspaceState: desktopWorkspaceReport,
       orchestratorAuth: orchestratorAuthReport,
       orchestratorState: orchestratorStateReport,
@@ -579,7 +525,6 @@ export function createServerPersistence(options: CreateServerPersistenceOptions)
       ...desktopWorkspaceReport.warnings,
       ...orchestratorStateReport.warnings,
       ...orchestratorAuthReport.warnings,
-      ...cloudSigninReport.warnings,
     ],
     workingDirectory: {
       databasePath: inMemory ? ":memory:" : workingDirectory.databasePath,
@@ -598,8 +543,6 @@ export function createServerPersistence(options: CreateServerPersistenceOptions)
     opencodeStatus: existingRuntimeState?.opencodeStatus ?? "unknown",
     opencodeVersion: existingRuntimeState?.opencodeVersion ?? options.version,
     restartPolicy: existingRuntimeState?.restartPolicy ?? null,
-    routerStatus: existingRuntimeState?.routerStatus ?? "disabled",
-    routerVersion: existingRuntimeState?.routerVersion ?? null,
     runtimeVersion: existingRuntimeState?.runtimeVersion ?? options.version,
     serverId: registry.localServerId,
   });

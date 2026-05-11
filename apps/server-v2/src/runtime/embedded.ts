@@ -1,7 +1,6 @@
 export type EmbeddedRuntimeBundle = {
   manifestPath: string;
   opencodePath: string;
-  routerPath: string;
 };
 
 declare global {

@@ -401,8 +401,6 @@ export function createWorkspaceFileService(input: {
       opencodeStatus: current?.opencodeStatus ?? "unknown",
       opencodeVersion: current?.opencodeVersion ?? null,
       restartPolicy: current?.restartPolicy ?? null,
-      routerStatus: current?.routerStatus ?? "disabled",
-      routerVersion: current?.routerVersion ?? null,
       runtimeVersion: current?.runtimeVersion ?? null,
       serverId: input.serverId,
     });

@@ -10,24 +10,17 @@ type VersionInfo = {
 };
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const repoRoot = resolve(root, "..", "..");
 const targetDir = resolve(root, "dist");
 
 const serverBin = resolve(root, "..", "server", "dist", "bin", "aiwork-server");
-const routerRepo = process.env.OPENCODE_ROUTER_DIR?.trim() || resolve(repoRoot, "apps", "opencode-router");
-if (!existsSync(resolve(routerRepo, "package.json"))) {
-  throw new Error("OpenCodeRouter package not found. Expected apps/opencode-router in the monorepo.");
-}
-const routerBin = resolve(routerRepo, "dist", "bin", "opencode-router");
+
 
 const serverPkg = JSON.parse(
   await readFile(resolve(root, "..", "server", "package.json"), "utf8"),
 ) as { version: string };
-const routerPkg = JSON.parse(await readFile(resolve(routerRepo, "package.json"), "utf8")) as { version: string };
 
 await mkdir(targetDir, { recursive: true });
 await copyFile(serverBin, resolve(targetDir, "aiwork-server"));
-await copyFile(routerBin, resolve(targetDir, "opencode-router"));
 
 const sha256 = async (path: string) => {
   const data = await readFile(path);
@@ -38,10 +31,6 @@ const versions = {
   "aiwork-server": {
     version: serverPkg.version,
     sha256: await sha256(resolve(targetDir, "aiwork-server")),
-  },
-  "opencode-router": {
-    version: routerPkg.version,
-    sha256: await sha256(resolve(targetDir, "opencode-router")),
   },
 } as Record<string, VersionInfo>;
 

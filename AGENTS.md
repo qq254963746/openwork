@@ -8,14 +8,14 @@ AiWork is a practical control surface for agentic work:
 
 * Run agent workflows from one place.
 * Use OpenCode capabilities directly through AiWork.
-* Compose desktop app, server, and messaging connectors without lock-in.
+* Compose desktop app and server without lock-in.
 * Treat the AiWork app as a client of the AiWork server API surface.
 
 ## Core Philosophy
 
 * **Local-first, cloud-ready**: AiWork runs on your machine in one click and can connect to cloud workflows when needed.
 * **Server-consumption first**: the app should consume AiWork server surfaces (self-hosted or hosted), not invent parallel behavior.
-* **Composable**: use the desktop app, WhatsApp/Slack/Telegram connectors, or server mode based on the task.
+* **Composable**: use the desktop app, or server mode based on the task.
 * **Ejectable**: AiWork is powered by OpenCode, so anything OpenCode can do is available in AiWork, even before a dedicated UI exists.
 * **Sharing is caring**: start solo, then share quickly; one CLI or desktop command can spin up an instantly shareable instance.
 
@@ -34,7 +34,7 @@ Read `ARCHITECTURE.md` for runtime flow, server-vs-shell ownership, and architec
 ## Why AiWork Exists
 
 **Cowork is closed-source and locked to Claude Max.** We need an open alternative.
-**Mobile-first matters.** People want to run tasks from their phones, including via messaging surfaces like WhatsApp and Telegram through OpenCode Router.
+**Mobile-first matters.** People want to run tasks from their phones.
 **Slick UI is non-negotiable.** The experience must feel premium, not utilitarian.
 
 ## Agent Guidelines for development

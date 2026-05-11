@@ -1,10 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { parseJsonValue, stringifyJsonValue } from "./json.js";
 import type {
-  CloudSigninRecord,
   ManagedConfigRecord,
-  RouterBindingRecord,
-  RouterIdentityRecord,
   ServerConfigStateRecord,
   ServerRecord,
   ServerRuntimeStateRecord,
@@ -68,8 +65,6 @@ type RawServerRuntimeStateRow = {
   opencode_status: string;
   opencode_version: string | null;
   restart_policy_json: string | null;
-  router_status: string;
-  router_version: string | null;
   runtime_version: string | null;
   server_id: string;
   updated_at: string;
@@ -136,29 +131,6 @@ type RawWorkspaceShareRow = {
   workspace_id: string;
 };
 
-type RawRouterIdentityRow = {
-  auth_json: string | null;
-  config_json: string;
-  created_at: string;
-  display_name: string;
-  id: string;
-  is_enabled: number;
-  kind: string;
-  server_id: string;
-  updated_at: string;
-};
-
-type RawRouterBindingRow = {
-  binding_key: string;
-  config_json: string;
-  created_at: string;
-  id: string;
-  is_enabled: number;
-  router_identity_id: string;
-  server_id: string;
-  updated_at: string;
-};
-
 function mapServer(row: RawServerRow | null | undefined): ServerRecord | null {
   if (!row) {
     return null;
@@ -217,8 +189,6 @@ function mapServerRuntimeState(row: RawServerRuntimeStateRow | null | undefined)
     opencodeStatus: row.opencode_status,
     opencodeVersion: row.opencode_version,
     restartPolicy: parseJsonValue(row.restart_policy_json, null),
-    routerStatus: row.router_status,
-    routerVersion: row.router_version,
     runtimeVersion: row.runtime_version,
     serverId: row.server_id,
     updatedAt: row.updated_at,
@@ -285,24 +255,6 @@ function mapManagedConfig(row: RawManagedConfigRow | null | undefined): ManagedC
   };
 }
 
-function mapCloudSignin(row: RawCloudSigninRow | null | undefined): CloudSigninRecord | null {
-  if (!row) {
-    return null;
-  }
-
-  return {
-    auth: parseJsonValue(row.auth_json, null),
-    cloudBaseUrl: row.cloud_base_url,
-    createdAt: row.created_at,
-    id: row.id,
-    lastValidatedAt: row.last_validated_at,
-    metadata: parseJsonValue(row.metadata_json, null),
-    orgId: row.org_id,
-    serverId: row.server_id,
-    updatedAt: row.updated_at,
-    userId: row.user_id,
-  };
-}
 
 function mapWorkspaceShare(row: RawWorkspaceShareRow | null | undefined): WorkspaceShareRecord | null {
   if (!row) {
@@ -319,41 +271,6 @@ function mapWorkspaceShare(row: RawWorkspaceShareRow | null | undefined): Worksp
     status: row.status,
     updatedAt: row.updated_at,
     workspaceId: row.workspace_id,
-  };
-}
-
-function mapRouterIdentity(row: RawRouterIdentityRow | null | undefined): RouterIdentityRecord | null {
-  if (!row) {
-    return null;
-  }
-
-  return {
-    auth: parseJsonValue(row.auth_json, null),
-    config: parseJsonValue(row.config_json, {}),
-    createdAt: row.created_at,
-    displayName: row.display_name,
-    id: row.id,
-    isEnabled: toBoolean(row.is_enabled),
-    kind: row.kind,
-    serverId: row.server_id,
-    updatedAt: row.updated_at,
-  };
-}
-
-function mapRouterBinding(row: RawRouterBindingRow | null | undefined): RouterBindingRecord | null {
-  if (!row) {
-    return null;
-  }
-
-  return {
-    bindingKey: row.binding_key,
-    config: parseJsonValue(row.config_json, {}),
-    createdAt: row.created_at,
-    id: row.id,
-    isEnabled: toBoolean(row.is_enabled),
-    routerIdentityId: row.router_identity_id,
-    serverId: row.server_id,
-    updatedAt: row.updated_at,
   };
 }
 
@@ -554,8 +471,8 @@ export class ServerRuntimeStateRepository {
         input.opencodeStatus,
         input.opencodeVersion,
         input.opencodeBaseUrl,
-        input.routerStatus,
-        input.routerVersion,
+        'disabled',
+        '0',
         stringifyJsonValue(input.restartPolicy),
         input.lastStartedAt,
         stringifyJsonValue(input.lastExit),
@@ -808,55 +725,6 @@ export class WorkspaceAssignmentRepository {
   }
 }
 
-export class CloudSigninRepository {
-  constructor(private readonly database: Database) {}
-
-  getPrimary() {
-    return mapCloudSignin(this.database.query("SELECT * FROM cloud_signin LIMIT 1").get() as RawCloudSigninRow | null);
-  }
-
-  upsert(input: Omit<CloudSigninRecord, "createdAt" | "updatedAt"> & { createdAt?: string; updatedAt?: string }) {
-    const createdAt = input.createdAt ?? nowIso();
-    const updatedAt = input.updatedAt ?? nowIso();
-    this.database
-      .query(
-        `
-          INSERT INTO cloud_signin (
-            id, server_id, cloud_base_url, user_id, org_id, auth_json, metadata_json,
-            last_validated_at, created_at, updated_at
-          )
-          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
-          ON CONFLICT(id) DO UPDATE SET
-            server_id = excluded.server_id,
-            cloud_base_url = excluded.cloud_base_url,
-            user_id = excluded.user_id,
-            org_id = excluded.org_id,
-            auth_json = excluded.auth_json,
-            metadata_json = excluded.metadata_json,
-            last_validated_at = excluded.last_validated_at,
-            updated_at = excluded.updated_at
-        `,
-      )
-      .run(
-        input.id,
-        input.serverId,
-        input.cloudBaseUrl,
-        input.userId,
-        input.orgId,
-        stringifyJsonValue(input.auth),
-        stringifyJsonValue(input.metadata),
-        input.lastValidatedAt,
-        createdAt,
-        updatedAt,
-      );
-    return this.getPrimary()!;
-  }
-
-  deletePrimary() {
-    this.database.query("DELETE FROM cloud_signin").run();
-  }
-}
-
 export class WorkspaceSharesRepository {
   constructor(private readonly database: Database) {}
 
@@ -911,125 +779,10 @@ export class WorkspaceSharesRepository {
   }
 }
 
-export class RouterIdentitiesRepository {
-  constructor(private readonly database: Database) {}
-
-  getById(id: string) {
-    return mapRouterIdentity(this.database.query("SELECT * FROM router_identities WHERE id = ?1").get(id) as RawRouterIdentityRow | null);
-  }
-
-  listByServer(serverId: string) {
-    return (this.database
-      .query("SELECT * FROM router_identities WHERE server_id = ?1 ORDER BY updated_at DESC")
-      .all(serverId) as RawRouterIdentityRow[]).map(mapRouterIdentity).filter(Boolean) as RouterIdentityRecord[];
-  }
-
-  deleteById(id: string) {
-    const existing = this.getById(id);
-    if (!existing) {
-      return false;
-    }
-    this.database.query("DELETE FROM router_identities WHERE id = ?1").run(id);
-    return true;
-  }
-
-  upsert(input: Omit<RouterIdentityRecord, "createdAt" | "updatedAt"> & { createdAt?: string; updatedAt?: string }) {
-    const createdAt = input.createdAt ?? nowIso();
-    const updatedAt = input.updatedAt ?? nowIso();
-    this.database
-      .query(
-        `
-          INSERT INTO router_identities (
-            id, server_id, kind, display_name, config_json, auth_json, is_enabled, created_at, updated_at
-          )
-          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-          ON CONFLICT(id) DO UPDATE SET
-            server_id = excluded.server_id,
-            kind = excluded.kind,
-            display_name = excluded.display_name,
-            config_json = excluded.config_json,
-            auth_json = excluded.auth_json,
-            is_enabled = excluded.is_enabled,
-            updated_at = excluded.updated_at
-        `,
-      )
-      .run(
-        input.id,
-        input.serverId,
-        input.kind,
-        input.displayName,
-        stringifyJsonValue(input.config),
-        stringifyJsonValue(input.auth),
-        toSqlBoolean(input.isEnabled),
-        createdAt,
-        updatedAt,
-      );
-    return this.listByServer(input.serverId).find((item) => item.id === input.id)!;
-  }
-}
-
-export class RouterBindingsRepository {
-  constructor(private readonly database: Database) {}
-
-  getById(id: string) {
-    return mapRouterBinding(this.database.query("SELECT * FROM router_bindings WHERE id = ?1").get(id) as RawRouterBindingRow | null);
-  }
-
-  listByServer(serverId: string) {
-    return (this.database
-      .query("SELECT * FROM router_bindings WHERE server_id = ?1 ORDER BY updated_at DESC")
-      .all(serverId) as RawRouterBindingRow[]).map(mapRouterBinding).filter(Boolean) as RouterBindingRecord[];
-  }
-
-  deleteById(id: string) {
-    const existing = this.getById(id);
-    if (!existing) {
-      return false;
-    }
-    this.database.query("DELETE FROM router_bindings WHERE id = ?1").run(id);
-    return true;
-  }
-
-  upsert(input: Omit<RouterBindingRecord, "createdAt" | "updatedAt"> & { createdAt?: string; updatedAt?: string }) {
-    const createdAt = input.createdAt ?? nowIso();
-    const updatedAt = input.updatedAt ?? nowIso();
-    this.database
-      .query(
-        `
-          INSERT INTO router_bindings (
-            id, server_id, router_identity_id, binding_key, config_json, is_enabled, created_at, updated_at
-          )
-          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-          ON CONFLICT(id) DO UPDATE SET
-            server_id = excluded.server_id,
-            router_identity_id = excluded.router_identity_id,
-            binding_key = excluded.binding_key,
-            config_json = excluded.config_json,
-            is_enabled = excluded.is_enabled,
-            updated_at = excluded.updated_at
-        `,
-      )
-      .run(
-        input.id,
-        input.serverId,
-        input.routerIdentityId,
-        input.bindingKey,
-        stringifyJsonValue(input.config),
-        toSqlBoolean(input.isEnabled),
-        createdAt,
-        updatedAt,
-      );
-    return this.listByServer(input.serverId).find((item) => item.id === input.id)!;
-  }
-}
-
 export type ServerRepositories = {
-  cloudSignin: CloudSigninRepository;
   mcps: ManagedConfigRepository;
   plugins: ManagedConfigRepository;
   providerConfigs: ManagedConfigRepository;
-  routerBindings: RouterBindingsRepository;
-  routerIdentities: RouterIdentitiesRepository;
   serverConfigState: ServerConfigStateRepository;
   serverRuntimeState: ServerRuntimeStateRepository;
   servers: ServersRepository;
@@ -1046,12 +799,9 @@ export type ServerRepositories = {
 
 export function createRepositories(database: Database): ServerRepositories {
   return {
-    cloudSignin: new CloudSigninRepository(database),
     mcps: new ManagedConfigRepository(database, "mcps"),
     plugins: new ManagedConfigRepository(database, "plugins"),
     providerConfigs: new ManagedConfigRepository(database, "provider_configs"),
-    routerBindings: new RouterBindingsRepository(database),
-    routerIdentities: new RouterIdentitiesRepository(database),
     serverConfigState: new ServerConfigStateRepository(database),
     serverRuntimeState: new ServerRuntimeStateRepository(database),
     servers: new ServersRepository(database),

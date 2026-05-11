@@ -6,7 +6,7 @@ export type RuntimeTarget =
   | "windows-arm64"
   | "windows-x64";
 
-export type RuntimeAssetName = "opencode" | "opencode-router";
+export type RuntimeAssetName = "opencode";
 export type RuntimeAssetSource = "development" | "release";
 
 export type RuntimeManifestFile = {
@@ -21,7 +21,6 @@ export type RuntimeManifest = {
   manifestVersion: 1;
   opencodeVersion: string;
   rootDir: string;
-  routerVersion: string;
   serverVersion: string;
   source: RuntimeAssetSource;
   target: RuntimeTarget;
@@ -41,7 +40,6 @@ export type ResolvedRuntimeBinary = {
 export type ResolvedRuntimeBundle = {
   manifest: RuntimeManifest;
   opencode: ResolvedRuntimeBinary;
-  router: ResolvedRuntimeBinary;
 };
 
 export function resolveRuntimeTarget(): RuntimeTarget | null {
@@ -79,8 +77,7 @@ export function resolveRuntimeTarget(): RuntimeTarget | null {
 }
 
 export function runtimeBinaryFilename(name: RuntimeAssetName, target: RuntimeTarget) {
-  const base = name === "opencode" ? "opencode" : "opencode-router";
-  return target.startsWith("windows") ? `${base}.exe` : base;
+  return target.startsWith("windows") ? `${name}.exe` : name;
 }
 
 export function resolveBunTarget(target: RuntimeTarget) {

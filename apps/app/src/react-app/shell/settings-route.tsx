@@ -37,11 +37,9 @@ import { EnvironmentView } from "../domains/settings/pages/environment-view";
 import { ExtensionsView } from "../domains/settings/pages/extensions-view";
 import { McpView } from "../domains/settings/pages/mcp-view";
 import { RecoveryView } from "../domains/settings/pages/recovery-view";
-import { MessagingView } from "../domains/settings/pages/messaging-view";
 import { SkillsView } from "../domains/settings/pages/skills-view";
 import { UsageView } from "../domains/settings/pages/usage-view";
 import { useDebugViewModel } from "../domains/settings/state/debug-view-model";
-import { useMessagingViewProps } from "../domains/settings/state/messaging-view-state";
 import { useBootState } from "./boot-state";
 import { SettingsSessionOverlayFrame, SettingsShell } from "../domains/settings/shell/settings-shell";
 import { createExtensionsStore, useExtensionsStoreSnapshot } from "../domains/settings/state/extensions-store";
@@ -272,7 +270,6 @@ function parseSettingsPath(pathname: string): {
     case "environment":
     case "recovery":
     case "debug":
-    case "messaging":
     case "usage":
       return { tab: head, redirectPath: null };
     case "extensions":
@@ -1213,14 +1210,6 @@ export function SettingsRoute() {
     }
   };
 
-  const handleReconnectMessagingServer = useCallback(async () => {
-    const ok = await aiworkServerStore.reconnectAiWorkServer();
-    if (ok) {
-      await refreshRouteState();
-    }
-    return ok;
-  }, [aiworkServerStore, refreshRouteState]);
-
   const handleRestartLocalServer = useCallback(async () => {
     try {
       await aiworkServerRestart();
@@ -1232,29 +1221,6 @@ export function SettingsRoute() {
     }
   }, [aiworkServerStore, refreshRouteState]);
 
-  const handleRestartMessagingWorker = useCallback(async () => {
-    try {
-      await aiworkServerRestart();
-      await aiworkServerStore.reconnectAiWorkServer();
-      await refreshRouteState();
-      return true;
-    } catch {
-      return false;
-    }
-  }, [aiworkServerStore, refreshRouteState]);
-
-  const messagingViewProps = useMessagingViewProps({
-    busy,
-    aiworkServerStatus: aiworkServerSnapshot.aiworkServerStatus,
-    aiworkServerUrl: aiworkServerSnapshot.aiworkServerUrl,
-    aiworkServerClient:
-      aiworkClient ?? aiworkServerSnapshot.aiworkServerClient,
-    aiworkReconnectBusy: aiworkServerSnapshot.aiworkReconnectBusy,
-    reconnectAiWorkServer: handleReconnectMessagingServer,
-    restartMessagingWorker: handleRestartMessagingWorker,
-    workspaceId: selectedWorkspace?.id ?? null,
-    selectedWorkspaceRoot,
-  });
 
   const autoCompactWorkspaceId = selectedWorkspace?.id ?? "";
   useEffect(() => {
@@ -1556,8 +1522,6 @@ export function SettingsRoute() {
             runtimeKey={environmentRuntimeKey}
           />
         );
-      case "messaging":
-        return <MessagingView {...messagingViewProps} />;
       case "usage":
         return (
           <UsageView

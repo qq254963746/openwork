@@ -114,32 +114,7 @@ export const phase2ManagedStateMigration = {
       revoked_at TEXT
     );
 
-    CREATE TABLE IF NOT EXISTS router_identities (
-      id TEXT PRIMARY KEY,
-      server_id TEXT NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
-      kind TEXT NOT NULL,
-      display_name TEXT NOT NULL,
-      config_json TEXT NOT NULL DEFAULT '{}',
-      auth_json TEXT,
-      is_enabled INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS router_bindings (
-      id TEXT PRIMARY KEY,
-      server_id TEXT NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
-      router_identity_id TEXT NOT NULL REFERENCES router_identities(id) ON DELETE CASCADE,
-      binding_key TEXT NOT NULL,
-      config_json TEXT NOT NULL DEFAULT '{}',
-      is_enabled INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
     CREATE INDEX IF NOT EXISTS idx_workspace_shares_workspace ON workspace_shares (workspace_id);
-    CREATE INDEX IF NOT EXISTS idx_router_identities_server ON router_identities (server_id);
-    CREATE INDEX IF NOT EXISTS idx_router_bindings_server ON router_bindings (server_id);
   `,
   version: "0002",
 } as const;

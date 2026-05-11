@@ -4,7 +4,6 @@ import { Copy, ScrollText, Trash2 } from "lucide-react";
 
 import { t } from "../../i18n";
 import { Button } from "../design-system/button";
-import { useBootState } from "./boot-state";
 import {
   fetchEngineInfoForLogViewer,
   fetchOpencodeEngineDiskLogsForLogViewer,
@@ -16,6 +15,7 @@ import {
 } from "../../app/lib/desktop-tauri";
 import { isTauriRuntime } from "../../app/utils";
 import { LOG_VIEWER_POPUP_QUERY } from "./open-app-log-window";
+import { useBootState } from "./boot-state";
 
 const POLL_SHELL_MS = 600;
 const POLL_SERVICE_MS = 1000;
@@ -123,7 +123,7 @@ export function AppLogWindowRoute() {
   useEffect(() => {
     markRouteReady();
   }, [markRouteReady]);
-
+  
   const [tab, setTab] = useState<LogTabId>("shell");
   const [live, setLive] = useState(true);
 

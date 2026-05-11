@@ -7,7 +7,6 @@ import { createServerPersistence, type ServerPersistence } from "../database/per
 import { createSqliteDatabaseStatusProvider, type DatabaseStatusProvider } from "../database/status-provider.js";
 import type { RuntimeAssetService } from "../runtime/assets.js";
 import type { RegistryService } from "../services/registry-service.js";
-import { createRouterProductService, type RouterProductService } from "../services/router-product-service.js";
 import { createServerRegistryService, type ServerRegistryService } from "../services/server-registry-service.js";
 import { createRuntimeService, type RuntimeService } from "../services/runtime-service.js";
 import { createWorkspaceFileService, type WorkspaceFileService } from "../services/workspace-file-service.js";
@@ -28,7 +27,6 @@ export type AppDependencies = {
       files: WorkspaceFileService;
       managed: ManagedResourceService;
       registry: RegistryService;
-      router: RouterProductService;
       runtime: RuntimeService;
     sessions: WorkspaceSessionService;
     serverRegistry: ServerRegistryService;
@@ -155,11 +153,6 @@ export function createAppDependencies(overrides: CreateAppDependenciesOverrides 
     serverId: persistence.registry.localServerId,
     workingDirectory: persistence.workingDirectory,
   });
-  const router = createRouterProductService({
-    repositories: persistence.repositories,
-    runtime,
-    serverId: persistence.registry.localServerId,
-  });
   return {
     database,
     environment,
@@ -172,7 +165,6 @@ export function createAppDependencies(overrides: CreateAppDependenciesOverrides 
       files,
       managed,
       registry: persistence.registry,
-      router,
       runtime,
       sessions,
       serverRegistry,

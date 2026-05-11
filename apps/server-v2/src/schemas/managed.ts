@@ -164,49 +164,6 @@ export const workspaceExportDataSchema = z.object({
   workspaceId: identifierSchema,
 }).meta({ ref: "AiWorkServerV2WorkspaceExportData" });
 
-export const routerIdentityItemSchema = z.object({
-  access: z.enum(["private", "public"]).optional(),
-  enabled: z.boolean(),
-  id: z.string(),
-  pairingRequired: z.boolean().optional(),
-  running: z.boolean(),
-}).meta({ ref: "AiWorkServerV2RouterIdentityItem" });
-export const routerHealthSnapshotSchema = z.object({
-  config: z.object({ groupsEnabled: z.boolean() }),
-  channels: z.object({ slack: z.boolean(), telegram: z.boolean(), whatsapp: z.boolean() }),
-  ok: z.boolean(),
-  opencode: z.object({ healthy: z.boolean(), url: z.string(), version: z.string().optional() }),
-}).meta({ ref: "AiWorkServerV2RouterHealthSnapshot" });
-export const routerIdentityListResponseSchema = successResponseSchema(
-  "AiWorkServerV2RouterIdentityListResponse",
-  z.object({ items: z.array(routerIdentityItemSchema), ok: z.boolean() }),
-);
-export const routerTelegramInfoResponseSchema = successResponseSchema(
-  "AiWorkServerV2RouterTelegramInfoResponse",
-  z.object({
-    bot: z.object({ id: z.number().int(), name: z.string().optional(), username: z.string().optional() }).nullable(),
-    configured: z.boolean(),
-    enabled: z.boolean(),
-    ok: z.boolean(),
-  }),
-);
-export const routerHealthResponseSchemaCompat = successResponseSchema("AiWorkServerV2RouterHealthCompatResponse", routerHealthSnapshotSchema);
-export const routerTelegramWriteSchema = z.object({ access: z.enum(["private", "public"]).optional(), enabled: z.boolean().optional(), id: z.string().optional(), token: z.string() }).meta({ ref: "AiWorkServerV2RouterTelegramWrite" });
-export const routerSlackWriteSchema = z.object({ appToken: z.string(), botToken: z.string(), enabled: z.boolean().optional(), id: z.string().optional() }).meta({ ref: "AiWorkServerV2RouterSlackWrite" });
-export const routerBindingWriteSchema = z.object({ channel: z.enum(["slack", "telegram"]), directory: z.string().optional(), identityId: z.string().optional(), peerId: z.string() }).meta({ ref: "AiWorkServerV2RouterBindingWrite" });
-export const routerBindingListResponseSchema = successResponseSchema(
-  "AiWorkServerV2RouterBindingListResponse",
-  z.object({
-    items: z.array(z.object({ channel: z.string(), directory: z.string(), identityId: z.string(), peerId: z.string(), updatedAt: z.number().int().optional() })),
-    ok: z.boolean(),
-  }),
-);
-export const routerSendWriteSchema = z.object({ autoBind: z.boolean().optional(), channel: z.enum(["slack", "telegram"]), directory: z.string().optional(), identityId: z.string().optional(), peerId: z.string().optional(), text: z.string() }).meta({ ref: "AiWorkServerV2RouterSendWrite" });
-export const routerMutationResponseSchema = successResponseSchema(
-  "AiWorkServerV2RouterMutationResponse",
-  z.record(z.string(), z.unknown()),
-);
-
 export const managedItemIdParamsSchema = z.object({ itemId: identifierSchema }).meta({ ref: "AiWorkServerV2ManagedItemIdParams" });
 export const workspaceNamedItemParamsSchema = workspaceIdParamsSchema.extend({ name: z.string() }).meta({ ref: "AiWorkServerV2WorkspaceNamedItemParams" });
 export const workspaceIdentityParamsSchema = workspaceIdParamsSchema.extend({ identityId: identifierSchema }).meta({ ref: "AiWorkServerV2WorkspaceIdentityParams" });

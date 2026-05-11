@@ -59,7 +59,7 @@ But what you can do is:
 * run the undelrying clis (since they are implented as sidecar)
 * run against real opencode value
 * use bash to test endpionts of these various servers/etc
-* if needed don't hestiate to ask for credentialse.g. to test telegram or other similar flow
+* if needed don't hesitate to ask for credentials to test specific flows
   -you should be able to test 99% of the flow on your own
 
 ## Applied to Current Components
@@ -74,11 +74,6 @@ But what you can do is:
 * Runs standalone via `aiwork-server` CLI.
 * Provides filesystem-backed config surfaces (skills, plugins, MCP, commands).
 * Sidecar lifecycle is described in `packages/app/pr/aiwork-server.md`.
-
-### OpenCode Router
-
-* Runs standalone via `opencode-router` CLI.
-* Must be able to use AiWork server for config and approvals.
 
 ## Non-goals
 

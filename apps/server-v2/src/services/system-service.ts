@@ -73,12 +73,6 @@ export function createSystemService(input: {
             status: runtimeSummary.opencode.status,
             version: runtimeSummary.opencode.version,
           },
-          router: {
-            baseUrl: runtimeSummary.router.baseUrl,
-            running: runtimeSummary.router.running,
-            status: runtimeSummary.router.status,
-            version: runtimeSummary.router.version,
-          },
           source: runtimeSummary.source,
           target: runtimeSummary.target,
         },

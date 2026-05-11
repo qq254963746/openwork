@@ -1,5 +1,4 @@
 import * as tauriBridge from "./desktop-tauri";
-import { nativeDeepLinkEvent } from "./deep-link-bridge";
 
 export type * from "./desktop-tauri";
 
@@ -190,29 +189,6 @@ export async function setDesktopZoomFactor(value: number): Promise<boolean> {
     return invokeElectronHelper<boolean>("__setZoomFactor", value);
   }
   return tauriBridge.setDesktopZoomFactor(value);
-}
-
-export async function subscribeDesktopDeepLinks(
-  handler: (urls: string[]) => void,
-): Promise<() => void> {
-  if (isElectronDesktopRuntime()) {
-    const listener = (event: Event) => {
-      const customEvent = event as CustomEvent<string[]>;
-      if (Array.isArray(customEvent.detail)) {
-        handler(customEvent.detail);
-      }
-    };
-    window.addEventListener(nativeDeepLinkEvent, listener as EventListener);
-    const initialUrls = window.__AIWORK_ELECTRON__?.meta?.initialDeepLinks;
-    if (Array.isArray(initialUrls) && initialUrls.length > 0) {
-      handler(initialUrls);
-    }
-    return () => {
-      window.removeEventListener(nativeDeepLinkEvent, listener as EventListener);
-    };
-  }
-
-  return tauriBridge.subscribeDesktopDeepLinks(handler);
 }
 
 const {

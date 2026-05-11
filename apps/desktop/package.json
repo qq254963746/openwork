@@ -33,6 +33,5 @@
     "electron-builder": "^25.1.8",
     "electron-devtools-installer": "^4.0.0"
   },
-  "packageManager": "pnpm@10.27.0",
-  "opencodeRouterVersion": "0.13.33"
+  "packageManager": "pnpm@10.27.0"
 }

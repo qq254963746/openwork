@@ -5,7 +5,6 @@ import { buildSuccessResponse } from "../http.js";
 import { jsonResponse, withCommonErrorResponses } from "../openapi.js";
 import {
   opencodeHealthResponseSchema,
-  routerHealthResponseSchema,
   runtimeSummaryResponseSchema,
   runtimeUpgradeResponseSchema,
   runtimeVersionsResponseSchema,
@@ -31,23 +30,6 @@ export function registerRuntimeRoutes(app: Hono<AppBindings>) {
   );
 
   app.get(
-    routePaths.system.routerHealth,
-    describeRoute({
-      tags: ["Runtime"],
-      summary: "Get router health",
-      description: "Returns the server-owned opencode-router health, enablement decision, and recent diagnostics.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Router runtime health returned successfully.", routerHealthResponseSchema),
-      }, { includeUnauthorized: true }),
-    }),
-    (c) => {
-      const requestContext = getRequestContext(c);
-      requestContext.services.auth.requireVisibleRead(requestContext.actor);
-      return c.json(buildSuccessResponse(requestContext.requestId, requestContext.services.runtime.getRouterHealth()));
-    },
-  );
-
-  app.get(
     routePaths.system.runtime.summary,
     describeRoute({
       tags: ["Runtime"],
@@ -69,7 +51,7 @@ export function registerRuntimeRoutes(app: Hono<AppBindings>) {
     describeRoute({
       tags: ["Runtime"],
       summary: "Get runtime versions",
-      description: "Returns the active and pinned runtime versions that Server V2 resolved for OpenCode and opencode-router.",
+      description: "Returns the active and pinned runtime versions that Server V2 resolved for OpenCode.",
       responses: withCommonErrorResponses({
         200: jsonResponse("Runtime versions returned successfully.", runtimeVersionsResponseSchema),
       }, { includeUnauthorized: true }),

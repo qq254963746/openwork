@@ -48,8 +48,6 @@ export type ServerRuntimeStateRecord = {
   opencodeStatus: string;
   opencodeVersion: string | null;
   restartPolicy: JsonObject | null;
-  routerStatus: string;
-  routerVersion: string | null;
   runtimeVersion: string | null;
   serverId: string;
   updatedAt: string;
@@ -100,19 +98,6 @@ export type WorkspaceAssignmentRecord = {
   workspaceId: string;
 };
 
-export type CloudSigninRecord = {
-  auth: JsonObject | null;
-  cloudBaseUrl: string;
-  createdAt: string;
-  id: string;
-  lastValidatedAt: string | null;
-  metadata: JsonObject | null;
-  orgId: string | null;
-  serverId: string;
-  updatedAt: string;
-  userId: string | null;
-};
-
 export type WorkspaceShareRecord = {
   accessKey: string | null;
   audit: JsonObject | null;
@@ -125,28 +110,6 @@ export type WorkspaceShareRecord = {
   workspaceId: string;
 };
 
-export type RouterIdentityRecord = {
-  auth: JsonObject | null;
-  config: JsonObject;
-  createdAt: string;
-  displayName: string;
-  id: string;
-  isEnabled: boolean;
-  kind: string;
-  serverId: string;
-  updatedAt: string;
-};
-
-export type RouterBindingRecord = {
-  config: JsonObject;
-  createdAt: string;
-  bindingKey: string;
-  id: string;
-  isEnabled: boolean;
-  routerIdentityId: string;
-  serverId: string;
-  updatedAt: string;
-};
 
 export type MigrationRecord = {
   appliedAt: string;
@@ -171,7 +134,6 @@ export type ImportSourceReport = {
 export type StartupDiagnostics = {
   completedAt: string;
   importReports: {
-    cloudSignin: ImportSourceReport;
     desktopWorkspaceState: ImportSourceReport;
     orchestratorAuth: ImportSourceReport;
     orchestratorState: ImportSourceReport;

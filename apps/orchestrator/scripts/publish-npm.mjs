@@ -118,7 +118,7 @@ copyFileSync(constantsSrc, join(meta, "constants.json"))
 writeJson(join(meta, "package.json"), {
   name: "aiwork-orchestrator",
   version,
-  description: "AiWork host orchestrator for opencode + AiWork server + opencode-router",
+  description: "AiWork host orchestrator for opencode + AiWork server",
   license: "MIT",
   bin: {
     aiwork: "./bin/aiwork",

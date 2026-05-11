@@ -26,7 +26,6 @@ type BuildOptions = {
 type RuntimeAssetPaths = {
   manifestPath: string;
   opencodePath: string;
-  routerPath: string;
 };
 
 const TARGET_TRIPLES: Record<string, string> = {
@@ -158,24 +157,18 @@ function runtimeAssetCandidates(bundleDir: string, target?: string): RuntimeAsse
     triple ? join(bundleDir, `opencode-${triple}${triple.includes("windows") ? ".exe" : ""}`) : null,
     join(bundleDir, process.platform === "win32" || target?.includes("windows") ? "opencode.exe" : "opencode"),
   ];
-  const routerCandidates = [
-    triple ? join(bundleDir, `opencode-router-${triple}${triple.includes("windows") ? ".exe" : ""}`) : null,
-    join(bundleDir, process.platform === "win32" || target?.includes("windows") ? "opencode-router.exe" : "opencode-router"),
-  ];
 
   const opencodePath = opencodeCandidates.find((candidate) => candidate && fileExists(candidate)) ?? null;
-  const routerPath = routerCandidates.find((candidate) => candidate && fileExists(candidate)) ?? null;
 
-  if (!manifestPath || !opencodePath || !routerPath) {
+  if (!manifestPath || !opencodePath) {
     throw new Error(
-      `Missing runtime assets for embedded build in ${bundleDir} (target=${target ?? "current"}, manifest=${manifestPath ?? "missing"}, opencode=${opencodePath ?? "missing"}, router=${routerPath ?? "missing"}).`,
+      `Missing runtime assets for embedded build in ${bundleDir} (target=${target ?? "current"}, manifest=${manifestPath ?? "missing"}, opencode=${opencodePath ?? "missing"}).`,
     );
   }
 
   return {
     manifestPath,
-    opencodePath,
-    routerPath,
+    opencodePath
   };
 }
 
@@ -189,12 +182,10 @@ function createEmbeddedEntrypoint(assets: RuntimeAssetPaths) {
     [
       `import manifestPath from ${JSON.stringify(assets.manifestPath)} with { type: "file" };`,
       `import opencodePath from ${JSON.stringify(assets.opencodePath)} with { type: "file" };`,
-      `import routerPath from ${JSON.stringify(assets.routerPath)} with { type: "file" };`,
       "",
       "export const embeddedRuntimeBundle = {",
       "  manifestPath,",
       "  opencodePath,",
-      "  routerPath,",
       "};",
       "",
     ].join("\n"),
