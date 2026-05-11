@@ -140,7 +140,6 @@ tree when a domain-scoped import path is clearer. Examples:
 - `app/lib/*` (opencode, tauri, den, aiwork-server, ...) — consumed directly by React.
 - `app/types.ts`, `app/constants.ts`, `app/theme.ts`, `app/utils/*` — shared across both runtimes.
 - `app/session/composer-tools.ts` — shared session helpers.
-- `app/bundles/{types,schema,url-policy,sources,apply,publish,skill-org-publish,index}` — bundle
   logic consumed by both runtimes; React side re-exports from `domains/bundles/*`.
 
 ## Porting pattern

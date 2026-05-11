@@ -62,29 +62,13 @@ async function sinkIsAvailable(base: string): Promise<boolean> {
   if (typeof cached === "boolean") return cached;
   let pending = sinkProbePromises.get(base);
   if (pending) return pending;
-  pending = nativeFetchRef(`${base.replace(/\/+$/, "")}/dev/log`, {
-    method: "GET",
-    keepalive: true,
-  })
-    .then(async (response) => {
-      if (!response.ok) return false;
-      // Server returns 200 + `{ok:true}` when the sink is enabled and
-      // 200 + `{ok:false, reason:"dev_log_disabled"}` otherwise, so the
-      // probe itself never logs a 404 to the console.
-      try {
-        const body = (await response.json()) as { ok?: boolean };
-        return body.ok === true;
-      } catch {
-        return false;
-      }
-    })
-    .catch(() => false)
-    .then((ok) => {
-      sinkAvailabilityByBase.set(base, ok);
-      sinkProbePromises.delete(base);
-      return ok;
-    });
-  sinkProbePromises.set(base, pending);
+  
+  // The /dev/log endpoint was removed from the server (desktop client doesn't use it).
+  // Desktop clients run the server without this route, so we silently disable the logger
+  // to avoid 404 spam in the console.
+  pending = Promise.resolve(false);
+  sinkAvailabilityByBase.set(base, false);
+  
   return pending;
 }
 

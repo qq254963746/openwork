@@ -5,7 +5,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter } from "react-router-dom";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { initializeAiWorkBootstrapConfig } from "./app/lib/aiwork-bootstrap";
 import { getAiWorkDeployment } from "./app/lib/aiwork-deployment";
 import { bootstrapTheme } from "./app/theme";
 import { initLocale } from "./i18n";
@@ -24,7 +23,6 @@ import "./app/index.css";
 bootstrapTheme();
 initLocale();
 startDeepLinkBridge();
-await initializeAiWorkBootstrapConfig();
 
 applyLogViewerPopupNavigationFromStorage();
 await installDesktopShellEventsBridgeListeners();
