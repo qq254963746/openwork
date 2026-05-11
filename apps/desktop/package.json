@@ -5,7 +5,7 @@
   "description": "AiWork desktop shell",
   "author": {
     "name": "AiWork",
-    "email": "support@aiworklabs.com"
+    "email": "support@aiwork.com"
   },
   "main": "electron/main.mjs",
   "type": "module",

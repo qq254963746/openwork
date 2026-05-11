@@ -1,7 +1,6 @@
 mod bun_env;
 mod commands;
 mod config;
-mod desktop_bootstrap;
 mod engine;
 mod env_file;
 mod fs;
@@ -19,7 +18,6 @@ use commands::command_files::{
     opencode_command_delete, opencode_command_list, opencode_command_write,
 };
 use commands::config::{read_opencode_auth_json, read_opencode_config, write_opencode_config};
-use commands::desktop_bootstrap::{get_desktop_bootstrap_config, set_desktop_bootstrap_config};
 use commands::engine::{
     engine_doctor, engine_info, engine_install, engine_restart, engine_start, engine_stop,
 };
@@ -183,8 +181,6 @@ pub fn run() {
             read_opencode_config,
             read_opencode_auth_json,
             write_opencode_config,
-            get_desktop_bootstrap_config,
-            set_desktop_bootstrap_config,
             desktop_app_paths,
             migrate_to_electron,
             write_migration_snapshot,

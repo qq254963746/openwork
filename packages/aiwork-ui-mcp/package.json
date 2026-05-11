@@ -2,7 +2,7 @@
   "name": "aiwork-ui-mcp",
   "version": "0.1.0",
   "description": "MCP server for AiWork UI control — exposes snapshot, actions, and execute as MCP tools",
-  "author": "AiWork <support@aiworklabs.com>",
+  "author": "AiWork <support@aiwork.com>",
   "license": "MIT",
   "type": "module",
   "bin": {

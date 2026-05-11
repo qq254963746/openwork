@@ -89,10 +89,6 @@ export function AdvancedView(props: AdvancedViewProps) {
   const [aiworkRestartBusy, setAiWorkRestartBusy] = useState(false);
   const [aiworkRestartStatus, setAiWorkRestartStatus] = useState<string | null>(null);
   const [aiworkRestartError, setAiWorkRestartError] = useState<string | null>(null);
-  const [debugDeepLinkOpen, setDebugDeepLinkOpen] = useState(false);
-  const [debugDeepLinkInput, setDebugDeepLinkInput] = useState("");
-  const [debugDeepLinkBusy, setDebugDeepLinkBusy] = useState(false);
-  const [debugDeepLinkStatus, setDebugDeepLinkStatus] = useState<string | null>(null);
 
   const clientStatusLabel = (() => {
     const status = props.opencodeConnectStatus?.status;
@@ -189,26 +185,6 @@ export function AdvancedView(props: AdvancedViewProps) {
     }
   };
 
-  const submitDebugDeepLink = async () => {
-    const rawUrl = debugDeepLinkInput.trim();
-    if (!rawUrl || props.busy || debugDeepLinkBusy) return;
-    setDebugDeepLinkBusy(true);
-    setDebugDeepLinkStatus(null);
-    try {
-      const result = await props.openDebugDeepLink(rawUrl);
-      setDebugDeepLinkStatus(result.message);
-      if (result.ok) {
-        setDebugDeepLinkInput("");
-      }
-    } catch (error) {
-      setDebugDeepLinkStatus(
-        error instanceof Error ? error.message : t("settings.open_deeplink_failed"),
-      );
-    } finally {
-      setDebugDeepLinkBusy(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className={`${settingsPanelClass} space-y-4`}>
@@ -290,53 +266,6 @@ export function AdvancedView(props: AdvancedViewProps) {
               : t("settings.developer_panel_disabled")}
           </div>
         </div>
-
-        {props.opencodeDevModeEnabled && props.developerMode ? (
-          <div className={`${settingsPanelSoftClass} space-y-3`}>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-medium text-gray-12">{t("settings.open_deeplink_title")}</div>
-                <div className="text-xs text-gray-9">{t("settings.open_deeplink_desc")}</div>
-              </div>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-md border border-dls-border bg-dls-surface px-3 py-1.5 text-xs font-medium text-dls-secondary shadow-sm transition-colors duration-150 hover:bg-dls-hover hover:text-dls-text focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--dls-accent-rgb),0.25)] disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={() => {
-                  setDebugDeepLinkOpen((value) => !value);
-                  setDebugDeepLinkStatus(null);
-                }}
-                disabled={props.busy || debugDeepLinkBusy}
-              >
-                {debugDeepLinkOpen ? t("common.hide") : t("settings.open_deeplink_button")}
-              </button>
-            </div>
-
-            {debugDeepLinkOpen ? (
-              <div className="space-y-3">
-                <textarea
-                  value={debugDeepLinkInput}
-                  onChange={(event) => setDebugDeepLinkInput(event.currentTarget.value)}
-                  rows={3}
-                  placeholder="aiwork://..."
-                  className="w-full rounded-xl border border-gray-6 bg-gray-1 px-3 py-2 text-xs font-mono text-gray-12 outline-none transition focus:border-blue-8"
-                />
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    className="h-8 px-3 py-0 text-xs"
-                    onClick={() => void submitDebugDeepLink()}
-                    disabled={props.busy || debugDeepLinkBusy || !debugDeepLinkInput.trim()}
-                  >
-                    {debugDeepLinkBusy ? t("settings.opening") : t("settings.open_deeplink_action")}
-                  </Button>
-                  <div className="text-[11px] text-gray-8">{t("settings.deeplink_hint")}</div>
-                </div>
-              </div>
-            ) : null}
-
-            {debugDeepLinkStatus ? <div className="text-xs text-gray-10">{debugDeepLinkStatus}</div> : null}
-          </div>
-        ) : null}
       </div>
 
       <div className={`${settingsPanelClass} space-y-3`}>

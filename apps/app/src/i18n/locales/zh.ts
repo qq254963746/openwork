@@ -784,7 +784,6 @@ export default {
   "settings.debug_desktop_app": "桌面应用：{version}",
   "settings.debug_opencode_version": "OpenCode：{version}",
   "settings.debug_aiwork_server_version": "AiWork服务器：{version}",
-  "settings.deeplink_hint": "接受aiwork://、aiwork-dev://或原始支持的https://share.aiworklabs.com/b/... URL。",
   "settings.delete_local_config": "正在移除本地状态…",
   "settings.dev_mode_badge": "开发模式",
   "settings.developer_mode_desc": "启用调试工具、诊断信息和开发者标签页。",

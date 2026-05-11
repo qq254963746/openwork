@@ -1,6 +1,5 @@
 pub mod command_files;
 pub mod config;
-pub mod desktop_bootstrap;
 pub mod engine;
 pub mod host_desktop;
 pub mod migration;

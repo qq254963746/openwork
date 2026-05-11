@@ -31,7 +31,6 @@ import {
   sanitizeAiWorkTemplateConfig,
 } from "./blueprint-sessions.js";
 import { inheritWorkspaceOpencodeConnection, resolveWorkspaceOpencodeConnection } from "./opencode-connection.js";
-import { fetchSharedBundle, publishSharedBundle } from "./share-bundles.js";
 import { seedOpencodeSessionMessages } from "./opencode-db.js";
 import { listPortableFiles } from "./portable-files.js";
 import {
@@ -3015,34 +3014,6 @@ function createRoutes(
       timestamp: Date.now(),
     });
     return jsonResponse(result);
-  });
-
-  addRoute(routes, "POST", "/share/bundles/publish", "client", async (ctx) => {
-    requireClientScope(ctx, "viewer");
-    const body = await readJsonBody(ctx.request);
-    if (typeof body.baseUrl === "string" && body.baseUrl.trim()) {
-      throw new ApiError(
-        400,
-        "publisher_base_url_forbidden",
-        "Bundle publishing always uses the configured AiWork publisher. Remove baseUrl from the request.",
-      );
-    }
-    const result = await publishSharedBundle({
-      payload: body.payload,
-      bundleType: String(body.bundleType ?? "").trim(),
-      name: typeof body.name === "string" ? body.name : undefined,
-      timeoutMs: typeof body.timeoutMs === "number" ? body.timeoutMs : undefined,
-    });
-    return jsonResponse(result);
-  });
-
-  addRoute(routes, "POST", "/share/bundles/fetch", "client", async (ctx) => {
-    requireClientScope(ctx, "viewer");
-    const body = await readJsonBody(ctx.request);
-    const bundle = await fetchSharedBundle(body.bundleUrl, {
-      timeoutMs: typeof body.timeoutMs === "number" ? body.timeoutMs : undefined,
-    });
-  return jsonResponse(bundle);
   });
 
   addRoute(routes, "GET", "/approvals", "host", async (ctx) => {

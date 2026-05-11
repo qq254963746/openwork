@@ -1065,17 +1065,6 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
         },
         timeoutMs: options?.timeoutMs ?? timeouts.shareBundle,
       }),
-    fetchBundle: (bundleUrl: string, options?: { timeoutMs?: number }) =>
-      requestJson<Record<string, unknown>>(baseUrl, "/share/bundles/fetch", {
-        token,
-        hostToken,
-        method: "POST",
-        body: {
-          bundleUrl,
-          timeoutMs: options?.timeoutMs,
-        },
-        timeoutMs: options?.timeoutMs ?? timeouts.shareBundle,
-      }),
     getConfig: (workspaceId: string) =>
       requestJson<{ opencode: Record<string, unknown>; aiwork: Record<string, unknown>; updatedAt?: number | null }>(
         baseUrl,

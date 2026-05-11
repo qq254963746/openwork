@@ -95,9 +95,6 @@ if (Number.isFinite(remoteDebugPort) && remoteDebugPort > 0) {
   app.commandLine.appendSwitch("remote-debugging-port", String(remoteDebugPort));
   app.commandLine.appendSwitch("remote-debugging-address", "127.0.0.1");
 }
-const DEFAULT_DEN_BASE_URL = "https://app.aiworklabs.com";
-const DEFAULT_LOCAL_BASE_URL = "http://127.0.0.1:4096";
-
 function envFlagDisabled(name) {
   const value = process.env[name]?.trim().toLowerCase();
   return value === "0" || value === "false" || value === "off";
@@ -184,11 +181,6 @@ let uiControlServer = null;
 let uiControlDiscoveryPath = null;
 const uiControlToken = randomBytes(32).toString("hex");
 
-function normalizePlatform(value) {
-  if (value === "darwin" || value === "linux") return value;
-  if (value === "win32") return "windows";
-  return "linux";
-}
 
 function forwardedDeepLinks(argv) {
   return argv
@@ -216,13 +208,6 @@ function flushPendingDeepLinks() {
   if (!mainWindow?.webContents || pendingDeepLinks.length === 0) return;
   const urls = pendingDeepLinks.splice(0, pendingDeepLinks.length);
   mainWindow.webContents.send(NATIVE_DEEP_LINK_EVENT, urls);
-}
-
-function desktopBootstrapPath() {
-  if (process.env.AIWORK_DESKTOP_BOOTSTRAP_PATH?.trim()) {
-    return process.env.AIWORK_DESKTOP_BOOTSTRAP_PATH.trim();
-  }
-  return path.join(os.homedir(), ".config", "aiwork", "desktop-bootstrap.json");
 }
 
 function workspaceStatePath() {
@@ -304,44 +289,6 @@ async function readJsonFile(targetPath, fallback) {
   }
 }
 
-function normalizeDesktopBootstrapConfig(input) {
-  const baseUrl = typeof input?.baseUrl === "string" ? input.baseUrl.trim() : "";
-  if (!baseUrl) {
-    throw new Error("baseUrl is required");
-  }
-
-  const apiBaseUrl =
-    typeof input?.apiBaseUrl === "string" && input.apiBaseUrl.trim().length > 0
-      ? input.apiBaseUrl.trim()
-      : null;
-
-  return {
-    baseUrl,
-    apiBaseUrl,
-    requireSignin: input?.requireSignin === true,
-  };
-}
-
-async function getDesktopBootstrapConfig() {
-  try {
-    const raw = await readFile(desktopBootstrapPath(), "utf8");
-    return normalizeDesktopBootstrapConfig(JSON.parse(raw));
-  } catch {
-    return {
-      baseUrl: DEFAULT_DEN_BASE_URL,
-      apiBaseUrl: null,
-      requireSignin: false,
-    };
-  }
-}
-
-async function setDesktopBootstrapConfig(config) {
-  const normalized = normalizeDesktopBootstrapConfig(config);
-  const outputPath = desktopBootstrapPath();
-  await mkdir(path.dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
-  return normalized;
-}
 
 function sanitizeCommandName(raw) {
   const trimmed = String(raw ?? "").trim().replace(/^\/+/, "");
@@ -1104,10 +1051,6 @@ async function handleDesktopInvoke(event, command, ...args) {
         buildEpoch: process.env.AIWORK_BUILD_EPOCH ?? null,
         aiworkDevMode: process.env.AIWORK_DEV_MODE === "1",
       };
-    case "getDesktopBootstrapConfig":
-      return getDesktopBootstrapConfig();
-    case "setDesktopBootstrapConfig":
-      return setDesktopBootstrapConfig(args[0] ?? {});
     case "nukeAiWorkAndOpencodeConfigAndExit": {
       await rm(app.getPath("userData"), { recursive: true, force: true });
       app.exit(0);
@@ -1244,7 +1187,6 @@ async function handleDesktopInvoke(event, command, ...args) {
       );
     case "resetAiWorkState": {
       await rm(workspaceStatePath(), { force: true });
-      await rm(desktopBootstrapPath(), { force: true });
       return undefined;
     }
     case "resetOpencodeCache":

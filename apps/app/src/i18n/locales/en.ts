@@ -835,7 +835,6 @@ export default {
   "settings.error": "Error",
   "settings.idle": "Idle",
   "settings.loading": "Loading",
-  "settings.deeplink_hint": "Accepts aiwork://, aiwork-dev://, or a raw supported https://share.aiworklabs.com/b/... URL.",
   "settings.default_label": "Default",
   "settings.delete_local_config": "Removing local state...",
   "settings.dev_mode_badge": "Dev mode",

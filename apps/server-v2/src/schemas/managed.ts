@@ -93,10 +93,6 @@ export const workspaceSkillWriteSchema = z.object({
   name: z.string(),
   trigger: z.string().optional(),
 }).meta({ ref: "AiWorkServerV2WorkspaceSkillWrite" });
-export const workspaceSkillDeleteResponseSchema = successResponseSchema(
-  "AiWorkServerV2WorkspaceSkillDeleteResponse",
-  z.object({ path: z.string() }),
-);
 
 export const hubRepoSchema = z.object({
   owner: z.string().optional(),
@@ -140,18 +136,6 @@ export const cloudSigninSchema = z.object({
   updatedAt: isoTimestampSchema,
   userId: z.string().nullable(),
 }).meta({ ref: "AiWorkServerV2CloudSignin" });
-export const cloudSigninWriteSchema = z.object({
-  auth: jsonObjectSchema.nullable().optional(),
-  cloudBaseUrl: z.string(),
-  metadata: jsonObjectSchema.nullable().optional(),
-  orgId: z.string().nullable().optional(),
-  userId: z.string().nullable().optional(),
-}).meta({ ref: "AiWorkServerV2CloudSigninWrite" });
-export const cloudSigninResponseSchema = successResponseSchema("AiWorkServerV2CloudSigninResponse", cloudSigninSchema.nullable());
-export const cloudSigninValidationResponseSchema = successResponseSchema(
-  "AiWorkServerV2CloudSigninValidationResponse",
-  z.object({ lastValidatedAt: isoTimestampSchema.nullable(), ok: z.boolean(), record: cloudSigninSchema }),
-);
 
 export const workspaceShareSchema = z.object({
   accessKey: z.string().nullable(),
@@ -164,7 +148,6 @@ export const workspaceShareSchema = z.object({
   updatedAt: isoTimestampSchema,
   workspaceId: identifierSchema,
 }).meta({ ref: "AiWorkServerV2WorkspaceShare" });
-export const workspaceShareResponseSchema = successResponseSchema("AiWorkServerV2WorkspaceShareResponse", workspaceShareSchema.nullable());
 
 export const workspaceExportWarningSchema = z.object({
   detail: z.string(),
@@ -180,28 +163,6 @@ export const workspaceExportDataSchema = z.object({
   skills: z.array(z.object({ content: z.string(), description: z.string().optional(), name: z.string(), trigger: z.string().optional() })),
   workspaceId: identifierSchema,
 }).meta({ ref: "AiWorkServerV2WorkspaceExportData" });
-export const workspaceExportResponseSchema = successResponseSchema("AiWorkServerV2WorkspaceExportResponse", workspaceExportDataSchema);
-export const workspaceImportWriteSchema = z.record(z.string(), z.unknown()).meta({ ref: "AiWorkServerV2WorkspaceImportWrite" });
-export const workspaceImportResponseSchema = successResponseSchema("AiWorkServerV2WorkspaceImportResponse", z.object({ ok: z.boolean() }));
-
-export const sharedBundlePublishWriteSchema = z.object({
-  bundleType: z.string(),
-  name: z.string().optional(),
-  payload: z.unknown(),
-  timeoutMs: z.number().int().positive().optional(),
-}).meta({ ref: "AiWorkServerV2SharedBundlePublishWrite" });
-export const sharedBundleFetchWriteSchema = z.object({
-  bundleUrl: z.string(),
-  timeoutMs: z.number().int().positive().optional(),
-}).meta({ ref: "AiWorkServerV2SharedBundleFetchWrite" });
-export const sharedBundlePublishResponseSchema = successResponseSchema(
-  "AiWorkServerV2SharedBundlePublishResponse",
-  z.object({ url: z.string() }),
-);
-export const sharedBundleFetchResponseSchema = successResponseSchema(
-  "AiWorkServerV2SharedBundleFetchResponse",
-  z.record(z.string(), z.unknown()),
-);
 
 export const routerIdentityItemSchema = z.object({
   access: z.enum(["private", "public"]).optional(),

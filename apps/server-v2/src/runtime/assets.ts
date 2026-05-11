@@ -28,14 +28,6 @@ type ReleaseBundleSource =
   | { kind: "directory"; rootDir: string }
   | { bundle: EmbeddedRuntimeBundle; kind: "embedded" };
 
-function isTruthy(value: string | undefined) {
-  if (!value) {
-    return false;
-  }
-
-  return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
-}
-
 function normalizeVersion(value: string) {
   const trimmed = value.trim();
   return trimmed.startsWith("v") ? trimmed.slice(1) : trimmed;

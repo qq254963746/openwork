@@ -4,9 +4,6 @@ import { getRequestContext, type AppBindings } from "../context/request-context.
 import { buildSuccessResponse, RouteError } from "../http.js";
 import { jsonResponse, withCommonErrorResponses } from "../openapi.js";
 import {
-  cloudSigninResponseSchema,
-  cloudSigninValidationResponseSchema,
-  cloudSigninWriteSchema,
   hubSkillInstallResponseSchema,
   hubSkillInstallWriteSchema,
   hubSkillListResponseSchema,
@@ -24,19 +21,10 @@ import {
   routerSlackWriteSchema,
   routerTelegramInfoResponseSchema,
   routerTelegramWriteSchema,
-  sharedBundleFetchResponseSchema,
-  sharedBundleFetchWriteSchema,
-  sharedBundlePublishResponseSchema,
-  sharedBundlePublishWriteSchema,
-  workspaceExportResponseSchema,
-  workspaceImportResponseSchema,
-  workspaceImportWriteSchema,
   workspaceMcpListResponseSchema,
   workspaceMcpWriteSchema,
   workspacePluginListResponseSchema,
   workspacePluginWriteSchema,
-  workspaceShareResponseSchema,
-  workspaceSkillDeleteResponseSchema,
   workspaceSkillListResponseSchema,
   workspaceSkillResponseSchema,
   workspaceSkillWriteSchema,
@@ -160,71 +148,6 @@ export function registerManagedRoutes(app: Hono<AppBindings>) {
       },
     );
   }
-
-  app.get(
-    routePaths.system.cloudSignin,
-    describeRoute({
-      tags: ["Cloud"],
-      summary: "Read cloud signin state",
-      description: "Returns the server-owned cloud signin record when one is configured.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Cloud signin returned successfully.", cloudSigninResponseSchema),
-      }, { includeUnauthorized: true }),
-    }),
-    async (c) => {
-      const requestContext = requireVisible(c);
-      return c.json(buildSuccessResponse(requestContext.requestId, requestContext.services.managed.getCloudSignin()));
-    },
-  );
-
-  app.put(
-    routePaths.system.cloudSignin,
-    describeRoute({
-      tags: ["Cloud"],
-      summary: "Persist cloud signin state",
-      description: "Stores cloud signin metadata in the server-owned database.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Cloud signin persisted successfully.", cloudSigninResponseSchema),
-      }, { includeInvalidRequest: true, includeUnauthorized: true }),
-    }),
-    async (c) => {
-      const requestContext = requireVisible(c);
-      const body = await parseJsonBody(cloudSigninWriteSchema, c.req.raw);
-      return c.json(buildSuccessResponse(requestContext.requestId, requestContext.services.managed.upsertCloudSignin(body)));
-    },
-  );
-
-  app.post(
-    "/system/cloud-signin/validate",
-    describeRoute({
-      tags: ["Cloud"],
-      summary: "Validate cloud signin state",
-      description: "Validates the stored cloud signin token against the configured cloud base URL.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Cloud signin validated successfully.", cloudSigninValidationResponseSchema),
-      }, { includeNotFound: true, includeUnauthorized: true }),
-    }),
-    async (c) => {
-      const requestContext = requireVisible(c);
-      return c.json(buildSuccessResponse(requestContext.requestId, await requestContext.services.managed.validateCloudSignin()));
-    },
-  );
-
-  app.delete(
-    routePaths.system.cloudSignin,
-    describeRoute({
-      tags: ["Cloud"],
-      summary: "Clear cloud signin state",
-      description: "Removes the server-owned cloud signin record for the current AiWork server.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Cloud signin cleared successfully.", cloudSigninResponseSchema),
-      }, { includeUnauthorized: true }),
-    }),
-    async (c) => {
-      const requestContext = requireVisible(c);
-      return c.json(buildSuccessResponse(requestContext.requestId, requestContext.services.managed.clearCloudSignin()));
-    },
-  );
 
   app.get(
     routePaths.system.router.health,
@@ -393,126 +316,6 @@ export function registerManagedRoutes(app: Hono<AppBindings>) {
       const requestContext = requireVisible(c);
       const body = await parseJsonBody(routerSendWriteSchema, c.req.raw);
       return c.json(buildSuccessResponse(requestContext.requestId, await requestContext.services.router.sendMessage(body)));
-    },
-  );
-
-  app.get(
-    routePaths.workspaces.share(),
-    describeRoute({
-      tags: ["Shares"],
-      summary: "Read workspace share",
-      description: "Returns the current workspace-scoped share record for a local workspace.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Workspace share returned successfully.", workspaceShareResponseSchema),
-      }, { includeUnauthorized: true }),
-    }),
-    (c) => {
-      const { requestContext, workspaceId } = requireWorkspace(c);
-      return c.json(buildSuccessResponse(requestContext.requestId, requestContext.services.managed.getWorkspaceShare(workspaceId)));
-    },
-  );
-
-  app.post(
-    routePaths.workspaces.share(),
-    describeRoute({
-      tags: ["Shares"],
-      summary: "Expose workspace share",
-      description: "Creates or rotates a workspace-scoped share access key for a local workspace.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Workspace share exposed successfully.", workspaceShareResponseSchema),
-      }, { includeUnauthorized: true }),
-    }),
-    (c) => {
-      const { requestContext, workspaceId } = requireWorkspace(c);
-      return c.json(buildSuccessResponse(requestContext.requestId, requestContext.services.managed.exposeWorkspaceShare(workspaceId)));
-    },
-  );
-
-  app.delete(
-    routePaths.workspaces.share(),
-    describeRoute({
-      tags: ["Shares"],
-      summary: "Revoke workspace share",
-      description: "Revokes the current workspace-scoped share access key for a local workspace.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Workspace share revoked successfully.", workspaceShareResponseSchema),
-      }, { includeNotFound: true, includeUnauthorized: true }),
-    }),
-    (c) => {
-      const { requestContext, workspaceId } = requireWorkspace(c);
-      return c.json(buildSuccessResponse(requestContext.requestId, requestContext.services.managed.revokeWorkspaceShare(workspaceId)));
-    },
-  );
-
-  app.get(
-    routePaths.workspaces.export(),
-    describeRoute({
-      tags: ["Bundles"],
-      summary: "Export workspace",
-      description: "Builds a portable workspace export from the server-owned config and managed-resource state.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Workspace exported successfully.", workspaceExportResponseSchema),
-      }, { includeUnauthorized: true }),
-    }),
-    async (c) => {
-      const { requestContext, workspaceId } = requireWorkspace(c);
-      const sensitiveMode = (new URL(c.req.url).searchParams.get("sensitive")?.trim() as "auto" | "exclude" | "include" | null) ?? "auto";
-      const result = await requestContext.services.managed.exportWorkspace(workspaceId, { sensitiveMode: sensitiveMode === "exclude" || sensitiveMode === "include" || sensitiveMode === "auto" ? sensitiveMode : "auto" });
-      if ("conflict" in result) {
-        return c.json({ code: "workspace_export_requires_decision", details: { warnings: result.warnings }, message: "This workspace includes sensitive config. Choose whether to exclude it or include it before exporting." }, 409);
-      }
-      return c.json(buildSuccessResponse(requestContext.requestId, result));
-    },
-  );
-
-  app.post(
-    routePaths.workspaces.import(),
-    describeRoute({
-      tags: ["Bundles"],
-      summary: "Import workspace",
-      description: "Applies a portable workspace import through the server-owned config and managed-resource model.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Workspace imported successfully.", workspaceImportResponseSchema),
-      }, { includeInvalidRequest: true, includeUnauthorized: true }),
-    }),
-    async (c) => {
-      const { requestContext, workspaceId } = requireWorkspace(c);
-      const body = await parseJsonBody(workspaceImportWriteSchema, c.req.raw);
-      return c.json(buildSuccessResponse(requestContext.requestId, await requestContext.services.managed.importWorkspace(workspaceId, body)));
-    },
-  );
-
-  app.post(
-    "/share/bundles/publish",
-    describeRoute({
-      tags: ["Bundles"],
-      summary: "Publish shared bundle",
-      description: "Publishes a trusted shared bundle through the configured AiWork bundle publisher.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Shared bundle published successfully.", sharedBundlePublishResponseSchema),
-      }, { includeInvalidRequest: true, includeUnauthorized: true }),
-    }),
-    async (c) => {
-      const requestContext = requireVisible(c);
-      const body = await parseJsonBody(sharedBundlePublishWriteSchema, c.req.raw);
-      return c.json(buildSuccessResponse(requestContext.requestId, await requestContext.services.managed.publishSharedBundle(body)));
-    },
-  );
-
-  app.post(
-    "/share/bundles/fetch",
-    describeRoute({
-      tags: ["Bundles"],
-      summary: "Fetch shared bundle",
-      description: "Fetches a trusted shared bundle through the configured AiWork bundle publisher.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Shared bundle fetched successfully.", sharedBundleFetchResponseSchema),
-      }, { includeInvalidRequest: true, includeUnauthorized: true }),
-    }),
-    async (c) => {
-      const requestContext = requireVisible(c);
-      const body = await parseJsonBody(sharedBundleFetchWriteSchema, c.req.raw);
-      return c.json(buildSuccessResponse(requestContext.requestId, await requestContext.services.managed.fetchSharedBundle(body.bundleUrl, { timeoutMs: body.timeoutMs })));
     },
   );
 
@@ -748,17 +551,4 @@ export function registerManagedRoutes(app: Hono<AppBindings>) {
     addCompatibilityRoute(app, "POST", `${basePath}/send`, async (c) => c.json(await getRequestContext(c).services.router.sendMessage(await parseJsonBody(routerSendWriteSchema, c.req.raw))));
   }
 
-  addCompatibilityRoute(app, "GET", "/workspace/:workspaceId/export", async (c) => {
-    const { requestContext, workspaceId } = requireWorkspace(c);
-    const sensitiveMode = (new URL(c.req.url).searchParams.get("sensitive")?.trim() as "auto" | "exclude" | "include" | null) ?? "auto";
-    const result = await requestContext.services.managed.exportWorkspace(workspaceId, { sensitiveMode: sensitiveMode === "exclude" || sensitiveMode === "include" || sensitiveMode === "auto" ? sensitiveMode : "auto" });
-    if ("conflict" in result) {
-      return c.json({ code: "workspace_export_requires_decision", details: { warnings: result.warnings }, message: "This workspace includes sensitive config. Choose whether to exclude it or include it before exporting." }, 409);
-    }
-    return c.json(result);
-  });
-  addCompatibilityRoute(app, "POST", "/workspace/:workspaceId/import", async (c) => {
-    const { requestContext, workspaceId } = requireWorkspace(c);
-    return c.json(await requestContext.services.managed.importWorkspace(workspaceId, await c.req.json()));
-  });
 }
