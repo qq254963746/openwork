@@ -707,12 +707,12 @@ export function WorkspaceSessionList(props: Props) {
                   void Promise.resolve(props.onReorderWorkspaces(next));
                 }}
               >
-                <div className="relative group">
+                <div className="relative group px-0.5">
                   <div
                     role="button"
                     tabIndex={0}
                     aria-expanded={expandedWorkspaceIds.has(workspace.id)}
-                    className={`flex w-full min-w-0 items-center justify-between px-3.5 py-2 text-left text-[13px] transition-colors ${
+                    className={`flex w-full min-w-0 items-center justify-between pl-[3px] pr-3 py-2 text-left text-[13px] transition-colors ${
                       props.selectedWorkspaceId === workspace.id
                         ? "bg-gray-2/70 dark:bg-gray-3"
                         : ""
