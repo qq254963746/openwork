@@ -7,7 +7,7 @@ import { opencodeMcpAuth } from "../../../app/lib/desktop";
 import { unwrap } from "../../../app/lib/opencode";
 import { validateMcpServerName } from "../../../app/mcp";
 import type { Client } from "../../../app/types";
-import { isDesktopRuntime, normalizeDirectoryPath } from "../../../app/utils";
+import { normalizeDirectoryPath } from "../../../app/utils";
 import { t } from "../../../i18n";
 import { Button } from "../../design-system/button";
 
@@ -220,7 +220,7 @@ export function McpAuthModal(props: McpAuthModalProps) {
   };
 
   const handleCliReauth = async () => {
-    if (!props.entry || cliAuthBusy || !isDesktopRuntime()) return;
+    if (!props.entry || cliAuthBusy) return;
 
     setCliAuthBusy(true);
     setCliAuthResult(null);
@@ -561,19 +561,10 @@ export function McpAuthModal(props: McpAuthModalProps) {
               {isInvalidRefreshToken() ? (
                 <div className="space-y-2 pt-2">
                   <p className="text-xs text-red-11">{t("mcp.auth.invalid_refresh_token")}</p>
-                  {
-                    isDesktopRuntime() ? (
-                      <Button variant="secondary" onClick={() => void handleCliReauth()} disabled={cliAuthBusy}>
-                        {cliAuthBusy ? <Loader2 size={14} className="animate-spin" /> : null}
-                        {cliAuthBusy
-                          ? t("mcp.auth.reauth_running")
-                          : t("mcp.auth.reauth_action")}
-                      </Button>
-                    ) : (
-                      <div className="text-[11px] text-red-10">
-                        {t("mcp.auth.reauth_cli_hint", { server: serverName })}
-                      </div>
-                    )}
+                  <Button variant="secondary" onClick={() => void handleCliReauth()} disabled={cliAuthBusy}>
+                    {cliAuthBusy ? <Loader2 size={14} className="animate-spin" /> : null}
+                    {cliAuthBusy ? t("mcp.auth.reauth_running") : t("mcp.auth.reauth_action")}
+                  </Button>
                   {cliAuthResult ? <div className="text-[11px] text-red-10">{cliAuthResult}</div> : null}
                 </div>
               ) : null}

@@ -32,7 +32,6 @@ import {
 } from "../../../../app/lib/aiwork-server";
 import {
   clearStartupPreference,
-  isDesktopRuntime,
   isElectronRuntime,
   isMacPlatform,
   isTauriRuntime,
@@ -262,7 +261,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   const [electronMigrationBusy, setElectronMigrationBusy] = useState(false);
   const [electronMigrationStatus, setElectronMigrationStatus] = useState<string | null>(null);
   const refreshEngineInfo = useCallback(async () => {
-    if (!isDesktopRuntime()) return;
     try {
       const info = await engineInfoCmd();
       setEngineInfoState(info);
@@ -274,7 +272,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   useEffect(() => {
     if (!developerMode) return;
     void (async () => {
-      if (!isDesktopRuntime()) return;
       try {
         const build = await appBuildInfoCmd();
         setAppBuild(build);
@@ -583,10 +580,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   }, []);
 
   const onPickEngineBinary = useCallback(async () => {
-    if (!isDesktopRuntime()) {
-      setServiceRestartError(t("session.app_log_services_desktop_only"));
-      return;
-    }
     try {
       const target = await pickFile({ title: t("settings.custom_binary_label"), multiple: false });
       if (typeof target === "string" && target.trim()) {
@@ -658,7 +651,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   }, [aiworkServerStore, refreshEngineInfo]);
 
   const onRestartOpencode = useCallback(async () => {
-    if (!isDesktopRuntime()) return;
     setOpencodeRestarting(true);
     setOpencodeServiceStatus(null);
     setServiceRestartError(null);
@@ -682,7 +674,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   }, [bootFullEngineStack, pushDeveloperLog]);
 
   const onRestartAiWorkServer = useCallback(async () => {
-    if (!isDesktopRuntime()) return;
     setAiWorkServerRestarting(true);
     setAiWorkServiceStatus(null);
     setServiceRestartError(null);
@@ -788,7 +779,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
 
   const onOpenResetModal = useCallback(
     (mode: ResetModalMode) => {
-      if (!isDesktopRuntime()) return;
       const message =
         mode === "all"
           ? "Reset ALL AiWork app data? Open sessions and workspaces will be removed."
@@ -818,7 +808,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   );
 
   const onNukeAiWorkAndOpencodeConfig = useCallback(async () => {
-    if (!isDesktopRuntime()) return;
     const confirmed =
       typeof window === "undefined"
         ? true

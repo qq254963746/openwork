@@ -78,10 +78,6 @@ export function isElectronRuntime() {
   return typeof window !== "undefined" && (window as Window).__AIWORK_ELECTRON__ != null;
 }
 
-export function isDesktopRuntime() {
-  return isTauriRuntime() || isElectronRuntime();
-}
-
 export function isWindowsPlatform() {
   if (typeof navigator === "undefined") return false;
 

@@ -2,7 +2,6 @@ import { useSyncExternalStore } from "react";
 
 import { t } from "../../../i18n";
 import type { StartupPreference, WorkspaceDisplay } from "../../../app/types";
-import { isDesktopRuntime } from "../../../app/utils";
 import {
   aiworkServerInfo,
   aiworkServerRestart,
@@ -100,7 +99,7 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
     aiworkServerCapabilities: null,
     aiworkServerCheckedAt: null,
     aiworkServerHostInfo: null,
-    aiworkServerHostInfoReady: !isDesktopRuntime(),
+    aiworkServerHostInfoReady: false,
     aiworkServerDiagnostics: null,
     aiworkReconnectBusy: false,
     aiworkAuditEntries: [],
@@ -255,13 +254,10 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
   };
 
   const shouldWaitForLocalHostInfo = () =>
-    isDesktopRuntime() &&
-    options.startupPreference() !== "server" &&
-    !state.aiworkServerHostInfoReady;
+    options.startupPreference() !== "server" && !state.aiworkServerHostInfoReady;
 
   const shouldRetryStartupCheck = (status: AiWorkServerStatus) =>
     status !== "connected" &&
-    isDesktopRuntime() &&
     options.startupPreference() !== "server" &&
     Date.now() - bootStartedAt < 5_000;
 
@@ -384,7 +380,6 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
     refreshSnapshot();
     emitChange();
 
-    if (!isDesktopRuntime()) return;
     const port = state.aiworkServerHostInfo?.port;
     if (!port) return;
     if (state.aiworkServerSettings.portOverride === port) return;
@@ -422,7 +417,6 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
     queueHealthCheck(0);
 
     const refreshHostInfo = () => {
-      if (!isDesktopRuntime()) return;
       if (!options.documentVisible()) return;
       void (async () => {
         try {
@@ -595,14 +589,12 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
 
     try {
       let hostInfo = state.aiworkServerHostInfo;
-      if (isDesktopRuntime()) {
-        try {
-          hostInfo = await aiworkServerInfo();
-          mutateState((current) => ({ ...current, aiworkServerHostInfo: hostInfo }));
-        } catch {
-          hostInfo = null;
-          setStateField("aiworkServerHostInfo", null);
-        }
+      try {
+        hostInfo = await aiworkServerInfo();
+        mutateState((current) => ({ ...current, aiworkServerHostInfo: hostInfo }));
+      } catch {
+        hostInfo = null;
+        setStateField("aiworkServerHostInfo", null);
       }
 
       if (hostInfo?.clientToken?.trim() && options.startupPreference() !== "server") {
@@ -656,8 +648,6 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
         // Fall through to a local restart.
       }
     }
-
-    if (!isDesktopRuntime()) return null;
 
     try {
       hostInfo = await aiworkServerRestart();

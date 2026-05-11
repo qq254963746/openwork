@@ -3,7 +3,6 @@ import {
   setDesktopBootstrapConfig as setDesktopBootstrapConfigInShell,
   type DesktopBootstrapConfig as ShellDesktopBootstrapConfig,
 } from "./desktop";
-import { isDesktopRuntime } from "../utils";
 import {
   BUILD_AIWORK_API_URL,
   DEFAULT_AIWORK_APP_URL,
@@ -57,15 +56,6 @@ export function readAiWorkBootstrapConfig(): AiWorkBootstrapConfig {
 }
 
 export async function initializeAiWorkBootstrapConfig(): Promise<AiWorkBootstrapConfig> {
-  if (!isDesktopRuntime()) {
-    desktopBootstrapConfig = resolveAiWorkBootstrapConfig({
-      baseUrl: DEFAULT_AIWORK_APP_URL,
-      apiBaseUrl: BUILD_AIWORK_API_URL,
-      requireSignin: BUILD_REQUIRE_SIGNIN,
-    });
-    return desktopBootstrapConfig;
-  }
-
   try {
     const bootstrap = await getDesktopBootstrapConfig();
     applyDesktopBootstrapConfig(resolveAiWorkBootstrapConfig(bootstrap));
@@ -86,16 +76,12 @@ export async function setAiWorkBootstrapConfig(
 ): Promise<AiWorkBootstrapConfig> {
   const normalized = resolveAiWorkBootstrapConfig(next);
 
-  if (isDesktopRuntime()) {
-    const persisted = await setDesktopBootstrapConfigInShell({
-      baseUrl: normalized.baseUrl,
-      apiBaseUrl: normalized.apiBaseUrl,
-      requireSignin: normalized.requireSignin,
-    });
-    applyDesktopBootstrapConfig(resolveAiWorkBootstrapConfig(persisted));
-  } else {
-    applyDesktopBootstrapConfig(normalized);
-  }
+  const persisted = await setDesktopBootstrapConfigInShell({
+    baseUrl: normalized.baseUrl,
+    apiBaseUrl: normalized.apiBaseUrl,
+    requireSignin: normalized.requireSignin,
+  });
+  applyDesktopBootstrapConfig(resolveAiWorkBootstrapConfig(persisted));
 
   return readAiWorkBootstrapConfig();
 }

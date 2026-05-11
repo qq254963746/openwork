@@ -1,6 +1,5 @@
 import type { Message, Part, Session, Todo } from "@opencode-ai/sdk/v2/client";
 import { desktopFetch } from "./desktop";
-import { isDesktopRuntime } from "../utils";
 import type { ExecResult, OpencodeConfigFile, WorkspaceInfo, WorkspaceList } from "./desktop";
 import type { ModelProviderType } from "../utils/model-providers-catalog";
 
@@ -711,7 +710,6 @@ function isStreamUrl(url: string): boolean {
 }
 
 const resolveFetch = (url?: string) => {
-  if (!isDesktopRuntime()) return globalThis.fetch;
   if (url && isStreamUrl(url)) {
     return typeof window !== "undefined" ? window.fetch.bind(window) : globalThis.fetch;
   }

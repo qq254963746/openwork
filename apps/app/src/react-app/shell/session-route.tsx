@@ -51,7 +51,7 @@ import type {
   ProviderListItem,
   WorkspaceSessionGroup,
 } from "../../app/types";
-import { isDesktopRuntime, normalizeDirectoryPath, safeStringify } from "../../app/utils";
+import { normalizeDirectoryPath, safeStringify } from "../../app/utils";
 import { t } from "../../i18n";
 import { useLocal } from "../kernel/local-provider";
 import { SessionPage } from "../domains/session/chat/session-page";
@@ -530,20 +530,18 @@ export function SessionRoute() {
     let desktopWorkspaces = workspacesRef.current;
     let routeReadyAfterRefresh = true;
     try {
-      if (isDesktopRuntime()) {
-        try {
-          desktopList = await workspaceBootstrap();
-          desktopWorkspaces = (desktopList.workspaces ?? []).map(mapDesktopWorkspace);
-        } catch (error) {
-          const message = describeRouteError(error);
-          console.error("[session-route] workspaceBootstrap failed", error);
-          recordInspectorEvent("route.workspace_bootstrap.error", {
-            route: "session",
-            message,
-            preservedWorkspaceCount: workspacesRef.current.length,
-          });
-          desktopWorkspaces = workspacesRef.current;
-        }
+      try {
+        desktopList = await workspaceBootstrap();
+        desktopWorkspaces = (desktopList.workspaces ?? []).map(mapDesktopWorkspace);
+      } catch (error) {
+        const message = describeRouteError(error);
+        console.error("[session-route] workspaceBootstrap failed", error);
+        recordInspectorEvent("route.workspace_bootstrap.error", {
+          route: "session",
+          message,
+          preservedWorkspaceCount: workspacesRef.current.length,
+        });
+        desktopWorkspaces = workspacesRef.current;
       }
 
       const { normalizedBaseUrl, resolvedToken, resolvedHostToken, hostInfo } = await resolveAiWorkConnection();
@@ -941,7 +939,6 @@ export function SessionRoute() {
   );
 
   useEffect(() => {
-    if (!isDesktopRuntime()) return;
     if (loading) return;
     if (client) {
       reconnectAttemptedWorkspaceIdRef.current = "";
@@ -1628,12 +1625,10 @@ export function SessionRoute() {
       // desktop-provided workspaceBootstrap results). Either call failing on
       // its own should NOT block the other — the user's intent was "rename
       // this workspace" and a soft failure in one store is recoverable.
-      if (isDesktopRuntime()) {
-        await workspaceUpdateDisplayName({
-          workspaceId: renameWorkspaceId,
-          displayName: trimmed,
-        }).catch(() => undefined);
-      }
+      await workspaceUpdateDisplayName({
+        workspaceId: renameWorkspaceId,
+        displayName: trimmed,
+      }).catch(() => undefined);
       if (client) {
         await client
           .updateWorkspaceDisplayName(renameWorkspaceId, trimmed)
@@ -1650,7 +1645,7 @@ export function SessionRoute() {
   const handleRevealWorkspace = useCallback(async (workspaceId: string) => {
     const workspace = workspaces.find((item) => item.id === workspaceId);
     const path = workspace?.path?.trim();
-    if (!path || !isDesktopRuntime()) return;
+    if (!path) return;
     try {
       await revealDesktopItemInDir(path);
     } catch {
@@ -1668,9 +1663,7 @@ export function SessionRoute() {
       }
       // Remove from both stores so the next refresh can't resurrect the row
       // from whichever list wins the merge.
-      if (isDesktopRuntime()) {
-        await workspaceForget(workspaceId).catch(() => undefined);
-      }
+      await workspaceForget(workspaceId).catch(() => undefined);
       if (client) {
         await client.deleteWorkspace(workspaceId).catch(() => undefined);
       }
@@ -1689,9 +1682,7 @@ export function SessionRoute() {
     async (orderedIds: string[]) => {
       if (orderedIds.length < 2) return;
       try {
-        if (isDesktopRuntime()) {
-          await workspaceReorder(orderedIds);
-        }
+        await workspaceReorder(orderedIds);
         if (client) {
           await client.reorderWorkspaces(orderedIds);
         }
@@ -1948,7 +1939,7 @@ export function SessionRoute() {
         newTaskDisabled: !canCreateTask,
         sidebarHydratedFromCache: Object.values(sessionsByWorkspaceId).some((list) => list.length > 0),
         startupPhase: effectiveLoading ? "nativeInit" : "ready",
-        onReorderWorkspaces: isDesktopRuntime() || client ? handleReorderWorkspaces : undefined,
+        onReorderWorkspaces: handleReorderWorkspaces,
         onOpenSession: (workspaceId, sessionId) => {
           setLegacySelectedWorkspaceId(workspaceId);
           writeActiveWorkspaceId(workspaceId || null);

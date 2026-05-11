@@ -22,7 +22,6 @@ import {
 } from "../../../../app/lib/workspace-relative-path";
 import type { ComposerAttachment } from "../../../../app/types";
 import {
-  isDesktopRuntime,
   isElectronRuntime,
   isMacPlatform,
   isTauriRuntime,
@@ -491,12 +490,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
           lastWorkspaceListErrorRef.current = String(error ?? "");
         }
 
-        if (
-          looksUnauthorized &&
-          isDesktopRuntime() &&
-          workspaceRoot &&
-          !attemptedWorkspaceAuthorizeRef.current
-        ) {
+        if (looksUnauthorized && workspaceRoot && !attemptedWorkspaceAuthorizeRef.current) {
           attemptedWorkspaceAuthorizeRef.current = true;
           await workspaceAddAuthorizedRoot({ workspacePath: workspaceRoot, folderPath: workspaceRoot }).catch(
             () => undefined,
@@ -535,14 +529,13 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
   };
 
   const openCurrentFolderOnDesktop = () => {
-    if (!workspaceRoot || !isDesktopRuntime()) return;
+    if (!workspaceRoot) return;
     const abs = absoluteWorkspaceFilePath(workspaceRoot, dirPath);
     if (!abs) return;
     void openDesktopPath(abs).catch(() => undefined);
   };
 
-  const canOpenCurrentFolderOnDesktop =
-    isDesktopRuntime() && Boolean(workspaceRoot) && Boolean(props.workspaceId);
+  const canOpenCurrentFolderOnDesktop = Boolean(workspaceRoot) && Boolean(props.workspaceId);
 
   const openFolderTitle = isWindowsPlatform()
     ? t("session.workspace_panel_open_current_folder_explorer")
@@ -575,9 +568,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
       const sel = apiRel ?? raw;
 
       if (apiRel == null && looksAbsoluteWorkspacePath(raw)) {
-        if (isDesktopRuntime()) {
-          void openDesktopPath(raw).catch(() => undefined);
-        }
+        void openDesktopPath(raw).catch(() => undefined);
         return;
       }
 
@@ -593,7 +584,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         setSelectedFile(sel);
         return;
       }
-      if (isDesktopRuntime() && root) {
+      if (root) {
         const abs = absoluteWorkspaceFilePath(root, sel);
         if (abs) {
           void openDesktopPath(abs).catch(() => undefined);
@@ -843,10 +834,10 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         {/* Drag region must not wrap toolbar buttons (WKWebView hit-testing); mirror workspace-session-list. */}
         <div className="shrink-0 border-b border-dls-divider px-3 py-2">
           <div
-            className={`flex min-h-[28px] items-center gap-2 ${isDesktopRuntime() ? "cursor-default" : ""}`}
+            className="flex min-h-[28px] cursor-default items-center gap-2"
           >
             <div
-              className={`flex min-w-0 flex-1 items-center select-none text-[11px] font-semibold uppercase tracking-wide text-[#000000] ${isDesktopRuntime() ? "cursor-default" : ""}`}
+              className="flex min-w-0 flex-1 cursor-default items-center select-none text-[11px] font-semibold uppercase tracking-wide text-[#000000]"
               {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
               style={{
                 ...WORKSPACE_PANEL_HEADER_DRAG_STYLE,
@@ -889,7 +880,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
             </div>
           </div>
           <div
-            className={`mt-1 flex min-w-0 flex-wrap items-center gap-x-0.5 gap-y-0.5 text-[11px] text-dls-secondary ${isDesktopRuntime() ? "cursor-default" : ""}`}
+            className="mt-1 flex min-w-0 cursor-default flex-wrap items-center gap-x-0.5 gap-y-0.5 text-[11px] text-dls-secondary"
           >
             <button
               type="button"

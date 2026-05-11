@@ -4,7 +4,6 @@ import type {
   AiWorkServerInfo,
 } from "../../app/lib/desktop-tauri";
 import { engineInfo, aiworkServerInfo, readOpencodeEngineDiskLogs } from "../../app/lib/desktop";
-import { isDesktopRuntime } from "../../app/utils";
 
 export type DesktopLogViewerHostBridge = {
   engineInfo: () => Promise<EngineInfo>;
@@ -23,7 +22,6 @@ declare global {
 /** Install on the main shell window so `window.open` log viewers can reach desktop IPC. */
 export function installDesktopLogViewerHostBridge(): void {
   if (typeof window === "undefined") return;
-  if (!isDesktopRuntime()) return;
   if (window.__aiworkDesktopLogBridge) return;
   window.__aiworkDesktopLogBridge = {
     engineInfo: () => engineInfo(),
@@ -35,9 +33,7 @@ export function installDesktopLogViewerHostBridge(): void {
 export function resolveDesktopLogViewerBridge(): DesktopLogViewerHostBridge | null {
   if (typeof window === "undefined") return null;
   try {
-    if (isDesktopRuntime()) {
-      return window.__aiworkDesktopLogBridge ?? null;
-    }
+    if (window.__aiworkDesktopLogBridge) return window.__aiworkDesktopLogBridge;
     const openerWindow = window.opener as Window | null;
     if (!openerWindow || openerWindow.closed) return null;
     return openerWindow.__aiworkDesktopLogBridge ?? null;
@@ -48,37 +44,45 @@ export function resolveDesktopLogViewerBridge(): DesktopLogViewerHostBridge | nu
 
 /** True when this frame has desktop IPC, or the opener exposed {@link installDesktopLogViewerHostBridge}. */
 export function isDesktopServiceLogsAvailableInLogViewer(): boolean {
-  if (isDesktopRuntime()) return true;
   return resolveDesktopLogViewerBridge() != null;
 }
 
 export async function fetchEngineInfoForLogViewer(): Promise<EngineInfo> {
-  if (isDesktopRuntime()) return engineInfo();
-  const bridge = resolveDesktopLogViewerBridge();
-  if (!bridge) throw new Error("desktop_log_bridge_missing");
-  return bridge.engineInfo();
+  try {
+    return await engineInfo();
+  } catch {
+    const bridge = resolveDesktopLogViewerBridge();
+    if (!bridge) throw new Error("desktop_log_bridge_missing");
+    return bridge.engineInfo();
+  }
 }
 
 export async function fetchOpencodeEngineDiskLogsForLogViewer(): Promise<OpencodeEngineDiskLogsSnapshot> {
-  if (isDesktopRuntime()) return readOpencodeEngineDiskLogs();
-  const bridge = resolveDesktopLogViewerBridge();
-  if (!bridge) throw new Error("desktop_log_bridge_missing");
-  const reader = bridge.readOpencodeEngineDiskLogs;
-  if (!reader) {
-    return {
-      dir: "",
-      resolvedVariant: "none",
-      fileLabel: null,
-      content: "",
-      error: "desktop_log_bridge_outdated",
-    };
+  try {
+    return await readOpencodeEngineDiskLogs();
+  } catch {
+    const bridge = resolveDesktopLogViewerBridge();
+    if (!bridge) throw new Error("desktop_log_bridge_missing");
+    const reader = bridge.readOpencodeEngineDiskLogs;
+    if (!reader) {
+      return {
+        dir: "",
+        resolvedVariant: "none",
+        fileLabel: null,
+        content: "",
+        error: "desktop_log_bridge_outdated",
+      };
+    }
+    return reader();
   }
-  return reader();
 }
 
 export async function fetchAiWorkServerInfoForLogViewer(): Promise<AiWorkServerInfo> {
-  if (isDesktopRuntime()) return aiworkServerInfo();
-  const bridge = resolveDesktopLogViewerBridge();
-  if (!bridge) throw new Error("desktop_log_bridge_missing");
-  return bridge.aiworkServerInfo();
+  try {
+    return await aiworkServerInfo();
+  } catch {
+    const bridge = resolveDesktopLogViewerBridge();
+    if (!bridge) throw new Error("desktop_log_bridge_missing");
+    return bridge.aiworkServerInfo();
+  }
 }

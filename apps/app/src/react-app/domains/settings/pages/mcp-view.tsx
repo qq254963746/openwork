@@ -36,7 +36,7 @@ import {
   usesChromeDevtoolsAutoConnect,
 } from "../../../../app/mcp";
 import type { McpServerEntry, McpStatusMap } from "../../../../app/types";
-import { formatRelativeTime, isDesktopRuntime, isWindowsPlatform } from "../../../../app/utils";
+import { formatRelativeTime, isWindowsPlatform } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import { Button } from "../../../design-system/button";
 import { ConfirmModal } from "../../../design-system/modals/confirm-modal";
@@ -186,13 +186,6 @@ export function McpView(props: McpViewProps) {
     configRequestId.current = nextId;
     const readConfig = props.readConfigFile;
 
-    if (!readConfig && !isDesktopRuntime()) {
-      setProjectConfig(null);
-      setGlobalConfig(null);
-      setConfigError(null);
-      return;
-    }
-
     void (async () => {
       try {
         setConfigError(null);
@@ -225,7 +218,6 @@ export function McpView(props: McpViewProps) {
     : t("mcp.reveal_in_finder");
 
   const canRevealConfig =
-    isDesktopRuntime() &&
     !revealBusy &&
     !(configScope === "project" && !props.selectedWorkspaceRoot.trim()) &&
     Boolean(activeConfig?.exists);
@@ -307,7 +299,7 @@ export function McpView(props: McpViewProps) {
   };
 
   const revealConfig = async () => {
-    if (!isDesktopRuntime() || revealBusy) return;
+    if (revealBusy) return;
     const root = props.selectedWorkspaceRoot.trim();
 
     if (configScope === "project" && !root) {

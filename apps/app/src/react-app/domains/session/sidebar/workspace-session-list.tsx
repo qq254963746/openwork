@@ -18,7 +18,6 @@ import type {
 } from "../../../../app/types";
 import {
   getWorkspaceTaskLoadErrorDisplay,
-  isDesktopRuntime,
   isElectronRuntime,
   isTauriRuntime,
   isWindowsPlatform,
@@ -843,18 +842,16 @@ export function WorkspaceSessionList(props: Props) {
                       >
                         {t("workspace_list.edit_name")}
                       </button>
-                      {isDesktopRuntime() ? (
-                        <button
-                          type="button"
-                          className="w-full rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
-                          onClick={() => {
-                            props.onRevealWorkspace(workspace.id);
-                            setWorkspaceMenuId(null);
-                          }}
-                        >
-                          {revealLabel}
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        className="w-full rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
+                        onClick={() => {
+                          props.onRevealWorkspace(workspace.id);
+                          setWorkspaceMenuId(null);
+                        }}
+                      >
+                        {revealLabel}
+                      </button>
                       <button
                         type="button"
                         className="w-full rounded-xl px-3 py-2 text-left text-sm text-red-11 transition-colors hover:bg-red-1/40"

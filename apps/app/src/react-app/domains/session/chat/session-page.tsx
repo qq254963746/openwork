@@ -31,7 +31,7 @@ import {
 } from "../../../shell/workspace-shell-layout";
 import { OwDotTicker } from "../../../shell/dot-ticker";
 import { useReactRenderWatchdog } from "../../../shell/react-render-watchdog";
-import { isDesktopRuntime, isElectronRuntime, isMacPlatform, isTauriRuntime } from "../../../../app/utils";
+import { isElectronRuntime, isMacPlatform, isTauriRuntime } from "../../../../app/utils";
 
 /** Title bar WebViews often show I‑beam over headings unless this is explicit. */
 const SESSION_MAIN_HEADER_DRAG_CHROME_STYLE: CSSProperties = {
@@ -506,14 +506,14 @@ export function SessionPage(props: SessionPageProps) {
           <header
             className={`relative z-10 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-dls-divider bg-dls-surface pr-1.5 md:pr-2 ${
               macHeaderTrafficInset ? "pl-[76px]" : "pl-4 md:pl-6"
-            } ${isDesktopRuntime() ? "select-none" : ""}`}
+            } select-none`}
             {...(!mainHeaderDragPassThrough && isTauriRuntime()
               ? ({ "data-tauri-drag-region": true } as const)
               : {})}
             style={
               !mainHeaderDragPassThrough
                 ? ({
-                    ...(isDesktopRuntime() ? SESSION_MAIN_HEADER_DRAG_CHROME_STYLE : {}),
+                    ...SESSION_MAIN_HEADER_DRAG_CHROME_STYLE,
                     ...(isElectronRuntime() && isMacPlatform()
                       ? ({ WebkitAppRegion: "drag" } as CSSProperties)
                       : {}),
@@ -537,7 +537,7 @@ export function SessionPage(props: SessionPageProps) {
             <div
               className={`relative z-[2] flex min-w-0 flex-1 items-center gap-3 ${
                 mainHeaderDragPassThrough ? "pointer-events-none" : ""
-              } ${isDesktopRuntime() && !mainHeaderDragPassThrough ? "cursor-default" : ""}`}
+              } ${!mainHeaderDragPassThrough ? "cursor-default" : ""}`}
             >
               {!leftWorkspaceSidebarVisible ? (
                 <div
@@ -567,14 +567,14 @@ export function SessionPage(props: SessionPageProps) {
                   <SessionTitleGlyph className="h-[18px] w-[18px] shrink-0 text-dls-text opacity-90" />
                   <div className="flex min-w-0 max-w-full flex-1 items-end gap-x-3">
                     <h1
-                      className={`max-w-full min-w-0 flex-1 truncate text-[15px] font-semibold leading-none text-dls-text ${isDesktopRuntime() ? "cursor-default" : ""}`}
+                      className="max-w-full min-w-0 flex-1 cursor-default truncate text-[15px] font-semibold leading-none text-dls-text"
                     >
                       {showWorkspaceSetupEmptyState
                         ? t("session.create_or_connect_workspace")
                         : selectedSessionTitle || t("session.default_title")}
                     </h1>
                     <span
-                      className={`hidden max-w-[14rem] shrink-0 truncate text-[10px] leading-none text-[rgba(0,0,0,0.2)] lg:inline dark:text-gray-11/45 ${isDesktopRuntime() ? "cursor-default" : ""}`}
+                      className="hidden max-w-[14rem] shrink-0 cursor-default truncate text-[10px] leading-none text-[rgba(0,0,0,0.2)] lg:inline dark:text-gray-11/45"
                     >
                       {workspaceName}
                     </span>
@@ -582,14 +582,14 @@ export function SessionPage(props: SessionPageProps) {
                 </div>
                 {props.developerMode ? (
                   <span
-                    className={`hidden max-w-full min-w-0 truncate text-[12px] text-dls-secondary lg:inline ${isDesktopRuntime() ? "cursor-default" : ""}`}
+                    className="hidden max-w-full min-w-0 cursor-default truncate text-[12px] text-dls-secondary lg:inline"
                   >
                     {props.headerStatus}
                   </span>
                 ) : null}
                 {props.busyHint ? (
                   <span
-                    className={`hidden max-w-full min-w-0 truncate text-[12px] text-dls-secondary lg:inline ${isDesktopRuntime() ? "cursor-default" : ""}`}
+                    className="hidden max-w-full min-w-0 cursor-default truncate text-[12px] text-dls-secondary lg:inline"
                   >
                     {props.busyHint}
                   </span>

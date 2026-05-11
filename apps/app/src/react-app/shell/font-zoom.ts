@@ -10,12 +10,10 @@ import {
   readStoredFontZoom,
 } from "../../app/lib/font-zoom";
 import { setDesktopZoomFactor } from "../../app/lib/desktop";
-import { isDesktopRuntime } from "../../app/utils";
 
 export function useDesktopFontZoomBehavior() {
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!isDesktopRuntime()) return;
 
     const applyAndPersistFontZoom = (value: number) => {
       const next = normalizeFontZoom(value);

@@ -17,7 +17,7 @@ import {
   readAiWorkServerSettings,
   writeAiWorkServerSettings,
 } from "../../app/lib/aiwork-server";
-import { isDesktopRuntime, isElectronRuntime, safeStringify } from "../../app/utils";
+import { isElectronRuntime, safeStringify } from "../../app/utils";
 import { useServer } from "../kernel/server-provider";
 import { useBootState } from "./boot-state";
 
@@ -56,11 +56,6 @@ export function useDesktopRuntimeBoot() {
   const { setActive } = useServer();
 
   useEffect(() => {
-    if (!isDesktopRuntime()) {
-      // Web/headless: nothing to spawn, we're instantly "ready".
-      markReady();
-      return;
-    }
     if (BOOT_STARTED) return;
     BOOT_STARTED = true;
 

@@ -15,7 +15,7 @@ import type {
   AiWorkServerDiagnostics,
 } from "../../../../app/lib/aiwork-server";
 import type { OpencodeConnectStatus, StartupPreference } from "../../../../app/types";
-import { formatRelativeTime, isDesktopRuntime } from "../../../../app/utils";
+import { formatRelativeTime } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import { Button } from "../../../design-system/button";
 
@@ -286,7 +286,7 @@ function ServiceCard(props: ServiceCardProps) {
 export function DebugView(props: DebugViewProps) {
   if (!props.developerMode) return null;
 
-  const isDesktop = isDesktopRuntime();
+  const isDesktop = true;
   const isLocalPreference = props.startupPreference !== "server";
 
   return (

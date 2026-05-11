@@ -10,7 +10,6 @@ import {
   workspaceSetRuntimeActive,
   workspaceSetSelected,
 } from "../../app/lib/desktop";
-import { isDesktopRuntime } from "../../app/utils";
 import { useLocal } from "../kernel/local-provider";
 import { WelcomePage } from "../domains/onboarding/welcome-page";
 import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-modal";
@@ -124,12 +123,8 @@ export function WelcomeRoute() {
         }
         submitting={createBusy}
         localError={createError}
-        localDisabled={!isDesktopRuntime()}
-        localDisabledReason={
-          isDesktopRuntime()
-            ? undefined
-            : t("app.local_disabled_reason")
-        }
+        localDisabled={false}
+        localDisabledReason={undefined}
       />
     </>
   );

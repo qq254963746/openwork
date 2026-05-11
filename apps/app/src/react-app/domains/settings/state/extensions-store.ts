@@ -12,7 +12,7 @@ import type {
   ReloadTrigger,
   SkillCard,
 } from "../../../../app/types";
-import { addOpencodeCacheHint, isDesktopRuntime, normalizeDirectoryPath } from "../../../../app/utils";
+import { addOpencodeCacheHint, normalizeDirectoryPath } from "../../../../app/utils";
 import skillCreatorTemplate from "../../../../app/data/skill-creator.md?raw";
 import {
   isPluginInstalled,
@@ -339,7 +339,7 @@ export function createExtensionsStore(options: {
       return config.aiwork ?? {};
     }
 
-    if (isDesktopRuntime() && root) {
+    if (root) {
       return await workspaceAiWorkRead({ workspacePath: root }) as unknown as Record<string, unknown>;
     }
 
@@ -362,7 +362,7 @@ export function createExtensionsStore(options: {
       return true;
     }
 
-    if (isDesktopRuntime() && root) {
+    if (root) {
       const result = await workspaceAiWorkWrite({
         workspacePath: root,
         config: config as never,
@@ -439,10 +439,6 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (!isDesktopRuntime()) {
-      throw new Error(t("skills.desktop_required"));
-    }
-
     if (!root) {
       throw new Error(t("skills.pick_workspace_first"));
     }
@@ -474,11 +470,7 @@ export function createExtensionsStore(options: {
       } catch (error) {
         const isNotFound =
           error instanceof AiWorkServerError && error.status === 404;
-        if (
-          isNotFound &&
-          isDesktopRuntime() &&
-          root
-        ) {
+        if (isNotFound && root) {
           const result = await uninstallSkillCommand(root, name);
           if (!result.ok) {
             throw new Error(result.stderr || result.stdout || t("skills.uninstall_failed"));
@@ -487,10 +479,6 @@ export function createExtensionsStore(options: {
         }
         throw error;
       }
-    }
-
-    if (!isDesktopRuntime()) {
-      throw new Error(t("skills.desktop_required"));
     }
 
     if (!root) {
@@ -533,9 +521,8 @@ export function createExtensionsStore(options: {
       !!ow.aiworkServerClient &&
       !!runtimeId &&
       !!ow.aiworkServerCapabilities?.skills?.read;
-    const desktopLocal = isDesktopRuntime();
     const hasOpencodeClient = !!options.client();
-    return `root:${root}|ow:${canUseAiWorkSkills ? 1 : 0}|dl:${desktopLocal ? 1 : 0}|oc:${hasOpencodeClient ? 1 : 0}`;
+    return `root:${root}|ow:${canUseAiWorkSkills ? 1 : 0}|dl:1|oc:${hasOpencodeClient ? 1 : 0}`;
   };
 
   const touch = () => {
@@ -750,7 +737,7 @@ export function createExtensionsStore(options: {
 
         // Server can briefly return an empty catalog while the engine/workspace warms up.
         // Desktop host can still see skills on disk — fall back so the UI isn't stuck until manual refresh.
-        if (next.length === 0 && isDesktopRuntime() && root) {
+        if (next.length === 0 && root) {
           try {
             const local = await listLocalSkills(root);
             if (refreshSkillsAborted) return;
@@ -788,56 +775,6 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (isDesktopRuntime()) {
-      if (root !== skillsRoot) skillsLoaded = false;
-      if (!optionsOverride?.force && skillsLoaded) return;
-      if (refreshSkillsInFlight) return;
-
-      refreshSkillsInFlight = true;
-      refreshSkillsAborted = false;
-      try {
-        setStateField("skillsStatus", null);
-        const local = await listLocalSkills(root);
-        if (refreshSkillsAborted) return;
-        const next: SkillCard[] = Array.isArray(local)
-          ? local.map((entry) => ({
-              name: entry.name,
-              description: entry.description,
-              path: entry.path,
-              trigger: entry.trigger,
-            }))
-          : [];
-        mutateState((current) => ({
-          ...current,
-          skills: next,
-          skillsStatus: next.length ? null : t("skills.no_skills_found"),
-          skillsContextKey: getWorkspaceContextKey(),
-        }));
-        skillsLoaded = true;
-        skillsRoot = root;
-      } catch (error) {
-        if (refreshSkillsAborted) return;
-        mutateState((current) => ({
-          ...current,
-          skills: [],
-          skillsStatus: error instanceof Error ? error.message : t("skills.failed_to_load"),
-        }));
-      } finally {
-        refreshSkillsInFlight = false;
-      }
-      return;
-    }
-
-    const client = options.client();
-    if (!client) {
-      mutateState((current) => ({
-        ...current,
-        skills: [],
-        skillsStatus: "AiWork server unavailable. Connect to load skills.",
-      }));
-      return;
-    }
-
     if (root !== skillsRoot) skillsLoaded = false;
     if (!optionsOverride?.force && skillsLoaded) return;
     if (refreshSkillsInFlight) return;
@@ -846,23 +783,14 @@ export function createExtensionsStore(options: {
     refreshSkillsAborted = false;
     try {
       setStateField("skillsStatus", null);
-      const rawClient = client as unknown as { _client?: { get: (input: { url: string }) => Promise<unknown> } };
-      if (!rawClient._client) throw new Error("OpenCode client unavailable.");
-      const result = await rawClient._client.get({ url: "/skill" }) as {
-        data?: Array<{ name: string; description: string; location: string }>;
-        error?: unknown;
-      };
-      if (result?.data === undefined) {
-        const err = result?.error;
-        const message = err instanceof Error ? err.message : typeof err === "string" ? err : t("skills.failed_to_load");
-        throw new Error(message);
-      }
+      const local = await listLocalSkills(root);
       if (refreshSkillsAborted) return;
-      const next: SkillCard[] = Array.isArray(result.data)
-        ? result.data.map((entry) => ({
+      const next: SkillCard[] = Array.isArray(local)
+        ? local.map((entry) => ({
             name: entry.name,
             description: entry.description,
-            path: formatSkillPath(entry.location),
+            path: entry.path,
+            trigger: entry.trigger,
           }))
         : [];
       mutateState((current) => ({
@@ -936,18 +864,6 @@ export function createExtensionsStore(options: {
       } finally {
         refreshPluginsInFlight = false;
       }
-      return;
-    }
-
-    if (!isDesktopRuntime()) {
-      mutateState((current) => ({
-        ...current,
-        pluginStatus: t("skills.plugin_management_host_only"),
-        pluginList: [],
-        sidebarPluginStatus: t("skills.plugins_host_only"),
-        sidebarPluginList: [],
-      }));
-      refreshPluginsInFlight = false;
       return;
     }
 
@@ -1058,11 +974,6 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (!isDesktopRuntime()) {
-      setStateField("pluginStatus", t("skills.plugin_management_host_only"));
-      return;
-    }
-
     const scope = snapshot.pluginScope;
     const targetDir = options.projectDir().trim();
 
@@ -1135,11 +1046,6 @@ export function createExtensionsStore(options: {
       return;
     }
 
-    if (!isDesktopRuntime()) {
-      setStateField("pluginStatus", t("skills.plugin_management_host_only"));
-      return;
-    }
-
     const scope = snapshot.pluginScope;
     const targetDir = options.projectDir().trim();
     if (scope === "project" && !targetDir) {
@@ -1175,10 +1081,6 @@ export function createExtensionsStore(options: {
   }
 
   async function importLocalSkill() {
-    if (!isDesktopRuntime()) {
-      options.setError(t("skills.desktop_required"));
-      return;
-    }
     const targetDir = options.projectDir().trim();
     if (!targetDir) {
       options.setError(t("skills.pick_project_first"));
@@ -1241,12 +1143,6 @@ export function createExtensionsStore(options: {
       }
     }
 
-    if (!isDesktopRuntime()) {
-      const message = t("skills.desktop_required");
-      setStateField("skillsStatus", message);
-      return { ok: false, message };
-    }
-
     const targetDir = options.selectedWorkspaceRoot().trim();
     if (!targetDir) {
       const message = t("skills.pick_workspace_first");
@@ -1288,10 +1184,6 @@ export function createExtensionsStore(options: {
   }
 
   async function revealSkillsFolder() {
-    if (!isDesktopRuntime()) {
-      setStateField("skillsStatus", t("skills.desktop_required"));
-      return;
-    }
     const root = options.selectedWorkspaceRoot().trim();
     if (!root) {
       setStateField("skillsStatus", t("skills.pick_workspace_first"));
@@ -1374,11 +1266,6 @@ export function createExtensionsStore(options: {
       }
     }
 
-    if (!isDesktopRuntime()) {
-      setStateField("skillsStatus", t("skills.desktop_required"));
-      return null;
-    }
-
     try {
       setStateField("skillsStatus", null);
       const result = await readLocalSkill(root, trimmed);
@@ -1426,11 +1313,6 @@ export function createExtensionsStore(options: {
       } finally {
         options.setBusy(false);
       }
-      return;
-    }
-
-    if (!isDesktopRuntime()) {
-      setStateField("skillsStatus", t("skills.desktop_required"));
       return;
     }
 

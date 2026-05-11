@@ -2,7 +2,6 @@
 import { createContext, useContext, type ReactNode } from "react";
 
 import { openDesktopUrl, relaunchDesktopApp } from "../../app/lib/desktop";
-import { isDesktopRuntime } from "../../app/utils";
 
 export type SyncStorage = {
   getItem(key: string): string | null;
@@ -60,33 +59,18 @@ function shouldOpenInCurrentTab(url: string) {
 
 export function createDefaultPlatform(): Platform {
   return {
-    platform: isDesktopRuntime() ? "desktop" : "web",
+    platform: "desktop",
     openLink(url: string) {
-      if (isDesktopRuntime()) {
-        void openDesktopUrl(url).catch(() => {
-          if (shouldOpenInCurrentTab(url)) {
-            window.location.href = url;
-            return;
-          }
-          window.open(url, "_blank");
-        });
-        return;
-      }
-
-      if (shouldOpenInCurrentTab(url)) {
-        window.location.href = url;
-        return;
-      }
-
-      window.open(url, "_blank");
+      void openDesktopUrl(url).catch(() => {
+        if (shouldOpenInCurrentTab(url)) {
+          window.location.href = url;
+          return;
+        }
+        window.open(url, "_blank");
+      });
     },
     restart: async () => {
-      if (isDesktopRuntime()) {
-        await relaunchDesktopApp();
-        return;
-      }
-
-      window.location.reload();
+      await relaunchDesktopApp();
     },
     notify: async (title, description, href) => {
       if (!("Notification" in window)) return;

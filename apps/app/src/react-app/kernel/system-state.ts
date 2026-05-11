@@ -6,11 +6,7 @@ import type {
   ResetAiWorkMode,
 } from "../../app/types";
 import { relaunchDesktopApp, resetAiWorkState } from "../../app/lib/desktop";
-import {
-  addOpencodeCacheHint,
-  isDesktopRuntime,
-  safeStringify,
-} from "../../app/utils";
+import { addOpencodeCacheHint, safeStringify } from "../../app/utils";
 import { t } from "../../i18n";
 
 export type ReloadState = {
@@ -202,15 +198,9 @@ export function useSystemState(
     options.setError(null);
 
     try {
-      if (isDesktopRuntime()) {
-        await resetAiWorkState(resetModalMode);
-      }
+      await resetAiWorkState(resetModalMode);
       clearAiWorkLocalStorage(resetModalMode);
-      if (isDesktopRuntime()) {
-        await relaunchDesktopApp();
-      } else {
-        window.location.reload();
-      }
+      await relaunchDesktopApp();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : safeStringify(error);

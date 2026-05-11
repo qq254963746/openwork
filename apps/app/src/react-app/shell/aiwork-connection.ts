@@ -4,7 +4,6 @@ import {
   readAiWorkServerSettings,
 } from "../../app/lib/aiwork-server";
 import { aiworkServerInfo, type AiWorkServerInfo } from "../../app/lib/desktop";
-import { isDesktopRuntime } from "../../app/utils";
 
 export type AiWorkConnectionSource = "desktop-runtime" | "stored-settings" | "empty";
 
@@ -31,26 +30,24 @@ function hasUsableConnection(url: string, token: string) {
 export async function resolveAiWorkConnection(): Promise<ResolvedAiWorkConnection> {
   let staleDesktopRuntimeBaseUrl = "";
 
-  if (isDesktopRuntime()) {
-    try {
-      const info = await aiworkServerInfo();
-      const normalizedBaseUrl =
-        normalizeAiWorkServerUrl(info.connectUrl ?? info.baseUrl ?? info.lanUrl ?? info.mdnsUrl ?? "") ??
-        "";
-      const resolvedToken = info.ownerToken?.trim() || info.clientToken?.trim() || "";
-      if (info.running === true && hasUsableConnection(normalizedBaseUrl, resolvedToken)) {
-        return {
-          normalizedBaseUrl,
-          resolvedToken,
-          resolvedHostToken: info.hostToken?.trim() || "",
-          hostInfo: info,
-          source: "desktop-runtime",
-        };
-      }
-      staleDesktopRuntimeBaseUrl = normalizedBaseUrl;
-    } catch {
-      // Fall through to stored settings for remote/manual connections.
+  try {
+    const info = await aiworkServerInfo();
+    const normalizedBaseUrl =
+      normalizeAiWorkServerUrl(info.connectUrl ?? info.baseUrl ?? info.lanUrl ?? info.mdnsUrl ?? "") ??
+      "";
+    const resolvedToken = info.ownerToken?.trim() || info.clientToken?.trim() || "";
+    if (info.running === true && hasUsableConnection(normalizedBaseUrl, resolvedToken)) {
+      return {
+        normalizedBaseUrl,
+        resolvedToken,
+        resolvedHostToken: info.hostToken?.trim() || "",
+        hostInfo: info,
+        source: "desktop-runtime",
+      };
     }
+    staleDesktopRuntimeBaseUrl = normalizedBaseUrl;
+  } catch {
+    // Fall through to stored settings for remote/manual connections.
   }
 
   const settings = readAiWorkServerSettings();
@@ -61,9 +58,7 @@ export async function resolveAiWorkConnection(): Promise<ResolvedAiWorkConnectio
       ? settings.hostToken?.trim() ?? ""
       : "";
   const storedConnectionIsStaleDesktopRuntime = Boolean(
-    isDesktopRuntime() &&
-      staleDesktopRuntimeBaseUrl &&
-      normalizedBaseUrl === staleDesktopRuntimeBaseUrl,
+    staleDesktopRuntimeBaseUrl && normalizedBaseUrl === staleDesktopRuntimeBaseUrl,
   );
   const source =
     !storedConnectionIsStaleDesktopRuntime && hasUsableConnection(normalizedBaseUrl, resolvedToken)

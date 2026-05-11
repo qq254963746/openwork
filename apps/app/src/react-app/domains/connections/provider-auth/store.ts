@@ -19,7 +19,7 @@ import type {
   ProviderListItem,
   WorkspaceDisplay,
 } from "../../../../app/types";
-import { isDesktopRuntime, safeStringify } from "../../../../app/utils";
+import { safeStringify } from "../../../../app/utils";
 import { compareProviders, filterProviderList, resolveProviderInitialApiBaseUrl } from "../../../../app/utils/providers";
 import { fetchFinallyProviderList } from "./fetch-finally-provider-list";
 import type { AiWorkServerStore } from "../aiwork-server-store";

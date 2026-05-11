@@ -11,7 +11,6 @@ import {
   type AiWorkServerStatus,
 } from "../../../../app/lib/aiwork-server";
 import type { AiWorkServerInfo } from "../../../../app/lib/desktop";
-import { isDesktopRuntime } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import { Button } from "../../../design-system/button";
 import { TextInput } from "../../../design-system/text-input";
@@ -162,7 +161,7 @@ export function ConfigView(props: ConfigViewProps) {
     const bundle = {
       capturedAt: new Date().toISOString(),
       runtime: {
-        tauri: isDesktopRuntime(),
+        tauri: true,
         developerMode: props.developerMode,
       },
       workspace: {
@@ -598,11 +597,6 @@ export function ConfigView(props: ConfigViewProps) {
         </div>
       </div>
 
-      {!isDesktopRuntime() ? (
-        <div className="text-xs text-gray-9">
-          {t("config.desktop_only_hint")}
-        </div>
-      ) : null}
     </section>
   );
 }

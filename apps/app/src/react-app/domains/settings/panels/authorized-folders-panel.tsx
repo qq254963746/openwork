@@ -11,7 +11,6 @@ import type {
 } from "../../../../app/lib/aiwork-server";
 import { pickDirectory } from "../../../../app/lib/desktop";
 import {
-  isDesktopRuntime,
   normalizeDirectoryQueryPath,
   safeStringify,
 } from "../../../../app/utils";
@@ -127,7 +126,7 @@ export function AuthorizedFoldersPanel(props: AuthorizedFoldersPanelProps) {
     return null;
   }, [canReadConfig, canWriteConfig, aiworkServerReady, aiworkServerWorkspaceReady]);
 
-  const canPickAuthorizedFolder = isDesktopRuntime() && canWriteConfig;
+  const canPickAuthorizedFolder = canWriteConfig;
   const workspaceRootFolder = props.selectedWorkspaceRoot.trim();
   const visibleAuthorizedFolders = useMemo(() => {
     const root = workspaceRootFolder;
@@ -255,7 +254,6 @@ export function AuthorizedFoldersPanel(props: AuthorizedFoldersPanelProps) {
   }, [authorizedFolders, persistAuthorizedFolders]);
 
   const pickAuthorizedFolder = useCallback(async () => {
-    if (!isDesktopRuntime()) return;
     try {
       const selection = await pickDirectory({
         title: t("onboarding.authorize_folder"),

@@ -32,7 +32,7 @@ import type {
   ReloadReason,
   ReloadTrigger,
 } from "../../../app/types";
-import { isDesktopRuntime, isElectronRuntime, normalizeDirectoryPath, safeStringify } from "../../../app/utils";
+import { isElectronRuntime, normalizeDirectoryPath, safeStringify } from "../../../app/utils";
 
 import type { AiWorkServerStore } from "./aiwork-server-store";
 
@@ -148,10 +148,6 @@ export function createConnectionsStore(options: {
 
     if (canUseAiWorkServer && aiworkClient && aiworkWorkspaceId) {
       return aiworkClient.readOpencodeConfigFile(aiworkWorkspaceId, scope);
-    }
-
-    if (!isDesktopRuntime()) {
-      return null;
     }
 
     return readOpencodeConfig(scope, projectDir);
@@ -296,16 +292,6 @@ export function createConnectionsStore(options: {
       });
     }
 
-    if (!isDesktopRuntime()) {
-      mutateState((current) => ({
-        ...current,
-        mcpStatus: "MCP configuration is only available for local workspaces.",
-        mcpServers: [],
-        mcpStatuses: {},
-      }));
-      return;
-    }
-
     if (!projectDir) {
       mutateState((current) => ({
         ...current,
@@ -388,39 +374,20 @@ export function createConnectionsStore(options: {
 
   async function connectMcp(entry: McpDirectoryInfo) {
     const startedAt = perfNow();
-    const aiworkSnapshot = getAiWorkSnapshot();
-    const preferAiWorkServerPath =
-      !isDesktopRuntime() && aiworkSnapshot.aiworkServerStatus === "connected";
     const projectDir = options.projectDir().trim();
     const entryType = entry.type ?? "remote";
 
     recordPerfLog(options.developerMode(), "mcp.connect", "start", {
       name: entry.name,
       type: entryType,
-      mcpConfigChannel: preferAiWorkServerPath ? "aiwork-server" : "desktop",
+      mcpConfigChannel: "desktop",
       projectDir: projectDir || null,
     });
 
     const { aiworkClient, aiworkWorkspaceId, canUseAiWorkServer } =
       await resolveWritableAiWorkTarget();
 
-    if (preferAiWorkServerPath && !canUseAiWorkServer) {
-      setStateField("mcpStatus", "AiWork server unavailable. MCP config is read-only.");
-      finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
-        reason: "aiwork-server-unavailable",
-      });
-      return;
-    }
-
-    if (!canUseAiWorkServer && !isDesktopRuntime()) {
-      setStateField("mcpStatus", t("mcp.desktop_required"));
-      finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
-        reason: "desktop-required",
-      });
-      return;
-    }
-
-    if (!preferAiWorkServerPath && !projectDir) {
+    if (!projectDir) {
       setStateField("mcpStatus", t("mcp.pick_workspace_first"));
       finishPerf(options.developerMode(), "mcp.connect", "blocked", startedAt, {
         reason: "missing-workspace",
@@ -487,11 +454,7 @@ export function createConnectionsStore(options: {
         }
         mcpEntryConfig["command"] = resolvedCommand;
 
-        if (
-          slug === CHROME_DEVTOOLS_MCP_ID &&
-          usesChromeDevtoolsAutoConnect(resolvedCommand) &&
-          isDesktopRuntime()
-        ) {
+        if (slug === CHROME_DEVTOOLS_MCP_ID && usesChromeDevtoolsAutoConnect(resolvedCommand)) {
           try {
             const hostHome = (await getDesktopHomeDir()).replace(/[\\/]+$/, "");
             if (hostHome) {
@@ -642,23 +605,10 @@ export function createConnectionsStore(options: {
   }
 
   async function logoutMcpAuth(name: string) {
-    const aiworkSnapshot = getAiWorkSnapshot();
-    const preferAiWorkServerPath =
-      !isDesktopRuntime() && aiworkSnapshot.aiworkServerStatus === "connected";
     const projectDir = options.projectDir().trim();
 
     const { aiworkClient, aiworkWorkspaceId, canUseAiWorkServer } =
       await resolveWritableAiWorkTarget();
-
-    if (preferAiWorkServerPath && !canUseAiWorkServer) {
-      setStateField("mcpStatus", "AiWork server unavailable. MCP auth is read-only.");
-      return;
-    }
-
-    if (!canUseAiWorkServer && !isDesktopRuntime()) {
-      setStateField("mcpStatus", t("mcp.desktop_required"));
-      return;
-    }
 
     const activeClient = await ensureActiveClient();
     if (!activeClient) {
@@ -834,7 +784,7 @@ export function createConnectionsStore(options: {
     lastWorkspaceContextKey = workspaceContextKey;
     lastProjectDir = projectDir;
 
-    if (!started || disposed || !isDesktopRuntime() || !changed) {
+    if (!started || disposed || !changed) {
       return;
     }
 

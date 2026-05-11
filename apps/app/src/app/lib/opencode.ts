@@ -2,7 +2,6 @@ import { createOpencodeClient, type Message, type Part, type Session, type Todo 
 
 import { desktopFetch } from "./desktop";
 import { createAiWorkServerClient, AiWorkServerError } from "./aiwork-server";
-import { isDesktopRuntime } from "../utils";
 
 type FieldsResult<T> =
   | ({ data: T; error?: undefined } & { request: Request; response: Response })
@@ -350,17 +349,7 @@ export function unwrap<T>(result: FieldsResult<T>): NonNullable<T> {
 
 export function createClient(baseUrl: string, directory?: string, auth?: OpencodeAuth) {
   const headers: Record<string, string> = {};
-  if (!isDesktopRuntime()) {
-    const authHeader = resolveAuthHeader(auth);
-    if (authHeader) {
-      headers.Authorization = authHeader;
-    }
-  }
-
-  const fetchImpl = isDesktopRuntime()
-    ? createDesktopFetch(auth)
-    : (input: RequestInfo | URL, init?: RequestInit) =>
-        fetchWithTimeout(globalThis.fetch, input, init, DEFAULT_OPENCODE_REQUEST_TIMEOUT_MS);
+  const fetchImpl = createDesktopFetch(auth);
   const client = createOpencodeClient({
     baseUrl,
     directory,

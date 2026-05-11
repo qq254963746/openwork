@@ -31,7 +31,7 @@ import {
   type WorkspaceWriteTouch,
 } from "../../../../app/types";
 import { deriveWorkspaceWriteTouchesFromUIMessage } from "../../../../app/utils/workspace-write-touches";
-import { groupMessageParts, isDesktopRuntime, summarizeStep } from "../../../../app/utils";
+import { groupMessageParts, summarizeStep } from "../../../../app/utils";
 import { currentLocale, t } from "../../../../i18n";
 import type { AssistantReplyFooterMeta } from "./session-render-state";
 import { MarkdownBlock } from "./markdown";
@@ -767,7 +767,7 @@ function FileCard(props: {
   const ext = props.part.filename?.split(".").pop()?.toLowerCase();
   const badge = humanMediaType(props.part.mediaType) ?? (ext ? ext.toUpperCase() : null);
   const isImage = isImageAttachment(props.part.mediaType ?? "");
-  const isDesktop = isDesktopRuntime();
+  const isDesktop = true;
   const hasPath = !isDataUrl && !isWorkspaceApiPath && rawUrl && !rawUrl.startsWith("http");
 
   return (
@@ -1070,7 +1070,7 @@ const AssistantWrittenFiles = memo(function AssistantWrittenFiles(props: {
     () => deriveWorkspaceWriteTouchesFromUIMessage(props.message),
     [props.message],
   );
-  const desktop = isDesktopRuntime();
+  const desktop = true;
 
   if (touches.length === 0) return null;
 

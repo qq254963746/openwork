@@ -1,5 +1,5 @@
 import { openAppLogWebviewWindow } from "../../app/lib/desktop-tauri";
-import { isDesktopRuntime, isTauriRuntime } from "../../app/utils";
+import { isTauriRuntime } from "../../app/utils";
 
 const APP_LOG_WINDOW_NAME = "aiworkAppLog";
 
@@ -79,40 +79,23 @@ export function applyLogViewerPopupNavigationFromStorage(): void {
     const u = new URL(window.location.href);
     u.searchParams.delete(LOG_VIEWER_POPUP_QUERY);
 
-    if (isDesktopRuntime()) {
-      u.hash = `#${route}`;
-    } else {
-      const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-      const path = `${base}${route}`.replace(/\/+/g, "/");
-      u.pathname = path.startsWith("/") ? path : `/${path}`;
-      u.hash = "";
-    }
+    u.hash = `#${route}`;
 
     window.history.replaceState(null, "", u.toString());
   } catch {
-    if (isDesktopRuntime()) {
-      try {
-        window.location.hash = `#${route}`;
-      } catch {
-        // ignore
-      }
+    try {
+      window.location.hash = `#${route}`;
+    } catch {
+      // ignore
     }
   }
 }
 
 export function buildAppLogWindowUrl(): string {
   if (typeof window === "undefined") return "";
-  if (isDesktopRuntime()) {
-    const u = new URL(window.location.href);
-    u.searchParams.set(LOG_VIEWER_POPUP_QUERY, "1");
-    u.hash = "#/devtools/app-log";
-    return u.href;
-  }
-  const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
-  const path = `${base}/devtools/app-log`.replace(/\/+/g, "/");
-  const originPrefix = `${window.location.origin}${path.startsWith("/") ? "" : "/"}${path}`;
-  const u = new URL(originPrefix);
+  const u = new URL(window.location.href);
   u.searchParams.set(LOG_VIEWER_POPUP_QUERY, "1");
+  u.hash = "#/devtools/app-log";
   return u.href;
 }
 
@@ -140,12 +123,10 @@ export function openAppLogWindow(): Window | null {
     return next;
   }
 
-  if (isDesktopRuntime()) {
-    try {
-      window.location.hash = "#/devtools/app-log";
-    } catch {
-      // ignore
-    }
+  try {
+    window.location.hash = "#/devtools/app-log";
+  } catch {
+    // ignore
   }
   return null;
 }

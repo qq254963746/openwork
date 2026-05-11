@@ -3,7 +3,6 @@ import { applyEdits, modify, parse } from "jsonc-parser";
 import type { AiWorkServerClient } from "./aiwork-server";
 import type { OpencodeConfigFile } from "./desktop-tauri";
 import { readOpencodeConfig, writeOpencodeConfig } from "./desktop";
-import { isDesktopRuntime } from "../utils";
 import { ConsoleLog } from "./console-log";
 
 const DEFAULT_GLOBAL_CONFIG_HEADER =
@@ -43,11 +42,7 @@ export async function readGlobalOpencodeConfigFile(
     return await input.aiworkServerClient.readOpencodeConfigFile(aiworkWorkspaceId, "global");
   }
 
-  if (isDesktopRuntime()) {
-    return await readOpencodeConfig("global", input.workspaceRoot);
-  }
-
-  return null;
+  return await readOpencodeConfig("global", input.workspaceRoot);
 }
 
 export async function writeGlobalOpencodeConfigContent(
@@ -75,20 +70,12 @@ export async function writeGlobalOpencodeConfigContent(
     return result.ok;
   }
 
-  if (isDesktopRuntime()) {
-    const result = await writeOpencodeConfig("global", input.workspaceRoot, content);
-    ConsoleLog.log("global-opencode-disabled-providers", "writeGlobalOpencodeConfigContent:done via desktop", {
-      ok: result.ok,
-      content: content,
-    });
-    return result.ok;
-  }
-
-  ConsoleLog.log("global-opencode-disabled-providers", "writeGlobalOpencodeConfigContent:done via fallback", {
-    ok: false,
+  const result = await writeOpencodeConfig("global", input.workspaceRoot, content);
+  ConsoleLog.log("global-opencode-disabled-providers", "writeGlobalOpencodeConfigContent:done via desktop", {
+    ok: result.ok,
     content: content,
   });
-  return false;
+  return result.ok;
 }
 
 export function parseDisabledProvidersFromOpenCodeJson(raw: string | null | undefined): string[] {

@@ -5,7 +5,6 @@ import { CircleAlert, Cpu, RefreshCcw, Server, Zap } from "lucide-react";
 import type { OpencodeConnectStatus } from "../../../../app/types";
 import type { AiWorkServerStatus } from "../../../../app/lib/aiwork-server";
 import type { EngineInfo } from "../../../../app/lib/desktop";
-import { isDesktopRuntime } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import { Button } from "../../../design-system/button";
 
@@ -292,7 +291,7 @@ export function AdvancedView(props: AdvancedViewProps) {
           </div>
         </div>
 
-        {isDesktopRuntime() && props.opencodeDevModeEnabled && props.developerMode ? (
+        {props.opencodeDevModeEnabled && props.developerMode ? (
           <div className={`${settingsPanelSoftClass} space-y-3`}>
             <div className="flex items-start justify-between gap-3">
               <div>

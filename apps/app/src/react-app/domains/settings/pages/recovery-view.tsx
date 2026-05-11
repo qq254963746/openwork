@@ -1,7 +1,6 @@
 /** @jsxImportSource react */
 import { FolderOpen } from "lucide-react";
 
-import { isDesktopRuntime } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import { Button } from "../../../design-system/button";
 
@@ -34,8 +33,8 @@ export function RecoveryView(props: RecoveryViewProps) {
             variant="outline"
             className="h-8 px-3 py-0 text-xs"
             onClick={() => void props.onRevealWorkspaceConfig()}
-            disabled={!isDesktopRuntime() || props.revealConfigBusy || !props.workspaceConfigPath}
-            title={!isDesktopRuntime() ? t("settings.reveal_config_requires_desktop") : ""}
+            disabled={props.revealConfigBusy || !props.workspaceConfigPath}
+            title=""
           >
             <FolderOpen size={13} className="mr-1.5" />
             {props.revealConfigBusy ? t("settings.opening") : t("settings.reveal_config")}
@@ -67,8 +66,8 @@ export function RecoveryView(props: RecoveryViewProps) {
           variant="secondary"
           className="h-8 shrink-0 px-3 py-0 text-xs"
           onClick={() => void props.onRepairOpencodeCache()}
-          disabled={props.cacheRepairBusy || !isDesktopRuntime()}
-          title={isDesktopRuntime() ? "" : t("settings.cache_repair_requires_desktop")}
+          disabled={props.cacheRepairBusy}
+          title=""
         >
           {props.cacheRepairBusy ? t("settings.repairing_cache") : t("settings.repair_cache")}
         </Button>

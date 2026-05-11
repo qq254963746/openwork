@@ -9,7 +9,6 @@ import {
 } from "react";
 
 import { openDesktopUrl } from "../../../../app/lib/desktop";
-import { isDesktopRuntime } from "../../../../app/utils";
 import {
   AIWORK_CUSTOM_PROVIDER_ENTRY_KEY,
   DEFAULT_CUSTOM_MODEL_PROVIDER_TYPE,
@@ -426,12 +425,7 @@ export default function ProviderAuthModal(props: ProviderAuthModalProps) {
 
   const openOauthUrl = async (url: string) => {
     if (!url) return;
-    if (isDesktopRuntime()) {
-      await openDesktopUrl(url);
-      setOauthBrowserOpened(true);
-      return;
-    }
-    window.open(url, "_blank", "noopener,noreferrer");
+    await openDesktopUrl(url);
     setOauthBrowserOpened(true);
   };
 

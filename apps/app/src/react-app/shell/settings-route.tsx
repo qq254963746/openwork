@@ -69,7 +69,7 @@ import {
   type WorkspaceInfo,
   revealDesktopItemInDir,
 } from "../../app/lib/desktop";
-import { isDesktopRuntime, normalizeDirectoryPath, safeStringify } from "../../app/utils";
+import { normalizeDirectoryPath, safeStringify } from "../../app/utils";
 import { fetchFinallyProviderList } from "../domains/connections/provider-auth/fetch-finally-provider-list";
 import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-modal";
 import { RenameWorkspaceModal } from "../domains/workspace/rename-workspace-modal";
@@ -553,10 +553,9 @@ export function SettingsRoute() {
     () =>
       createAiWorkServerStore({
         startupPreference: () => {
-          // In desktop mode, loopback URLs are ephemeral local runtime details.
+          // Loopback URLs are ephemeral local runtime details.
           // Only non-loopback stored URLs indicate an explicit remote/manual
           // server connection preference.
-          if (!isDesktopRuntime()) return "server";
           const stored = readAiWorkServerSettings();
           const storedUrl = stored.urlOverride?.trim() ?? "";
           return storedUrl && !isLoopbackAiWorkServerUrl(storedUrl) ? "server" : "local";
@@ -567,7 +566,6 @@ export function SettingsRoute() {
         activeClient: () => routeStateRef.current.activeClient,
         selectedWorkspaceDisplay: () => routeStateRef.current.selectedWorkspaceDisplay,
         restartLocalServer: async () => {
-          if (!isDesktopRuntime()) return false;
           try {
             await aiworkServerRestart();
             return true;
@@ -810,20 +808,18 @@ export function SettingsRoute() {
     let desktopList = null as Awaited<ReturnType<typeof workspaceBootstrap>> | null;
     let desktopWorkspaces = workspacesRef.current;
     try {
-      if (isDesktopRuntime()) {
-        try {
-          desktopList = await workspaceBootstrap();
-          desktopWorkspaces = (desktopList.workspaces ?? []).map(mapDesktopWorkspace);
-        } catch (error) {
-          const message = describeRouteError(error);
-          console.error("[settings-route] workspaceBootstrap failed", error);
-          recordInspectorEvent("route.workspace_bootstrap.error", {
-            route: "settings",
-            message,
-            preservedWorkspaceCount: workspacesRef.current.length,
-          });
-          desktopWorkspaces = workspacesRef.current;
-        }
+      try {
+        desktopList = await workspaceBootstrap();
+        desktopWorkspaces = (desktopList.workspaces ?? []).map(mapDesktopWorkspace);
+      } catch (error) {
+        const message = describeRouteError(error);
+        console.error("[settings-route] workspaceBootstrap failed", error);
+        recordInspectorEvent("route.workspace_bootstrap.error", {
+          route: "settings",
+          message,
+          preservedWorkspaceCount: workspacesRef.current.length,
+        });
+        desktopWorkspaces = workspacesRef.current;
       }
       const { normalizedBaseUrl, resolvedToken, resolvedHostToken } = await resolveAiWorkConnection();
 
@@ -936,9 +932,7 @@ export function SettingsRoute() {
     async (orderedIds: string[]) => {
       if (orderedIds.length < 2) return;
       try {
-        if (isDesktopRuntime()) {
-          await workspaceReorder(orderedIds);
-        }
+        await workspaceReorder(orderedIds);
         if (aiworkClient) {
           await aiworkClient.reorderWorkspaces(orderedIds);
         }
@@ -976,7 +970,6 @@ export function SettingsRoute() {
   }, [workspaces]);
 
   useEffect(() => {
-    if (!isDesktopRuntime()) return;
     if (loading) return;
     if (aiworkClient) {
       reconnectAttemptedWorkspaceIdRef.current = "";
@@ -1094,9 +1087,6 @@ export function SettingsRoute() {
   });
 
   const handleApplyEnvironmentChanges = async () => {
-    if (!isDesktopRuntime()) {
-      throw new Error(t("settings.environment.apply_unavailable"));
-    }
     if (activeReloadBlockingSessions.length > 0) {
       throw new Error(t("settings.environment.apply_blocked_active_tasks"));
     }
@@ -1144,12 +1134,10 @@ export function SettingsRoute() {
     if (!trimmed) return;
     setRenameWorkspaceBusy(true);
     try {
-      if (isDesktopRuntime()) {
-        await workspaceUpdateDisplayName({
-          workspaceId: renameWorkspaceId,
-          displayName: trimmed,
-        }).catch(() => undefined);
-      }
+      await workspaceUpdateDisplayName({
+        workspaceId: renameWorkspaceId,
+        displayName: trimmed,
+      }).catch(() => undefined);
       if (aiworkClient) {
         await aiworkClient
           .updateWorkspaceDisplayName(renameWorkspaceId, trimmed)
@@ -1166,7 +1154,7 @@ export function SettingsRoute() {
   const handleRevealWorkspace = useCallback(async (workspaceId: string) => {
     const workspace = workspaces.find((item) => item.id === workspaceId);
     const path = workspace?.path?.trim();
-    if (!path || !isDesktopRuntime()) return;
+    if (!path) return;
     await revealDesktopItemInDir(path).catch(() => undefined);
   }, [workspaces]);
 
@@ -1175,9 +1163,7 @@ export function SettingsRoute() {
       const message = t("workspace_list.remove_confirm") || "Remove this workspace from the sidebar?";
       if (!window.confirm(message)) return;
     }
-    if (isDesktopRuntime()) {
-      await workspaceForget(workspaceId).catch(() => undefined);
-    }
+    await workspaceForget(workspaceId).catch(() => undefined);
     if (aiworkClient) {
       await aiworkClient.deleteWorkspace(workspaceId).catch(() => undefined);
     }
@@ -1236,7 +1222,6 @@ export function SettingsRoute() {
   }, [aiworkServerStore, refreshRouteState]);
 
   const handleRestartLocalServer = useCallback(async () => {
-    if (!isDesktopRuntime()) return false;
     try {
       await aiworkServerRestart();
       await aiworkServerStore.reconnectAiWorkServer();
@@ -1248,8 +1233,6 @@ export function SettingsRoute() {
   }, [aiworkServerStore, refreshRouteState]);
 
   const handleRestartMessagingWorker = useCallback(async () => {
-    if (!isDesktopRuntime()) return false;
-
     try {
       await aiworkServerRestart();
       await aiworkServerStore.reconnectAiWorkServer();
@@ -1563,7 +1546,7 @@ export function SettingsRoute() {
           <EnvironmentView
             client={aiworkServerSnapshot.aiworkServerClient}
             onStatusMessage={setConfigActionStatus}
-            onApplyChanges={isDesktopRuntime() ? handleApplyEnvironmentChanges : undefined}
+            onApplyChanges={handleApplyEnvironmentChanges}
             applyBlocked={activeReloadBlockingSessions.length > 0}
             applyBlockedReason={
               activeReloadBlockingSessions.length > 0
@@ -1611,7 +1594,7 @@ export function SettingsRoute() {
         connectingWorkspaceId: null,
         workspaceConnectionStateById,
         newTaskDisabled: !opencodeClient,
-        onReorderWorkspaces: isDesktopRuntime() || aiworkClient ? handleReorderWorkspaces : undefined,
+        onReorderWorkspaces: handleReorderWorkspaces,
         onOpenSession: (workspaceId, sessionId) => navigate(workspaceSessionRoute(workspaceId, sessionId)),
         onCreateTaskInWorkspace: handleCreateTaskInWorkspace,
         onOpenRenameWorkspace: handleOpenRenameWorkspace,
