@@ -22,7 +22,7 @@ import { ensureWorkspaceFiles, readRawOpencodeConfig } from "./workspace-init.js
 import { sanitizeCommandName, validateMcpName } from "./validators.js";
 import { TokenService } from "./tokens.js";
 import { EnvService, EnvStoreReadError, InvalidEnvKeyError, isValidEnvKey } from "./env-file.js";
-import { TOY_UI_CSS, TOY_UI_FAVICON_SVG, TOY_UI_HTML, TOY_UI_JS, cssResponse, htmlResponse, jsResponse, svgResponse } from "./toy-ui.js";
+
 import { FileSessionStore } from "./file-sessions.js";
 import {
   applyMaterializedBlueprintSessions,
@@ -621,7 +621,7 @@ function buildCapabilities(config: ServerConfig): Capabilities {
   const inboxEnabled = resolveInboxEnabled();
   const outboxEnabled = resolveOutboxEnabled();
   const maxBytes = resolveInboxMaxBytes();
-  const toyUiEnabled = resolveToyUiEnabled();
+
   const browserProvider = resolveBrowserProvider();
   const opencodeConfigured = config.workspaces.some((workspace) => Boolean(workspace.opencode?.baseUrl?.trim()));
   return {
@@ -642,7 +642,7 @@ function buildCapabilities(config: ServerConfig): Capabilities {
     config: { read: true, write: writeEnabled },
 
     approvals: { mode: config.approval.mode, timeoutMs: config.approval.timeoutMs },
-    ui: { toy: toyUiEnabled },
+
     tokens: { scoped: true, scopes: ["owner", "collaborator", "viewer"] },
     proxy: {
       opencode: opencodeConfigured,
@@ -681,20 +681,9 @@ function resolveInboxMaxBytes(): number {
   return 50_000_000;
 }
 
-function resolveToyUiEnabled(): boolean {
-  const raw = (process.env.AIWORK_TOY_UI ?? "").trim().toLowerCase();
-  if (!raw) return true;
-  return ["1", "true", "yes", "on"].includes(raw);
-}
 
-// Dev-only log sink target. When AIWORK_DEV_LOG_FILE is set to a path, the
-// /dev/log endpoint accepts JSON payloads and appends them to that file so an
-// operator can `tail -f` the file to see live browser activity. Returning null
-// disables the endpoint entirely.
-function resolveDevLogPath(): string | null {
-  const raw = (process.env.AIWORK_DEV_LOG_FILE ?? "").trim();
-  return raw.length > 0 ? raw : null;
-}
+
+
 
 function resolveBrowserProvider(): Capabilities["toolProviders"]["browser"] {
   const raw = (process.env.AIWORK_BROWSER_PROVIDER ?? "").trim().toLowerCase();
@@ -1156,87 +1145,9 @@ function createRoutes(
     return jsonResponse({ ok: true, version: SERVER_VERSION, opencodeVersion: OPENCODE_VERSION, uptimeMs: Date.now() - config.startedAt });
   });
 
-  // Dev log sink: append browser console + error events to a file that an
-  // operator (or an AI driver) can tail. Unauth on purpose because this is
-  // scoped to the dev host and needs to work before clients finish wiring
-  // tokens; it is also a no-op when AIWORK_DEV_LOG_FILE is unset.
-  addRoute(routes, "POST", "/dev/log", "none", async (ctx) => {
-    const target = resolveDevLogPath();
-    if (!target) {
-      return jsonResponse({ ok: false, reason: "dev_log_disabled" }, 404);
-    }
-    let payload: unknown = null;
-    try {
-      payload = await ctx.request.json();
-    } catch {
-      return jsonResponse({ ok: false, reason: "invalid_json" }, 400);
-    }
-    const entries = Array.isArray(payload) ? payload : [payload];
-    try {
-      await mkdir(dirname(target), { recursive: true });
-      const lines = entries
-        .map((entry) => {
-          try {
-            const stamped = { at: new Date().toISOString(), ...(entry as Record<string, unknown>) };
-            return JSON.stringify(stamped);
-          } catch {
-            return JSON.stringify({ at: new Date().toISOString(), raw: String(entry) });
-          }
-        })
-        .join("\n");
-      await appendFile(target, `${lines}\n`, "utf8");
-    } catch (error) {
-      return jsonResponse({ ok: false, reason: error instanceof Error ? error.message : String(error) }, 500);
-    }
-    return jsonResponse({ ok: true, count: entries.length });
-  });
 
-  addRoute(routes, "GET", "/dev/log", "none", async () => {
-    // Probe response: always 200 so the client's capability probe doesn't
-    // log a noisy "Failed to load resource: 404" in the browser console
-    // when the sink is simply disabled. Clients should key on `ok` + `reason`
-    // in the body, not on HTTP status.
-    const target = resolveDevLogPath();
-    if (!target) {
-      return jsonResponse({ ok: false, reason: "dev_log_disabled" });
-    }
-    return jsonResponse({ ok: true, path: target });
-  });
 
-  addRoute(routes, "GET", "/ui", "none", async () => {
-    if (!resolveToyUiEnabled()) {
-      throw new ApiError(404, "ui_disabled", "Toy UI is disabled");
-    }
-    return htmlResponse(TOY_UI_HTML);
-  });
 
-  addRoute(routes, "GET", "/w/:id/ui", "none", async () => {
-    if (!resolveToyUiEnabled()) {
-      throw new ApiError(404, "ui_disabled", "Toy UI is disabled");
-    }
-    return htmlResponse(TOY_UI_HTML);
-  });
-
-  addRoute(routes, "GET", "/ui/assets/toy.css", "none", async () => {
-    if (!resolveToyUiEnabled()) {
-      throw new ApiError(404, "ui_disabled", "Toy UI is disabled");
-    }
-    return cssResponse(TOY_UI_CSS);
-  });
-
-  addRoute(routes, "GET", "/ui/assets/toy.js", "none", async () => {
-    if (!resolveToyUiEnabled()) {
-      throw new ApiError(404, "ui_disabled", "Toy UI is disabled");
-    }
-    return jsResponse(TOY_UI_JS);
-  });
-
-  addRoute(routes, "GET", "/ui/assets/aiwork-mark.svg", "none", async () => {
-    if (!resolveToyUiEnabled()) {
-      throw new ApiError(404, "ui_disabled", "Toy UI is disabled");
-    }
-    return svgResponse(TOY_UI_FAVICON_SVG);
-  });
 
   addRoute(routes, "GET", "/w/:id/status", "client", async (ctx) => {
     const workspace = await resolveWorkspace(config, ctx.params.id);
