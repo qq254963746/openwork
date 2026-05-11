@@ -46,7 +46,7 @@ function MarkdownCodeBlock(props: { className?: string; children: React.ReactNod
 
   return (
     <div className="my-4 overflow-hidden rounded-[18px] border border-dls-border/70 bg-[rgb(249,250,251)]">
-      <div className="flex items-center justify-between gap-3 border-b border-dls-border/70 px-3 py-1.5">
+      <div className="flex items-center justify-between gap-3 border-b border-dls-border/70 bg-dls-hover px-3 py-1.5">
         <span className="min-w-0 truncate font-mono text-[11px] font-medium text-gray-12">{lang}</span>
         <button
           type="button"
