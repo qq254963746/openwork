@@ -657,7 +657,6 @@ export default {
   "session.app_log_copy": "复制",
   "session.app_log_empty": "暂无日志条目。",
   "session.app_log_window_no_opener": "无法连接主窗口。请关闭本窗口并从主界面侧边栏的「应用日志」按钮重新打开（不要在浏览器中直接打开此地址）。",
-  "session.app_log_close_window": "关闭窗口",
   "session.app_log_tab_shell": "应用（前端）",
   "session.app_log_sources_label": "日志来源",
   "session.app_log_services_desktop_only": "AiWork 服务器与 OpenCode 引擎日志仅在桌面版应用中可用。",

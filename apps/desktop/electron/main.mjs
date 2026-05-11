@@ -1509,7 +1509,19 @@ async function createMainWindow() {
       void shell.openExternal(url);
       return { action: "deny" };
     }
-    return { action: "allow" };
+    // Allow window.open() for local URLs and inject preload script so child windows
+    // have the same __AIWORK_ELECTRON__ bridge as the main window.
+    return {
+      action: "allow",
+      overrideBrowserWindowOptions: {
+        webPreferences: {
+          preload: preloadPath,
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: false,
+        },
+      },
+    };
   });
 
   const startUrl = process.env.AIWORK_ELECTRON_START_URL?.trim() || process.env.ELECTRON_START_URL?.trim();

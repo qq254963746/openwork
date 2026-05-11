@@ -1,7 +1,7 @@
 {
   "name": "@aiwork/desktop",
   "private": true,
-  "version": "0.13.32",
+  "version": "0.13.33",
   "description": "AiWork desktop shell",
   "author": {
     "name": "AiWork",
@@ -34,5 +34,5 @@
     "electron-devtools-installer": "^4.0.0"
   },
   "packageManager": "pnpm@10.27.0",
-  "opencodeRouterVersion": "0.13.32"
+  "opencodeRouterVersion": "0.13.33"
 }

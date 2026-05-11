@@ -686,7 +686,6 @@ export default {
   "session.app_log_copy": "Copy",
   "session.app_log_empty": "No log entries yet.",
   "session.app_log_window_no_opener": "Cannot reach the main window. Close this window and open logs again from the sidebar \"Application log\" button on the main shell (do not bookmark this URL).",
-  "session.app_log_close_window": "Close window",
   "session.app_log_tab_shell": "App shell",
   "session.app_log_sources_label": "Log sources",
   "session.app_log_services_desktop_only": "AiWork server and OpenCode engine logs are only available in the desktop app.",

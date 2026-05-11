@@ -459,10 +459,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   }, [pushDeveloperLog]);
 
   const onRevealElectronMigrationBackup = useCallback(async () => {
-    if (!isTauriRuntime() && !isElectronRuntime()) {
-      setElectronMigrationStatus("Migration backup reveal is available only in the desktop app.");
-      return;
-    }
     try {
       const env = await desktopAppPathsCmd();
       const appBundlePath = env.appBundlePath?.trim();

@@ -9,7 +9,6 @@ import {
   fetchEngineInfoForLogViewer,
   fetchOpencodeEngineDiskLogsForLogViewer,
   fetchAiWorkServerInfoForLogViewer,
-  isDesktopServiceLogsAvailableInLogViewer,
 } from "./desktop-log-viewer-host-bridge";
 import {
   pullShellEventsFromMain,
@@ -195,7 +194,6 @@ export function AppLogWindowRoute() {
   }, [stringify, t]);
 
   const refreshAiWork = useCallback(async () => {
-    if (!isDesktopServiceLogsAvailableInLogViewer()) return;
     setAiWorkError(null);
     try {
       const info = await fetchAiWorkServerInfoForLogViewer();
@@ -208,7 +206,6 @@ export function AppLogWindowRoute() {
   }, []);
 
   const refreshOpencode = useCallback(async () => {
-    if (!isDesktopServiceLogsAvailableInLogViewer()) return;
     setOpencodeError(null);
     try {
       const [disk, info] = await Promise.all([
@@ -251,7 +248,6 @@ export function AppLogWindowRoute() {
 
   const displayBody = useMemo(() => {
     if (tab === "aiwork_server" || tab === "opencode") {
-      if (!isDesktopServiceLogsAvailableInLogViewer()) return t("session.app_log_services_desktop_only");
       if (tab === "aiwork_server") {
         if (aiworkError) return `${t("session.app_log_fetch_error")}\n${aiworkError}`;
         return aiworkText || t("settings.no_logs_captured");
@@ -342,9 +338,6 @@ export function AppLogWindowRoute() {
             >
               <Copy className="h-3.5 w-3.5" aria-hidden />
               {t("session.app_log_copy")}
-            </Button>
-            <Button type="button" variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => window.close()}>
-              {t("session.app_log_close_window")}
             </Button>
           </div>
         </div>
