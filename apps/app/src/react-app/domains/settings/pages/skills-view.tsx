@@ -528,19 +528,6 @@ export function SkillsView(props: SkillsViewProps) {
               <p className="mt-1 text-[13px] text-dls-secondary">{t("skills.hub_desc")}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  void Promise.resolve(extensions.addHubRepo({ owner: "fengai", repo: "aiwork-hub", ref: "main" })).then(() => {
-                    void extensions.refreshHubSkills({ force: true });
-                  });
-                }}
-                className={pillGhostClass}
-                disabled={props.busy || hasDefaultHubRepo}
-              >
-                <Plus size={14} />
-                {t("skills.add_aiwork_hub")}
-              </button>
               <button type="button" onClick={openCustomRepoModal} disabled={props.busy} className={pillSecondaryClass}>
                 <Plus size={14} />
                 {t("skills.add_git_repo")}
@@ -774,7 +761,7 @@ export function SkillsView(props: SkillsViewProps) {
 
               {customRepoError ? <div className="rounded-xl border border-red-7/20 bg-red-1/40 px-4 py-3 text-xs text-red-12">{customRepoError}</div> : null}
 
-              <div className="flex justify-end gap-2">
+              <div className="mt-4 flex justify-end gap-2">
                 <Button variant="outline" onClick={closeCustomRepoModal} disabled={props.busy}>
                   {t("common.cancel")}
                 </Button>

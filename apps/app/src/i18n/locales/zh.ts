@@ -1051,7 +1051,6 @@ export default {
   "settings.workspace_debug_events_label": "工作区调试事件",
   "skills.add_custom_repo": "添加自定义GitHub仓库",
   "skills.add_git_repo": "添加Git仓库",
-  "skills.add_aiwork_hub": "添加AiWork Hub",
   "skills.available_from_hub": "从Hub获取",
   "skills.catalog_search_placeholder": "搜索已安装与 Hub skills",
   "skills.create_in_chat": "在聊天中创建skill",

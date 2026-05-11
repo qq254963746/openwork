@@ -1127,7 +1127,6 @@ export default {
   "settings.workspace_debug_events_label": "Workspace debug events",
   "skills.add_custom_repo": "Add custom GitHub repo",
   "skills.add_git_repo": "Add git repo",
-  "skills.add_aiwork_hub": "Add AiWork Hub",
   "skills.available_from_hub": "Available from Hub",
   "skills.catalog_search_placeholder": "Search installed and hub skills",
   "skills.create_in_chat": "Create skill in chat",
