@@ -148,17 +148,3 @@ export function readWorkspaceCloudImports(value: unknown): WorkspaceCloudImports
 
   return { skillHubs, skills, plugins };
 }
-
-export function withWorkspaceCloudImports(
-  config: Record<string, unknown>,
-  cloudImports: WorkspaceCloudImports,
-) {
-  return {
-    ...config,
-    cloudImports: {
-      skillHubs: cloudImports.skillHubs,
-      skills: cloudImports.skills,
-      plugins: cloudImports.plugins,
-    },
-  };
-}
