@@ -17,7 +17,7 @@
   --dls-background: var(--slate-1);
   --dls-canvas: var(--slate-2);
   --dls-surface-muted: var(--slate-3);
-  --dls-border: #f3f4f6;
+  --dls-border: #0000001a;
   --dls-panel-divider: color-mix(in oklab,#00000014 80%,transparent);
   --dls-accent: var(--blue-9);
   --dls-accent-hover: var(--blue-10);

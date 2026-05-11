@@ -374,6 +374,23 @@ const STORAGE_PORT_OVERRIDE = "aiwork.server.port";
 const STORAGE_TOKEN = "aiwork.server.token";
 const STORAGE_HOST_TOKEN = "aiwork.server.hostToken";
 
+/**
+ * Prefix root-relative AiWork HTTP paths (`/workspace/...`) with the real server base URL.
+ * Session snapshots may store API URLs without a host; in Vite dev they would otherwise resolve
+ * against the web shell origin (wrong port) instead of the AiWork server.
+ */
+export function resolveWorkspaceApiUrl(rawUrl: string, serverBaseUrl: string): string {
+  const raw = rawUrl.trim();
+  const base = serverBaseUrl.trim().replace(/\/+$/, "");
+  if (!raw || !base) return raw;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith("//")) return raw;
+  if (raw.startsWith("/workspace/")) {
+    return `${base}${raw}`;
+  }
+  return raw;
+}
+
 export function normalizeAiWorkServerUrl(input: string) {
   const trimmed = input.trim();
   if (!trimmed) return null;

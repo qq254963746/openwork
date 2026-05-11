@@ -16,7 +16,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Atom, Check, ChevronDown, CircleAlert, Copy, File as FileIcon } from "lucide-react";
 
+import { resolveWorkspaceApiUrl } from "../../../../app/lib/aiwork-server";
 import { joinDesktopPath, openDesktopPath, revealDesktopItemInDir } from "../../../../app/lib/desktop";
+import {
+  looksAbsoluteWorkspacePath,
+  workspaceRelativePathForServerRead,
+} from "../../../../app/lib/workspace-relative-path";
 import { WorkspacePanelFileGlyph } from "./workspace-panel-file-glyph";
 import {
   SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX,
@@ -280,6 +285,11 @@ export type SessionTranscriptProps = {
   writtenFileSvgQueryKey?: string;
   /** Per-message timing/usage/model for assistant replies (from session snapshot). */
   assistantReplyMetaById?: ReadonlyMap<string, AssistantReplyFooterMeta>;
+  /**
+   * AiWork server root (e.g. `http://127.0.0.1:PORT`). Used to resolve root-relative
+   * `/workspace/...` URLs in file parts and markdown so they target the API in Vite dev.
+   */
+  aiworkServerBaseUrl?: string;
 };
 
 // 500 was too high for real-world AiWork sessions: a handful of giant
@@ -743,15 +753,22 @@ function HighlightedPlainText(props: {
 function FileCard(props: {
   part: { filename?: string; url: string; mediaType: string };
   tone: "assistant" | "user";
+  aiworkServerBaseUrl?: string;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const isDataUrl = props.part.url?.startsWith("data:");
-  const title = props.part.filename || (isDataUrl ? "Attached file" : props.part.url) || "File";
+  const rawUrl = props.part.url ?? "";
+  const displayUrl =
+    props.aiworkServerBaseUrl?.trim() && rawUrl
+      ? resolveWorkspaceApiUrl(rawUrl, props.aiworkServerBaseUrl)
+      : rawUrl;
+  const isDataUrl = rawUrl.startsWith("data:");
+  const isWorkspaceApiPath = rawUrl.startsWith("/workspace/");
+  const title = props.part.filename || (isDataUrl ? "Attached file" : rawUrl) || "File";
   const ext = props.part.filename?.split(".").pop()?.toLowerCase();
   const badge = humanMediaType(props.part.mediaType) ?? (ext ? ext.toUpperCase() : null);
   const isImage = isImageAttachment(props.part.mediaType ?? "");
   const isDesktop = isDesktopRuntime();
-  const hasPath = !isDataUrl && props.part.url && !props.part.url.startsWith("http");
+  const hasPath = !isDataUrl && !isWorkspaceApiPath && rawUrl && !rawUrl.startsWith("http");
 
   return (
     <div
@@ -761,9 +778,9 @@ function FileCard(props: {
           : "border-gray-6/40 bg-gray-1/40 hover:bg-gray-2/30"
       }`}
     >
-      {isImage && props.part.url ? (
+      {isImage && displayUrl ? (
         <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-dls-border/60 bg-dls-surface">
-          <img src={props.part.url} alt={title} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+          <img src={displayUrl} alt={title} loading="lazy" decoding="async" className="h-full w-full object-cover" />
         </div>
       ) : (
         <div
@@ -801,7 +818,7 @@ function FileCard(props: {
                   type="button"
                   className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13px] text-gray-12 transition-colors hover:bg-gray-3/60"
                   onClick={() => {
-                    void openFileWithOS(props.part.url);
+                    void openFileWithOS(rawUrl);
                     setMenuOpen(false);
                   }}
                 >
@@ -811,7 +828,7 @@ function FileCard(props: {
                   type="button"
                   className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13px] text-gray-12 transition-colors hover:bg-gray-3/60"
                   onClick={() => {
-                    void revealFileInFinder(props.part.url);
+                    void revealFileInFinder(rawUrl);
                     setMenuOpen(false);
                   }}
                 >
@@ -821,7 +838,7 @@ function FileCard(props: {
                   type="button"
                   className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13px] text-gray-12 transition-colors hover:bg-gray-3/60"
                   onClick={() => {
-                    void navigator.clipboard.writeText(props.part.url);
+                    void navigator.clipboard.writeText(displayUrl || rawUrl);
                     setMenuOpen(false);
                   }}
                 >
@@ -834,67 +851,6 @@ function FileCard(props: {
       ) : null}
     </div>
   );
-}
-
-function looksAbsoluteWorkspacePath(p: string): boolean {
-  const n = p.trim().replace(/\\/g, "/");
-  return n.startsWith("/") || /^[a-zA-Z]:\//.test(n);
-}
-
-/** Align with workspace panel path normalization so `readWorkspaceFile` sees the same key as the file list */
-function normalizeWorkspaceRelativeFetchPath(raw: string): string {
-  let s = String(raw ?? "").trim().replace(/\\/g, "/");
-  if (!s) return "";
-  s = s.replace(/^\/+/, "");
-  s = s.replace(/^\.\//, "");
-  s = s.replace(/^workspace\//i, "");
-  s = s.replace(/^\/+/, "");
-  const parts = s.split("/").filter(Boolean);
-  return parts.join("/");
-}
-
-function tryStripWorkspaceRootPrefix(posixPath: string, workspaceRoot: string): string | null {
-  const root = workspaceRoot.trim().replace(/[/\\]+$/, "").replace(/\\/g, "/");
-  if (!root) return null;
-  const p = posixPath.replace(/\\/g, "/");
-  const prefix = root.endsWith("/") ? root : `${root}/`;
-  if (p === root) return "";
-  if (!p.startsWith(prefix)) return null;
-  const rest = p.slice(prefix.length);
-  const n = normalizeWorkspaceRelativeFetchPath(rest);
-  return n || null;
-}
-
-/**
- * API path for `readWorkspaceFile` — must match workspace-side normalization.
- * Tools often emit POSIX paths from repo root (`/diagrams/a.svg`); older logic treated every
- * leading `/` as OS-absolute and skipped the fetch.
- */
-function workspaceRelativePathForServerRead(raw: string, workspaceRoot: string): string | null {
-  const trimmed = String(raw ?? "").trim();
-  if (!trimmed) return null;
-  const slash = trimmed.replace(/\\/g, "/");
-
-  if (/^[a-zA-Z]:\//.test(slash)) {
-    return tryStripWorkspaceRootPrefix(slash, workspaceRoot);
-  }
-
-  if (slash.startsWith("/")) {
-    const rootTrim = workspaceRoot.trim();
-    if (rootTrim) {
-      const stripped = tryStripWorkspaceRootPrefix(slash, workspaceRoot);
-      if (stripped != null) return stripped;
-    }
-    // Real host paths not under workspace — do not turn "/Users/..." into "Users/..."
-    if (/^\/(Users|home|Volumes|private)\//i.test(slash)) {
-      return null;
-    }
-    const n = normalizeWorkspaceRelativeFetchPath(slash);
-    return n || null;
-  }
-
-  const rel = normalizeWorkspaceRelativeFetchPath(slash);
-  return rel || null;
 }
 
 /** Mutate root `<svg>` so the preview spans the card width (inline render + intrinsic sizing). */
@@ -1479,6 +1435,12 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
     [props.messages],
   );
 
+  const resolveRemoteHref = useMemo(() => {
+    const base = props.aiworkServerBaseUrl?.trim();
+    if (!base) return undefined;
+    return (href: string) => resolveWorkspaceApiUrl(href, base);
+  }, [props.aiworkServerBaseUrl]);
+
   const transcriptMessages = useMemo<TranscriptMessage[]>(() => {
     return props.messages.map((message) => ({
       id: message.id,
@@ -1868,6 +1830,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                     mediaType: attachment.mime,
                   }}
                   tone={block.isUser ? "user" : "assistant"}
+                  aiworkServerBaseUrl={props.aiworkServerBaseUrl}
                 />
               ))}
             </div>
@@ -1895,6 +1858,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                           mediaType: filePart.mime ?? "application/octet-stream",
                         }}
                         tone={block.isUser ? "user" : "assistant"}
+                        aiworkServerBaseUrl={props.aiworkServerBaseUrl}
                       />
                     );
                   }
@@ -1915,6 +1879,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                       text={text}
                       streaming={isStreamingLatestAssistant}
                       highlightQuery={highlightQuery}
+                      resolveRemoteHref={resolveRemoteHref}
                     />
                   );
                 })() : null}

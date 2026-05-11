@@ -14,8 +14,12 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { t } from "../../../../i18n";
 import { openDesktopPath, workspaceAddAuthorizedRoot } from "../../../../app/lib/desktop";
-import type { OpenworkServerClient } from "../../../../app/lib/openwork-server";
-import { OpenworkServerError } from "../../../../app/lib/openwork-server";
+import type { AiWorkServerClient } from "../../../../app/lib/aiwork-server";
+import { AiWorkServerError } from "../../../../app/lib/aiwork-server";
+import {
+  looksAbsoluteWorkspacePath,
+  workspaceRelativePathForServerRead,
+} from "../../../../app/lib/workspace-relative-path";
 import type { ComposerAttachment } from "../../../../app/types";
 import {
   isDesktopRuntime,
@@ -35,7 +39,7 @@ const WORKSPACE_PANEL_HEADER_DRAG_STYLE: CSSProperties = {
   WebkitUserSelect: "none",
 };
 
-const WORKSPACE_PANEL_WIDTH_KEY = "openwork.session.workspacePanelWidth.v1";
+const WORKSPACE_PANEL_WIDTH_KEY = "aiwork.session.workspacePanelWidth.v1";
 const DEFAULT_WORKSPACE_PANEL_WIDTH = 300;
 const MIN_WORKSPACE_PANEL_WIDTH = 240;
 // Keep the chat transcript usable when the right panel grows.
@@ -293,7 +297,7 @@ function collectSessionToolNames(messages: UIMessage[]): string[] {
 }
 
 export type SessionWorkspacePanelProps = {
-  client: OpenworkServerClient;
+  client: AiWorkServerClient;
   workspaceId: string;
   workspaceRoot: string;
   attachments: ComposerAttachment[];
@@ -319,6 +323,18 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
   useEffect(() => {
     panelWidthRef.current = panelWidth;
   }, [panelWidth]);
+
+  /** When the window narrows, clamp stored panel width so chat + panel fit (flex-shrink alone is not enough if width is fixed in px). */
+  useEffect(() => {
+    const clampWidth = () => {
+      const vw = document.documentElement?.clientWidth || window.innerWidth;
+      const maxAllowed = Math.max(MIN_WORKSPACE_PANEL_WIDTH, vw - MIN_CHAT_COLUMN_WIDTH);
+      setPanelWidth((w) => Math.min(Math.max(MIN_WORKSPACE_PANEL_WIDTH, w), maxAllowed));
+    };
+    clampWidth();
+    window.addEventListener("resize", clampWidth);
+    return () => window.removeEventListener("resize", clampWidth);
+  }, []);
 
   useEffect(() => {
     try {
@@ -435,7 +451,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         return await props.client.listWorkspaceDirectory(props.workspaceId, dirPath || undefined);
       } catch (error) {
         const looksUnauthorized =
-          error instanceof OpenworkServerError
+          error instanceof AiWorkServerError
             ? error.status === 403 && (error.code === "workspace_unauthorized" || error.code === "forbidden")
             : (() => {
                 const message = error instanceof Error ? error.message : String(error ?? "");
@@ -447,7 +463,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
                 );
               })();
 
-        if (error instanceof OpenworkServerError) {
+        if (error instanceof AiWorkServerError) {
           // Always keep a terse summary visible (safe for prod); detailed messages remain dev-only.
           let location = "";
           const url = (error.details &&
@@ -550,29 +566,41 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
 
   const selectWorkspaceRelativePath = useCallback(
     (relativePath: string) => {
-      const rel = relativePath.trim().replace(/\\/g, "/");
-      if (!rel) return;
-      if (isMarkdownDocumentPath(rel)) {
-        setSelectedFile(rel);
-        return;
-      }
-      if (isWebPreviewDocumentPath(rel)) {
-        setSelectedFile(rel);
-        return;
-      }
-      if (isWorkspacePreviewablePath(rel)) {
-        setSelectedFile(rel);
-        return;
-      }
+      const raw = relativePath.trim().replace(/\\/g, "/");
+      if (!raw) return;
+
       const root = props.workspaceRoot.trim();
+      const apiRel = root ? workspaceRelativePathForServerRead(raw, root) : null;
+      /** Workspace-relative POSIX path for list/preview APIs — never pass OS-absolute `/Users/...` through. */
+      const sel = apiRel ?? raw;
+
+      if (apiRel == null && looksAbsoluteWorkspacePath(raw)) {
+        if (isDesktopRuntime()) {
+          void openDesktopPath(raw).catch(() => undefined);
+        }
+        return;
+      }
+
+      if (isMarkdownDocumentPath(sel)) {
+        setSelectedFile(sel);
+        return;
+      }
+      if (isWebPreviewDocumentPath(sel)) {
+        setSelectedFile(sel);
+        return;
+      }
+      if (isWorkspacePreviewablePath(sel)) {
+        setSelectedFile(sel);
+        return;
+      }
       if (isDesktopRuntime() && root) {
-        const abs = absoluteWorkspaceFilePath(root, rel);
+        const abs = absoluteWorkspaceFilePath(root, sel);
         if (abs) {
           void openDesktopPath(abs).catch(() => undefined);
           return;
         }
       }
-      setSelectedFile(rel);
+      setSelectedFile(sel);
     },
     [props.workspaceRoot],
   );
@@ -595,7 +623,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
 
   return (
     <aside
-      className="relative flex min-h-0 h-full shrink-0 flex-col border-l border-dls-divider bg-dls-sidebar"
+      className="relative flex min-h-0 h-full min-w-0 shrink flex-col border-l border-dls-divider bg-dls-sidebar"
       style={{ width: panelWidth, minWidth: MIN_WORKSPACE_PANEL_WIDTH, maxWidth: "100%" }}
     >
       <div
@@ -639,7 +667,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
               </button>
             </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto bg-dls-surface px-4 py-4">
+          <div className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto bg-dls-surface px-4 py-4">
             {previewQuery.isLoading ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="animate-spin text-dls-secondary" size={22} />
@@ -647,7 +675,9 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
             ) : previewQuery.isError ? (
               <div className="text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
             ) : (
-              <MarkdownBlock text={previewQuery.data?.content ?? ""} />
+              <div className="min-w-0 max-w-full">
+                <MarkdownBlock text={previewQuery.data?.content ?? ""} />
+              </div>
             )}
           </div>
         </div>
@@ -685,7 +715,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
               </button>
             </div>
           </div>
-          <div className="relative min-h-0 flex-1 bg-dls-surface">
+          <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-dls-surface">
             {previewQuery.isLoading ? (
               <div className="flex min-h-[200px] items-center justify-center py-12">
                 <Loader2 className="animate-spin text-dls-secondary" size={22} />
@@ -737,7 +767,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
               </button>
             </div>
           </div>
-          <div className="relative min-h-0 flex-1 overflow-hidden bg-dls-surface">
+          <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-dls-surface">
             {previewQuery.isLoading ? (
               <div className="flex min-h-[200px] items-center justify-center py-12">
                 <Loader2 className="animate-spin text-dls-secondary" size={22} />
@@ -809,7 +839,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {/* Drag region must not wrap toolbar buttons (WKWebView hit-testing); mirror workspace-session-list. */}
         <div className="shrink-0 border-b border-dls-divider px-3 py-2">
           <div
@@ -907,7 +937,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+        <div className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto px-2 py-2">
           {listQuery.isLoading ? (
             <div className="flex justify-center py-6">
               <Loader2 className="animate-spin text-dls-secondary" size={18} />
@@ -955,7 +985,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
             <div className="shrink-0 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wide text-dls-secondary">
               {t("session.workspace_panel_preview")}
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+            <div className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto px-3 pb-3">
               {!isWorkspacePreviewablePath(selectedFile) ? (
                 <div className="text-[11px] text-dls-secondary">{t("session.workspace_panel_preview_unsupported")}</div>
               ) : previewQuery.isLoading ? (

@@ -1,6 +1,6 @@
 {
   "name": "aiwork-orchestrator",
-  "version": "0.13.31",
+  "version": "0.13.32",
   "description": "AiWork host orchestrator for opencode + AiWork server + opencode-router",
   "private": true,
   "type": "module",
@@ -47,8 +47,8 @@
     "@opencode-ai/sdk": "^1.14.41",
     "@opentui/core": "0.1.77",
     "@opentui/solid": "0.1.77",
-    "opencode-router": "0.13.31",
-    "aiwork-server": "0.13.31",
+    "opencode-router": "0.13.32",
+    "aiwork-server": "0.13.32",
     "solid-js": "1.9.9"
   },
   "devDependencies": {

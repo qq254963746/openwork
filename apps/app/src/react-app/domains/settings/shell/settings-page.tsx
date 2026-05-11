@@ -128,7 +128,14 @@ export function SettingsPage(props: SettingsPageProps) {
   return (
     <SidebarProvider
       className="relative min-h-full min-w-0"
-      style={{ "--sidebar-border": "var(--dls-border)", "--border": "var(--dls-border)" } as CSSProperties}
+      style={
+        {
+          "--sidebar-border": "var(--dls-border)",
+          "--border": "var(--dls-border)",
+          /** Narrower than default `16rem` from `@/components/ui/sidebar` — settings-only provider. */
+          "--sidebar-width": "14rem",
+        } as CSSProperties
+      }
     >
         <Sidebar collapsible="none" className="absolute inset-0">
           <SidebarContent>

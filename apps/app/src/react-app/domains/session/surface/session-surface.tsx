@@ -1115,7 +1115,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   return (
     <DevProfiler id="SessionSurface">
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex min-h-0 flex-1 flex-row">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col" style={{ minWidth: MIN_CHAT_COLUMN_WIDTH }}>
       {model.transitionState === "switching" && showDelayedLoading ? (
         <div className="flex justify-center px-6 pt-4">
@@ -1215,6 +1215,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
                     fetchWorkspaceFileText={fetchWorkspaceFileText}
                     writtenFileSvgQueryKey={props.workspaceId}
                     assistantReplyMetaById={assistantReplyMetaById}
+                    aiworkServerBaseUrl={props.client.baseUrl}
                   />
                   {error ? (
                     <SessionErrorCard

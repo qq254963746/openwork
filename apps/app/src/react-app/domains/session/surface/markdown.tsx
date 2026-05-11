@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import * as React from "react";
-import { memo, useContext, useEffect, useRef, useState } from "react";
+import { memo, useContext, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components, Options as ReactMarkdownOptions } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -138,7 +138,7 @@ function normalizeHashId(raw: string): string {
   }
 }
 
-function createMarkdownComponents(): Components {
+function createMarkdownComponents(resolveRemoteHref?: (href: string) => string): Components {
   const slugCounts = new Map<string, number>();
   const getUniqueId = (raw: string) => {
     const base = slugifyHeading(raw);
@@ -160,10 +160,12 @@ function createMarkdownComponents(): Components {
     a({ href, children }) {
       const rawHref = href ?? "";
       const isHashLink = rawHref.startsWith("#");
+      const displayHref =
+        !isHashLink && resolveRemoteHref ? resolveRemoteHref(rawHref) : rawHref;
 
       return (
         <a
-          href={rawHref}
+          href={displayHref}
           target={isHashLink ? undefined : "_blank"}
           rel={isHashLink ? undefined : "noreferrer noopener"}
           className="underline underline-offset-2 text-dls-accent hover:text-[var(--dls-accent-hover)]"
@@ -245,19 +247,30 @@ function createMarkdownComponents(): Components {
       );
     },
     table({ children }) {
+      // `border-collapse: collapse` does not follow rounded clipping cleanly — corners look “open”.
+      // Inset shadow draws a 1px perimeter that follows `border-radius`; inner lines use r/b only.
       return (
-        <div className="my-4 overflow-hidden rounded-[20px]">
+        <div
+          className={[
+            "my-4 overflow-hidden rounded-[20px]",
+            "shadow-[inset_0_0_0_1px_var(--dls-border)]",
+            "[&_th]:border-r [&_th]:border-b [&_th]:border-dls-border",
+            "[&_td]:border-r [&_td]:border-b [&_td]:border-dls-border",
+            "[&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0",
+            "[&_tr:last-child_th]:border-b-0 [&_tr:last-child_td]:border-b-0",
+          ].join(" ")}
+        >
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">{children}</table>
+            <table className="w-full border-separate border-spacing-0">{children}</table>
           </div>
         </div>
       );
     },
     th({ children }) {
-      return <th className="border border-dls-border bg-dls-hover p-2 text-left">{children}</th>;
+      return <th className="bg-dls-hover p-2 text-left">{children}</th>;
     },
     td({ children }) {
-      return <td className="border border-dls-border p-2 align-top">{children}</td>;
+      return <td className="p-2 align-top">{children}</td>;
     },
     hr() {
       return <hr className="my-6 border-none h-px bg-gray-4" />;
@@ -285,9 +298,14 @@ function MarkdownBlockInner(props: {
   text: string;
   streaming?: boolean;
   highlightQuery?: string;
+  /** Rewrite root-relative AiWork API URLs (e.g. `/workspace/...`) against the HTTP server base. */
+  resolveRemoteHref?: (href: string) => string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const components = createMarkdownComponents();
+  const components = useMemo(
+    () => createMarkdownComponents(props.resolveRemoteHref),
+    [props.resolveRemoteHref],
+  );
 
   useEffect(() => {
     const root = rootRef.current;
