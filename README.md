@@ -1,6 +1,5 @@
 > AiWork is the open source alternative to Claude Cowork/Codex (desktop app).
 
-
 ## Core Philosophy
 
 - Local-first, cloud-ready: AiWork runs on your machine in one click. Send a message instantly.
@@ -8,7 +7,6 @@
 - Ejectable: AiWork is powered by OpenCode, so everything OpenCode can do works in AiWork, even without a UI yet.
 
 AiWork is designed around the idea that you can easily ship your agentic workflows for your team as a repeatable, productized process.
-
 
 ## Why
 
@@ -80,6 +78,8 @@ AiWork now lives in `apps/app` (UI) and `apps/desktop` (desktop shell).
 
 ```bash
 pnpm dev
+
+# lsof -i:5173
 ```
 
 `pnpm dev` now enables `AIWORK_DEV_MODE=1` automatically, so desktop dev uses an isolated OpenCode state instead of your personal global config/auth/data.
