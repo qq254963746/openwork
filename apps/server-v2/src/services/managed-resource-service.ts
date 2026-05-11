@@ -156,6 +156,14 @@ function normalizeManagedKey(value: string, fallback: string) {
   return trimmed || fallback;
 }
 
+function managedSkillMatchesWorkspaceQuery(item: ManagedSummary, workspaceId: string, normalizedName: string) {
+  if (!item.workspaceIds.includes(workspaceId)) return false;
+  const byKey = normalizeManagedKey(item.key ?? "", "skill");
+  if (byKey === normalizedName) return true;
+  const byDisplay = normalizeManagedKey(item.displayName ?? "", "skill");
+  return byDisplay === normalizedName;
+}
+
 function normalizePortablePath(input: unknown) {
   const normalized = String(input ?? "")
     .replaceAll("\\", "/")
@@ -934,8 +942,8 @@ export function createManagedResourceService(input: {
 
     getWorkspaceSkill(workspaceId: string, name: string) {
       const workspace = ensureWorkspaceMutable(getWorkspaceOrThrow(workspaceId));
-      const key = normalizeManagedKey(name, "skill");
-      const skill = this.listManaged("skills").find((item) => item.key === key && item.workspaceIds.includes(workspaceId)) ?? null;
+      const normalized = normalizeManagedKey(name, "skill");
+      const skill = this.listManaged("skills").find((item) => managedSkillMatchesWorkspaceQuery(item, workspaceId, normalized)) ?? null;
       if (!skill) {
         throw new HTTPException(404, { message: `Skill not found: ${name}` });
       }
@@ -1000,8 +1008,8 @@ export function createManagedResourceService(input: {
 
     async deleteWorkspaceSkill(workspaceId: string, name: string) {
       const workspace = ensureWorkspaceMutable(getWorkspaceOrThrow(workspaceId));
-      const key = normalizeManagedKey(name, "skill");
-      const assignment = this.listManaged("skills").find((item) => item.key === key && item.workspaceIds.includes(workspaceId)) ?? null;
+      const normalized = normalizeManagedKey(name, "skill");
+      const assignment = this.listManaged("skills").find((item) => managedSkillMatchesWorkspaceQuery(item, workspaceId, normalized)) ?? null;
       if (!assignment) {
         throw new HTTPException(404, { message: `Skill not found: ${name}` });
       }
@@ -1011,7 +1019,8 @@ export function createManagedResourceService(input: {
       } else {
         await updateAssignments("skills", assignment.id, nextWorkspaceIds);
       }
-      return { path: workspaceSkillPath(workspace, key).replace(/[/\\]SKILL\.md$/, "") };
+      const pathKey = normalizeManagedKey(assignment.key ?? assignment.displayName ?? name, "skill");
+      return { path: workspaceSkillPath(workspace, pathKey).replace(/[/\\]SKILL\.md$/, "") };
     },
 
     async listHubSkills(repo?: Partial<HubRepo>) {

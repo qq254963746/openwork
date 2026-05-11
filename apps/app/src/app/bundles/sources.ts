@@ -1,6 +1,6 @@
 import { desktopFetch } from "../lib/desktop";
 import type { AiWorkServerClient } from "../lib/aiwork-server";
-import { isDesktopRuntime, safeStringify } from "../utils";
+import { safeStringify } from "../utils";
 import { parseBundlePayload } from "./schema";
 import type { BundleImportIntent, BundleRequest, BundleV1 } from "./types";
 import { extractBundleId, isConfiguredBundlePublisherUrl } from "./url-policy";
@@ -129,17 +129,11 @@ export async function fetchBundle(
   try {
     let response: Response;
     try {
-        response = isDesktopRuntime()
-          ? await desktopFetch(targetUrl.toString(), {
+        response = await desktopFetch(targetUrl.toString(), {
             method: "GET",
             headers: { Accept: "application/json" },
             signal: controller.signal,
           })
-        : await fetch(targetUrl.toString(), {
-            method: "GET",
-            headers: { Accept: "application/json" },
-            signal: controller.signal,
-          });
     } catch (error) {
       const message = error instanceof Error ? error.message : safeStringify(error);
       throw new Error(`Failed to load bundle from ${targetUrl.toString()}: ${message}`);

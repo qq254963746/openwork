@@ -2,13 +2,12 @@
 import * as React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, HashRouter } from "react-router-dom";
+import { HashRouter } from "react-router-dom";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { initializeAiWorkBootstrapConfig } from "./app/lib/aiwork-bootstrap";
 import { getAiWorkDeployment } from "./app/lib/aiwork-deployment";
 import { bootstrapTheme } from "./app/theme";
-import { isDesktopRuntime } from "./app/utils";
 import { initLocale } from "./i18n";
 import { getReactQueryClient } from "./react-app/infra/query-client";
 import {
@@ -42,7 +41,7 @@ root.dataset.aiworkDeployment = getAiWorkDeployment();
 
 const platform = createDefaultPlatform();
 const queryClient = getReactQueryClient();
-const Router = isDesktopRuntime() ? HashRouter : BrowserRouter;
+const Router =  HashRouter;
 
 ReactDOM.createRoot(root).render(
   <React.StrictMode>

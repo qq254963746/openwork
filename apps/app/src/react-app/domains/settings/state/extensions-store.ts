@@ -37,11 +37,12 @@ import {
   writeOpencodeConfig,
   type OpencodeConfigFile,
 } from "../../../../app/lib/desktop";
-import type {
-  AiWorkHubRepo,
-  AiWorkServerCapabilities,
-  AiWorkServerClient,
-  AiWorkServerStatus,
+import {
+  AiWorkServerError,
+  type AiWorkHubRepo,
+  type AiWorkServerCapabilities,
+  type AiWorkServerClient,
+  type AiWorkServerStatus,
 } from "../../../../app/lib/aiwork-server";
 import {
   readWorkspaceCloudImports,
@@ -467,8 +468,25 @@ export function createExtensionsStore(options: {
       aiworkSnapshot.aiworkServerCapabilities?.skills?.write;
 
     if (canUseAiWorkServer) {
-      await aiworkClient.deleteSkill(aiworkWorkspaceId, name);
-      return;
+      try {
+        await aiworkClient.deleteSkill(aiworkWorkspaceId, name);
+        return;
+      } catch (error) {
+        const isNotFound =
+          error instanceof AiWorkServerError && error.status === 404;
+        if (
+          isNotFound &&
+          isDesktopRuntime() &&
+          root
+        ) {
+          const result = await uninstallSkillCommand(root, name);
+          if (!result.ok) {
+            throw new Error(result.stderr || result.stdout || t("skills.uninstall_failed"));
+          }
+          return;
+        }
+        throw error;
+      }
     }
 
     if (!isDesktopRuntime()) {
