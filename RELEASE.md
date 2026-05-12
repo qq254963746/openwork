@@ -1,23 +1,4 @@
-
-source "$HOME/.cargo/env"
-
-pnpm install
-pnpm release:review
-pnpm bump:patch   # 或 bump:minor / bump:major
-pnpm release:review
-
-pnpm -C apps/desktop prepare:sidecar
-
-查看版本是否对
-apps/desktop/src-tauri/sidecars/aiwork-server --version
-
-pnpm --filter @aiwork/desktop exec tauri build \
-  --target aarch64-apple-darwin \
-  --bundles dmg,app \
-  --config '{"bundle":{"createUpdaterArtifacts":false}}'
-
-
-# Release checklist
+Release checklist
 
 AiWork releases should be deterministic, easy to reproduce, and fully verifiable with CLI tooling.
 
@@ -30,7 +11,7 @@ AiWork releases should be deterministic, easy to reproduce, and fully verifiable
 ## App release (desktop)
 
 1. Bump versions (app + desktop + Tauri + Cargo):
-    - `pnpm bump:patch` or `pnpm bump:minor` or `pnpm bump:major`
+   - `pnpm bump:patch` or `pnpm bump:minor` or `pnpm bump:major`
 2. Re-run `pnpm release:review`.
 3. Build sidecars for the desktop bundle:
    - `pnpm --filter @fengai/aiwork prepare:sidecar`
@@ -53,19 +34,3 @@ AiWork releases should be deterministic, easy to reproduce, and fully verifiable
 ## aiwork-server (if version changed)
 
 - `pnpm --filter aiwork-server publish --access public`
-
-## Verification
-
-- `aiwork start --workspace /path/to/workspace --check --check-events`
-- `gh run list --repo fengai/aiwork --workflow "Release App" --limit 5`
-- `gh release view vX.Y.Z --repo fengai/aiwork`
-
-Use `pnpm release:review --json` when automating these checks in scripts or agents.
-
-## npm publishing
-
-If you want `Release App` to publish `aiwork-orchestrator`, `aiwork-server` to npm, configure:
-
-- GitHub Actions secret: `NPM_TOKEN` (npm automation token)
-
-If `NPM_TOKEN` is not set, the npm publish job is skipped.

@@ -77,45 +77,12 @@ AiWork now lives in `apps/app` (UI) and `apps/desktop` (desktop shell).
 ### Run (Desktop)
 
 ```bash
-pnpm dev
-
-# lsof -i:5173
+./script/pnpm-dev.sh
 ```
 
 `pnpm dev` now enables `AIWORK_DEV_MODE=1` automatically, so desktop dev uses an isolated OpenCode state instead of your personal global config/auth/data.
 
-### Run (Web UI only)
-
-```bash
-pnpm dev:ui
-```
-
-All repo `dev` entrypoints now opt into the same dev-mode isolation so local testing uses the AiWork-managed OpenCode state consistently.
-
-### Arch Users:
-
-```bash
-sudo pacman -S --needed webkit2gtk-4.1
-curl -fsSL https://opencode.ai/install | bash -s -- --version "$(node -e "const fs=require('fs'); const parsed=JSON.parse(fs.readFileSync('constants.json','utf8')); process.stdout.write(String(parsed.opencodeVersion||'').trim().replace(/^v/,''));")" --no-modify-path
-```
-
-## Architecture (high-level)
-
-- In **Host mode**, AiWork runs a local host stack and connects the UI to it.
-  - Default runtime: `aiwork` (installed from `aiwork-orchestrator`), which orchestrates `opencode`, `aiwork-server`
-  - Fallback runtime: `direct`, where the desktop app spawns `opencode serve --hostname 127.0.0.1 --port <free-port>` directly.
-
-When you select a project folder, AiWork runs the host stack locally using that folder and connects the desktop UI.
-This lets you run agentic workflows, send prompts, and see progress entirely on your machine
-
-- The UI uses `@opencode-ai/sdk/v2/client` to:
-  - connect to the server
-  - list/create sessions
-  - send prompts
-  - subscribe to SSE events(Server-Sent Events are used to stream real-time updates from the server to the UI.)
-  - read todos and permission requests
-
-## Folder Picker
+### Folder Picker
 
 The folder picker uses the Tauri dialog plugin.
 Capability permissions are defined in:
