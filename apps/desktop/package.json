@@ -1,7 +1,7 @@
 {
   "name": "@aiwork/desktop",
   "private": true,
-  "version": "0.13.33",
+  "version": "0.13.35",
   "description": "AiWork desktop shell",
   "author": {
     "name": "AiWork",
@@ -11,7 +11,7 @@
   "type": "module",
   "scripts": {
     "dev": "node ./scripts/electron-dev.mjs",
-    "dev:tauri": "AIWORK_DEV_MODE=1 AIWORK_DATA_DIR=\"$HOME/.aiwork/aiwork-orchestrator-dev\" tauri dev --config src-tauri/tauri.dev.conf.json --config \"{\\\"build\\\":{\\\"devUrl\\\":\\\"http://localhost:${PORT:-5173}\\\"}}\"",
+    "dev:tauri": "AIWORK_DEV_MODE=1 tauri dev --config src-tauri/tauri.dev.conf.json --config \"{\\\"build\\\":{\\\"devUrl\\\":\\\"http://localhost:${PORT:-5173}\\\"}}\"",
     "dev:electron": "node ./scripts/electron-dev.mjs",
     "dev:windows": "node ./scripts/dev-windows.mjs",
     "dev:windows:x64": "node ./scripts/dev-windows.mjs x64",

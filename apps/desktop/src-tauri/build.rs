@@ -10,7 +10,6 @@ fn main() {
     emit_build_info();
     ensure_opencode_sidecar();
     ensure_aiwork_server_sidecar();
-    ensure_orchestrator_sidecar();
     ensure_chrome_devtools_mcp_sidecar();
     ensure_versions_manifest();
     tauri_build::build();
@@ -141,102 +140,6 @@ fn emit_build_info() {
 
     if let Some(value) = build_epoch {
         println!("cargo:rustc-env=AIWORK_BUILD_EPOCH={}", value);
-    }
-}
-
-fn ensure_orchestrator_sidecar() {
-    let target = env::var("CARGO_CFG_TARGET_TRIPLE")
-        .or_else(|_| env::var("TARGET"))
-        .or_else(|_| env::var("TAURI_ENV_TARGET_TRIPLE"))
-        .unwrap_or_default();
-    if target.is_empty() {
-        return;
-    }
-
-    let manifest_dir = env::var("CARGO_MANIFEST_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("."));
-    let sidecar_dir = manifest_dir.join("sidecars");
-
-    let canonical_name = if target.contains("windows") {
-        "aiwork-orchestrator.exe"
-    } else {
-        "aiwork-orchestrator"
-    };
-    let mut target_name = format!("aiwork-orchestrator-{target}");
-    if target.contains("windows") {
-        target_name.push_str(".exe");
-    }
-
-    let dest_path = sidecar_dir.join(canonical_name);
-    let target_dest_path = sidecar_dir.join(target_name);
-
-    let profile = env::var("PROFILE").unwrap_or_default();
-    if !dest_path.exists() {
-        create_debug_stub(&dest_path, &sidecar_dir, &profile, &target);
-    }
-    if !target_dest_path.exists() {
-        create_debug_stub(&target_dest_path, &sidecar_dir, &profile, &target);
-    }
-
-    if dest_path.exists() && target_dest_path.exists() {
-        return;
-    }
-
-    if target_dest_path.exists() && !dest_path.exists() {
-        if copy_sidecar(&target_dest_path, &dest_path, &target) {
-            return;
-        }
-    }
-
-    let source_path = env::var("AIWORK_ORCHESTRATOR_BIN_PATH")
-        .ok()
-        .map(PathBuf::from)
-        .filter(|path| path.is_file())
-        .or_else(|| {
-            find_in_path(if target.contains("windows") {
-                "aiwork.exe"
-            } else {
-                "aiwork"
-            })
-        });
-
-    let Some(source_path) = source_path else {
-        println!(
-            "cargo:warning=orchestrator sidecar missing at {} (set AIWORK_ORCHESTRATOR_BIN_PATH or install aiwork-orchestrator)",
-            dest_path.display()
-        );
-        create_debug_stub(&dest_path, &sidecar_dir, &profile, &target);
-        create_debug_stub(&target_dest_path, &sidecar_dir, &profile, &target);
-        return;
-    };
-
-    if fs::create_dir_all(&sidecar_dir).is_err() {
-        return;
-    }
-
-    let copied = copy_sidecar(&source_path, &dest_path, &target);
-    if copied {
-        #[cfg(unix)]
-        {
-            let _ = fs::set_permissions(&dest_path, fs::Permissions::from_mode(0o755));
-        }
-        let _ = copy_sidecar(&dest_path, &target_dest_path, &target);
-    } else {
-        println!(
-            "cargo:warning=Failed to copy orchestrator sidecar from {} to {}",
-            source_path.display(),
-            dest_path.display()
-        );
-        create_debug_stub(&dest_path, &sidecar_dir, &profile, &target);
-        create_debug_stub(&target_dest_path, &sidecar_dir, &profile, &target);
-    }
-
-    if !dest_path.exists() {
-        create_debug_stub(&dest_path, &sidecar_dir, &profile, &target);
-    }
-    if !target_dest_path.exists() {
-        create_debug_stub(&target_dest_path, &sidecar_dir, &profile, &target);
     }
 }
 

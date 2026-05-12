@@ -517,10 +517,6 @@ async function bootRuntimeForSelectedWorkspace() {
       watchedId: String(fallback.id ?? ""),
     }).catch(() => undefined);
   }
-  await runtimeManager.orchestratorWorkspaceActivate({
-    workspacePath: bootWorkspaceRoot,
-    name: bootWorkspace.name ?? bootWorkspace.displayName ?? null,
-  }).catch(() => undefined);
   const aiworkServer = assertAiWorkServerReady(await runtimeManager.aiworkServerInfo());
   return { ok: true, skipped: false, engine, aiworkServer, workspaceId: bootWorkspace.id ?? null };
 }
@@ -1036,14 +1032,6 @@ async function handleDesktopInvoke(event, command, ...args) {
       return engineDoctor(args[0]);
     case "engineInstall":
       return runtimeManager.engineInstall();
-    case "orchestratorStatus": {
-      return runtimeManager.orchestratorStatus();
-    }
-    case "orchestratorWorkspaceActivate": {
-      return runtimeManager.orchestratorWorkspaceActivate(args[0] ?? {});
-    }
-    case "orchestratorInstanceDispose":
-      return runtimeManager.orchestratorInstanceDispose(String(args[0] ?? "").trim());
     case "appBuildInfo":
       return {
         version: app.getVersion(),
@@ -1055,9 +1043,6 @@ async function handleDesktopInvoke(event, command, ...args) {
       await rm(app.getPath("userData"), { recursive: true, force: true });
       app.exit(0);
       return undefined;
-    }
-    case "orchestratorStartDetached": {
-      return runtimeManager.orchestratorStartDetached(args[0] ?? {});
     }
     case "aiworkServerInfo":
       return runtimeManager.aiworkServerInfo();

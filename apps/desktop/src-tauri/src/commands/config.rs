@@ -50,7 +50,7 @@ fn opencode_auth_json_path_candidates() -> Vec<PathBuf> {
     dirs.into_iter().map(|dir| dir.join("auth.json")).collect()
 }
 
-/// Reads OpenCode `auth.json` from known global data dirs (same locations as the orchestrator sandbox mount).
+/// Reads OpenCode `auth.json` from known global data dirs
 #[tauri::command]
 pub fn read_opencode_auth_json() -> Result<OpencodeAuthJsonFile, String> {
     for path in opencode_auth_json_path_candidates() {

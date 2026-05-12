@@ -22,7 +22,7 @@ const stopStaleSidecars = () => {
   const targetDir = tauriDebugDir.replace(/\\/g, "\\\\");
   const command = [
     `$targetDir = \"${targetDir}\"`,
-    "$names = @('opencode.exe','aiwork-server.exe','aiwork-orchestrator.exe','chrome-devtools-mcp.exe')",
+    "$names = @('opencode.exe','aiwork-server.exe','chrome-devtools-mcp.exe')",
     "Get-CimInstance Win32_Process | Where-Object {",
     "  $_.ExecutablePath -and $_.ExecutablePath.StartsWith($targetDir, [System.StringComparison]::OrdinalIgnoreCase) -and $names.Contains([System.IO.Path]::GetFileName($_.ExecutablePath))",
     "} | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
@@ -77,7 +77,7 @@ const env = {
   AIWORK_DEV_MODE: process.env.AIWORK_DEV_MODE || "1",
   AIWORK_DATA_DIR:
     process.env.AIWORK_DATA_DIR ||
-    `${homedir()}${process.platform === "win32" ? "\\" : "/"}.aiwork${process.platform === "win32" ? "\\" : "/"}aiwork-orchestrator-dev`,
+    `${homedir()}${process.platform === "win32" ? "\\" : "/"}.aiwork${process.platform === "win32" ? "\\" : "/"}aiwork-dev`,
   AIWORK_USE_COREPACK_PNPM: "1",
   PORT: String(resolvedPort),
   CC: process.env.CC || "clang",

@@ -5,7 +5,6 @@ mod engine;
 mod env_file;
 mod fs;
 mod aiwork_server;
-mod orchestrator;
 mod paths;
 mod platform;
 mod types;
@@ -27,7 +26,6 @@ use commands::misc::{
     read_opencode_engine_disk_logs, reset_opencode_cache, reset_aiwork_state,
 };
 use commands::aiwork_server::{aiwork_server_info, aiwork_server_restart};
-use commands::orchestrator::orchestrator_start_detached;
 use commands::skills::{
     import_skill, install_skill_template, list_local_skills, read_local_skill, uninstall_skill,
     write_local_skill,
@@ -46,7 +44,6 @@ use commands::workspace::{
 };
 use engine::manager::EngineManager;
 use aiwork_server::manager::AiWorkServerManager;
-use orchestrator::manager::OrchestratorManager;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 use workspace::watch::WorkspaceWatchState;
 
@@ -112,9 +109,6 @@ fn stop_managed_services(app_handle: &tauri::AppHandle) {
     if let Ok(mut engine) = app_handle.state::<EngineManager>().inner.lock() {
         EngineManager::stop_locked(&mut engine);
     }
-    if let Ok(mut orchestrator) = app_handle.state::<OrchestratorManager>().inner.lock() {
-        OrchestratorManager::stop_locked(&mut orchestrator);
-    }
     if let Ok(mut aiwork_server) = app_handle.state::<AiWorkServerManager>().inner.lock() {
         AiWorkServerManager::stop_locked(&mut aiwork_server);
     }
@@ -142,7 +136,6 @@ pub fn run() {
             Ok(())
         })
         .manage(EngineManager::default())
-        .manage(OrchestratorManager::default())
         .manage(AiWorkServerManager::default())
         .manage(WorkspaceWatchState::default())
         .manage(ShellEventsBridge::default())
@@ -153,7 +146,6 @@ pub fn run() {
             engine_doctor,
             engine_install,
             engine_restart,
-            orchestrator_start_detached,
             aiwork_server_info,
             aiwork_server_restart,
             workspace_bootstrap,

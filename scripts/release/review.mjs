@@ -18,9 +18,6 @@ const readCargoVersion = (path) => {
 
 const appPkg = readJson(resolve(root, "apps", "app", "package.json"));
 const desktopPkg = readJson(resolve(root, "apps", "desktop", "package.json"));
-const orchestratorPkg = readJson(
-  resolve(root, "apps", "orchestrator", "package.json"),
-);
 const pinnedOpencodeVersion = String(
   readJson(resolve(root, "constants.json")).opencodeVersion ?? "",
 )
@@ -41,10 +38,7 @@ const versions = {
   tauri: tauriConfig.version ?? null,
   cargo: cargoVersion ?? null,
   server: serverPkg.version ?? null,
-  orchestrator: orchestratorPkg.version ?? null,
-  opencode: pinnedOpencodeVersion || null,
-  orchestratorAiWorkServerRange:
-    orchestratorPkg.dependencies?.["aiwork-server"] ?? null,
+  opencode: pinnedOpencodeVersion || null
 };
 
 const checks = [];
@@ -62,13 +56,6 @@ addCheck(
   "App/desktop versions match",
   versions.app && versions.desktop && versions.app === versions.desktop,
   `${versions.app ?? "?"} vs ${versions.desktop ?? "?"}`,
-);
-addCheck(
-  "App/aiwork-orchestrator versions match",
-  versions.app &&
-    versions.orchestrator &&
-    versions.app === versions.orchestrator,
-  `${versions.app ?? "?"} vs ${versions.orchestrator ?? "?"}`,
 );
 addCheck(
   "App/aiwork-server versions match",
@@ -94,51 +81,6 @@ if (versions.opencode) {
 } else {
   addWarning(
     "OpenCode version is not pinned in constants.json.",
-  );
-}
-
-const aiworkServerRange = versions.orchestratorAiWorkServerRange ?? "";
-const aiworkServerPinned = /^\d+\.\d+\.\d+/.test(aiworkServerRange);
-if (!aiworkServerRange) {
-  addWarning("aiwork-orchestrator is missing an aiwork-server dependency.");
-} else if (!aiworkServerPinned) {
-  addWarning(
-    `aiwork-orchestrator aiwork-server dependency is not pinned (${aiworkServerRange}).`,
-  );
-} else {
-  addCheck(
-    "AiWork-server dependency matches server version",
-    versions.server && aiworkServerRange === versions.server,
-    `${aiworkServerRange} vs ${versions.server ?? "?"}`,
-  );
-}
-
-const sidecarManifestPath = resolve(
-  root,
-  "apps",
-  "orchestrator",
-  "dist",
-  "sidecars",
-  "aiwork-orchestrator-sidecars.json",
-);
-if (existsSync(sidecarManifestPath)) {
-  const manifest = readJson(sidecarManifestPath);
-  addCheck(
-    "Sidecar manifest version matches aiwork-orchestrator",
-    versions.orchestrator && manifest.version === versions.orchestrator,
-    `${manifest.version ?? "?"} vs ${versions.orchestrator ?? "?"}`,
-  );
-  const serverEntry = manifest.entries?.["aiwork-server"]?.version;
-  if (serverEntry) {
-    addCheck(
-      "Sidecar manifest aiwork-server version matches",
-      versions.server && serverEntry === versions.server,
-      `${serverEntry ?? "?"} vs ${versions.server ?? "?"}`,
-    );
-  }
-} else {
-  addWarning(
-    "Sidecar manifest missing (run pnpm --filter aiwork-orchestrator build:sidecars).",
   );
 }
 

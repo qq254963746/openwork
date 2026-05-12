@@ -341,28 +341,6 @@ export async function nukeAiWorkAndOpencodeConfigAndExit(): Promise<void> {
   return invoke<void>("nuke_aiwork_and_opencode_config_and_exit");
 }
 
-export type OrchestratorDetachedHost = {
-  aiworkUrl: string;
-  token: string;
-  ownerToken?: string | null;
-  hostToken: string;
-  port: number;
-};
-
-export async function orchestratorStartDetached(input: {
-  workspacePath: string;
-  runId?: string | null;
-  aiworkToken?: string | null;
-  aiworkHostToken?: string | null;
-}): Promise<OrchestratorDetachedHost> {
-  return invoke<OrchestratorDetachedHost>("orchestrator_start_detached", {
-    workspacePath: input.workspacePath,
-    runId: input.runId ?? null,
-    aiworkToken: input.aiworkToken ?? null,
-    aiworkHostToken: input.aiworkHostToken ?? null,
-  });
-}
-
 export async function aiworkServerInfo(): Promise<AiWorkServerInfo> {
   return invoke<AiWorkServerInfo>("aiwork_server_info");
 }

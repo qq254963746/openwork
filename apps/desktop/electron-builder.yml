@@ -35,9 +35,6 @@ mac:
         - aiwork-server
         - aiwork-server-aarch64-apple-darwin
         - aiwork-server-x86_64-apple-darwin
-        - aiwork-orchestrator
-        - aiwork-orchestrator-aarch64-apple-darwin
-        - aiwork-orchestrator-x86_64-apple-darwin
         - chrome-devtools-mcp
         - chrome-devtools-mcp-aarch64-apple-darwin
         - chrome-devtools-mcp-x86_64-apple-darwin
@@ -59,9 +56,6 @@ linux:
         - aiwork-server
         - aiwork-server-aarch64-unknown-linux-gnu
         - aiwork-server-x86_64-unknown-linux-gnu
-        - aiwork-orchestrator
-        - aiwork-orchestrator-aarch64-unknown-linux-gnu
-        - aiwork-orchestrator-x86_64-unknown-linux-gnu
         - chrome-devtools-mcp
         - chrome-devtools-mcp-aarch64-unknown-linux-gnu
         - chrome-devtools-mcp-x86_64-unknown-linux-gnu
@@ -83,9 +77,6 @@ win:
         - aiwork-server.exe
         - aiwork-server-aarch64-pc-windows-msvc.exe
         - aiwork-server-x86_64-pc-windows-msvc.exe
-        - aiwork-orchestrator.exe
-        - aiwork-orchestrator-aarch64-pc-windows-msvc.exe
-        - aiwork-orchestrator-x86_64-pc-windows-msvc.exe
         - chrome-devtools-mcp.exe
         - chrome-devtools-mcp-aarch64-pc-windows-msvc.exe
         - chrome-devtools-mcp-x86_64-pc-windows-msvc.exe

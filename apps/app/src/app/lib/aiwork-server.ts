@@ -64,10 +64,6 @@ export type AiWorkRuntimeServiceSnapshot = {
 
 export type AiWorkRuntimeSnapshot = {
   ok: boolean;
-  orchestrator?: {
-    version: string;
-    startedAt: number;
-  };
   worker?: {
     workspace: string;
   };

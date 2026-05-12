@@ -7,9 +7,6 @@ import os from "node:os";
 import path from "node:path";
 
 const DIRECT_RUNTIME = "direct";
-const ORCHESTRATOR_RUNTIME = "aiwork-orchestrator";
-const AIWORK_SERVER_PORT_RANGE_START = 48_000;
-const AIWORK_SERVER_PORT_RANGE_END = 51_000;
 
 function truncateOutput(value, limit = 8000) {
   const text = String(value ?? "");
@@ -120,18 +117,6 @@ function assertAiWorkServerReady(snapshot) {
     throw new Error("AiWork server did not report an access token after startup.");
   }
   return snapshot;
-}
-
-function createOrchestratorState() {
-  return {
-    child: null,
-    childExited: true,
-    dataDir: null,
-    baseUrl: null,
-    daemonPort: null,
-    lastStdout: null,
-    lastStderr: null,
-  };
 }
 
 async function fileExists(targetPath) {
@@ -381,12 +366,9 @@ function loadUserEnvFile() {
 export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths }) {
   const engineState = createEngineState();
   const aiworkServerState = createAiWorkServerState();
-  const orchestratorState = createOrchestratorState();
-
   // Serialize engine lifecycle operations. Without this, concurrent renderer
   // invocations of engineStart/engineStop/engineRestart race: each call's
   // stopAllRuntimeChildren kills the previous call's freshly-spawned
-  // orchestrator daemon, and the prior call then times out its /health probe.
   let runtimeLifecycleQueue = Promise.resolve();
   let lifecycleState = "idle";
   function withRuntimeLifecycle(fn) {
@@ -412,53 +394,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
 
   function managedOpencodeWorkdir() {
     return path.join(userDataDir, "managed-opencode-workdir");
-  }
-
-  function orchestratorDataDir() {
-    const envDir = process.env.AIWORK_DATA_DIR?.trim();
-    if (envDir) return envDir;
-    return path.join(app.getPath("home"), ".aiwork", "aiwork-orchestrator");
-  }
-
-  function orchestratorStatePath(dataDir) {
-    return path.join(dataDir, "aiwork-orchestrator-state.json");
-  }
-
-  function orchestratorAuthPath(dataDir) {
-    return path.join(dataDir, "aiwork-orchestrator-auth.json");
-  }
-
-  async function readOrchestratorStateFile(dataDir) {
-    return readJsonFile(orchestratorStatePath(dataDir), null);
-  }
-
-  async function readOrchestratorAuthFile(dataDir) {
-    return readJsonFile(orchestratorAuthPath(dataDir), null);
-  }
-
-  async function writeOrchestratorAuthFile(dataDir, auth) {
-    const filePath = orchestratorAuthPath(dataDir);
-    await mkdir(path.dirname(filePath), { recursive: true });
-    await writeFile(filePath, `${JSON.stringify({ ...auth, updatedAt: nowMs() }, null, 2)}\n`, "utf8");
-  }
-
-  async function clearOrchestratorAuthFile(dataDir) {
-    await rm(orchestratorAuthPath(dataDir), { force: true });
-  }
-
-  async function requestOrchestratorShutdown(dataDir) {
-    const state = await readOrchestratorStateFile(dataDir);
-    const baseUrl = state?.daemon?.baseUrl?.trim();
-    if (!baseUrl) return false;
-    try {
-      await fetch(`${baseUrl.replace(/\/+$/, "")}/shutdown`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      return true;
-    } catch {
-      return false;
-    }
   }
 
   async function loadTokenStore() {
@@ -872,7 +807,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     const value = String(command ?? "");
     return sidecarDirs.some((dir) => value.includes(dir)) &&
       (
-        value.includes("aiwork-orchestrator") ||
         value.includes("aiwork-server") ||
         value.includes("opencode serve")
       );
@@ -890,10 +824,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
   async function cleanupPackagedSidecars() {
     if (!app.isPackaged) return;
 
-    // First ask the previously recorded orchestrator daemon to shut itself and
-    // its OpenCode child down. This handles the happy path without relying on
-    // process-list parsing.
-    await requestOrchestratorShutdown(orchestratorState.dataDir || orchestratorDataDir()).catch(() => false);
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     // Safety net: an unclean Electron quit can orphan sidecars. Packaged builds
@@ -952,10 +882,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       `${JSON.stringify({ $schema: "https://opencode.ai/config.json" }, null, 2)}\n`,
       "utf8",
     );
-  }
-
-  function generateManagedCredentials() {
-    return [randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, ""), randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "")];
   }
 
   async function issueOwnerToken(baseUrl, hostToken) {
@@ -1074,142 +1000,12 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     return snapshotAiWorkServerState(aiworkServerState);
   }
 
-  async function resolveOrchestratorBaseUrl() {
-    if (orchestratorState.baseUrl) {
-      return orchestratorState.baseUrl;
-    }
-    const stateFile = await readOrchestratorStateFile(orchestratorState.dataDir || orchestratorDataDir());
-    const baseUrl = stateFile?.daemon?.baseUrl?.trim();
-    if (!baseUrl) {
-      throw new Error("orchestrator daemon is not running");
-    }
-    return baseUrl;
-  }
-
-  async function startOrchestratorRuntime(projectDir, options = {}) {
-    const dataDir = orchestratorDataDir();
-    await mkdir(dataDir, { recursive: true });
-    const daemonPort = await findFreePort("127.0.0.1");
-    const opencodePort = await findFreePort("127.0.0.1");
-    const [username, password] = generateManagedCredentials();
-
-    const orchestratorProgram = resolveBinary("aiwork-orchestrator") ?? resolveBinary("aiwork");
-    if (!orchestratorProgram) {
-      throw new Error("Failed to locate aiwork-orchestrator.");
-    }
-
-    const opencodeBinary = resolveOpencodeBinary(options.opencodeBinPath);
-    if (!opencodeBinary?.path) {
-      throw new Error("Failed to locate opencode.");
-    }
-
-    const env = await buildChildEnv({
-      AIWORK_INTERNAL_ALLOW_OPENCODE_CREDENTIALS: "1",
-      AIWORK_OPENCODE_USERNAME: username,
-      AIWORK_OPENCODE_PASSWORD: password,
-      ...(options.opencodeEnableExa === true ? { OPENCODE_ENABLE_EXA: "1" } : {}),
-    });
-
-    const args = [
-      "daemon",
-      "run",
-      "--data-dir",
-      dataDir,
-      "--daemon-host",
-      "127.0.0.1",
-      "--daemon-port",
-      String(daemonPort),
-      "--opencode-bin",
-      opencodeBinary.path,
-      "--opencode-host",
-      "127.0.0.1",
-      "--opencode-workdir",
-      projectDir,
-      "--opencode-port",
-      String(opencodePort),
-      "--allow-external",
-      "--cors",
-      "*",
-    ];
-
-    spawnManagedChild(orchestratorState, orchestratorProgram, args, { env });
-    orchestratorState.dataDir = dataDir;
-    orchestratorState.daemonPort = daemonPort;
-    orchestratorState.baseUrl = `http://127.0.0.1:${daemonPort}`;
-
-    await writeOrchestratorAuthFile(dataDir, {
-      opencodeUsername: username,
-      opencodePassword: password,
-      projectDir,
-    });
-
-    const health = await waitForHttpOk(`${orchestratorState.baseUrl}/health`, 180_000).then((response) => response.json());
-    const opencode = health?.opencode;
-    if (!opencode?.port) {
-      throw new Error("Orchestrator did not report OpenCode status.");
-    }
-
-    engineState.runtime = ORCHESTRATOR_RUNTIME;
-    engineState.projectDir = projectDir;
-    engineState.hostname = "127.0.0.1";
-    engineState.port = opencode.port;
-    engineState.baseUrl = `http://127.0.0.1:${opencode.port}`;
-    engineState.opencodeUsername = username;
-    engineState.opencodePassword = password;
-    engineState.opencodeBinPath = opencodeBinary.path;
-    engineState.opencodeBinSource = opencodeBinary.source;
-
-    return snapshotEngineState(engineState);
-  }
-
-  async function startDirectRuntime(projectDir, options = {}) {
-    const opencodeBinary = resolveOpencodeBinary(options.opencodeBinPath);
-    if (!opencodeBinary?.path) {
-      throw new Error("Failed to locate opencode.");
-    }
-
-    const port = await findFreePort("127.0.0.1");
-    const [username, password] = generateManagedCredentials();
-    const env = await buildChildEnv({
-      OPENCODE_SERVER_USERNAME: username,
-      OPENCODE_SERVER_PASSWORD: password,
-    });
-
-    spawnManagedChild(
-      engineState,
-      opencodeBinary.path,
-      ["serve", "--hostname", "127.0.0.1", "--port", String(port), "--cors", "*"],
-      {
-        cwd: projectDir,
-        env,
-      },
-    );
-
-    engineState.runtime = DIRECT_RUNTIME;
-    engineState.projectDir = projectDir;
-    engineState.hostname = "127.0.0.1";
-    engineState.port = port;
-    engineState.baseUrl = `http://127.0.0.1:${port}`;
-    engineState.opencodeUsername = username;
-    engineState.opencodePassword = password;
-    engineState.opencodeBinPath = opencodeBinary.path;
-    engineState.opencodeBinSource = opencodeBinary.source;
-
-    await waitForHttpOk(`${engineState.baseUrl}/health`, 10_000).catch(() => undefined);
-    return snapshotEngineState(engineState);
-  }
-
   async function stopAllRuntimeChildren() {
     await stopChild(aiworkServerState);
-    await stopChild(orchestratorState, {
-      requestShutdown: () => requestOrchestratorShutdown(orchestratorState.dataDir || orchestratorDataDir()),
-    });
-    await clearOrchestratorAuthFile(orchestratorState.dataDir || orchestratorDataDir()).catch(() => undefined);
     await stopChild(engineState);
 
     Object.assign(engineState, createEngineState());
     Object.assign(aiworkServerState, createAiWorkServerState());
-    Object.assign(orchestratorState, createOrchestratorState());
   }
 
   async function prepareFreshRuntime() {
@@ -1319,57 +1115,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     });
   }
 
-  async function orchestratorStatus() {
-    const engine = snapshotEngineState(engineState);
-    const aiworkServer = snapshotAiWorkServerState(aiworkServerState);
-    const workspaces = engine.projectDir
-      ? [{ id: normalizeWorkspaceKey(engine.projectDir), path: engine.projectDir, name: path.basename(engine.projectDir) || "Workspace" }]
-      : [];
-    return {
-      running: engine.running,
-      dataDir: null,
-      daemon: aiworkServer.running
-        ? { baseUrl: aiworkServer.baseUrl, port: aiworkServer.port, pid: aiworkServer.pid, runtime: "direct" }
-        : null,
-      opencode: engine.running
-        ? { baseUrl: engine.baseUrl, port: engine.port, pid: engine.pid, projectDir: engine.projectDir, runtime: "direct" }
-        : null,
-      cliVersion: null,
-      sidecar: null,
-      binaries: null,
-      activeId: workspaces[0]?.id ?? null,
-      workspaceCount: workspaces.length,
-      workspaces,
-      lastError: engine.lastStderr,
-    };
-  }
-
-  async function orchestratorWorkspaceActivate(input) {
-    const workspacePath = String(input?.workspacePath ?? "").trim();
-    if (!workspacePath) {
-      throw new Error("workspacePath is required");
-    }
-    const resolved = path.resolve(workspacePath);
-    if (normalizeWorkspaceKey(engineState.projectDir) !== normalizeWorkspaceKey(resolved)) {
-      await engineStart(resolved, {
-        runtime: DIRECT_RUNTIME,
-        workspacePaths: [resolved],
-      });
-    }
-    return {
-      id: normalizeWorkspaceKey(resolved),
-      path: resolved,
-      name: input?.name ?? (path.basename(resolved) || "Workspace"),
-    };
-  }
-
-  async function orchestratorInstanceDispose(workspacePath) {
-    if (normalizeWorkspaceKey(engineState.projectDir) === normalizeWorkspaceKey(workspacePath)) {
-      return true;
-    }
-    return true;
-  }
-
   async function engineInstall() {
     if (process.platform === "win32") {
       return {
@@ -1423,55 +1168,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     };
   }
 
-  async function orchestratorStartDetached(options = {}) {
-    const workspacePath = String(options.workspacePath ?? "").trim();
-    if (!workspacePath) {
-      throw new Error("workspacePath is required");
-    }
-
-    const runId = String(options.runId ?? randomUUID()).trim();
-    const port = await findFreePort("127.0.0.1");
-    const token = String(options.aiworkToken ?? randomUUID()).trim();
-    const hostToken = String(options.aiworkHostToken ?? randomUUID()).trim();
-    const aiworkUrl = `http://127.0.0.1:${port}`;
-    const program = resolveBinary("aiwork-orchestrator") ?? resolveBinary("aiwork");
-    if (!program) {
-      throw new Error("Failed to locate aiwork orchestrator.");
-    }
-
-    const args = [
-      "start",
-      "--workspace",
-      workspacePath,
-      "--approval",
-      "auto",
-      "--detach",
-      "--aiwork-port",
-      String(port),
-      "--run-id",
-      runId,
-    ];
-
-    const child = spawn(program, args, {
-      env: { ...(await buildChildEnv()), AIWORK_TOKEN: token, AIWORK_HOST_TOKEN: hostToken },
-      detached: true,
-      stdio: "ignore",
-      windowsHide: true,
-    });
-    child.unref();
-
-    await waitForHttpOk(`${aiworkUrl}/health`, 12_000);
-    const ownerToken = await issueOwnerToken(aiworkUrl, hostToken).catch(() => null);
-
-    return {
-      aiworkUrl,
-      token,
-      ownerToken,
-      hostToken,
-      port,
-    };
-  }
-
   return {
     engineStart: (projectDir, options) => withRuntimeLifecycle(() => engineStart(projectDir, options)),
     engineStop: () => withRuntimeLifecycle(() => engineStop()),
@@ -1485,10 +1181,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     engineInstall,
     aiworkServerInfo,
     aiworkServerRestart,
-    orchestratorStatus,
-    orchestratorWorkspaceActivate,
-    orchestratorInstanceDispose,
-    orchestratorStartDetached,
     opencodeMcpAuth,
   };
 }

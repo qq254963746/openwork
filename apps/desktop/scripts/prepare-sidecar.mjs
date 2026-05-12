@@ -146,22 +146,6 @@ const resolveBuildScript = (dir) => {
   return scriptPath;
 };
 
-// orchestrator paths
-const orchestratorBaseName = "aiwork-orchestrator";
-const orchestratorName =
-  isWindowsTarget ? `${orchestratorBaseName}.exe` : orchestratorBaseName;
-const orchestratorPath = join(sidecarDir, orchestratorName);
-const orchestratorBuildName = bunTarget
-  ? `${orchestratorBaseName}-${bunTarget}${bunTarget.includes("windows") ? ".exe" : ""}`
-  : orchestratorName;
-const orchestratorBuildPath = join(sidecarDir, orchestratorBuildName);
-const orchestratorTargetTriple = resolvedTargetTriple;
-const orchestratorTargetName = orchestratorTargetTriple
-  ? `${orchestratorBaseName}-${orchestratorTargetTriple}${orchestratorTargetTriple.includes("windows") ? ".exe" : ""}`
-  : null;
-const orchestratorTargetPath = orchestratorTargetName ? join(sidecarDir, orchestratorTargetName) : null;
-const orchestratorDir = resolve(__dirname, "..", "..", "orchestrator");
-
 // chrome-devtools-mcp: now bundled as a node_modules dependency of
 // @aiwork/desktop (Electron resolves it directly). The Bun-compiled shim
 // sidecar is no longer built.  These variables are kept only so the
@@ -503,78 +487,6 @@ if (shouldDownloadOpencode) {
   console.log(`OpenCode sidecar updated to ${normalizedOpencodeVersion}.`);
 }
 
-// Build orchestrator sidecar
-let didBuildOrchestrator = false;
-const shouldBuildOrchestrator =
-  forceBuild || !existsSync(orchestratorBuildPath) || isStubBinary(orchestratorBuildPath);
-if (shouldBuildOrchestrator) {
-  mkdirSync(sidecarDir, { recursive: true });
-  if (existsSync(orchestratorBuildPath)) {
-    try {
-      unlinkSync(orchestratorBuildPath);
-    } catch {
-      // ignore
-    }
-  }
-  const orchestratorBuildScript = resolveBuildScript(orchestratorDir);
-  if (!existsSync(orchestratorBuildScript)) {
-    console.error(`Orchestrator build script not found at ${orchestratorBuildScript}`);
-    process.exit(1);
-  }
-  const orchestratorArgs = [
-    orchestratorBuildScript,
-    "--outdir",
-    sidecarDir,
-    "--filename",
-    orchestratorBaseName,
-  ];
-  if (bunTarget) {
-    orchestratorArgs.push("--target", bunTarget);
-  }
-  const result = spawnSync("bun", orchestratorArgs, {
-    cwd: orchestratorDir,
-    stdio: "inherit",
-    shell: true,
-    env: {
-      ...process.env,
-      NODE_ENV: "production",
-      BUN_ENV: "production",
-    },
-  });
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
-  }
-
-  didBuildOrchestrator = true;
-}
-
-if (existsSync(orchestratorBuildPath)) {
-  const shouldCopyCanonical =
-    didBuildOrchestrator || !existsSync(orchestratorPath) || isStubBinary(orchestratorPath);
-  if (shouldCopyCanonical && orchestratorBuildPath !== orchestratorPath) {
-    try {
-      if (existsSync(orchestratorPath)) unlinkSync(orchestratorPath);
-    } catch {
-      // ignore
-    }
-    copyFileSync(orchestratorBuildPath, orchestratorPath);
-  }
-
-  if (orchestratorTargetPath) {
-    const shouldCopyTarget =
-      didBuildOrchestrator ||
-      !existsSync(orchestratorTargetPath) ||
-      isStubBinary(orchestratorTargetPath);
-    if (shouldCopyTarget && orchestratorBuildPath !== orchestratorTargetPath) {
-      try {
-        if (existsSync(orchestratorTargetPath)) unlinkSync(orchestratorTargetPath);
-      } catch {
-        // ignore
-      }
-      copyFileSync(orchestratorBuildPath, orchestratorTargetPath);
-    }
-  }
-}
 
 // chrome-devtools-mcp is now a node_modules dependency — no sidecar build needed.
 
@@ -583,22 +495,10 @@ adHocSignDarwinSidecars([
   opencodeTargetPath,
   aiworkServerBuildPath,
   aiworkServerPath,
-  aiworkServerTargetPath,
-  orchestratorBuildPath,
-  orchestratorPath,
-  orchestratorTargetPath,
+  aiworkServerTargetPath
 ]);
 
 const aiworkServerVersion = desiredAiWorkServerVersion;
-
-const orchestratorVersion = (() => {
-  try {
-    const raw = readFileSync(resolve(orchestratorDir, "package.json"), "utf8");
-    return String(JSON.parse(raw).version ?? "").trim();
-  } catch {
-    return null;
-  }
-})();
 
 const versions = {
   opencode: {
@@ -608,10 +508,6 @@ const versions = {
   "aiwork-server": {
     version: aiworkServerVersion,
     sha256: existsSync(aiworkServerPath) ? sha256File(aiworkServerPath) : null,
-  },
-  "aiwork-orchestrator": {
-    version: orchestratorVersion,
-    sha256: existsSync(orchestratorPath) ? sha256File(orchestratorPath) : null,
   },
   "chrome-devtools-mcp": {
     version: chromeDevtoolsMcpVersion,

@@ -13,7 +13,6 @@ type SeedMessage = {
 const DEFAULT_AGENT = "aiwork";
 const DEFAULT_PROVIDER = "openai";
 const DEFAULT_MODEL = "gpt-5.4";
-const AIWORK_DEV_DATA_DIRS = ["aiwork-dev-data", "opencode-dev"];
 
 function truthy(value: string | undefined): boolean {
   if (!value) return false;
@@ -21,32 +20,8 @@ function truthy(value: string | undefined): boolean {
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
 
-function opencodeOrchestratorDataDirs(): string[] {
-  const root = process.env.AIWORK_DATA_DIR?.trim();
-  if (!root) return [];
-
-  const dirs: string[] = [];
-  const pushIfExists = (dir: string) => {
-    if (existsSync(dir)) dirs.push(dir);
-  };
-
-  for (const name of AIWORK_DEV_DATA_DIRS) {
-    const base = join(root, name);
-    pushIfExists(join(base, "xdg", "data", "opencode"));
-    if (!existsSync(base)) continue;
-
-    for (const entry of readdirSync(base, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      pushIfExists(join(base, entry.name, "xdg", "data", "opencode"));
-    }
-  }
-
-  return dirs;
-}
-
 function opencodeDataDirs(): string[] {
   const dirs: string[] = [];
-  dirs.push(...opencodeOrchestratorDataDirs());
   const xdg = process.env.XDG_DATA_HOME?.trim();
   if (xdg) dirs.push(join(xdg, "opencode"));
   dirs.push(join(homedir(), ".local", "share", "opencode"));

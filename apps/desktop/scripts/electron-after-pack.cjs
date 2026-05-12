@@ -4,7 +4,6 @@ const path = require("node:path");
 const sidecarBases = [
   "opencode",
   "aiwork-server",
-  "aiwork-orchestrator",
   "chrome-devtools-mcp",
 ];
 

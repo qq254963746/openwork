@@ -6,8 +6,6 @@ use std::path::{Path, PathBuf};
 use crate::engine::doctor::resolve_engine_path;
 use crate::engine::manager::EngineManager;
 use crate::aiwork_server::manager::AiWorkServerManager;
-use crate::orchestrator;
-use crate::orchestrator::manager::OrchestratorManager;
 use crate::paths::{candidate_xdg_config_dirs, candidate_xdg_data_dirs, home_dir};
 use crate::platform::command_for_program;
 use crate::types::{DesktopAppPaths, ExecResult, WorkspaceAiWorkConfig};
@@ -335,7 +333,6 @@ fn current_aiwork_state_paths(app: &AppHandle) -> Result<Vec<PathBuf>, String> {
         app.path()
             .app_data_dir()
             .map_err(|e| format!("Failed to resolve app data dir: {e}"))?,
-        PathBuf::from(orchestrator::resolve_orchestrator_data_dir()),
     ];
 
     if let Some(home) = home_dir() {
@@ -352,14 +349,10 @@ fn current_aiwork_state_paths(app: &AppHandle) -> Result<Vec<PathBuf>, String> {
 
 fn stop_host_services(
     engine_manager: &State<EngineManager>,
-    orchestrator_manager: &State<OrchestratorManager>,
     aiwork_manager: &State<AiWorkServerManager>,
 ) {
     if let Ok(mut engine) = engine_manager.inner.lock() {
         EngineManager::stop_locked(&mut engine);
-    }
-    if let Ok(mut orchestrator_state) = orchestrator_manager.inner.lock() {
-        OrchestratorManager::stop_locked(&mut orchestrator_state);
     }
     if let Ok(mut aiwork_state) = aiwork_manager.inner.lock() {
         AiWorkServerManager::stop_locked(&mut aiwork_state);
@@ -546,7 +539,6 @@ pub fn reset_aiwork_state(
     app: tauri::AppHandle,
     mode: String,
     engine_manager: State<EngineManager>,
-    orchestrator_manager: State<OrchestratorManager>,
     aiwork_manager: State<AiWorkServerManager>,
 ) -> Result<(), String> {
     let mode = mode.trim();
@@ -554,7 +546,7 @@ pub fn reset_aiwork_state(
         return Err("mode must be 'onboarding' or 'all'".to_string());
     }
 
-    stop_host_services(&engine_manager, &orchestrator_manager, &aiwork_manager);
+    stop_host_services(&engine_manager, &aiwork_manager);
 
     let mut paths = vec![
         app.path()
@@ -574,7 +566,6 @@ pub fn reset_aiwork_state(
                 .app_data_dir()
                 .map_err(|e| format!("Failed to resolve app data dir: {e}"))?,
         );
-        paths.push(PathBuf::from(orchestrator::resolve_orchestrator_data_dir()));
     }
 
     let mut seen = HashSet::new();
@@ -623,18 +614,17 @@ pub fn app_build_info(app: AppHandle) -> AppBuildInfo {
 pub fn nuke_aiwork_and_opencode_config_and_exit(
     app: AppHandle,
     engine_manager: State<EngineManager>,
-    orchestrator_manager: State<OrchestratorManager>,
     aiwork_manager: State<AiWorkServerManager>,
 ) -> Result<(), String> {
-    stop_host_services(&engine_manager, &orchestrator_manager, &aiwork_manager);
+    stop_host_services(&engine_manager, &aiwork_manager);
 
     let dev_mode = env_truthy("AIWORK_DEV_MODE");
     let mut paths = current_aiwork_state_paths(&app)?;
     if dev_mode {
-        // In dev mode, the current app + orchestrator directories are already isolated
+        // In dev mode, the current app  directories are already isolated
         // by the dev app identity and AIWORK_DATA_DIR, so only clear those dev paths.
     } else {
-        // In production, clear the normal app/orchestrator paths plus the standard
+        // In production, clear the normal app paths plus the standard
         // user OpenCode config/data/cache/state locations.
         paths.extend(opencode_standard_state_paths());
     }
