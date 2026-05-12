@@ -1,6 +1,6 @@
 # IMPORTANT: appId intentionally matches the Tauri shell so both builds share
 # the same macOS bundle identifier, keychain entries, Launchpad slot
-appId: com.fengai.aiwork
+appId: com.aiworkgroup2.aiwork
 productName: AiWork
 protocols:
   - name: AiWork

@@ -20,7 +20,7 @@ try {
   const client = makeClient({ baseUrl: server.baseUrl, directory: server.cwd });
   await waitForHealthy(client);
 
-  const root = ".aiwork/test-engine";
+  const root = ".opencode/test-engine";
   const nestedDir = path.join(root, "nested");
   const filePath = path.join(root, "hello.txt");
 

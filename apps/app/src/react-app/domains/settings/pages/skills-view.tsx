@@ -181,10 +181,6 @@ export function SkillsView(props: SkillsViewProps) {
     [hubRepo],
   );
 
-  const hasDefaultHubRepo = useMemo(
-    () => hubRepos.some((repo) => `${repo.owner}/${repo.repo}@${repo.ref}` === "fengai/aiwork-hub@main"),
-    [hubRepos],
-  );
 
   const showInstalledSection = activeFilter === "all" || activeFilter === "installed";
   const showHubSection = activeFilter === "all" || activeFilter === "hub";
@@ -729,7 +725,7 @@ export function SkillsView(props: SkillsViewProps) {
                     type="text"
                     value={customRepoOwner}
                     onChange={(event) => setCustomRepoOwner(event.currentTarget.value)}
-                    placeholder="fengai"
+                    placeholder="aiworkgroup2"
                     className="w-full rounded-lg border border-dls-border bg-dls-hover px-3 py-2 text-xs font-mono text-dls-text focus:outline-none"
                     spellCheck={false}
                   />

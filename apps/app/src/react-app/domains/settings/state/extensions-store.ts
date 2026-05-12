@@ -1100,7 +1100,7 @@ export function createExtensionsStore(options: {
     }
 
     try {
-      const opencodeSkills = await joinDesktopPath(root, ".aiwork", "skills");
+      const opencodeSkills = await joinDesktopPath(root, ".opencode", "skills");
       const tryOpen = async (target: string) => {
         try {
           await openDesktopPath(target);

@@ -268,7 +268,7 @@ pub fn engine_install() -> Result<ExecResult, String> {
     {
         let install_dir = crate::paths::home_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join(".aiwork")
+            .join(".opencode")
             .join("bin");
 
         let output = std::process::Command::new("bash")

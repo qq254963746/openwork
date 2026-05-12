@@ -10,7 +10,7 @@ type SeedMessage = {
   text: string;
 };
 
-const DEFAULT_AGENT = "aiwork";
+export const DEFAULT_AGENT = "aiwork";
 const DEFAULT_PROVIDER = "openai";
 const DEFAULT_MODEL = "gpt-5.4";
 

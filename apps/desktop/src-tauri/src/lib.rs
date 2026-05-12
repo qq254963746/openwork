@@ -44,6 +44,7 @@ use commands::workspace::{
 use engine::manager::EngineManager;
 use aiwork_server::manager::AiWorkServerManager;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
+use workspace::files::seed_global_tools;
 use workspace::watch::WorkspaceWatchState;
 
 const NATIVE_DEEP_LINK_EVENT: &str = "aiwork:deep-link-native";
@@ -132,6 +133,7 @@ pub fn run() {
     let app = builder
         .setup(|_| {
             set_dev_app_name();
+            seed_global_tools();
             Ok(())
         })
         .manage(EngineManager::default())

@@ -71,7 +71,7 @@ fn env_truthy(key: &str) -> bool {
 fn macos_dev_application_support_opencode_log_dir() -> Option<PathBuf> {
     let home = home_dir()?;
     Some(
-        home.join("Library/Application Support/com.fengai.aiwork.dev/aiwork-dev-data/xdg/data/opencode/log"),
+        home.join("Library/Application Support/com.aiworkgroup2.aiwork.dev/aiwork-dev-data/xdg/data/opencode/log"),
     )
 }
 
@@ -339,7 +339,7 @@ fn current_aiwork_state_paths(app: &AppHandle) -> Result<Vec<PathBuf>, String> {
         paths.push(
             home.join("AiWork")
                 .join("Welcome")
-                .join(".aiwork")
+                .join(".opencode")
                 .join("aiwork.json"),
         );
     }
@@ -395,7 +395,7 @@ fn validate_server_name(name: &str) -> Result<String, String> {
 fn read_workspace_aiwork_config(
     workspace_path: &Path,
 ) -> Result<WorkspaceAiWorkConfig, String> {
-    let aiwork_path = workspace_path.join(".aiwork").join("aiwork.json");
+    let aiwork_path = workspace_path.join(".opencode").join("aiwork.json");
     if !aiwork_path.exists() {
         let mut cfg = WorkspaceAiWorkConfig::default();
         let workspace_value = workspace_path.to_string_lossy().to_string();

@@ -1,9 +1,66 @@
+use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::types::{OpencodeCommand, WorkspaceAiWorkConfig};
 use crate::utils::now_ms;
 use crate::workspace::commands::{sanitize_command_name, serialize_command_frontmatter};
+
+const READ_FILE_AS_TEXT_TOOL: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/opencode-tools/read_file_as_text.ts"
+));
+
+/// Seed the built-in `read_file_as_text` custom tool into the global opencode tools directory.
+/// Uses OPENCODE_CONFIG_DIR if set (dev isolation), otherwise ~/.config/opencode/tools/.
+/// The file is only written if it doesn't already exist, so user edits are preserved.
+pub fn seed_global_tools() {
+    let base = if let Ok(dir) = env::var("OPENCODE_CONFIG_DIR") {
+        let trimmed = dir.trim().to_string();
+        if trimmed.is_empty() {
+            resolve_default_config_base()
+        } else {
+            Some(PathBuf::from(trimmed))
+        }
+    } else {
+        resolve_default_config_base()
+    };
+
+    let Some(base) = base else {
+        return;
+    };
+
+    let tools_dir = base.join("opencode").join("tools");
+    if let Err(e) = fs::create_dir_all(&tools_dir) {
+        eprintln!("[aiwork] Failed to create global tools dir {}: {e}", tools_dir.display());
+        return;
+    }
+
+    let tool_path = tools_dir.join("read_file_as_text.ts");
+    if tool_path.exists() {
+        return;
+    }
+
+    if let Err(e) = fs::write(&tool_path, READ_FILE_AS_TEXT_TOOL) {
+        eprintln!("[aiwork] Failed to write {}: {e}", tool_path.display());
+    }
+}
+
+fn resolve_default_config_base() -> Option<PathBuf> {
+    if let Ok(dir) = env::var("XDG_CONFIG_HOME") {
+        let trimmed = dir.trim().to_string();
+        if !trimmed.is_empty() {
+            return Some(PathBuf::from(trimmed));
+        }
+    }
+    if let Ok(home) = env::var("HOME") {
+        let trimmed = home.trim().to_string();
+        if !trimmed.is_empty() {
+            return Some(PathBuf::from(trimmed).join(".config"));
+        }
+    }
+    None
+}
 
 pub fn merge_plugins(existing: Vec<String>, required: &[&str]) -> Vec<String> {
     let mut out = existing;
@@ -139,8 +196,8 @@ Your job:
 
 Memory (two kinds)
 1) Behavior memory (shareable, in git)
-- `.aiwork/skills/**`
-- `.aiwork/agents/**`
+- `.opencode/skills/**`
+- `.opencode/agents/**`
 - repo docs
 
 2) Private memory (never commit)
@@ -244,8 +301,8 @@ fn seed_commands(commands_dir: &PathBuf, preset: &str) -> Result<(), String> {
 fn resolve_workspace_opencode_config_path(root: &Path) -> PathBuf {
     let config_path_jsonc = root.join("opencode.jsonc");
     let config_path_json = root.join("opencode.json");
-    let hidden_config_path_jsonc = root.join(".aiwork").join("opencode.jsonc");
-    let hidden_config_path_json = root.join(".aiwork").join("opencode.json");
+    let hidden_config_path_jsonc = root.join(".opencode").join("opencode.jsonc");
+    let hidden_config_path_json = root.join(".opencode").join("opencode.json");
 
     if config_path_jsonc.exists() {
         config_path_jsonc
@@ -263,22 +320,22 @@ fn resolve_workspace_opencode_config_path(root: &Path) -> PathBuf {
 pub fn ensure_workspace_files(workspace_path: &str, preset: &str) -> Result<(), String> {
     let root = PathBuf::from(workspace_path);
 
-    let skill_root = root.join(".aiwork").join("skills");
+    let skill_root = root.join(".opencode").join("skills");
     fs::create_dir_all(&skill_root)
-        .map_err(|e| format!("Failed to create .aiwork/skills: {e}"))?;
+        .map_err(|e| format!("Failed to create .opencode/skills: {e}"))?;
     seed_workspace_guide(&skill_root)?;
     if preset == "starter" {
         seed_get_started_skill(&skill_root)?;
     }
 
-    let agents_dir = root.join(".aiwork").join("agents");
+    let agents_dir = root.join(".opencode").join("agents");
     fs::create_dir_all(&agents_dir)
-        .map_err(|e| format!("Failed to create .aiwork/agents: {e}"))?;
+        .map_err(|e| format!("Failed to create .opencode/agents: {e}"))?;
     seed_aiwork_agent(&agents_dir)?;
 
-    let commands_dir = root.join(".aiwork").join("commands");
+    let commands_dir = root.join(".opencode").join("commands");
     fs::create_dir_all(&commands_dir)
-        .map_err(|e| format!("Failed to create .aiwork/commands: {e}"))?;
+        .map_err(|e| format!("Failed to create .opencode/commands: {e}"))?;
     seed_commands(&commands_dir, preset)?;
 
     let config_path = resolve_workspace_opencode_config_path(&root);
@@ -385,7 +442,7 @@ pub fn ensure_workspace_files(workspace_path: &str, preset: &str) -> Result<(), 
         .map_err(|e| format!("Failed to write {}: {e}", config_path.display()))?;
     }
 
-    let aiwork_path = root.join(".aiwork").join("aiwork.json");
+    let aiwork_path = root.join(".opencode").join("aiwork.json");
     if !aiwork_path.exists() {
         let aiwork = WorkspaceAiWorkConfig::new(workspace_path, preset, now_ms());
 
@@ -422,7 +479,7 @@ mod tests {
     #[test]
     fn prefers_hidden_opencode_jsonc_when_root_config_is_missing() {
         let root = temp_workspace_root();
-        let hidden = root.join(".aiwork").join("opencode.jsonc");
+        let hidden = root.join(".opencode").join("opencode.jsonc");
         fs::create_dir_all(hidden.parent().unwrap()).unwrap();
         fs::write(&hidden, "{}\n").unwrap();
 
@@ -436,7 +493,7 @@ mod tests {
     fn prefers_root_config_over_hidden_config() {
         let root = temp_workspace_root();
         let root_jsonc = root.join("opencode.jsonc");
-        let hidden = root.join(".aiwork").join("opencode.jsonc");
+        let hidden = root.join(".opencode").join("opencode.jsonc");
         fs::create_dir_all(hidden.parent().unwrap()).unwrap();
         fs::write(&root_jsonc, "{}\n").unwrap();
         fs::write(&hidden, "{}\n").unwrap();

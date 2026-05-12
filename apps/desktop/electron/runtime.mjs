@@ -447,15 +447,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     await saveTokenStore(store);
   }
 
-  async function readPreferredAiWorkPort(workspaceKey) {
-    const state = await loadPortState();
-    const normalized = normalizeWorkspaceKey(workspaceKey);
-    if (normalized && state.workspacePorts?.[normalized]) {
-      return state.workspacePorts[normalized];
-    }
-    return state.preferredPort ?? null;
-  }
-
   async function persistPreferredAiWorkPort(workspaceKey, port) {
     const state = await loadPortState();
     const normalized = normalizeWorkspaceKey(workspaceKey);
@@ -543,7 +534,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
           variant: "macos_electron_dev",
           dir: path.join(
             home,
-            "Library/Application Support/com.fengai.aiwork.dev/aiwork-dev-data/xdg/data/opencode/log",
+            "Library/Application Support/com.aiworkgroup2.aiwork.dev/aiwork-dev-data/xdg/data/opencode/log",
           ),
         });
       }
@@ -683,7 +674,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
 
     if (baseName === "opencode") {
       for (const candidate of [
-        path.join(app.getPath("home"), ".aiwork", "bin", process.platform === "win32" ? "opencode.exe" : "opencode"),
+        path.join(app.getPath("home"), ".opencode", "bin", process.platform === "win32" ? "opencode.exe" : "opencode"),
         path.join("/opt/homebrew/bin", process.platform === "win32" ? "opencode.exe" : "opencode"),
         path.join("/usr/local/bin", process.platform === "win32" ? "opencode.exe" : "opencode"),
         path.join("/usr/bin", process.platform === "win32" ? "opencode.exe" : "opencode"),
@@ -1125,7 +1116,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       };
     }
 
-    const installDir = path.join(app.getPath("home"), ".aiwork", "bin");
+    const installDir = path.join(app.getPath("home"), ".opencode", "bin");
     const command = await pinnedOpencodeInstallCommand();
     const result = await runShellCommand("bash", ["-lc", command], {
       env: { ...(await buildChildEnv()), OPENCODE_INSTALL_DIR: installDir },

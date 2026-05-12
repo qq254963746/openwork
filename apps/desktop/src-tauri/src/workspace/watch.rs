@@ -26,37 +26,37 @@ fn reason_for_path(path: &Path) -> Option<&'static str> {
     let lower = normalized.to_lowercase();
 
     // Ignore AiWork metadata files — they don't affect the OpenCode engine.
-    if lower.ends_with("/aiwork.json") {
+    if lower.ends_with("/opencode.json") {
         return None;
     }
 
-    // Specific .aiwork subdirectories map to distinct reasons.
-    if lower.contains("/.aiwork/skills/") || lower.ends_with("/.aiwork/skills") {
+    // Specific .opencode subdirectories map to distinct reasons.
+    if lower.contains("/.opencode/skills/") || lower.ends_with("/.opencode/skills") {
         return Some("skills");
     }
-    if lower.contains("/.aiwork/agents/") || lower.contains("/.aiwork/agent/") {
+    if lower.contains("/.opencode/agents/") || lower.contains("/.opencode/agent/") {
         return Some("agents");
     }
-    if lower.contains("/.aiwork/commands/") || lower.contains("/.aiwork/command/") {
+    if lower.contains("/.opencode/commands/") || lower.contains("/.opencode/command/") {
         return Some("commands");
     }
-    if lower.contains("/.aiwork/plugins/") {
+    if lower.contains("/.opencode/plugins/") {
         return Some("plugins");
     }
 
-    // opencode.json / opencode.jsonc at the workspace root or inside .aiwork/
+    // opencode.json / opencode.jsonc at the workspace root or inside .opencode/
     if lower.ends_with("/opencode.json") || lower.ends_with("/opencode.jsonc") {
         return Some("config");
     }
 
     // AGENTS.md at the workspace root triggers agent reload.
-    if lower.ends_with("/agents.md") && !lower.contains("/.aiwork/") {
+    if lower.ends_with("/agents.md") && !lower.contains("/.opencode/") {
         return Some("agents");
     }
 
-    // Any other file inside .aiwork/ that isn't already matched above
-    // (e.g. .aiwork/opencode.db, .aiwork/opencode.json handled above).
-    // We intentionally do NOT emit for unknown .aiwork files to be conservative.
+    // Any other file inside .opencode/ that isn't already matched above
+    // (e.g. .opencode/opencode.db, .opencode/opencode.json handled above).
+    // We intentionally do NOT emit for unknown .opencode files to be conservative.
     None
 }
 
@@ -155,11 +155,11 @@ pub fn update_workspace_watch(
         .watch(&root, RecursiveMode::NonRecursive)
         .map_err(|e| format!("Failed to watch workspace root: {e}"))?;
 
-    let opencode_dir = root.join(".aiwork");
+    let opencode_dir = root.join(".opencode");
     if opencode_dir.exists() {
         watcher
             .watch(&opencode_dir, RecursiveMode::Recursive)
-            .map_err(|e| format!("Failed to watch .aiwork: {e}"))?;
+            .map_err(|e| format!("Failed to watch .opencode: {e}"))?;
     }
 
     *state

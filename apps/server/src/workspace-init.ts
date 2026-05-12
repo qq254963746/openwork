@@ -5,6 +5,8 @@ import { ensureDir, exists } from "./utils.js";
 import { ApiError } from "./errors.js";
 import { aiworkConfigPath, opencodeConfigPath } from "./workspace-files.js";
 import { readJsoncFile, writeJsoncFile } from "./jsonc.js";
+import { DEFAULT_AGENT } from "./opencode-db.js";
+import { logger } from "./log-util.js";
 
 const AIWORK_AGENT = `---
 description: AiWork default agent
@@ -51,7 +53,7 @@ async function ensureWorkspaceAiWorkConfig(workspaceRoot: string, preset: string
     authorizedRoots: [workspaceRoot],
     reload: null,
   };
-  await ensureDir(join(workspaceRoot, ".aiwork"));
+  await ensureDir(join(workspaceRoot, ".opencode"));
   await writeFile(path, JSON.stringify(config, null, 2) + "\n", "utf8");
 }
 
@@ -65,14 +67,14 @@ async function ensureOpencodeConfig(workspaceRoot: string): Promise<void> {
     : { $schema: "https://opencode.ai/config.json" };
 
   if (typeof next.default_agent !== "string" || !next.default_agent.trim()) {
-    next.default_agent = "aiwork";
+    next.default_agent = DEFAULT_AGENT;
   }
 
   await writeJsoncFile(path, next);
 }
 
 async function ensureAiWorkAgent(workspaceRoot: string): Promise<void> {
-  const agentsDir = join(workspaceRoot, ".aiwork", "agents");
+  const agentsDir = join(workspaceRoot, ".opencode", "agents");
   const agentPath = join(agentsDir, "aiwork.md");
   if (await exists(agentPath)) return;
   await ensureDir(agentsDir);
@@ -81,13 +83,24 @@ async function ensureAiWorkAgent(workspaceRoot: string): Promise<void> {
 
 export async function ensureWorkspaceFiles(workspaceRoot: string, presetInput: string): Promise<void> {
   const preset = normalizePreset(presetInput);
+  await logger.info("ensureWorkspaceFiles: start", { workspaceRoot, preset });
   if (!workspaceRoot.trim()) {
+    await logger.error("ensureWorkspaceFiles: invalid workspace path");
     throw new ApiError(400, "invalid_workspace_path", "workspace path is required");
   }
   await ensureDir(workspaceRoot);
+  await logger.info("ensureWorkspaceFiles: ensured workspace dir", { workspaceRoot });
+
   await ensureOpencodeConfig(workspaceRoot);
+  await logger.info("ensureWorkspaceFiles: ensured opencode config", { workspaceRoot });
+
   await ensureAiWorkAgent(workspaceRoot);
+  await logger.info("ensureWorkspaceFiles: ensured aiwork agent", { workspaceRoot });
+
   await ensureWorkspaceAiWorkConfig(workspaceRoot, preset);
+  await logger.info("ensureWorkspaceFiles: ensured aiwork config", { workspaceRoot, preset });
+
+  await logger.info("ensureWorkspaceFiles: done", { workspaceRoot });
 }
 
 export async function readRawOpencodeConfig(path: string): Promise<{ exists: boolean; content: string | null }> {

@@ -32,6 +32,7 @@ import { inheritWorkspaceOpencodeConnection, resolveWorkspaceOpencodeConnection 
 import { seedOpencodeSessionMessages } from "./opencode-db.js";
 import { listModelsByProviderType, parseModelProviderType } from "./ai-model-service/list-models.js";
 import { buildSession, buildSessionList, buildSessionMessages, buildSessionSnapshot } from "./session-read-model.js";
+import { logger as fileLogger } from "./log-util.js";
 import pkg from "../package.json" with { type: "json" };
 import constants from "../../../constants.json" with { type: "json" };
 
@@ -638,8 +639,8 @@ function buildCapabilities(config: ServerConfig): Capabilities {
       files: {
         injection: writeEnabled && inboxEnabled,
         outbox: outboxEnabled,
-        inboxPath: ".aiwork/aiwork/inbox/",
-        outboxPath: ".aiwork/aiwork/outbox/",
+        inboxPath: ".opencode/aiwork/inbox/",
+        outboxPath: ".opencode/aiwork/outbox/",
         maxBytes,
       },
     },
@@ -686,11 +687,11 @@ function resolveBrowserProvider(): Capabilities["toolProviders"]["browser"] {
 }
 
 function resolveInboxDir(workspaceRoot: string): string {
-  return join(workspaceRoot, ".aiwork", "aiwork", "inbox");
+  return join(workspaceRoot, ".opencode", "aiwork", "inbox");
 }
 
 function resolveOutboxDir(workspaceRoot: string): string {
-  return join(workspaceRoot, ".aiwork", "aiwork", "outbox");
+  return join(workspaceRoot, ".opencode", "aiwork", "outbox");
 }
 
 export function normalizeWorkspaceRelativePath(input: string, options: { allowSubdirs: boolean }): string {
@@ -1347,11 +1348,16 @@ function createRoutes(
     const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : basename(folderPath || "Workspace");
     const preset = typeof body.preset === "string" && body.preset.trim() ? body.preset.trim() : "starter";
 
+    await fileLogger.info("POST /workspaces/local: received request", { folderPath, name, preset });
+
     if (!folderPath) {
+      await fileLogger.warn("POST /workspaces/local: missing folderPath");
       throw new ApiError(400, "invalid_payload", "folderPath is required");
     }
 
     const workspacePath = resolve(folderPath);
+    await fileLogger.info("POST /workspaces/local: resolved workspace path", { workspacePath });
+
     await ensureDir(workspacePath);
     await ensureWorkspaceFiles(workspacePath, preset);
 
@@ -1379,6 +1385,8 @@ function createRoutes(
       summary: `Created workspace ${name}`,
       timestamp: Date.now(),
     });
+
+    await fileLogger.info("POST /workspaces/local: workspace created", { workspaceId: workspace.id, workspacePath, name, preset, persisted });
 
     return jsonResponse({
       activeId: workspace.id,
@@ -2507,7 +2515,7 @@ function createRoutes(
     const repo = ctx.url.searchParams.get("repo")?.trim();
     const ref = ctx.url.searchParams.get("ref")?.trim();
     const items = await listHubSkills({
-      owner: owner || "fengai",
+      owner: owner || "aiworkgroup2",
       repo: repo || "aiwork-hub",
       ref: ref || "main",
     });
@@ -2544,7 +2552,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action: "skills.install_hub",
       summary: `Install hub skill ${name}`,
-      paths: [join(workspace.path, ".aiwork", "skills", name)],
+      paths: [join(workspace.path, ".opencode", "skills", name)],
     });
 
     const result = await installHubSkill(workspace.path, { name, overwrite, repo });
@@ -2595,7 +2603,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action: "skills.upsert",
       summary: `Upsert skill ${name}`,
-      paths: [join(workspace.path, ".aiwork", "skills", name, "SKILL.md")],
+      paths: [join(workspace.path, ".opencode", "skills", name, "SKILL.md")],
     });
     const result = await upsertSkill(workspace.path, { name, content, description });
     await recordAudit(workspace.path, {
@@ -2628,7 +2636,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action: "skills.delete",
       summary: `Delete skill ${name}`,
-      paths: [join(workspace.path, ".aiwork", "skills", name)],
+      paths: [join(workspace.path, ".opencode", "skills", name)],
     });
     const result = await deleteSkill(workspace.path, name);
     await recordAudit(workspace.path, {
@@ -2839,7 +2847,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action: "commands.upsert",
       summary: `Upsert command ${name}`,
-      paths: [join(workspace.path, ".aiwork", "commands", `${sanitizeCommandName(name)}.md`)],
+      paths: [join(workspace.path, ".opencode", "commands", `${sanitizeCommandName(name)}.md`)],
     });
     const path = await upsertCommand(workspace.path, {
       name,
@@ -2878,7 +2886,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action: "commands.delete",
       summary: `Delete command ${name}`,
-      paths: [join(workspace.path, ".aiwork", "commands", `${sanitizeCommandName(name)}.md`)],
+      paths: [join(workspace.path, ".opencode", "commands", `${sanitizeCommandName(name)}.md`)],
     });
     await deleteCommand(workspace.path, name);
     await recordAudit(workspace.path, {
@@ -2886,7 +2894,7 @@ function createRoutes(
       workspaceId: workspace.id,
       actor: ctx.actor ?? { type: "remote" },
       action: "commands.delete",
-      target: join(workspace.path, ".aiwork", "commands"),
+      target: join(workspace.path, ".opencode", "commands"),
       summary: `Deleted command ${name}`,
       timestamp: Date.now(),
     });
@@ -2895,7 +2903,7 @@ function createRoutes(
       type: "command",
       name: sanitizeCommandName(name),
       action: "removed",
-      path: join(workspace.path, ".aiwork", "commands", `${sanitizeCommandName(name)}.md`),
+      path: join(workspace.path, ".opencode", "commands", `${sanitizeCommandName(name)}.md`),
     });
     return jsonResponse({ ok: true });
   });
@@ -3322,7 +3330,7 @@ async function reloadOpencodeEngine(config: ServerConfig, workspace: WorkspaceIn
 async function writeAiWorkConfig(workspaceRoot: string, payload: Record<string, unknown>, merge: boolean): Promise<void> {
   const path = aiworkConfigPath(workspaceRoot);
   const next = merge ? { ...(await readAiWorkConfig(workspaceRoot)), ...payload } : payload;
-  await ensureDir(join(workspaceRoot, ".aiwork"));
+  await ensureDir(join(workspaceRoot, ".opencode"));
   await writeFile(path, JSON.stringify(next, null, 2) + "\n", "utf8");
 }
 

@@ -116,8 +116,8 @@ function startWorkspaceReloadWatcher(input: {
             return;
           }
 
-          // If .aiwork is created/removed, rescan the relevant trees.
-          if (name === ".aiwork") {
+          // If .opencode is created/removed, rescan the relevant trees.
+          if (name === ".opencode") {
             for (const tree of trees) tree.scheduleRescan();
           }
         },
@@ -138,7 +138,7 @@ function startWorkspaceReloadWatcher(input: {
     }
   }
 
-  const opencodeRoot = join(root, ".aiwork");
+  const opencodeRoot = join(root, ".opencode");
 
   trees.push(
     createDirectoryTreeWatcher({
