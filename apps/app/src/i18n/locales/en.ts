@@ -1010,7 +1010,7 @@ export default {
   "skills.no_hub_skills": "No hub repo selected. Add a GitHub repo to browse skills.",
   "skills.no_opencode_found": "No opencode.json found yet. Add a plugin to create one.",
   "skills.no_opencode_workspace": "No opencode.json in this workspace yet.",
-  "skills.no_skills": "No skills detected in `.aiwork-opencode/skills`, `.claude/skills`, or `~/.agents/skills`.",
+  "skills.no_skills": "No skills detected in `.aiwork-opencode/skills`.",
   "skills.no_skills_found": "No skills found yet.",
   "skills.owner_label": "Owner",
   "skills.owner_repo_required": "Owner and repo are required.",

@@ -1018,7 +1018,7 @@ async function handleDesktopInvoke(event, command, ...args) {
       const projectDir = String(args[0] ?? "").trim();
       const skillPath = await findSkillFile(projectDir, args[1]);
       if (!skillPath) {
-        return execResult(false, "", "Skill not found in .aiwork-opencode/skills or .claude/skills");
+        return execResult(false, "", "Skill not found in .aiwork-opencode/skills");
       }
       await rm(path.dirname(skillPath), { recursive: true, force: true });
       return execResult(true, `Removed skill ${args[1]}`);

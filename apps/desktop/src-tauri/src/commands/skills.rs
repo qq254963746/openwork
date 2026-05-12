@@ -556,7 +556,7 @@ pub fn uninstall_skill(project_dir: String, name: String) -> Result<ExecResult, 
             ok: false,
             status: 1,
             stdout: String::new(),
-            stderr: "Skill not found in .aiwork-opencode/skills or .claude/skills".to_string(),
+            stderr: "Skill not found in .aiwork-opencode/skills".to_string(),
         });
     }
 

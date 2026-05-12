@@ -936,7 +936,7 @@ export default {
   "skills.no_hub_skills": "未选择Hub仓库。添加GitHub仓库以浏览skills。",
   "skills.no_opencode_found": "尚未找到opencode.json。添加插件以创建一个。",
   "skills.no_opencode_workspace": "此工作区中还没有opencode.json。",
-  "skills.no_skills": "在`.aiwork-opencode/skills`、`.claude/skills`或`~/.agents/skills`中未检测到skills。",
+  "skills.no_skills": "在`.aiwork-opencode/skills`中未检测到skills。",
   "skills.no_skills_found": "还没有找到skills。",
   "skills.owner_label": "所有者",
   "skills.owner_repo_required": "所有者和仓库为必填项。",
