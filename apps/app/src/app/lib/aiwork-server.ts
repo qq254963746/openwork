@@ -211,14 +211,6 @@ export type AiWorkMcpItem = {
   disabledByTools?: boolean;
 };
 
-
-export type AiWorkBlueprintSessionsMaterializeResult = {
-  ok: boolean;
-  created: Array<{ templateId: string; sessionId: string; title: string }>;
-  existing: Array<{ templateId: string; sessionId: string }>;
-  openSessionId: string | null;
-};
-
 export type AiWorkArtifactItem = {
   id: string;
   name?: string;
@@ -942,18 +934,6 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
           { token, hostToken, timeoutMs: timeouts.sessionRead },
         ));
     },
-    materializeBlueprintSessions: (workspaceId: string) =>
-      logCall("materializeBlueprintSessions", { workspaceId },
-        requestJson<AiWorkBlueprintSessionsMaterializeResult>(
-          baseUrl,
-          `/workspace/${encodeURIComponent(workspaceId)}/blueprint/sessions/materialize`,
-          {
-            token,
-            hostToken,
-            method: "POST",
-            timeoutMs: timeouts.workspaceImport,
-          },
-        )),
     getConfig: (workspaceId: string) =>
       logCall("getConfig", { workspaceId },
         requestJson<{ opencode: Record<string, unknown>; aiwork: Record<string, unknown>; updatedAt?: number | null }>(

@@ -23,13 +23,7 @@ import { TokenService } from "./tokens.js";
 import { EnvService, EnvStoreReadError, InvalidEnvKeyError, isValidEnvKey } from "./env-file.js";
 
 import { FileSessionStore } from "./file-sessions.js";
-import {
-  applyMaterializedBlueprintSessions,
-  normalizeBlueprintSessionTemplates,
-  readMaterializedBlueprintSessions,
-} from "./blueprint-sessions.js";
 import { inheritWorkspaceOpencodeConnection, resolveWorkspaceOpencodeConnection } from "./opencode-connection.js";
-import { seedOpencodeSessionMessages } from "./opencode-db.js";
 import { listModelsByProviderType, parseModelProviderType } from "./ai-model-service/list-models.js";
 import { buildSession, buildSessionList, buildSessionMessages, buildSessionSnapshot } from "./session-read-model.js";
 import { logger as fileLogger } from "./log-util.js";
@@ -2908,25 +2902,6 @@ function createRoutes(
     return jsonResponse({ ok: true });
   });
 
-  addRoute(routes, "POST", "/workspace/:id/blueprint/sessions/materialize", "client", async (ctx) => {
-    ensureWritable(config);
-    requireClientScope(ctx, "collaborator");
-    const workspace = await resolveWorkspace(config, ctx.params.id);
-    const result = await materializeBlueprintSessions(config, workspace);
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "blueprint.sessions.materialize",
-      target: "workspace",
-      summary: result.created.length
-        ? `Materialized ${result.created.length} template starter session${result.created.length === 1 ? "" : "s"}`
-        : "Checked template starter sessions",
-      timestamp: Date.now(),
-    });
-    return jsonResponse(result);
-  });
-
   addRoute(routes, "GET", "/approvals", "host", async (ctx) => {
     return jsonResponse({ items: ctx.approvals.list() });
   });
@@ -3346,60 +3321,4 @@ async function requireApproval(
       reason: result.reason,
     });
   }
-}
-
-async function materializeBlueprintSessions(config: ServerConfig, workspace: WorkspaceInfo): Promise<{
-  ok: boolean;
-  created: Array<{ templateId: string; sessionId: string; title: string }>;
-  existing: Array<{ templateId: string; sessionId: string }>;
-  openSessionId: string | null;
-}> {
-  const aiwork = await readAiWorkConfig(workspace.path);
-  const templates = normalizeBlueprintSessionTemplates(aiwork);
-  if (!templates.length) {
-    return { ok: true, created: [], existing: [], openSessionId: null };
-  }
-
-  const existing = readMaterializedBlueprintSessions(aiwork);
-  if (existing.length > 0) {
-    const preferredTemplate = templates.find((template) => template.openOnFirstLoad) ?? templates[0] ?? null;
-    const openSessionId = preferredTemplate
-      ? existing.find((item) => item.templateId === preferredTemplate.id)?.sessionId ?? existing[0]?.sessionId ?? null
-      : existing[0]?.sessionId ?? null;
-    return { ok: true, created: [], existing, openSessionId };
-  }
-
-  const created: Array<{ templateId: string; sessionId: string; title: string }> = [];
-  for (const template of templates) {
-    const result = await fetchOpencodeJson(config, workspace, "/session", {
-      method: "POST",
-      body: template.title ? { title: template.title } : undefined,
-    });
-    const sessionId =
-      result && typeof result === "object" && "id" in result && typeof result.id === "string" ? result.id.trim() : "";
-    if (!sessionId) {
-      throw new ApiError(502, "opencode_failed", "OpenCode session did not return an id");
-    }
-    seedOpencodeSessionMessages({
-      sessionId,
-      workspaceRoot: resolveOpencodeDirectory(workspace) ?? workspace.path,
-      messages: template.messages,
-    });
-    created.push({ templateId: template.id, sessionId, title: template.title });
-  }
-
-  const now = Date.now();
-  const nextAiWork = applyMaterializedBlueprintSessions(
-    aiwork,
-    created.map(({ templateId, sessionId }) => ({ templateId, sessionId })),
-    now,
-  );
-  await writeAiWorkConfig(workspace.path, nextAiWork, false);
-
-  const preferredTemplate = templates.find((template) => template.openOnFirstLoad) ?? templates[0] ?? null;
-  const openSessionId = preferredTemplate
-    ? created.find((item) => item.templateId === preferredTemplate.id)?.sessionId ?? created[0]?.sessionId ?? null
-    : created[0]?.sessionId ?? null;
-
-  return { ok: true, created, existing: [], openSessionId };
 }

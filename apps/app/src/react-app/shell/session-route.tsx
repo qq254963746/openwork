@@ -905,8 +905,7 @@ export function SessionRoute() {
     navigate("/welcome", { replace: true });
   }, [loading, local.prefs.hasCompletedOnboarding, navigate, workspaces.length]);
 
-  // NOTE: Blueprint seeding was removed from the route.
-  // It was firing `materializeBlueprintSessions` + a session re-fetch on every
+  // It was firing a session re-fetch on every
   // workspace change, which cascaded setState updates and froze the UI after
   // a few rapid switches. Empty workspaces now simply show "No tasks yet." and
   // the user creates their first session explicitly via "New task". Seeding
