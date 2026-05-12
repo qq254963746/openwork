@@ -67,7 +67,7 @@ async function collectWorkspaceEntries(workspaceRoot) {
     }
   }
 
-  const opencodeDir = path.join(workspaceRoot, ".opencode");
+  const opencodeDir = path.join(workspaceRoot, ".aiwork-opencode");
   if (await pathExists(opencodeDir)) {
     for (const file of await collectFiles(workspaceRoot, opencodeDir)) {
       if (isSecretName(path.basename(file.absolute))) {
@@ -279,15 +279,15 @@ export async function importWorkspaceConfig({ archivePath, targetDir, name }) {
   for (const entry of listZipEntries(buffer)) {
     if (entry.name === "manifest.json" || entry.name.endsWith("/")) continue;
     if (!isSafeArchivePath(entry.name)) throw new Error("Archive contains an unsafe path");
-    if (!(entry.name === "opencode.json" || entry.name.startsWith(".opencode/"))) continue;
+    if (!(entry.name === "opencode.json" || entry.name.startsWith(".aiwork-opencode/"))) continue;
     if (isSecretName(path.basename(entry.name))) continue;
     const outPath = path.join(targetDir, ...entry.name.split("/"));
     await mkdir(path.dirname(outPath), { recursive: true });
     await writeFile(outPath, readZipEntryData(buffer, entry));
   }
 
-  const opencodeDir = path.join(targetDir, ".opencode");
-  if (!(await pathExists(opencodeDir))) throw new Error("Archive is missing .opencode config");
+  const opencodeDir = path.join(targetDir, ".aiwork-opencode");
+  if (!(await pathExists(opencodeDir))) throw new Error("Archive is missing .aiwork-opencode config");
 
   const aiworkPath = path.join(opencodeDir, "aiwork.json");
   let preset = "starter";

@@ -46,9 +46,9 @@ INFRA_GLOBS=(
   "apps/*/scripts/*.mjs"
   "apps/*/scripts/*.ts"
   "apps/*/scripts/*.sh"
-  # .opencode skills/commands that may invoke source
-  ".opencode/skills/*/scripts/*.sh"
-  ".opencode/skills/*/*.sh"
+  # .aiwork-opencode skills/commands that may invoke source
+  ".aiwork-opencode/skills/*/scripts/*.sh"
+  ".aiwork-opencode/skills/*/*.sh"
 )
 
 # Files used by convention (framework/tool magic), not imports

@@ -32,7 +32,6 @@ import {
   revealDesktopItemInDir,
   uninstallSkill as uninstallSkillCommand,
   workspaceAiWorkRead,
-  workspaceAiWorkWrite,
   writeLocalSkill,
   writeOpencodeConfig,
   type OpencodeConfigFile,
@@ -291,8 +290,6 @@ export function createExtensionsStore(options: {
   const applyStateAction = <T,>(current: T, next: SetStateAction<T>) =>
     typeof next === "function" ? (next as (value: T) => T)(current) : next;
 
-  const formatSkillPath = (location: string) => location.replace(/[/\\]SKILL\.md$/i, "");
-
   const normalizeHubRepo = (input?: Partial<HubSkillRepo> | null): HubSkillRepo | null => {
     const owner = input?.owner?.trim() || "";
     const repo = input?.repo?.trim() || "";
@@ -346,36 +343,6 @@ export function createExtensionsStore(options: {
     return {};
   };
 
-  const writeWorkspaceAiWorkConfigRecord = async (config: Record<string, unknown>) => {
-    const root = options.selectedWorkspaceRoot().trim();
-    const aiworkSnapshot = getAiWorkServerSnapshot();
-    const aiworkClient = aiworkSnapshot.aiworkServerClient;
-    const aiworkWorkspaceId = options.runtimeWorkspaceId();
-    const canUseAiWorkServer =
-      aiworkSnapshot.aiworkServerStatus === "connected" &&
-      aiworkClient &&
-      aiworkWorkspaceId &&
-      aiworkSnapshot.aiworkServerCapabilities?.config?.write;
-
-    if (canUseAiWorkServer) {
-      await aiworkClient.patchConfig(aiworkWorkspaceId, { aiwork: config });
-      return true;
-    }
-
-    if (root) {
-      const result = await workspaceAiWorkWrite({
-        workspacePath: root,
-        config: config as never,
-      });
-      if (!result.ok) {
-        throw new Error(result.stderr || result.stdout || "Failed to write .opencode/aiwork.json");
-      }
-      return true;
-    }
-
-    return false;
-  };
-
   const refreshImportedCloudSkillHubs = async () => {
     try {
       const config = await readWorkspaceAiWorkConfigRecord();
@@ -411,46 +378,6 @@ export function createExtensionsStore(options: {
       return {};
     }
   };
-
-
-
-  const upsertWorkspaceSkill = async (
-    name: string,
-    content: string,
-    description: string,
-    optionsOverride?: { overwrite?: boolean },
-  ) => {
-    const root = options.selectedWorkspaceRoot().trim();
-    const aiworkSnapshot = getAiWorkServerSnapshot();
-    const aiworkClient = aiworkSnapshot.aiworkServerClient;
-    const aiworkWorkspaceId = options.runtimeWorkspaceId();
-    const canUseAiWorkServer =
-      aiworkSnapshot.aiworkServerStatus === "connected" &&
-      aiworkClient &&
-      aiworkWorkspaceId &&
-      aiworkSnapshot.aiworkServerCapabilities?.skills?.write;
-
-    if (canUseAiWorkServer) {
-      await aiworkClient.upsertSkill(aiworkWorkspaceId, {
-        name,
-        content,
-        description,
-      });
-      return;
-    }
-
-    if (!root) {
-      throw new Error(t("skills.pick_workspace_first"));
-    }
-
-    const result = await installSkillTemplate(root, name, content, {
-      overwrite: optionsOverride?.overwrite ?? false,
-    });
-    if (!result.ok) {
-      throw new Error(result.stderr || result.stdout || t("skills.install_failed"));
-    }
-  };
-
 
   const deleteWorkspaceSkill = async (name: string) => {
     const root = options.selectedWorkspaceRoot().trim();
@@ -675,25 +602,6 @@ export function createExtensionsStore(options: {
       options.setBusy(false);
     }
   }
-
-  const loadPluginsFromConfig = (config: OpencodeConfigFile | null) => {
-    const nextPluginNames: string[] = [];
-    let nextPluginStatus: string | null = null;
-    loadPluginsFromConfigHelpers(
-      config,
-      (value) => {
-        nextPluginNames.splice(0, nextPluginNames.length, ...applyStateAction(nextPluginNames, value));
-      },
-      (message) => {
-        nextPluginStatus = message;
-      },
-    );
-    mutateState((current) => ({
-      ...current,
-      pluginList: toConfigPluginListEntries(nextPluginNames),
-      pluginStatus: nextPluginStatus,
-    }));
-  };
 
   async function refreshSkills(optionsOverride?: { force?: boolean }) {
     const root = options.selectedWorkspaceRoot().trim();
@@ -1191,9 +1099,9 @@ export function createExtensionsStore(options: {
     }
 
     try {
-      const opencodeSkills = await joinDesktopPath(root, ".opencode", "skills");
+      const opencodeSkills = await joinDesktopPath(root, ".aiwork-opencode", "skills");
       const claudeSkills = await joinDesktopPath(root, ".claude", "skills");
-      const legacySkills = await joinDesktopPath(root, ".opencode", "skill");
+      const legacySkills = await joinDesktopPath(root, ".aiwork-opencode", "skill");
       const tryOpen = async (target: string) => {
         try {
           await openDesktopPath(target);

@@ -38,15 +38,7 @@ apps/server/cli
 # OS
 .DS_Store
 
-# OpenCode mirror
-vendor/opencode/
-
-# OpenCode local deps
-.opencode/node_modules/
-.opencode/bun.lock
-
 # AiWork workspace-local artifacts
-.opencode/aiwork/
 .vercel
 .env*.local
 .claude/*

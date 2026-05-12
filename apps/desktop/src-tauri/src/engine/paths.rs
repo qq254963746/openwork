@@ -19,7 +19,7 @@ pub fn candidate_opencode_paths() -> Vec<PathBuf> {
     let mut candidates = Vec::new();
 
     if let Some(home) = home_dir() {
-        candidates.push(home.join(".opencode").join("bin").join(OPENCODE_EXECUTABLE));
+        candidates.push(home.join(".aiwork-opencode").join("bin").join(OPENCODE_EXECUTABLE));
     }
 
     #[cfg(windows)]

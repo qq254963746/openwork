@@ -17,8 +17,8 @@ fn opencode_config_candidates(
             Ok(vec![
                 root.join("opencode.jsonc"),
                 root.join("opencode.json"),
-                root.join(".opencode").join("opencode.jsonc"),
-                root.join(".opencode").join("opencode.json"),
+                root.join(".aiwork-opencode").join("opencode.jsonc"),
+                root.join(".aiwork-opencode").join("opencode.json"),
             ])
         }
         "global" => {

@@ -1,7 +1,7 @@
 {
   "name": "@aiwork/desktop",
   "private": true,
-  "version": "0.13.37",
+  "version": "0.13.38",
   "description": "AiWork desktop shell",
   "author": {
     "name": "AiWork",

@@ -104,7 +104,7 @@ Token management (host/owner auth):
 
 Inbox/outbox:
 
-- `POST /workspace/:id/inbox` (multipart upload into `.opencode/aiwork/inbox/`)
+- `POST /workspace/:id/inbox` (multipart upload into `.aiwork-opencode/aiwork/inbox/`)
 - `GET /workspace/:id/artifacts`
 - `GET /workspace/:id/artifacts/:artifactId`
 - `POST /workspace/:id/files/sessions`

@@ -351,7 +351,7 @@ pub fn workspace_add_authorized_root(
     }
 
     let aiwork_path = PathBuf::from(&workspace_path)
-        .join(".opencode")
+        .join(".aiwork-opencode")
         .join("aiwork.json");
 
     if let Some(parent) = aiwork_path.parent() {
@@ -400,7 +400,7 @@ pub fn workspace_aiwork_read(
     }
 
     let aiwork_path = PathBuf::from(&workspace_path)
-        .join(".opencode")
+        .join(".aiwork-opencode")
         .join("aiwork.json");
 
     if !aiwork_path.exists() {
@@ -428,7 +428,7 @@ pub fn workspace_aiwork_write(
     }
 
     let aiwork_path = PathBuf::from(&workspace_path)
-        .join(".opencode")
+        .join(".aiwork-opencode")
         .join("aiwork.json");
 
     if let Some(parent) = aiwork_path.parent() {
@@ -510,7 +510,7 @@ fn collect_workspace_entries(
         }
     }
 
-    let opencode_dir = workspace_root.join(".opencode");
+    let opencode_dir = workspace_root.join(".aiwork-opencode");
     if opencode_dir.exists() {
         for entry in WalkDir::new(&opencode_dir) {
             let entry = entry.map_err(|e| e.to_string())?;
@@ -673,7 +673,7 @@ pub fn workspace_import_config(
         }) {
             return Err("Archive contains an unsafe path".to_string());
         }
-        if !(name == "opencode.json" || name.starts_with(".opencode/")) {
+        if !(name == "opencode.json" || name.starts_with(".aiwork-opencode/")) {
             continue;
         }
         if let Some(file_name) = entry_path.file_name().and_then(|entry| entry.to_str()) {
@@ -699,12 +699,12 @@ pub fn workspace_import_config(
             .map_err(|e| format!("Failed to write {}: {e}", out_path.display()))?;
     }
 
-    let opencode_dir = target_path.join(".opencode");
+    let opencode_dir = target_path.join(".aiwork-opencode");
     if !opencode_dir.exists() {
-        return Err("Archive is missing .opencode config".to_string());
+        return Err("Archive is missing .aiwork-opencode config".to_string());
     }
 
-    let aiwork_path = target_path.join(".opencode").join("aiwork.json");
+    let aiwork_path = target_path.join(".aiwork-opencode").join("aiwork.json");
     let mut preset = "starter".to_string();
     let mut workspace_name = name.clone().filter(|value| !value.trim().is_empty());
 

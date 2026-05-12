@@ -297,7 +297,7 @@ function localWorkspaceId(workspacePath) {
 }
 
 async function readWorkspaceAiWorkConfig(workspacePath) {
-  const aiworkPath = path.join(workspacePath, ".opencode", "aiwork.json");
+  const aiworkPath = path.join(workspacePath, ".aiwork-opencode", "aiwork.json");
   if (!(await pathExists(aiworkPath))) {
     return defaultWorkspaceAiWorkConfig(workspacePath);
   }
@@ -306,7 +306,7 @@ async function readWorkspaceAiWorkConfig(workspacePath) {
 }
 
 async function writeWorkspaceAiWorkConfig(workspacePath, config) {
-  const aiworkPath = path.join(workspacePath, ".opencode", "aiwork.json");
+  const aiworkPath = path.join(workspacePath, ".aiwork-opencode", "aiwork.json");
   await mkdir(path.dirname(aiworkPath), { recursive: true });
   await writeFile(aiworkPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
   return execResult(true, `Wrote ${aiworkPath}`);
@@ -541,7 +541,7 @@ function resolveCommandsDir(scope, projectDir) {
     if (!String(projectDir ?? "").trim()) {
       throw new Error("projectDir is required");
     }
-    return path.join(projectDir, ".opencode", "commands");
+    return path.join(projectDir, ".aiwork-opencode", "commands");
   }
   if (scope === "global") {
     return path.join(globalOpencodeRoot(), "commands");
@@ -591,8 +591,8 @@ async function collectProjectSkillRoots(projectDir) {
   let current = path.resolve(projectDir);
 
   while (true) {
-    const opencodeSkills = path.join(current, ".opencode", "skills");
-    const legacySkills = path.join(current, ".opencode", "skill");
+    const opencodeSkills = path.join(current, ".aiwork-opencode", "skills");
+    const legacySkills = path.join(current, ".aiwork-opencode", "skill");
     const claudeSkills = path.join(current, ".claude", "skills");
 
     if (await isDirectory(opencodeSkills)) roots.push(opencodeSkills);
@@ -743,7 +743,7 @@ async function ensureProjectSkillRoot(projectDir) {
   if (!String(projectDir ?? "").trim()) {
     throw new Error("projectDir is required");
   }
-  const opencodeRoot = path.join(projectDir, ".opencode");
+  const opencodeRoot = path.join(projectDir, ".aiwork-opencode");
   const legacy = path.join(opencodeRoot, "skill");
   const modern = path.join(opencodeRoot, "skills");
   if ((await isDirectory(legacy)) && !(await pathExists(modern))) {
@@ -816,7 +816,7 @@ async function handleDesktopInvoke(event, command, ...args) {
         path: folderPath,
         preset,
       });
-      await mkdir(path.join(folderPath, ".opencode"), { recursive: true });
+      await mkdir(path.join(folderPath, ".aiwork-opencode"), { recursive: true });
       await writeWorkspaceAiWorkConfig(folderPath, defaultWorkspaceAiWorkConfig(folderPath, preset));
       return mutateWorkspaceState((state) => {
         const workspacePathKey = normalizeWorkspacePathKey(workspace.path);
@@ -1067,7 +1067,7 @@ async function handleDesktopInvoke(event, command, ...args) {
       const projectDir = String(args[0] ?? "").trim();
       const skillPath = await findSkillFile(projectDir, args[1]);
       if (!skillPath) {
-        return execResult(false, "", "Skill not found in .opencode/skills or .claude/skills");
+        return execResult(false, "", "Skill not found in .aiwork-opencode/skills or .claude/skills");
       }
       await rm(path.dirname(skillPath), { recursive: true, force: true });
       return execResult(true, `Removed skill ${args[1]}`);

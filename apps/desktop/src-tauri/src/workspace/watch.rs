@@ -30,33 +30,33 @@ fn reason_for_path(path: &Path) -> Option<&'static str> {
         return None;
     }
 
-    // Specific .opencode subdirectories map to distinct reasons.
-    if lower.contains("/.opencode/skills/") || lower.ends_with("/.opencode/skills") {
+    // Specific .aiwork-opencode subdirectories map to distinct reasons.
+    if lower.contains("/.aiwork-opencode/skills/") || lower.ends_with("/.aiwork-opencode/skills") {
         return Some("skills");
     }
-    if lower.contains("/.opencode/agents/") || lower.contains("/.opencode/agent/") {
+    if lower.contains("/.aiwork-opencode/agents/") || lower.contains("/.aiwork-opencode/agent/") {
         return Some("agents");
     }
-    if lower.contains("/.opencode/commands/") || lower.contains("/.opencode/command/") {
+    if lower.contains("/.aiwork-opencode/commands/") || lower.contains("/.aiwork-opencode/command/") {
         return Some("commands");
     }
-    if lower.contains("/.opencode/plugins/") {
+    if lower.contains("/.aiwork-opencode/plugins/") {
         return Some("plugins");
     }
 
-    // opencode.json / opencode.jsonc at the workspace root or inside .opencode/
+    // opencode.json / opencode.jsonc at the workspace root or inside .aiwork-opencode/
     if lower.ends_with("/opencode.json") || lower.ends_with("/opencode.jsonc") {
         return Some("config");
     }
 
     // AGENTS.md at the workspace root triggers agent reload.
-    if lower.ends_with("/agents.md") && !lower.contains("/.opencode/") {
+    if lower.ends_with("/agents.md") && !lower.contains("/.aiwork-opencode/") {
         return Some("agents");
     }
 
-    // Any other file inside .opencode/ that isn't already matched above
-    // (e.g. .opencode/opencode.db, .opencode/opencode.json handled above).
-    // We intentionally do NOT emit for unknown .opencode files to be conservative.
+    // Any other file inside .aiwork-opencode/ that isn't already matched above
+    // (e.g. .aiwork-opencode/opencode.db, .aiwork-opencode/opencode.json handled above).
+    // We intentionally do NOT emit for unknown .aiwork-opencode files to be conservative.
     None
 }
 
@@ -155,11 +155,11 @@ pub fn update_workspace_watch(
         .watch(&root, RecursiveMode::NonRecursive)
         .map_err(|e| format!("Failed to watch workspace root: {e}"))?;
 
-    let opencode_dir = root.join(".opencode");
+    let opencode_dir = root.join(".aiwork-opencode");
     if opencode_dir.exists() {
         watcher
             .watch(&opencode_dir, RecursiveMode::Recursive)
-            .map_err(|e| format!("Failed to watch .opencode: {e}"))?;
+            .map_err(|e| format!("Failed to watch .aiwork-opencode: {e}"))?;
     }
 
     *state

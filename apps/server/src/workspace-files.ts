@@ -4,8 +4,8 @@ import { join } from "node:path";
 export function opencodeConfigPath(workspaceRoot: string): string {
   const jsoncPath = join(workspaceRoot, "opencode.jsonc");
   const jsonPath = join(workspaceRoot, "opencode.json");
-  const hiddenJsoncPath = join(workspaceRoot, ".opencode", "opencode.jsonc");
-  const hiddenJsonPath = join(workspaceRoot, ".opencode", "opencode.json");
+  const hiddenJsoncPath = join(workspaceRoot, ".aiwork-opencode", "opencode.jsonc");
+  const hiddenJsonPath = join(workspaceRoot, ".aiwork-opencode", "opencode.json");
   if (existsSync(jsoncPath)) return jsoncPath;
   if (existsSync(jsonPath)) return jsonPath;
   if (existsSync(hiddenJsoncPath)) return hiddenJsoncPath;
@@ -14,17 +14,17 @@ export function opencodeConfigPath(workspaceRoot: string): string {
 }
 
 export function aiworkConfigPath(workspaceRoot: string): string {
-  return join(workspaceRoot, ".opencode", "aiwork.json");
+  return join(workspaceRoot, ".aiwork-opencode", "aiwork.json");
 }
 
 export function projectSkillsDir(workspaceRoot: string): string {
-  return join(workspaceRoot, ".opencode", "skills");
+  return join(workspaceRoot, ".aiwork-opencode", "skills");
 }
 
 export function projectCommandsDir(workspaceRoot: string): string {
-  return join(workspaceRoot, ".opencode", "commands");
+  return join(workspaceRoot, ".aiwork-opencode", "commands");
 }
 
 export function projectPluginsDir(workspaceRoot: string): string {
-  return join(workspaceRoot, ".opencode", "plugins");
+  return join(workspaceRoot, ".aiwork-opencode", "plugins");
 }
