@@ -13,4 +13,5 @@ else
 fi
 
 pnpm install
-pnpm dev
+# pnpm dev
+pnpm --filter @aiwork/desktop dev:tauri

@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use crate::types::{OpencodeCommand, WorkspaceAiWorkConfig};
 use crate::utils::now_ms;
 use crate::workspace::commands::{sanitize_command_name, serialize_command_frontmatter};
+use crate::log_error;
 
 const READ_FILE_AS_TEXT_TOOL: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -32,7 +33,7 @@ pub fn seed_global_tools() {
 
     let tools_dir = base.join("opencode").join("tools");
     if let Err(e) = fs::create_dir_all(&tools_dir) {
-        eprintln!("[aiwork] Failed to create global tools dir {}: {e}", tools_dir.display());
+        log_error!("aiwork", "Failed to create global tools dir {}: {e}", tools_dir.display());
         return;
     }
 
@@ -42,7 +43,7 @@ pub fn seed_global_tools() {
     }
 
     if let Err(e) = fs::write(&tool_path, READ_FILE_AS_TEXT_TOOL) {
-        eprintln!("[aiwork] Failed to write {}: {e}", tool_path.display());
+        log_error!("aiwork", "Failed to write {}: {e}", tool_path.display());
     }
 }
 

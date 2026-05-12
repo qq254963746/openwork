@@ -5,6 +5,7 @@ mod engine;
 mod env_file;
 mod fs;
 mod aiwork_server;
+mod logger;
 mod paths;
 mod platform;
 mod types;

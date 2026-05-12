@@ -10,6 +10,7 @@ use crate::workspace::state::{
     save_workspace_state, stable_workspace_id,
 };
 use crate::workspace::watch::{update_workspace_watch, WorkspaceWatchState};
+use crate::{log_error, log_info};
 use serde::Serialize;
 use tauri::{Manager, State};
 use walkdir::WalkDir;
@@ -46,7 +47,7 @@ fn schedule_watched_workspace_update(app: &tauri::AppHandle, state: crate::types
     tauri::async_runtime::spawn(async move {
         let watch_state = app_handle.state::<WorkspaceWatchState>();
         if let Err(error) = update_watched_workspace(&app_handle, watch_state, &state) {
-            eprintln!("[workspace] deferred watcher update failed: {error}");
+            log_error!("workspace", "deferred watcher update failed: {error}");
         }
     });
 }
@@ -56,7 +57,7 @@ pub fn workspace_bootstrap(
     app: tauri::AppHandle,
     watch_state: State<WorkspaceWatchState>,
 ) -> Result<WorkspaceList, String> {
-    println!("[workspace] bootstrap");
+    log_info!("workspace", "bootstrap");
     let mut state = load_workspace_state(&app)?;
 
     if !state
@@ -92,7 +93,7 @@ pub fn workspace_forget(
     workspace_id: String,
     watch_state: State<WorkspaceWatchState>,
 ) -> Result<WorkspaceList, String> {
-    println!("[workspace] forget request: {workspace_id}");
+    log_info!("workspace", "forget request: {workspace_id}");
     let mut state = load_workspace_state(&app)?;
     let id = workspace_id.trim();
 
@@ -125,7 +126,7 @@ pub fn workspace_forget(
 
     save_workspace_state(&app, &state)?;
     update_watched_workspace(&app, watch_state, &state)?;
-    println!("[workspace] forget complete");
+    log_info!("workspace", "forget complete");
 
     Ok(build_workspace_list(state))
 }
@@ -136,7 +137,7 @@ pub fn workspace_reorder(
     workspace_ids: Vec<String>,
     watch_state: State<WorkspaceWatchState>,
 ) -> Result<WorkspaceList, String> {
-    println!("[workspace] reorder request");
+    log_info!("workspace", "reorder request");
     let mut state = load_workspace_state_fast(&app)?;
     let requested: Vec<String> = workspace_ids
         .into_iter()
@@ -176,7 +177,7 @@ pub fn workspace_reorder(
     }
 
     save_workspace_state(&app, &state)?;
-    println!("[workspace] reorder complete");
+    log_info!("workspace", "reorder complete");
 
     let _ = watch_state;
 
@@ -189,7 +190,7 @@ pub fn workspace_set_selected(
     workspace_id: String,
     watch_state: State<WorkspaceWatchState>,
 ) -> Result<WorkspaceList, String> {
-    println!("[workspace] set_selected request: {workspace_id}");
+    log_info!("workspace", "set_selected request: {workspace_id}");
     let mut state = load_workspace_state_fast(&app)?;
     let id = workspace_id.trim();
 
@@ -203,7 +204,7 @@ pub fn workspace_set_selected(
 
     state.selected_workspace_id = id.to_string();
     save_workspace_state(&app, &state)?;
-    println!("[workspace] set_selected complete: {id}");
+    log_info!("workspace", "set_selected complete: {id}");
 
     let _ = watch_state;
 
@@ -216,7 +217,7 @@ pub fn workspace_set_runtime_active(
     workspace_id: String,
     watch_state: State<WorkspaceWatchState>,
 ) -> Result<WorkspaceList, String> {
-    println!("[workspace] set_runtime_active request: {workspace_id}");
+    log_info!("workspace", "set_runtime_active request: {workspace_id}");
     let mut state = load_workspace_state_fast(&app)?;
     let id = workspace_id.trim();
 
@@ -232,8 +233,9 @@ pub fn workspace_set_runtime_active(
     save_workspace_state(&app, &state)?;
     let _ = watch_state;
     schedule_watched_workspace_update(&app, state.clone());
-    println!(
-        "[workspace] set_runtime_active complete: {}",
+    log_info!(
+        "workspace",
+        "set_runtime_active complete: {}",
         if id.is_empty() { "(cleared)" } else { id }
     );
 
@@ -255,7 +257,7 @@ pub fn workspace_update_display_name(
     workspace_id: String,
     display_name: Option<String>,
 ) -> Result<WorkspaceList, String> {
-    println!("[workspace] update display name request: {workspace_id}");
+    log_info!("workspace", "update display name request: {workspace_id}");
     let mut state = load_workspace_state(&app)?;
     let id = workspace_id.trim();
 
@@ -276,7 +278,7 @@ pub fn workspace_update_display_name(
     }
 
     save_workspace_state(&app, &state)?;
-    println!("[workspace] update display name complete: {id}");
+    log_info!("workspace", "update display name complete: {id}");
 
     Ok(build_workspace_list(state))
 }
@@ -289,7 +291,7 @@ pub fn workspace_create(
     preset: String,
     watch_state: State<WorkspaceWatchState>,
 ) -> Result<WorkspaceList, String> {
-    println!("[workspace] create local request");
+    log_info!("workspace", "create local request");
     let mut folder = folder_path.trim().to_string();
     if folder.is_empty() {
         return Err("folderPath is required".to_string());
@@ -327,7 +329,7 @@ pub fn workspace_create(
 
     state.selected_workspace_id = id.clone();
     save_workspace_state(&app, &state)?;
-    println!("[workspace] create local complete: {id}");
+    log_info!("workspace", "create local complete: {id}");
 
     let _ = watch_state;
 
