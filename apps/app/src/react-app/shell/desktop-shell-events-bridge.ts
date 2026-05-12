@@ -1,4 +1,3 @@
-import { isTauriRuntime } from "../../app/utils";
 import { ensureInspectorInstalled } from "./app-inspector";
 
 const EVENT_SHELL_EVENTS_REQUEST = "aiwork-shell-events-request";
@@ -8,7 +7,6 @@ const EVENT_SHELL_CLEAR_REQUEST = "aiwork-shell-clear-request";
  * Listeners on the **main** webview only: answers IPC pull/clear for the detached `app-log` window.
  */
 export async function installDesktopShellEventsBridgeListeners(): Promise<void> {
-  if (!isTauriRuntime()) return;
   const { getCurrentWebviewWindow } = await import("@tauri-apps/api/webviewWindow");
   if (getCurrentWebviewWindow().label !== "main") return;
 

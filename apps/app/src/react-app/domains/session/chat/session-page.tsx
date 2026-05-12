@@ -31,7 +31,7 @@ import {
 } from "../../../shell/workspace-shell-layout";
 import { OwDotTicker } from "../../../shell/dot-ticker";
 import { useReactRenderWatchdog } from "../../../shell/react-render-watchdog";
-import { isElectronRuntime, isMacPlatform, isTauriRuntime } from "../../../../app/utils";
+import { isMacPlatform } from "../../../../app/utils";
 
 /** Title bar WebViews often show I‑beam over headings unless this is explicit. */
 const SESSION_MAIN_HEADER_DRAG_CHROME_STYLE: CSSProperties = {
@@ -63,9 +63,7 @@ function SessionTitleGlyph(props: { className?: string }) {
 }
 
 /** Full-window-drag hits fail on nested title text in WKWebView (incl. release); use an underlay + pointer-events pass-through. */
-function sessionMainHeaderUsesDragPassThrough(): boolean {
-  return isTauriRuntime() || (isElectronRuntime() && isMacPlatform());
-}
+const SESSION_MAIN_HEADER_USES_DRAG_PASS_THROUGH = true;
 
 type StatusBarOverrides = Pick<
   StatusBarProps,
@@ -214,7 +212,7 @@ export function SessionPage(props: SessionPageProps) {
   }, []);
 
   const macDesktopChrome =
-    isMacPlatform() && (isTauriRuntime() || isElectronRuntime());
+    isMacPlatform();
 
   const selectedSessionTitle = useMemo(
     () => sessionTitleForId(props.sidebar.workspaceSessionGroups, props.selectedSessionId),
@@ -394,7 +392,7 @@ export function SessionPage(props: SessionPageProps) {
   const macHeaderTrafficInset =
     macDesktopChrome && (!layoutLg || leftWorkspaceSidebarCollapsed);
 
-  const mainHeaderDragPassThrough = sessionMainHeaderUsesDragPassThrough();
+  const mainHeaderDragPassThrough = SESSION_MAIN_HEADER_USES_DRAG_PASS_THROUGH;
 
   const statusBarInSidebar = layoutLg && !leftWorkspaceSidebarCollapsed;
 
@@ -507,30 +505,15 @@ export function SessionPage(props: SessionPageProps) {
             className={`relative z-10 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-dls-divider bg-dls-surface pr-1.5 md:pr-2 ${
               macHeaderTrafficInset ? "pl-[76px]" : "pl-4 md:pl-6"
             } select-none`}
-            {...(!mainHeaderDragPassThrough && isTauriRuntime()
-              ? ({ "data-tauri-drag-region": true } as const)
-              : {})}
-            style={
-              !mainHeaderDragPassThrough
-                ? ({
-                    ...SESSION_MAIN_HEADER_DRAG_CHROME_STYLE,
-                    ...(isElectronRuntime() && isMacPlatform()
-                      ? ({ WebkitAppRegion: "drag" } as CSSProperties)
-                      : {}),
-                  } satisfies CSSProperties)
-                : undefined
-            }
+            data-tauri-drag-region={true}
           >
             {mainHeaderDragPassThrough ? (
               <div
                 aria-hidden
                 className="absolute inset-0 z-0"
-                {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
+                data-tauri-drag-region={true}
                 style={{
                   ...SESSION_MAIN_HEADER_DRAG_CHROME_STYLE,
-                  ...(isElectronRuntime() && isMacPlatform()
-                    ? ({ WebkitAppRegion: "drag" } as CSSProperties)
-                    : {}),
                 }}
               />
             ) : null}
@@ -544,12 +527,7 @@ export function SessionPage(props: SessionPageProps) {
                   className={`flex shrink-0 ${mainHeaderDragPassThrough ? "pointer-events-auto" : ""} ${
                     import.meta.env.PROD && macHeaderTrafficInset ? "ml-2" : ""
                   }`}
-                  {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
-                  style={
-                    isElectronRuntime() && isMacPlatform()
-                      ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
-                      : undefined
-                  }
+                  data-tauri-drag-region="false"
                 >
                   <button
                     type="button"
@@ -600,12 +578,7 @@ export function SessionPage(props: SessionPageProps) {
               className={`relative z-[2] flex shrink-0 items-center ${
                 mainHeaderDragPassThrough ? "pointer-events-none" : ""
               }`}
-              {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
-              style={
-                isElectronRuntime() && isMacPlatform()
-                  ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
-                  : undefined
-              }
+              data-tauri-drag-region="false"
             >
               <div className={mainHeaderDragPassThrough ? "pointer-events-auto" : undefined}>
                 <button

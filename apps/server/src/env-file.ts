@@ -225,7 +225,7 @@ export class EnvService {
     });
   }
 
-  // Used by the Electron shells at spawn time. The Tauri Rust
+  // The Tauri Rust
   // shell has its own equivalent in src-tauri/src/env_file.rs — keep the two
   // readers byte-for-byte in sync on path resolution and reserved-keys policy.
   static async readForInjection(overridePath?: string): Promise<Record<string, string>> {

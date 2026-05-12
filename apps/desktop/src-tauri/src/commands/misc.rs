@@ -107,7 +107,7 @@ fn collect_opencode_disk_log_dir_candidates(app: &AppHandle) -> Vec<(String, Pat
     #[cfg(target_os = "macos")]
     if env_truthy("AIWORK_DEV_MODE") {
         if let Some(path) = macos_dev_application_support_opencode_log_dir() {
-            ordered.push(("macos_electron_dev".into(), path));
+            ordered.push(("macos_dev".into(), path));
         }
     }
 

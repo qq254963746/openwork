@@ -19,11 +19,6 @@ import {
   type AiWorkServerInfo,
 } from "../../../../app/lib/desktop";
 import {
-  ELECTRON_ALPHA_RELEASE_PAGE_URL,
-  resolveElectronAlphaArtifact,
-  type ElectronAlphaArtifact,
-} from "../../../../app/lib/electron-alpha";
-import {
   writeAiWorkServerSettings,
 } from "../../../../app/lib/aiwork-server";
 import {
@@ -95,10 +90,6 @@ function downloadTextAsFile(filename: string, content: string, mimeType: string)
 function readEngineSource(): "path" | "sidecar" | "custom" {
   const raw = readStoredString(ENGINE_SOURCE_KEY, "sidecar");
   return raw === "path" || raw === "sidecar" || raw === "custom" ? raw : "sidecar";
-}
-
-function readOpencodeEnableExa(): boolean {
-  return readStoredString(OPENCODE_ENABLE_EXA_KEY, "0") === "1";
 }
 
 function statusPill(
@@ -680,7 +671,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       onClearDeveloperLog,
       onCopyDeveloperLog,
       onExportDeveloperLog,
-      electronPreviewReleaseUrl: ELECTRON_ALPHA_RELEASE_PAGE_URL,
       onStopHost,
       onResetStartupPreference,
       engineSource,

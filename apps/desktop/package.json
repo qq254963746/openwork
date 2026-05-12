@@ -1,37 +1,24 @@
 {
   "name": "@aiwork/desktop",
   "private": true,
-  "version": "0.13.40",
+  "version": "0.13.41",
   "description": "AiWork desktop shell",
   "author": {
     "name": "AiWork",
     "email": "support@aiwork.com"
   },
-  "main": "electron/main.mjs",
   "type": "module",
   "scripts": {
-    "dev": "node ./scripts/electron-dev.mjs",
+    "dev": "AIWORK_DEV_MODE=1 tauri dev --config src-tauri/tauri.dev.conf.json --config \"{\\\"build\\\":{\\\"devUrl\\\":\\\"http://localhost:${PORT:-5173}\\\"}}\"",
     "dev:tauri": "AIWORK_DEV_MODE=1 tauri dev --config src-tauri/tauri.dev.conf.json --config \"{\\\"build\\\":{\\\"devUrl\\\":\\\"http://localhost:${PORT:-5173}\\\"}}\"",
-    "dev:electron": "node ./scripts/electron-dev.mjs",
-    "dev:windows": "node ./scripts/dev-windows.mjs",
-    "dev:windows:x64": "node ./scripts/dev-windows.mjs x64",
     "build": "tauri build",
-    "build:electron": "node ./scripts/electron-build.mjs",
-    "package:electron": "pnpm run build:electron && pnpm exec electron-builder --config electron-builder.yml",
-    "package:electron:dir": "pnpm run build:electron && pnpm exec electron-builder --config electron-builder.yml --dir",
-    "electron": "pnpm exec electron ./electron/main.mjs",
-    "check:electron": "node ./scripts/check-electron-bridge.mjs",
-    "typecheck:electron": "pnpm --dir ../server exec tsc -p ../desktop/tsconfig.electron.json --noEmit",
     "prepare:sidecar": "node ./scripts/prepare-sidecar.mjs"
   },
   "dependencies": {
     "chrome-devtools-mcp": "0.17.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.11.1",
-    "electron": "^35.7.5",
-    "electron-builder": "^25.1.8",
-    "electron-devtools-installer": "^4.0.0"
+    "@tauri-apps/cli": "^2.11.1"
   },
   "packageManager": "pnpm@10.27.0"
 }

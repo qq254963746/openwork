@@ -15,7 +15,7 @@ import {
   hydrateAiWorkServerSettingsFromEnv,
   writeAiWorkServerSettings,
 } from "../../app/lib/aiwork-server";
-import { isElectronRuntime, safeStringify } from "../../app/utils";
+import { safeStringify } from "../../app/utils";
 import { useServer } from "../kernel/server-provider";
 import { useBootState } from "./boot-state";
 
@@ -24,28 +24,13 @@ import { useBootState } from "./boot-state";
 // keeps running across the transient unmount.
 let BOOT_STARTED = false;
 
-function isAiWorkServerReady(info?: {
-  running?: boolean | null;
-  baseUrl?: string | null;
-  ownerToken?: string | null;
-  clientToken?: string | null;
-}) {
-  return Boolean(
-    info?.running === true &&
-      info.baseUrl?.trim() &&
-      (info.ownerToken?.trim() || info.clientToken?.trim()),
-  );
-}
-
 /**
  * On desktop (Tauri) startup:
  *   1) bootstrap the workspace list
  *   2) if a local workspace is selected, restart the embedded AiWork server
  *   3) start the OpenCode engine pointed at the workspace
  *   4) activate the workspace on the running AiWork server
- *   5) notify React routes that fresh desktop runtime info is available. Electron
- *      routes read live runtime info directly instead of persisting ephemeral
- *      localhost ports/tokens into AiWork settings.
+ *   5) notify React routes that fresh desktop runtime info is available.
  *
  * Safe to call multiple times — gated by a `didBoot` ref so it runs once per mount.
  */
@@ -79,50 +64,6 @@ export function useDesktopRuntimeBoot() {
 
         const workspaceRoot = workspace.path?.trim();
         if (!workspaceRoot) {
-          markReady();
-          return;
-        }
-
-        if (isElectronRuntime()) {
-          setPhase("starting-engine", "Starting your workspace");
-          const boot = (await runtimeBootstrap().catch((error) => ({
-            ok: false,
-            error: error instanceof Error ? error.message : safeStringify(error),
-          }))) as {
-            ok?: boolean;
-            skipped?: boolean;
-            error?: string;
-            engine?: { baseUrl?: string | null };
-            aiworkServer?: {
-              running?: boolean | null;
-              baseUrl?: string | null;
-              ownerToken?: string | null;
-              clientToken?: string | null;
-              port?: number | null;
-            };
-          };
-
-          if (boot.ok === false) {
-            setError(boot.error || "Failed to start AiWork runtime");
-            return;
-          }
-
-          if (!boot.skipped && !isAiWorkServerReady(boot.aiworkServer)) {
-            setError("AiWork server did not finish starting. Please restart AiWork.");
-            return;
-          }
-
-          if (boot.engine?.baseUrl) {
-            setActive(boot.engine.baseUrl);
-          }
-          const serverInfo = boot.aiworkServer;
-          if (serverInfo?.baseUrl) {
-            try {
-              window.dispatchEvent(new CustomEvent("aiwork-server-settings-changed"));
-            } catch {
-              /* ignore */
-            }
-          }
           markReady();
           return;
         }
@@ -163,8 +104,8 @@ export function useDesktopRuntimeBoot() {
         }
 
         // SLOW PATH ─────────────────────────────────────────────────────
-        // No running engine. Tauri now mirrors Electron: engine_start boots
-        // aiwork-server and lets that server manage OpenCode.
+        // No running engine. engine_start boots aiwork-server and lets that
+        // server manage OpenCode.
         const localPaths = list.workspaces
           .map((entry) => entry.path?.trim() ?? "")
           .filter((path): path is string => path.length > 0);

@@ -2,13 +2,11 @@ import type { Part, Session } from "@opencode-ai/sdk/v2/client";
 import { t } from "../../i18n";
 import { cleanArtifactPath } from "./artifact-path";
 import type {
-  ArtifactItem,
   MessageGroup,
   MessageInfo,
   MessageWithParts,
   ModelRef,
   OpencodeEvent,
-  PlaceholderAssistantMessage,
   ProviderListItem,
 } from "../types";
 import type { WorkspaceInfo } from "../lib/desktop";
@@ -68,14 +66,6 @@ export function formatModelLabel(model: ModelRef, providers: ProviderListItem[] 
   const modelLabel = modelInfo?.name ?? humanizeModelLabel(model.modelID);
 
   return `${providerLabel} · ${modelLabel}`;
-}
-
-export function isTauriRuntime() {
-  return typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__ != null;
-}
-
-export function isElectronRuntime() {
-  return typeof window !== "undefined" && (window as Window).__AIWORK_ELECTRON__ != null;
 }
 
 export function isWindowsPlatform() {
@@ -813,16 +803,8 @@ function buildToolDetail(state: any, toolName: string): string | undefined {
   return undefined;
 }
 
-const ARTIFACT_PATH_PATTERN =
-  /(?:^|[\s"'`([{])((?:[a-zA-Z]:[/\\]|\.{1,2}[/\\]|~[/\\]|[/\\])[\w./\\\-]*\.[a-z][a-z0-9]{0,9}|[\w.\-]+[/\\][\w./\\\-]*\.[a-z][a-z0-9]{0,9})/gi;
-const ARTIFACT_OUTPUT_SCAN_LIMIT = 4000;
-const ARTIFACT_OUTPUT_SKIP_TOOLS = new Set(["webfetch"]);
-
 export { cleanArtifactPath };
 
-type DeriveArtifactsOptions = {
-  maxMessages?: number;
-};
 
 export function summarizeStep(part: Part): { title: string; detail?: string; isSkill?: boolean; skillName?: string; toolCategory?: string; status?: string } {
   if (part.type === "tool") {
@@ -889,105 +871,3 @@ export function summarizeStep(part: Part): { title: string; detail?: string; isS
   return { title: "Step", toolCategory: "tool" };
 }
 
-export function deriveArtifacts(list: MessageWithParts[], options: DeriveArtifactsOptions = {}): ArtifactItem[] {
-  const results = new Map<string, ArtifactItem>();
-  const maxMessages =
-    typeof options.maxMessages === "number" && Number.isFinite(options.maxMessages) && options.maxMessages > 0
-      ? Math.floor(options.maxMessages)
-      : null;
-  const source = maxMessages && list.length > maxMessages ? list.slice(list.length - maxMessages) : list;
-
-  source.forEach((message) => {
-    const messageId = String((message.info as any)?.id ?? "");
-
-    message.parts.forEach((part) => {
-      if (part.type !== "tool") return;
-      const record = part as any;
-      const state = record.state ?? {};
-      const matches = new Set<string>();
-
-      const explicit = [
-        state.path,
-        state.file,
-        ...(Array.isArray(state.files) ? state.files : []),
-      ];
-
-      explicit.forEach((f) => {
-        if (typeof f === "string") {
-          const trimmed = f.trim();
-          if (
-            trimmed.length > 0 &&
-            trimmed.length <= 500 &&
-            trimmed.includes(".") &&
-            !/^\.{2,}$/.test(trimmed)
-          ) {
-            matches.add(trimmed);
-          }
-        }
-      });
-
-      const toolName =
-        typeof record.tool === "string" && record.tool.trim()
-          ? record.tool.trim().toLowerCase()
-          : "";
-      const titleText = typeof state.title === "string" ? state.title : "";
-      const outputText =
-        typeof state.output === "string" && !ARTIFACT_OUTPUT_SKIP_TOOLS.has(toolName)
-          ? state.output.slice(0, ARTIFACT_OUTPUT_SCAN_LIMIT)
-          : "";
-
-      const text = [titleText, outputText]
-        .filter((v): v is string => Boolean(v))
-        .join(" ");
-
-      if (text) {
-        ARTIFACT_PATH_PATTERN.lastIndex = 0;
-        Array.from(text.matchAll(ARTIFACT_PATH_PATTERN))
-          .map((m) => m[1])
-          .filter((f) => f && f.length <= 500)
-          .forEach((f) => matches.add(f));
-      }
-
-      if (matches.size === 0) return;
-
-      matches.forEach((match) => {
-        const cleanedPath = cleanArtifactPath(match);
-        if (!cleanedPath) return;
-
-        const key = cleanedPath.toLowerCase();
-        const name = cleanedPath.split("/").pop() ?? cleanedPath;
-        const id = `artifact-${encodeURIComponent(cleanedPath)}`;
-
-        // Delete and re-add to move to end (most recent)
-        if (results.has(key)) results.delete(key);
-        results.set(key, {
-          id,
-          name,
-          path: cleanedPath,
-          kind: "file" as const,
-          size: state.size ? String(state.size) : undefined,
-          messageId: messageId || undefined,
-        });
-      });
-    });
-  });
-
-  return Array.from(results.values());
-}
-
-export function deriveWorkingFiles(items: ArtifactItem[]): string[] {
-  const results: string[] = [];
-  const seen = new Set<string>();
-
-  for (const item of items) {
-    const rawKey = item.path ?? item.name;
-    const normalizedPath = rawKey.trim().replace(/[\\/]+/g, "/");
-    const normalizedKey = normalizedPath.toLowerCase();
-    if (!normalizedPath || seen.has(normalizedKey)) continue;
-    seen.add(normalizedKey);
-    results.push(normalizedPath);
-    if (results.length >= 5) break;
-  }
-
-  return results;
-}

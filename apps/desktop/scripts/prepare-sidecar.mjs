@@ -147,7 +147,7 @@ const resolveBuildScript = (dir) => {
 };
 
 // chrome-devtools-mcp: now bundled as a node_modules dependency of
-// @aiwork/desktop (Electron resolves it directly). The Bun-compiled shim
+// @aiwork/desktop . The Bun-compiled shim
 // sidecar is no longer built.  These variables are kept only so the
 // versions.json metadata block below can record the pinned version without
 // breaking the build.

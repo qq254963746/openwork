@@ -20,10 +20,14 @@
         "title": "AiWork - Dev",
         "width": 1180,
         "height": 820,
+        "minWidth": 1024,
+        "minHeight": 700,
         "resizable": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
         "trafficLightPosition": {
           "x": 14,
-          "y": 16
+          "y": 26
         }
       }
     ]

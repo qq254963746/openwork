@@ -77,7 +77,6 @@ export type DebugViewProps = {
   onClearDeveloperLog: () => void | Promise<void>;
   onCopyDeveloperLog: () => void | Promise<void>;
   onExportDeveloperLog: () => void | Promise<void>;
-  electronPreviewReleaseUrl: string;
   onStopHost: () => void | Promise<void>;
   onResetStartupPreference: () => void | Promise<void>;
   engineSource: "path" | "sidecar" | "custom";

@@ -5,7 +5,6 @@ use serde::Deserialize;
 
 // User-level env file. Matched byte-for-byte by:
 //   apps/server/src/env-file.ts             (CRUD + server routes)
-//   apps/desktop/electron/runtime.mjs       (Electron spawn)
 // If any of those change their path resolution or reserved-prefix policy,
 // update this file in the same PR.
 

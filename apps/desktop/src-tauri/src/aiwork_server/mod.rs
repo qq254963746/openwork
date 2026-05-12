@@ -412,7 +412,7 @@ pub fn start_aiwork_server(
         .map(|path| path.as_str())
         .unwrap_or("");
     let reserved_ports = reserved_aiwork_ports(app, active_workspace)?;
-    // Match Electron: choose a fresh server port for each boot. The renderer is
+    // Choose a fresh server port for each boot. The renderer is
     // updated with the new URL after startup, which avoids stale sidecar ports.
     let port = resolve_aiwork_port(&host, None, &reserved_ports)?;
     let workspace_tokens = load_or_create_workspace_tokens(app, active_workspace)?;
@@ -559,7 +559,7 @@ mod tests {
     }
 
     #[test]
-    fn reads_electron_camel_case_token_entries() {
+    fn reads_camel_case_token_entries() {
         let path = unique_temp_path("camel-token");
         fs::write(
             &path,
@@ -589,7 +589,7 @@ mod tests {
     }
 
     #[test]
-    fn reads_electron_camel_case_port_state() {
+    fn reads_camel_case_port_state() {
         let path = unique_temp_path("camel-port");
         fs::write(
             &path,

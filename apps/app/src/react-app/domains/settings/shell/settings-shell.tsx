@@ -1,10 +1,8 @@
 /** @jsxImportSource react */
-import type { CSSProperties } from "react";
 import type * as React from "react";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { isElectronRuntime, isTauriRuntime } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import { SettingsPage, getSettingsTabLabel } from "./settings-page";
 import { WorkspaceSessionList } from "../../session/sidebar/workspace-session-list";
@@ -93,12 +91,7 @@ export function SettingsShell(props: SettingsShellProps) {
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-dls-surface">
           <header
             className="shrink-0 flex h-12 items-center justify-between border-b border-dls-border bg-dls-surface pl-4 pr-1 md:pl-6 md:pr-3"
-            {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
-            style={
-              isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
-                ? ({ WebkitAppRegion: "drag" } as CSSProperties)
-                : undefined
-            }
+            data-tauri-drag-region={true}
           >
             <div className="flex min-w-0 items-center gap-3">
               {props.headerLeadingSlot}
@@ -127,11 +120,6 @@ export function SettingsShell(props: SettingsShellProps) {
             </div>
             <div
               className="flex items-center text-gray-10"
-              style={
-                isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
-                  ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
-                  : undefined
-              }
             >
               <Button
                 variant="ghost"

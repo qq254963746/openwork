@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
@@ -18,8 +18,6 @@ import type {
 } from "../../../../app/types";
 import {
   getWorkspaceTaskLoadErrorDisplay,
-  isElectronRuntime,
-  isTauriRuntime,
   isWindowsPlatform,
 } from "../../../../app/utils";
 import { t } from "../../../../i18n";
@@ -552,29 +550,18 @@ export function WorkspaceSessionList(props: Props) {
     );
   };
 
-  const electronMacDrag =
-    isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
-
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col px-1">
       <div className="flex h-[50px] shrink-0 items-stretch gap-1">
         <div
           aria-hidden
           className="min-w-0 flex-1 select-none"
-          {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
-          style={
-            electronMacDrag ? ({ WebkitAppRegion: "drag" } as CSSProperties) : undefined
-          }
+          data-tauri-drag-region={true}
         />
         {props.onCollapseWorkspaceSidebar ? (
           <div
             className="flex shrink-0 items-center pr-1.5"
-            {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
-            style={
-              isElectronRuntime() && typeof navigator !== "undefined" && /Mac/i.test(navigator.platform)
-                ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
-                : undefined
-            }
+            data-tauri-drag-region="false"
           >
             <button
               type="button"

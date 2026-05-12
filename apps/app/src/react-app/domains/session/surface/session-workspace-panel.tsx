@@ -22,16 +22,14 @@ import {
 } from "../../../../app/lib/workspace-relative-path";
 import type { ComposerAttachment } from "../../../../app/types";
 import {
-  isElectronRuntime,
   isMacPlatform,
-  isTauriRuntime,
   isWindowsPlatform,
 } from "../../../../app/utils";
 import { MarkdownBlock } from "./markdown";
 import { WorkspaceCodePreview } from "./workspace-code-preview";
 import { WorkspacePanelFileGlyph } from "./workspace-panel-file-glyph";
 
-/** Inline styles so drag chrome avoids text I‑beam / selection in Tauri & Electron WebViews. */
+/** Inline styles so drag chrome avoids text I‑beam / selection in Tauri WebViews. */
 const WORKSPACE_PANEL_HEADER_DRAG_STYLE: CSSProperties = {
   cursor: "default",
   userSelect: "none",
@@ -838,24 +836,16 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
           >
             <div
               className="flex min-w-0 flex-1 cursor-default items-center select-none text-[11px] font-semibold uppercase tracking-wide text-[#000000]"
-              {...(isTauriRuntime() ? ({ "data-tauri-drag-region": true } as const) : {})}
+              data-tauri-drag-region={true}
               style={{
                 ...WORKSPACE_PANEL_HEADER_DRAG_STYLE,
-                ...(isElectronRuntime() && isMacPlatform()
-                  ? ({ WebkitAppRegion: "drag" } as CSSProperties)
-                  : {}),
               }}
             >
               {t("session.workspace_panel_files")}
             </div>
             <div
               className="flex shrink-0 items-center gap-0.5"
-              {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
-              style={
-                isElectronRuntime() && isMacPlatform()
-                  ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
-                  : undefined
-              }
+              data-tauri-drag-region="false"
             >
               <button
                 type="button"
@@ -885,11 +875,8 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
             <button
               type="button"
               className="inline-flex max-w-full min-w-0 shrink cursor-pointer select-none truncate rounded px-1 py-0.5 hover:bg-dls-hover hover:text-dls-text"
-              {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
+              data-tauri-drag-region="false"
               style={{
-                ...(isElectronRuntime() && isMacPlatform()
-                  ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
-                  : {}),
                 cursor: "pointer",
                 userSelect: "none",
                 WebkitUserSelect: "none",
@@ -910,11 +897,8 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
                 <button
                   type="button"
                   className="inline-flex max-w-full min-w-0 shrink cursor-pointer select-none truncate rounded px-1 py-0.5 hover:bg-dls-hover hover:text-dls-text"
-                  {...(isTauriRuntime() ? ({ "data-tauri-drag-region": "false" } as const) : {})}
+                  data-tauri-drag-region="false"
                   style={{
-                    ...(isElectronRuntime() && isMacPlatform()
-                      ? ({ WebkitAppRegion: "no-drag" } as CSSProperties)
-                      : {}),
                     cursor: "pointer",
                     userSelect: "none",
                     WebkitUserSelect: "none",

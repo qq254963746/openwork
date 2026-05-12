@@ -27,7 +27,6 @@ fn env_truthy_aiwork_dev() -> bool {
     )
 }
 
-/// Matches `apps/desktop/electron/runtime.mjs` (`ensureDevModePaths` / `buildChildEnv`).
 /// GUI-launched Tauri often inherits no `XDG_*` / `OPENCODE_CONFIG_DIR`; without this,
 /// `aiwork-server` resolves global config + managed OpenCode state to `~/.config` while
 /// the UI writes credentials under `Application Support/.../aiwork-dev-data/...`.

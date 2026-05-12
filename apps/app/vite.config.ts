@@ -42,13 +42,8 @@ const buildAppVersion =
   readPackageVersion(appPackagePath) ||
   "0.0.0";
 
-// Electron packaged builds load index.html via `file://`, so asset URLs
-// must be relative. Tauri serves via its own protocol so absolute paths
-// work there. Gate on an env var the electron build script sets.
-const isElectronPackagedBuild = process.env.AIWORK_ELECTRON_BUILD === "1";
-
 export default defineConfig({
-  base: isElectronPackagedBuild ? "./" : "/",
+  base: "/",
   define: {
     "import.meta.env.VITE_AIWORK_APP_VERSION": JSON.stringify(buildAppVersion),
   },

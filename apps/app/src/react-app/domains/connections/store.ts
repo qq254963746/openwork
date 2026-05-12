@@ -20,7 +20,6 @@ import { toSessionTransportDirectory } from "../../../app/lib/session-scope";
 import {
   parseMcpServersFromContent,
   removeMcpFromConfig,
-  resolveChromeDevtoolsMcpCommand,
   usesChromeDevtoolsAutoConnect,
   validateMcpServerName,
 } from "../../../app/mcp";
@@ -32,7 +31,7 @@ import type {
   ReloadReason,
   ReloadTrigger,
 } from "../../../app/types";
-import { isElectronRuntime, normalizeDirectoryPath, safeStringify } from "../../../app/utils";
+import { normalizeDirectoryPath, safeStringify } from "../../../app/utils";
 
 import type { AiWorkServerStore } from "./aiwork-server-store";
 
@@ -441,17 +440,9 @@ export function createConnectionsStore(options: {
           throw new Error("Missing MCP command.");
         }
 
-        // For chrome-devtools in Electron, resolve the bundled binary so we
-        // don't need npx/npm at runtime.
+        // For chrome-devtools, resolve the command (uses npx-based for Tauri/web).
         let resolvedCommand = entry.command;
-        if (slug === CHROME_DEVTOOLS_MCP_ID && isElectronRuntime()) {
-          const bundled = await resolveChromeDevtoolsMcpCommand();
-          // Preserve any extra args (e.g. --autoConnect) from the original
-          const extraArgs = entry.command.filter(
-            (arg) => arg.startsWith("--") || arg.startsWith("-"),
-          );
-          resolvedCommand = [...bundled, ...extraArgs];
-        }
+
         mcpEntryConfig["command"] = resolvedCommand;
 
         if (slug === CHROME_DEVTOOLS_MCP_ID && usesChromeDevtoolsAutoConnect(resolvedCommand)) {

@@ -13,7 +13,6 @@ import {
   pullShellEventsFromMain,
   requestClearMainShellEvents,
 } from "../../app/lib/desktop-tauri";
-import { isTauriRuntime } from "../../app/utils";
 import { LOG_VIEWER_POPUP_QUERY } from "./open-app-log-window";
 import { useBootState } from "./boot-state";
 
@@ -102,7 +101,6 @@ function resolveOpenerLogApi(): NonNullable<typeof window.__aiwork> | null {
 
 /** Tauri detached log webview uses `open_app_log_window` + `?aiworkLogViewer=1` (no `window.opener`). */
 function shouldPullShellEventsFromMainShell(): boolean {
-  if (!isTauriRuntime()) return false;
   try {
     return new URL(window.location.href).searchParams.get(LOG_VIEWER_POPUP_QUERY) === "1";
   } catch {

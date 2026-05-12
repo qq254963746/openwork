@@ -2,44 +2,18 @@ import { applyEdits, modify, parse, printParseErrorCode } from "jsonc-parser";
 import type { McpServerConfig, McpServerEntry } from "./types";
 import { readOpencodeConfig, writeOpencodeConfig } from "./lib/desktop";
 import { CHROME_DEVTOOLS_MCP_COMMAND, CHROME_DEVTOOLS_MCP_ID } from "./constants";
-import { isElectronRuntime } from "./utils";
 
 type McpConfigValue = Record<string, unknown> | null | undefined;
 
 export const CHROME_DEVTOOLS_AUTO_CONNECT_ARG = "--autoConnect";
 
 /**
- * Cached result of resolving the bundled chrome-devtools-mcp binary path
- * from the Electron main process. `undefined` = not yet resolved.
- */
-let _resolvedBundledCommand: string[] | null | undefined;
-
-/**
- * Resolve the chrome-devtools-mcp command for the current runtime.
+ * Resolve the chrome-devtools-mcp command.
  *
- * In Electron, the package is bundled as a dependency of `@aiwork/desktop`,
- * so we ask the main process for the absolute path to the bin and use
- * `["node", "<path>"]` — no npm/npx required.
- *
- * Falls back to the npx-based command for web/remote contexts.
+ * With Tauri, uses the npx-based command for web/remote contexts.
  */
 export async function resolveChromeDevtoolsMcpCommand(): Promise<string[]> {
-  if (isElectronRuntime() && _resolvedBundledCommand === undefined) {
-    try {
-      const invokeDesktop = (window as Window).__AIWORK_ELECTRON__?.invokeDesktop;
-      if (!invokeDesktop) {
-        _resolvedBundledCommand = null;
-      } else {
-        const resolved = await invokeDesktop("resolveChromeDevtoolsMcpBin");
-        _resolvedBundledCommand = Array.isArray(resolved) && resolved.length > 0
-          ? (resolved as string[])
-          : null;
-      }
-    } catch {
-      _resolvedBundledCommand = null;
-    }
-  }
-  return _resolvedBundledCommand ?? [...CHROME_DEVTOOLS_MCP_COMMAND];
+  return [...CHROME_DEVTOOLS_MCP_COMMAND];
 }
 
 type McpIdentity = {

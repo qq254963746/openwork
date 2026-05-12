@@ -15,11 +15,3 @@ export function getAiWorkDeployment(): AiWorkDeployment {
 
   return normalizeDeployment(envValue);
 }
-
-export function isWebDeployment(): boolean {
-  return getAiWorkDeployment() === "web";
-}
-
-export function isDesktopDeployment(): boolean {
-  return getAiWorkDeployment() === "desktop";
-}
