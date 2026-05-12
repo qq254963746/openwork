@@ -12,7 +12,7 @@ fn resolve_commands_dir(scope: &str, project_dir: &str) -> Result<PathBuf, Strin
                 return Err("projectDir is required".to_string());
             }
             Ok(PathBuf::from(project_dir)
-                .join(".aiwork-opencode")
+                .join(".aiwork")
                 .join("commands"))
         }
         "global" => {

@@ -239,11 +239,11 @@ function formatPluginObjectType(type: string) {
 function pluginSlashCommandName(file: CloudImportedPluginFile) {
   const path = file.path.trim();
   if (file.objectType === "command") {
-    const command = path.match(/^\.aiwork-opencode\/(?:command|commands)\/(.+)\.md$/i)?.[1];
+    const command = path.match(/^\.aiwork\/(?:command|commands)\/(.+)\.md$/i)?.[1];
     return command?.trim() || null;
   }
   if (file.objectType === "skill") {
-    const skill = path.match(/^\.aiwork-opencode\/(?:skill|skills)\/(?:[^/]+\/)?([^/]+)\/SKILL\.md$/i)?.[1];
+    const skill = path.match(/^\.aiwork\/(?:skill|skills)\/(?:[^/]+\/)?([^/]+)\/SKILL\.md$/i)?.[1];
     return skill?.trim() || null;
   }
   return null;

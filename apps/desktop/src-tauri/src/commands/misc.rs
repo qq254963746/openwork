@@ -339,7 +339,7 @@ fn current_aiwork_state_paths(app: &AppHandle) -> Result<Vec<PathBuf>, String> {
         paths.push(
             home.join("AiWork")
                 .join("Welcome")
-                .join(".aiwork-opencode")
+                .join(".aiwork")
                 .join("aiwork.json"),
         );
     }
@@ -395,7 +395,7 @@ fn validate_server_name(name: &str) -> Result<String, String> {
 fn read_workspace_aiwork_config(
     workspace_path: &Path,
 ) -> Result<WorkspaceAiWorkConfig, String> {
-    let aiwork_path = workspace_path.join(".aiwork-opencode").join("aiwork.json");
+    let aiwork_path = workspace_path.join(".aiwork").join("aiwork.json");
     if !aiwork_path.exists() {
         let mut cfg = WorkspaceAiWorkConfig::default();
         let workspace_value = workspace_path.to_string_lossy().to_string();

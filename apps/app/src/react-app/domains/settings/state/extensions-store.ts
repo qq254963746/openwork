@@ -53,8 +53,8 @@ import {
 import type { AiWorkServerStore } from "../../connections/aiwork-server-store";
 
 const DEFAULT_HUB_REPO: HubSkillRepo = {
-  owner: "different-ai",
-  repo: "openwork-hub",
+  owner: "anthropic",
+  repo: "skills",
   ref: "main",
 };
 const HUB_REPOS_STORAGE_KEY = "aiwork.skills.hubRepos.v1";
@@ -1100,7 +1100,7 @@ export function createExtensionsStore(options: {
     }
 
     try {
-      const opencodeSkills = await joinDesktopPath(root, ".aiwork-opencode", "skills");
+      const opencodeSkills = await joinDesktopPath(root, ".aiwork", "skills");
       const tryOpen = async (target: string) => {
         try {
           await openDesktopPath(target);

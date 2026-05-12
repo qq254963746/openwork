@@ -139,8 +139,8 @@ Your job:
 
 Memory (two kinds)
 1) Behavior memory (shareable, in git)
-- `.aiwork-opencode/skills/**`
-- `.aiwork-opencode/agents/**`
+- `.aiwork/skills/**`
+- `.aiwork/agents/**`
 - repo docs
 
 2) Private memory (never commit)
@@ -244,8 +244,8 @@ fn seed_commands(commands_dir: &PathBuf, preset: &str) -> Result<(), String> {
 fn resolve_workspace_opencode_config_path(root: &Path) -> PathBuf {
     let config_path_jsonc = root.join("opencode.jsonc");
     let config_path_json = root.join("opencode.json");
-    let hidden_config_path_jsonc = root.join(".aiwork-opencode").join("opencode.jsonc");
-    let hidden_config_path_json = root.join(".aiwork-opencode").join("opencode.json");
+    let hidden_config_path_jsonc = root.join(".aiwork").join("opencode.jsonc");
+    let hidden_config_path_json = root.join(".aiwork").join("opencode.json");
 
     if config_path_jsonc.exists() {
         config_path_jsonc
@@ -263,22 +263,22 @@ fn resolve_workspace_opencode_config_path(root: &Path) -> PathBuf {
 pub fn ensure_workspace_files(workspace_path: &str, preset: &str) -> Result<(), String> {
     let root = PathBuf::from(workspace_path);
 
-    let skill_root = root.join(".aiwork-opencode").join("skills");
+    let skill_root = root.join(".aiwork").join("skills");
     fs::create_dir_all(&skill_root)
-        .map_err(|e| format!("Failed to create .aiwork-opencode/skills: {e}"))?;
+        .map_err(|e| format!("Failed to create .aiwork/skills: {e}"))?;
     seed_workspace_guide(&skill_root)?;
     if preset == "starter" {
         seed_get_started_skill(&skill_root)?;
     }
 
-    let agents_dir = root.join(".aiwork-opencode").join("agents");
+    let agents_dir = root.join(".aiwork").join("agents");
     fs::create_dir_all(&agents_dir)
-        .map_err(|e| format!("Failed to create .aiwork-opencode/agents: {e}"))?;
+        .map_err(|e| format!("Failed to create .aiwork/agents: {e}"))?;
     seed_aiwork_agent(&agents_dir)?;
 
-    let commands_dir = root.join(".aiwork-opencode").join("commands");
+    let commands_dir = root.join(".aiwork").join("commands");
     fs::create_dir_all(&commands_dir)
-        .map_err(|e| format!("Failed to create .aiwork-opencode/commands: {e}"))?;
+        .map_err(|e| format!("Failed to create .aiwork/commands: {e}"))?;
     seed_commands(&commands_dir, preset)?;
 
     let config_path = resolve_workspace_opencode_config_path(&root);
@@ -385,7 +385,7 @@ pub fn ensure_workspace_files(workspace_path: &str, preset: &str) -> Result<(), 
         .map_err(|e| format!("Failed to write {}: {e}", config_path.display()))?;
     }
 
-    let aiwork_path = root.join(".aiwork-opencode").join("aiwork.json");
+    let aiwork_path = root.join(".aiwork").join("aiwork.json");
     if !aiwork_path.exists() {
         let aiwork = WorkspaceAiWorkConfig::new(workspace_path, preset, now_ms());
 
@@ -422,7 +422,7 @@ mod tests {
     #[test]
     fn prefers_hidden_opencode_jsonc_when_root_config_is_missing() {
         let root = temp_workspace_root();
-        let hidden = root.join(".aiwork-opencode").join("opencode.jsonc");
+        let hidden = root.join(".aiwork").join("opencode.jsonc");
         fs::create_dir_all(hidden.parent().unwrap()).unwrap();
         fs::write(&hidden, "{}\n").unwrap();
 
@@ -436,7 +436,7 @@ mod tests {
     fn prefers_root_config_over_hidden_config() {
         let root = temp_workspace_root();
         let root_jsonc = root.join("opencode.jsonc");
-        let hidden = root.join(".aiwork-opencode").join("opencode.jsonc");
+        let hidden = root.join(".aiwork").join("opencode.jsonc");
         fs::create_dir_all(hidden.parent().unwrap()).unwrap();
         fs::write(&root_jsonc, "{}\n").unwrap();
         fs::write(&hidden, "{}\n").unwrap();

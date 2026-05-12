@@ -30,8 +30,8 @@ AiWork is designed to be:
 - **Templates**: save and re-run common workflows (stored locally).
 - **Debug exports**: copy or export the runtime debug report and developer log stream from Settings -> Debug when you need to file a bug.
 - **Skills manager**:
-  - list installed `.aiwork-opencode/skills` folders
-  - import a local skill folder into `.aiwork-opencode/skills/<skill-name>`
+  - list installed `.aiwork/skills` folders
+  - import a local skill folder into `.aiwork/skills/<skill-name>`
 
 ## Quick Start
 

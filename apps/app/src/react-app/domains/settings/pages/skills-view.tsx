@@ -332,7 +332,7 @@ export function SkillsView(props: SkillsViewProps) {
   const isAiWorkInjectedSkill = (skill: SkillCard) => {
     const normalizedName = skill.name.trim().toLowerCase();
     const normalizedPath = skill.path.replace(/\\/g, "/").toLowerCase();
-    return normalizedPath.includes("/.aiwork-opencode/skills/") &&
+    return normalizedPath.includes("/.aiwork/skills/") &&
       (AIWORK_DEFAULT_SKILL_NAMES.has(normalizedName) || normalizedName.endsWith("-creator"));
   };
 

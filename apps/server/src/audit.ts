@@ -22,7 +22,7 @@ export function auditLogPath(workspaceId: string): string {
 }
 
 export function legacyAuditLogPath(workspaceRoot: string): string {
-  return join(workspaceRoot, ".aiwork-opencode", "aiwork", "audit.jsonl");
+  return join(workspaceRoot, ".aiwork", "aiwork", "audit.jsonl");
 }
 
 async function resolveReadableAuditPath(workspaceRoot: string, workspaceId: string): Promise<string | null> {

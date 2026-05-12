@@ -51,7 +51,7 @@ async function ensureWorkspaceAiWorkConfig(workspaceRoot: string, preset: string
     authorizedRoots: [workspaceRoot],
     reload: null,
   };
-  await ensureDir(join(workspaceRoot, ".aiwork-opencode"));
+  await ensureDir(join(workspaceRoot, ".aiwork"));
   await writeFile(path, JSON.stringify(config, null, 2) + "\n", "utf8");
 }
 
@@ -72,7 +72,7 @@ async function ensureOpencodeConfig(workspaceRoot: string): Promise<void> {
 }
 
 async function ensureAiWorkAgent(workspaceRoot: string): Promise<void> {
-  const agentsDir = join(workspaceRoot, ".aiwork-opencode", "agents");
+  const agentsDir = join(workspaceRoot, ".aiwork", "agents");
   const agentPath = join(agentsDir, "aiwork.md");
   if (await exists(agentPath)) return;
   await ensureDir(agentsDir);

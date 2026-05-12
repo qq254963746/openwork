@@ -683,7 +683,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
 
     if (baseName === "opencode") {
       for (const candidate of [
-        path.join(app.getPath("home"), ".aiwork-opencode", "bin", process.platform === "win32" ? "opencode.exe" : "opencode"),
+        path.join(app.getPath("home"), ".aiwork", "bin", process.platform === "win32" ? "opencode.exe" : "opencode"),
         path.join("/opt/homebrew/bin", process.platform === "win32" ? "opencode.exe" : "opencode"),
         path.join("/usr/local/bin", process.platform === "win32" ? "opencode.exe" : "opencode"),
         path.join("/usr/bin", process.platform === "win32" ? "opencode.exe" : "opencode"),
@@ -1125,7 +1125,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
       };
     }
 
-    const installDir = path.join(app.getPath("home"), ".aiwork-opencode", "bin");
+    const installDir = path.join(app.getPath("home"), ".aiwork", "bin");
     const command = await pinnedOpencodeInstallCommand();
     const result = await runShellCommand("bash", ["-lc", command], {
       env: { ...(await buildChildEnv()), OPENCODE_INSTALL_DIR: installDir },

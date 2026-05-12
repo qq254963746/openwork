@@ -559,7 +559,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     }
     try {
       downloadTextAsFile(
-        `aiwork-opencode-${new Date().toISOString().replace(/[:.]/g, "-")}.log`,
+        `aiwork-${new Date().toISOString().replace(/[:.]/g, "-")}.log`,
         text,
         "text/plain",
       );
