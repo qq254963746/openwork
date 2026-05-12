@@ -21,8 +21,8 @@ import { createRuntimeManager } from "./runtime.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const NATIVE_DEEP_LINK_EVENT = "aiwork:deep-link-native";
-const TAURI_APP_IDENTIFIER = "com.aiworkgroup2.aiwork";
-const DEV_APP_IDENTIFIER = "com.aiworkgroup2.aiwork.dev";
+const TAURI_APP_IDENTIFIER = "com.aiworkgroup.aiwork";
+const DEV_APP_IDENTIFIER = "com.aiworkgroup.aiwork.dev";
 const DESKTOP_PROTOCOL_SCHEME = "aiwork";
 const isDevMode = process.env.AIWORK_DEV_MODE === "1";
 const APP_NAME = isDevMode ? "AiWork - Dev" : "AiWork";

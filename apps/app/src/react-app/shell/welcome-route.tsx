@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { t } from "../../i18n";
 import {
+  engineStart,
   pickDirectory,
   resolveWorkspaceListSelectedId,
   workspaceCreate,
@@ -16,6 +17,7 @@ import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-moda
 import { resolveAiWorkConnection } from "./aiwork-connection";
 import { createAiWorkServerClient } from "../../app/lib/aiwork-server";
 import { writeActiveWorkspaceId } from "./session-memory";
+import { ConsoleLog } from "../../app/lib/console-log";
 import { workspaceSettingsRoute } from "./workspace-routes";
 
 function folderNameFromPath(path: string) {
@@ -52,11 +54,13 @@ export function WelcomeRoute() {
 
   const handleCreateWorkspace = useCallback(
     async (_preset: string, folder: string | null) => {
+      ConsoleLog.log("welcome-route", "handleCreateWorkspace:call", { folder });
       if (!folder) return;
       setCreateBusy(true);
       setCreateError(null);
       try {
         const workspaceName = folderNameFromPath(folder);
+        ConsoleLog.log("welcome-route", "handleCreateWorkspace:workspaceCreate:calling", { folderPath: folder, name: workspaceName });
         const list = await workspaceCreate({
           folderPath: folder,
           name: workspaceName,
@@ -66,16 +70,30 @@ export function WelcomeRoute() {
           resolveWorkspaceListSelectedId(list) ||
           list.workspaces[list.workspaces.length - 1]?.id ||
           "";
+        ConsoleLog.log("welcome-route", "handleCreateWorkspace:workspaceCreate:ok", { createdId, workspaceCount: list.workspaces.length });
         if (createdId) {
           await workspaceSetSelected(createdId).catch(() => undefined);
           await workspaceSetRuntimeActive(createdId).catch(() => undefined);
           writeActiveWorkspaceId(createdId);
+          ConsoleLog.log("welcome-route", "handleCreateWorkspace:workspaceSelected", { createdId });
         }
-        // Register with the running aiwork-server if available.
+
+        // Start the aiwork server so the workspace can be registered with it.
+        ConsoleLog.log("welcome-route", "handleCreateWorkspace:engineStart:calling", { folderPath: folder });
+        await engineStart(folder, {
+          runtime: "direct",
+          workspacePaths: [folder],
+        });
+        ConsoleLog.log("welcome-route", "handleCreateWorkspace:engineStart:ok");
+
+        // Register with the running aiwork-server.
         try {
           const { normalizedBaseUrl, resolvedToken, resolvedHostToken } =
             await resolveAiWorkConnection();
+          
+          ConsoleLog.log("welcome-route", "handleCreateWorkspace:createLocalWorkspace:calling - resolveAiWorkConnection", { normalizedBaseUrl, resolvedToken, resolvedHostToken });
           if (normalizedBaseUrl && resolvedToken) {
+            ConsoleLog.log("welcome-route", "handleCreateWorkspace:createLocalWorkspace:calling", { folderPath: folder, name: workspaceName });
             const aiworkClient = createAiWorkServerClient({
               baseUrl: normalizedBaseUrl,
               token: resolvedToken,
@@ -87,15 +105,22 @@ export function WelcomeRoute() {
                 name: workspaceName,
                 preset: "starter",
               })
-              .catch(() => undefined);
+              .catch((err) => {
+                ConsoleLog.log("welcome-route", "handleCreateWorkspace:createLocalWorkspace:error", err);
+              });
+            ConsoleLog.log("welcome-route", "handleCreateWorkspace:createLocalWorkspace:ok", { folderPath: folder });
+          } else {
+            ConsoleLog.log("welcome-route", "handleCreateWorkspace:createLocalWorkspace:skipped", { normalizedBaseUrl, hasToken: Boolean(resolvedToken) });
           }
         } catch {
           // Best-effort server registration.
         }
+        ConsoleLog.log("welcome-route", "handleCreateWorkspace:done", { createdId });
         markOnboardingComplete();
         setModalOpen(false);
         navigate(createdId ? workspaceSettingsRoute(createdId, "general") : "/settings/general", { replace: true });
       } catch (error) {
+        ConsoleLog.log("welcome-route", "handleCreateWorkspace:error", error);
         setCreateError(
           error instanceof Error ? error.message : "Failed to create workspace.",
         );

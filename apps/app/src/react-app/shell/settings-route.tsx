@@ -20,7 +20,6 @@ import type {
   SettingsTab,
   WorkspaceConnectionState,
   WorkspaceDisplay,
-  WorkspacePreset,
   WorkspaceSessionGroup,
 } from "../../app/types";
 import { currentLocale, t, setLocale, type Language } from "../../i18n";
@@ -112,19 +111,6 @@ function describeRouteError(error: unknown) {
   }
   const serialized = safeStringify(error);
   return serialized && serialized !== "{}" ? serialized : t("app.unknown_error");
-}
-
-function describeWorkspaceCreateError(error: unknown) {
-  const message = describeRouteError(error);
-  const lower = message.toLowerCase();
-  if (
-    lower.includes("operation timed out") ||
-    lower.includes("os error 60") ||
-    lower.includes("etimedout")
-  ) {
-    return `${message}\n\nAiWork could not read the workspace config before the filesystem timed out. This often happens when the folder is still syncing from iCloud Drive or another remote folder. Wait for the folder to finish downloading, move the workspace to a local folder, or try again.`;
-  }
-  return message;
 }
 
 function mergeRouteWorkspaces(
@@ -383,9 +369,6 @@ export function SettingsRoute() {
   const [configActionStatus, setConfigActionStatus] = useState<string | null>(null);
   const [revealConfigBusy, setRevealConfigBusy] = useState(false);
   const [resetConfigBusy, setResetConfigBusy] = useState(false);
-  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
-  const [createWorkspaceBusy, setCreateWorkspaceBusy] = useState(false);
-  const [createWorkspaceError, setCreateWorkspaceError] = useState<string | null>(null);
   const [renameWorkspaceId, setRenameWorkspaceId] = useState<string | null>(null);
   const [renameWorkspaceTitle, setRenameWorkspaceTitle] = useState("");
   const [renameWorkspaceBusy, setRenameWorkspaceBusy] = useState(false);
@@ -1113,11 +1096,6 @@ export function SettingsRoute() {
     await refreshRouteState();
   };
 
-  const handleOpenCreateWorkspace = () => {
-    setCreateWorkspaceError(null);
-    setCreateWorkspaceOpen(true);
-  };
-
   const handleOpenRenameWorkspace = useCallback((workspaceId: string) => {
     const workspace = workspaces.find((item) => item.id === workspaceId);
     if (!workspace) return;
@@ -1174,41 +1152,6 @@ export function SettingsRoute() {
     }
     await refreshRouteState();
   }, [aiworkClient, refreshRouteState, selectedWorkspaceId, workspaces]);
-
-  const handleCreateWorkspace = async (preset: WorkspacePreset, folder: string | null) => {
-    if (!folder) return;
-    setCreateWorkspaceBusy(true);
-    setCreateWorkspaceError(null);
-    try {
-      const workspaceName = folderNameFromPath(folder);
-      const list = await workspaceCreate({
-        folderPath: folder,
-        name: workspaceName,
-        preset,
-      });
-      const createdId = resolveWorkspaceListSelectedId(list) || list.workspaces[list.workspaces.length - 1]?.id || "";
-      if (createdId) {
-        await workspaceSetSelected(createdId).catch(() => undefined);
-        await workspaceSetRuntimeActive(createdId).catch(() => undefined);
-      }
-      // Register the workspace with the running aiwork-server so
-      // listWorkspaces() reflects it immediately. Without this the UI only
-      // picks up the new workspace after an app restart (because the server
-      // is launched with a fixed --workspace list at boot and the bridge
-      // write only updates desktop-side state).
-      if (aiworkClient) {
-        await aiworkClient
-          .createLocalWorkspace({ folderPath: folder, name: workspaceName, preset })
-          .catch(() => undefined);
-      }
-      setCreateWorkspaceOpen(false);
-      await refreshRouteState();
-    } catch (error) {
-      setCreateWorkspaceError(describeWorkspaceCreateError(error));
-    } finally {
-      setCreateWorkspaceBusy(false);
-    }
-  };
 
   const handleRestartLocalServer = useCallback(async () => {
     try {
@@ -1560,7 +1503,9 @@ export function SettingsRoute() {
         onOpenRenameWorkspace: handleOpenRenameWorkspace,
         onRevealWorkspace: (id) => void handleRevealWorkspace(id),
         onForgetWorkspace: (id) => void handleForgetWorkspace(id),
-        onOpenCreateWorkspace: handleOpenCreateWorkspace,
+        onOpenCreateWorkspace: ()=>{
+          // 不用支持
+        }
       }}
       onClose={handleCloseSettings}
       sidebarWidth={shellLayout.leftSidebarWidth}
@@ -1602,17 +1547,6 @@ export function SettingsRoute() {
         onSubmitOAuth={providerAuthStore.completeProviderAuthOAuth}
         onRefreshProviders={providerAuthStore.refreshProviders}
         onClose={() => providerAuthStore.closeProviderAuthModal()}
-      />
-      <CreateWorkspaceModal
-        open={createWorkspaceOpen}
-        onClose={() => {
-          setCreateWorkspaceOpen(false);
-          setCreateWorkspaceError(null);
-        }}
-        onConfirm={handleCreateWorkspace}
-        onPickFolder={() => pickDirectory({ title: t("onboarding.authorize_folder") }) as Promise<string | null>}
-        submitting={createWorkspaceBusy}
-        localError={createWorkspaceError}
       />
       <RenameWorkspaceModal
         open={renameWorkspaceId !== null}

@@ -534,7 +534,7 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
           variant: "macos_electron_dev",
           dir: path.join(
             home,
-            "Library/Application Support/com.aiworkgroup2.aiwork.dev/aiwork-dev-data/xdg/data/opencode/log",
+            "Library/Application Support/com.aiworkgroup.aiwork.dev/aiwork-dev-data/xdg/data/opencode/log",
           ),
         });
       }

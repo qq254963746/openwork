@@ -4,6 +4,7 @@ import {
   readAiWorkServerSettings,
 } from "../../app/lib/aiwork-server";
 import { aiworkServerInfo, type AiWorkServerInfo } from "../../app/lib/desktop";
+import { ConsoleLog } from "../../app/lib/console-log";
 
 export type AiWorkConnectionSource = "desktop-runtime" | "stored-settings" | "empty";
 
@@ -28,15 +29,18 @@ function hasUsableConnection(url: string, token: string) {
  * connections and for desktop cases where the runtime bridge is unavailable.
  */
 export async function resolveAiWorkConnection(): Promise<ResolvedAiWorkConnection> {
+  ConsoleLog.log("aiwork-connection", "resolveAiWorkConnection:call");
   let staleDesktopRuntimeBaseUrl = "";
 
   try {
     const info = await aiworkServerInfo();
+    ConsoleLog.log("aiwork-connection", "resolveAiWorkConnection:aiworkServerInfo", { info: info });
     const normalizedBaseUrl =
       normalizeAiWorkServerUrl(info.connectUrl ?? info.baseUrl ?? info.lanUrl ?? info.mdnsUrl ?? "") ??
       "";
     const resolvedToken = info.ownerToken?.trim() || info.clientToken?.trim() || "";
     if (info.running === true && hasUsableConnection(normalizedBaseUrl, resolvedToken)) {
+      ConsoleLog.log("aiwork-connection", "resolveAiWorkConnection:resolved:desktop-runtime", { normalizedBaseUrl, hasToken: Boolean(resolvedToken) });
       return {
         normalizedBaseUrl,
         resolvedToken,
@@ -46,11 +50,14 @@ export async function resolveAiWorkConnection(): Promise<ResolvedAiWorkConnectio
       };
     }
     staleDesktopRuntimeBaseUrl = normalizedBaseUrl;
-  } catch {
+    ConsoleLog.log("aiwork-connection", "resolveAiWorkConnection:desktopRuntimeNotUsable", { running: info.running, hasBaseUrl: Boolean(normalizedBaseUrl), hasToken: Boolean(resolvedToken) });
+  } catch (error) {
+    ConsoleLog.log("aiwork-connection", "resolveAiWorkConnection:aiworkServerInfo:error", error);
     // Fall through to stored settings for remote/manual connections.
   }
 
   const settings = readAiWorkServerSettings();
+  ConsoleLog.log("aiwork-connection", "resolveAiWorkConnection:settingsLoaded", { hasUrlOverride: Boolean(settings.urlOverride), hasToken: Boolean(settings.token) });
   const normalizedBaseUrl = normalizeAiWorkServerUrl(settings.urlOverride ?? "") ?? "";
   const resolvedToken = settings.token?.trim() ?? "";
   const resolvedHostToken =
@@ -65,6 +72,7 @@ export async function resolveAiWorkConnection(): Promise<ResolvedAiWorkConnectio
       ? "stored-settings"
       : "empty";
 
+  ConsoleLog.log("aiwork-connection", "resolveAiWorkConnection:resolved", { source, hasBaseUrl: Boolean(normalizedBaseUrl), isStaleDesktop: storedConnectionIsStaleDesktopRuntime });
   return {
     normalizedBaseUrl: source === "empty" ? "" : normalizedBaseUrl,
     resolvedToken: source === "empty" ? "" : resolvedToken,

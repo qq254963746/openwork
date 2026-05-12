@@ -2,6 +2,17 @@ import type { Message, Part, Session, Todo } from "@opencode-ai/sdk/v2/client";
 import { desktopFetch } from "./desktop";
 import type { ExecResult, OpencodeConfigFile, WorkspaceInfo, WorkspaceList } from "./desktop";
 import type { ModelProviderType } from "../utils/model-providers-catalog";
+import { ConsoleLog } from "./console-log";
+
+const LOG_SCOPE = "aiwork-server-client";
+
+function logCall<T>(method: string, input: unknown, promise: Promise<T>): Promise<T> {
+  ConsoleLog.log(LOG_SCOPE, `${method}:call`, input);
+  return promise.then(
+    (result) => { ConsoleLog.log(LOG_SCOPE, `${method}:ok`, result); return result; },
+    (error) => { ConsoleLog.log(LOG_SCOPE, `${method}:error`, error); return Promise.reject(error); },
+  );
+}
 
 export type AiWorkServerCapabilities = {
   skills: { read: boolean; write: boolean; source: "aiwork" | "opencode" };
@@ -817,60 +828,74 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
     baseUrl,
     token,
     health: () =>
-      requestJson<{ ok: boolean; version: string; uptimeMs: number }>(baseUrl, "/health", { token, hostToken, timeoutMs: timeouts.health }),
+      logCall("health", undefined,
+        requestJson<{ ok: boolean; version: string; uptimeMs: number }>(baseUrl, "/health", { token, hostToken, timeoutMs: timeouts.health })),
     runtimeVersions: () =>
-      requestJson<AiWorkRuntimeSnapshot>(baseUrl, "/runtime/versions", { token, hostToken, timeoutMs: timeouts.status }),
-    status: () => requestJson<AiWorkServerDiagnostics>(baseUrl, "/status", { token, hostToken, timeoutMs: timeouts.status }),
-    capabilities: () => requestJson<AiWorkServerCapabilities>(baseUrl, "/capabilities", { token, hostToken, timeoutMs: timeouts.capabilities }),
-    listWorkspaces: () => requestJson<AiWorkWorkspaceList>(baseUrl, "/workspaces", { token, hostToken, timeoutMs: timeouts.listWorkspaces }),
+      logCall("runtimeVersions", undefined,
+        requestJson<AiWorkRuntimeSnapshot>(baseUrl, "/runtime/versions", { token, hostToken, timeoutMs: timeouts.status })),
+    status: () =>
+      logCall("status", undefined,
+        requestJson<AiWorkServerDiagnostics>(baseUrl, "/status", { token, hostToken, timeoutMs: timeouts.status })),
+    capabilities: () =>
+      logCall("capabilities", undefined,
+        requestJson<AiWorkServerCapabilities>(baseUrl, "/capabilities", { token, hostToken, timeoutMs: timeouts.capabilities })),
+    listWorkspaces: () =>
+      logCall("listWorkspaces", undefined,
+        requestJson<AiWorkWorkspaceList>(baseUrl, "/workspaces", { token, hostToken, timeoutMs: timeouts.listWorkspaces })),
     createLocalWorkspace: (payload: { folderPath: string; name: string; preset: string }) =>
-      requestJson<WorkspaceList>(baseUrl, "/workspaces/local", {
-        token,
-        hostToken,
-        method: "POST",
-        body: payload,
-        timeoutMs: timeouts.activateWorkspace,
-      }),
+      logCall("createLocalWorkspace", payload,
+        requestJson<WorkspaceList>(baseUrl, "/workspaces/local", {
+          token,
+          hostToken,
+          method: "POST",
+          body: payload,
+          timeoutMs: timeouts.activateWorkspace,
+        })),
     updateWorkspaceDisplayName: (workspaceId: string, displayName: string | null) =>
-      requestJson<WorkspaceList>(baseUrl, `/workspaces/${encodeURIComponent(workspaceId)}/display-name`, {
-        token,
-        hostToken,
-        method: "PATCH",
-        body: { displayName },
-        timeoutMs: timeouts.activateWorkspace,
-      }),
+      logCall("updateWorkspaceDisplayName", { workspaceId, displayName },
+        requestJson<WorkspaceList>(baseUrl, `/workspaces/${encodeURIComponent(workspaceId)}/display-name`, {
+          token,
+          hostToken,
+          method: "PATCH",
+          body: { displayName },
+          timeoutMs: timeouts.activateWorkspace,
+        })),
     activateWorkspace: (workspaceId: string) =>
-      requestJson<{ activeId: string; workspace: AiWorkWorkspaceInfo }>(
-        baseUrl,
-        `/workspaces/${encodeURIComponent(workspaceId)}/activate`,
-        { token, hostToken, method: "POST", timeoutMs: timeouts.activateWorkspace },
-      ),
+      logCall("activateWorkspace", { workspaceId },
+        requestJson<{ activeId: string; workspace: AiWorkWorkspaceInfo }>(
+          baseUrl,
+          `/workspaces/${encodeURIComponent(workspaceId)}/activate`,
+          { token, hostToken, method: "POST", timeoutMs: timeouts.activateWorkspace },
+        )),
     reorderWorkspaces: (workspaceIds: string[]) =>
-      requestJson<{
-        ok: boolean;
-        persisted: boolean;
-        activeId: string | null;
-        items: AiWorkWorkspaceInfo[];
-        workspaces?: AiWorkWorkspaceInfo[];
-      }>(baseUrl, "/workspaces/reorder", {
-        token,
-        hostToken,
-        method: "POST",
-        body: { workspaceIds },
-        timeoutMs: timeouts.activateWorkspace,
-      }),
+      logCall("reorderWorkspaces", { workspaceIds },
+        requestJson<{
+          ok: boolean;
+          persisted: boolean;
+          activeId: string | null;
+          items: AiWorkWorkspaceInfo[];
+          workspaces?: AiWorkWorkspaceInfo[];
+        }>(baseUrl, "/workspaces/reorder", {
+          token,
+          hostToken,
+          method: "POST",
+          body: { workspaceIds },
+          timeoutMs: timeouts.activateWorkspace,
+        })),
     deleteWorkspace: (workspaceId: string) =>
-      requestJson<{ ok: boolean; deleted: boolean; persisted: boolean; activeId: string | null; items: AiWorkWorkspaceInfo[]; workspaces?: WorkspaceInfo[] }>(
-        baseUrl,
-        `/workspaces/${encodeURIComponent(workspaceId)}`,
-        { token, hostToken, method: "DELETE", timeoutMs: timeouts.deleteWorkspace },
-      ),
+      logCall("deleteWorkspace", { workspaceId },
+        requestJson<{ ok: boolean; deleted: boolean; persisted: boolean; activeId: string | null; items: AiWorkWorkspaceInfo[]; workspaces?: WorkspaceInfo[] }>(
+          baseUrl,
+          `/workspaces/${encodeURIComponent(workspaceId)}`,
+          { token, hostToken, method: "DELETE", timeoutMs: timeouts.deleteWorkspace },
+        )),
     deleteSession: (workspaceId: string, sessionId: string) =>
-      requestJson<{ ok: boolean }>(
-        baseUrl,
-        `/workspace/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}`,
-        { token, hostToken, method: "DELETE", timeoutMs: timeouts.deleteSession },
-      ),
+      logCall("deleteSession", { workspaceId, sessionId },
+        requestJson<{ ok: boolean }>(
+          baseUrl,
+          `/workspace/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}`,
+          { token, hostToken, method: "DELETE", timeoutMs: timeouts.deleteSession },
+        )),
     listSessions: (
       workspaceId: string,
       options?: { roots?: boolean; start?: number; search?: string; limit?: number },
@@ -881,79 +906,88 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
       if (options?.search?.trim()) query.set("search", options.search.trim());
       if (typeof options?.limit === "number") query.set("limit", String(options.limit));
       const suffix = query.size ? `?${query.toString()}` : "";
-      return requestJson<{ items: Session[] }>(
-        baseUrl,
-        `/workspace/${encodeURIComponent(workspaceId)}/sessions${suffix}`,
-        { token, hostToken, timeoutMs: timeouts.sessionRead },
-      );
+      return logCall("listSessions", { workspaceId, options },
+        requestJson<{ items: Session[] }>(
+          baseUrl,
+          `/workspace/${encodeURIComponent(workspaceId)}/sessions${suffix}`,
+          { token, hostToken, timeoutMs: timeouts.sessionRead },
+        ));
     },
     getSession: (workspaceId: string, sessionId: string) =>
-      requestJson<{ item: Session }>(
-        baseUrl,
-        `/workspace/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}`,
-        { token, hostToken, timeoutMs: timeouts.sessionRead },
-      ),
+      logCall("getSession", { workspaceId, sessionId },
+        requestJson<{ item: Session }>(
+          baseUrl,
+          `/workspace/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}`,
+          { token, hostToken, timeoutMs: timeouts.sessionRead },
+        )),
     getSessionMessages: (workspaceId: string, sessionId: string, options?: { limit?: number }) => {
       const query = new URLSearchParams();
       if (typeof options?.limit === "number") query.set("limit", String(options.limit));
       const suffix = query.size ? `?${query.toString()}` : "";
-      return requestJson<{ items: AiWorkSessionMessage[] }>(
-        baseUrl,
-        `/workspace/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}/messages${suffix}`,
-        { token, hostToken, timeoutMs: timeouts.sessionRead },
-      );
+      return logCall("getSessionMessages", { workspaceId, sessionId, options },
+        requestJson<{ items: AiWorkSessionMessage[] }>(
+          baseUrl,
+          `/workspace/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}/messages${suffix}`,
+          { token, hostToken, timeoutMs: timeouts.sessionRead },
+        ));
     },
     getSessionSnapshot: (workspaceId: string, sessionId: string, options?: { limit?: number }) => {
       const query = new URLSearchParams();
       if (typeof options?.limit === "number") query.set("limit", String(options.limit));
       const suffix = query.size ? `?${query.toString()}` : "";
-      return requestJson<{ item: AiWorkSessionSnapshot }>(
-        baseUrl,
-        `/workspace/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}/snapshot${suffix}`,
-        { token, hostToken, timeoutMs: timeouts.sessionRead },
-      );
+      return logCall("getSessionSnapshot", { workspaceId, sessionId, options },
+        requestJson<{ item: AiWorkSessionSnapshot }>(
+          baseUrl,
+          `/workspace/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}/snapshot${suffix}`,
+          { token, hostToken, timeoutMs: timeouts.sessionRead },
+        ));
     },
     materializeBlueprintSessions: (workspaceId: string) =>
-      requestJson<AiWorkBlueprintSessionsMaterializeResult>(
-        baseUrl,
-        `/workspace/${encodeURIComponent(workspaceId)}/blueprint/sessions/materialize`,
-        {
+      logCall("materializeBlueprintSessions", { workspaceId },
+        requestJson<AiWorkBlueprintSessionsMaterializeResult>(
+          baseUrl,
+          `/workspace/${encodeURIComponent(workspaceId)}/blueprint/sessions/materialize`,
+          {
+            token,
+            hostToken,
+            method: "POST",
+            timeoutMs: timeouts.workspaceImport,
+          },
+        )),
+    getConfig: (workspaceId: string) =>
+      logCall("getConfig", { workspaceId },
+        requestJson<{ opencode: Record<string, unknown>; aiwork: Record<string, unknown>; updatedAt?: number | null }>(
+          baseUrl,
+          `/workspace/${workspaceId}/config`,
+          { token, hostToken, timeoutMs: timeouts.config },
+        )),
+    patchConfig: (workspaceId: string, payload: { opencode?: Record<string, unknown>; aiwork?: Record<string, unknown> }) =>
+      logCall("patchConfig", { workspaceId, payload },
+        requestJson<{ updatedAt?: number | null }>(baseUrl, `/workspace/${workspaceId}/config`, {
           token,
           hostToken,
-          method: "POST",
-          timeoutMs: timeouts.workspaceImport,
-        },
-      ),
-    getConfig: (workspaceId: string) =>
-      requestJson<{ opencode: Record<string, unknown>; aiwork: Record<string, unknown>; updatedAt?: number | null }>(
-        baseUrl,
-        `/workspace/${workspaceId}/config`,
-        { token, hostToken, timeoutMs: timeouts.config },
-      ),
-    patchConfig: (workspaceId: string, payload: { opencode?: Record<string, unknown>; aiwork?: Record<string, unknown> }) =>
-      requestJson<{ updatedAt?: number | null }>(baseUrl, `/workspace/${workspaceId}/config`, {
-        token,
-        hostToken,
-        method: "PATCH",
-        body: payload,
-      }),
+          method: "PATCH",
+          body: payload,
+        })),
     readOpencodeConfigFile: (workspaceId: string, scope: "project" | "global" = "project") => {
       const params = new URLSearchParams({ scope });
       // Avoid stale reads after rapid global config writes (disabled_providers, etc.).
       params.set("_", String(Date.now()));
       const query = `?${params.toString()}`;
-      return requestJson<OpencodeConfigFile>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/opencode-config${query}`, {
-        token,
-        hostToken,
-      });
+      return logCall("readOpencodeConfigFile", { workspaceId, scope },
+        requestJson<OpencodeConfigFile>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/opencode-config${query}`, {
+          token,
+          hostToken,
+        }));
     },
     writeOpencodeConfigFile: (workspaceId: string, scope: "project" | "global", content: string) =>
-      requestJson<ExecResult>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/opencode-config`, {
-        token,
-        hostToken,
-        method: "POST",
-        body: { scope, content },
-      }),
+      logCall("writeOpencodeConfigFile", { workspaceId, scope },
+        requestJson<ExecResult>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/opencode-config`, {
+          token,
+          hostToken,
+          method: "POST",
+          body: { scope, content },
+        })),
     /**
      * Server-side model listing proxy (avoids browser CORS). Dispatches by `providerType` on the server.
      */
@@ -961,59 +995,66 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
       workspaceId: string,
       body: { baseURL: string; apiKey: string; providerType: ModelProviderType },
     ) =>
-      requestJson<{
-        ok: boolean;
-        ids?: string[];
-        message?: string;
-        httpStatus?: number;
-      }>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/model-provider/models`, {
-        token,
-        hostToken,
-        method: "POST",
-        body,
-        timeoutMs: timeouts.openAiCompatibleModels,
-      }),
+      logCall("proxyModelProviderModels", { workspaceId, providerType: body.providerType },
+        requestJson<{
+          ok: boolean;
+          ids?: string[];
+          message?: string;
+          httpStatus?: number;
+        }>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/model-provider/models`, {
+          token,
+          hostToken,
+          method: "POST",
+          body,
+          timeoutMs: timeouts.openAiCompatibleModels,
+        })),
     listReloadEvents: (workspaceId: string, options?: { since?: number }) => {
       const query = typeof options?.since === "number" ? `?since=${options.since}` : "";
-      return requestJson<{ items: AiWorkReloadEvent[]; cursor?: number }>(
-        baseUrl,
-        `/workspace/${workspaceId}/events${query}`,
-        { token, hostToken },
-      );
+      return logCall("listReloadEvents", { workspaceId, options },
+        requestJson<{ items: AiWorkReloadEvent[]; cursor?: number }>(
+          baseUrl,
+          `/workspace/${workspaceId}/events${query}`,
+          { token, hostToken },
+        ));
     },
     reloadEngine: (workspaceId: string) =>
-      requestJson<{ ok: boolean; reloadedAt?: number }>(baseUrl, `/workspace/${workspaceId}/engine/reload`, {
-        token,
-        hostToken,
-        method: "POST",
-      }),
+      logCall("reloadEngine", { workspaceId },
+        requestJson<{ ok: boolean; reloadedAt?: number }>(baseUrl, `/workspace/${workspaceId}/engine/reload`, {
+          token,
+          hostToken,
+          method: "POST",
+        })),
     listPlugins: (workspaceId: string, options?: { includeGlobal?: boolean }) => {
       const query = options?.includeGlobal ? "?includeGlobal=true" : "";
-      return requestJson<{ items: AiWorkPluginItem[]; loadOrder: string[] }>(
-        baseUrl,
-        `/workspace/${workspaceId}/plugins${query}`,
-        { token, hostToken },
-      );
+      return logCall("listPlugins", { workspaceId, options },
+        requestJson<{ items: AiWorkPluginItem[]; loadOrder: string[] }>(
+          baseUrl,
+          `/workspace/${workspaceId}/plugins${query}`,
+          { token, hostToken },
+        ));
     },
     addPlugin: (workspaceId: string, spec: string) =>
-      requestJson<{ items: AiWorkPluginItem[]; loadOrder: string[] }>(
-        baseUrl,
-        `/workspace/${workspaceId}/plugins`,
-        { token, hostToken, method: "POST", body: { spec } },
-      ),
+      logCall("addPlugin", { workspaceId, spec },
+        requestJson<{ items: AiWorkPluginItem[]; loadOrder: string[] }>(
+          baseUrl,
+          `/workspace/${workspaceId}/plugins`,
+          { token, hostToken, method: "POST", body: { spec } },
+        )),
     removePlugin: (workspaceId: string, name: string) =>
-      requestJson<{ items: AiWorkPluginItem[]; loadOrder: string[] }>(
-        baseUrl,
-        `/workspace/${workspaceId}/plugins/${encodeURIComponent(name)}`,
-        { token, hostToken, method: "DELETE" },
-      ),
+      logCall("removePlugin", { workspaceId, name },
+        requestJson<{ items: AiWorkPluginItem[]; loadOrder: string[] }>(
+          baseUrl,
+          `/workspace/${workspaceId}/plugins/${encodeURIComponent(name)}`,
+          { token, hostToken, method: "DELETE" },
+        )),
     listSkills: (workspaceId: string, options?: { includeGlobal?: boolean }) => {
       const query = options?.includeGlobal ? "?includeGlobal=true" : "";
-      return requestJson<{ items: AiWorkSkillItem[] }>(
-        baseUrl,
-        `/workspace/${workspaceId}/skills${query}`,
-        { token, hostToken },
-      );
+      return logCall("listSkills", { workspaceId, options },
+        requestJson<{ items: AiWorkSkillItem[] }>(
+          baseUrl,
+          `/workspace/${workspaceId}/skills${query}`,
+          { token, hostToken },
+        ));
     },
     listHubSkills: (options?: { repo?: AiWorkHubRepo }) => {
       const params = new URLSearchParams();
@@ -1024,116 +1065,130 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
       if (repo) params.set("repo", repo);
       if (ref) params.set("ref", ref);
       const query = params.size ? `?${params.toString()}` : "";
-      return requestJson<{ items: AiWorkHubSkillItem[] }>(baseUrl, `/hub/skills${query}`, {
-        token,
-        hostToken,
-      });
+      return logCall("listHubSkills", { options },
+        requestJson<{ items: AiWorkHubSkillItem[] }>(baseUrl, `/hub/skills${query}`, {
+          token,
+          hostToken,
+        }));
     },
     installHubSkill: (
       workspaceId: string,
       name: string,
       options?: { overwrite?: boolean; repo?: { owner?: string; repo?: string; ref?: string } },
     ) =>
-      requestJson<{ ok: boolean; name: string; path: string; action: "added" | "updated"; written: number; skipped: number }>(
-        baseUrl,
-        `/workspace/${workspaceId}/skills/hub/${encodeURIComponent(name)}`,
-        {
+      logCall("installHubSkill", { workspaceId, name, options },
+        requestJson<{ ok: boolean; name: string; path: string; action: "added" | "updated"; written: number; skipped: number }>(
+          baseUrl,
+          `/workspace/${workspaceId}/skills/hub/${encodeURIComponent(name)}`,
+          {
+            token,
+            hostToken,
+            method: "POST",
+            body: {
+              ...(options?.overwrite ? { overwrite: true } : {}),
+              ...(options?.repo ? { repo: options.repo } : {}),
+            },
+          },
+        )),
+    getSkill: (workspaceId: string, name: string, options?: { includeGlobal?: boolean }) => {
+      const query = options?.includeGlobal ? "?includeGlobal=true" : "";
+      return logCall("getSkill", { workspaceId, name, options },
+        requestJson<AiWorkSkillContent>(
+          baseUrl,
+          `/workspace/${workspaceId}/skills/${encodeURIComponent(name)}${query}`,
+          { token, hostToken },
+        ));
+    },
+    upsertSkill: (workspaceId: string, payload: { name: string; content: string; description?: string }) =>
+      logCall("upsertSkill", { workspaceId, name: payload.name },
+        requestJson<AiWorkSkillItem>(baseUrl, `/workspace/${workspaceId}/skills`, {
           token,
           hostToken,
           method: "POST",
-          body: {
-            ...(options?.overwrite ? { overwrite: true } : {}),
-            ...(options?.repo ? { repo: options.repo } : {}),
-          },
-        },
-      ),
-    getSkill: (workspaceId: string, name: string, options?: { includeGlobal?: boolean }) => {
-      const query = options?.includeGlobal ? "?includeGlobal=true" : "";
-      return requestJson<AiWorkSkillContent>(
-        baseUrl,
-        `/workspace/${workspaceId}/skills/${encodeURIComponent(name)}${query}`,
-        { token, hostToken },
-      );
-    },
-    upsertSkill: (workspaceId: string, payload: { name: string; content: string; description?: string }) =>
-      requestJson<AiWorkSkillItem>(baseUrl, `/workspace/${workspaceId}/skills`, {
-        token,
-        hostToken,
-        method: "POST",
-        body: payload,
-      }),
+          body: payload,
+        })),
     deleteSkill: (workspaceId: string, name: string) =>
-      requestJson<{ path: string }>(
-        baseUrl,
-        `/workspace/${workspaceId}/skills/${encodeURIComponent(name)}`,
-        {
+      logCall("deleteSkill", { workspaceId, name },
+        requestJson<{ path: string }>(
+          baseUrl,
+          `/workspace/${workspaceId}/skills/${encodeURIComponent(name)}`,
+          {
+            token,
+            hostToken,
+            method: "DELETE",
+          },
+        )),
+    listMcp: (workspaceId: string) =>
+      logCall("listMcp", { workspaceId },
+        requestJson<{ items: AiWorkMcpItem[] }>(baseUrl, `/workspace/${workspaceId}/mcp`, { token, hostToken })),
+    addMcp: (workspaceId: string, payload: { name: string; config: Record<string, unknown> }) =>
+      logCall("addMcp", { workspaceId, name: payload.name },
+        requestJson<{ items: AiWorkMcpItem[] }>(baseUrl, `/workspace/${workspaceId}/mcp`, {
+          token,
+          hostToken,
+          method: "POST",
+          body: payload,
+        })),
+    removeMcp: (workspaceId: string, name: string) =>
+      logCall("removeMcp", { workspaceId, name },
+        requestJson<{ items: AiWorkMcpItem[] }>(baseUrl, `/workspace/${workspaceId}/mcp/${encodeURIComponent(name)}`, {
           token,
           hostToken,
           method: "DELETE",
-        },
-      ),
-    listMcp: (workspaceId: string) =>
-      requestJson<{ items: AiWorkMcpItem[] }>(baseUrl, `/workspace/${workspaceId}/mcp`, { token, hostToken }),
-    addMcp: (workspaceId: string, payload: { name: string; config: Record<string, unknown> }) =>
-      requestJson<{ items: AiWorkMcpItem[] }>(baseUrl, `/workspace/${workspaceId}/mcp`, {
-        token,
-        hostToken,
-        method: "POST",
-        body: payload,
-      }),
-    removeMcp: (workspaceId: string, name: string) =>
-      requestJson<{ items: AiWorkMcpItem[] }>(baseUrl, `/workspace/${workspaceId}/mcp/${encodeURIComponent(name)}`, {
-        token,
-        hostToken,
-        method: "DELETE",
-      }),
+        })),
     setMcpEnabled: (workspaceId: string, name: string, enabled: boolean) =>
-      requestJson<{ items: AiWorkMcpItem[] }>(
-        baseUrl,
-        `/workspace/${workspaceId}/mcp/${encodeURIComponent(name)}/enabled`,
-        {
-          token,
-          hostToken,
-          method: "POST",
-          body: { enabled },
-        },
-      ),
+      logCall("setMcpEnabled", { workspaceId, name, enabled },
+        requestJson<{ items: AiWorkMcpItem[] }>(
+          baseUrl,
+          `/workspace/${workspaceId}/mcp/${encodeURIComponent(name)}/enabled`,
+          {
+            token,
+            hostToken,
+            method: "POST",
+            body: { enabled },
+          },
+        )),
 
     logoutMcpAuth: (workspaceId: string, name: string) =>
-      requestJson<{ ok: true }>(baseUrl, `/workspace/${workspaceId}/mcp/${encodeURIComponent(name)}/auth`, {
-        token,
-        hostToken,
-        method: "DELETE",
-      }),
+      logCall("logoutMcpAuth", { workspaceId, name },
+        requestJson<{ ok: true }>(baseUrl, `/workspace/${workspaceId}/mcp/${encodeURIComponent(name)}/auth`, {
+          token,
+          hostToken,
+          method: "DELETE",
+        })),
 
     listCommands: (workspaceId: string, scope: "workspace" | "global" = "workspace") =>
-      requestJson<{ items: AiWorkCommandItem[] }>(
-        baseUrl,
-        `/workspace/${workspaceId}/commands?scope=${scope}`,
-        { token, hostToken },
-      ),
+      logCall("listCommands", { workspaceId, scope },
+        requestJson<{ items: AiWorkCommandItem[] }>(
+          baseUrl,
+          `/workspace/${workspaceId}/commands?scope=${scope}`,
+          { token, hostToken },
+        )),
     listAudit: (workspaceId: string, limit = 50) =>
-      requestJson<{ items: AiWorkAuditEntry[] }>(
-        baseUrl,
-        `/workspace/${workspaceId}/audit?limit=${limit}`,
-        { token, hostToken },
-      ),
+      logCall("listAudit", { workspaceId, limit },
+        requestJson<{ items: AiWorkAuditEntry[] }>(
+          baseUrl,
+          `/workspace/${workspaceId}/audit?limit=${limit}`,
+          { token, hostToken },
+        )),
     upsertCommand: (
       workspaceId: string,
       payload: { name: string; description?: string; template: string; agent?: string; model?: string | null; subtask?: boolean },
     ) =>
-      requestJson<{ items: AiWorkCommandItem[] }>(baseUrl, `/workspace/${workspaceId}/commands`, {
-        token,
-        hostToken,
-        method: "POST",
-        body: payload,
-      }),
+      logCall("upsertCommand", { workspaceId, name: payload.name },
+        requestJson<{ items: AiWorkCommandItem[] }>(baseUrl, `/workspace/${workspaceId}/commands`, {
+          token,
+          hostToken,
+          method: "POST",
+          body: payload,
+        })),
     deleteCommand: (workspaceId: string, name: string) =>
-      requestJson<{ ok: boolean }>(baseUrl, `/workspace/${workspaceId}/commands/${encodeURIComponent(name)}`, {
-        token,
-        hostToken,
-        method: "DELETE",
-      }),
+      logCall("deleteCommand", { workspaceId, name },
+        requestJson<{ ok: boolean }>(baseUrl, `/workspace/${workspaceId}/commands/${encodeURIComponent(name)}`, {
+          token,
+          hostToken,
+          method: "DELETE",
+        })),
     uploadInbox: async (workspaceId: string, file: File, options?: { path?: string }) => {
       const id = workspaceId.trim();
       if (!id) throw new Error("workspaceId is required");
@@ -1143,6 +1198,8 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
       if (options?.path?.trim()) {
         form.append("path", options.path.trim());
       }
+
+      ConsoleLog.log(LOG_SCOPE, "uploadInbox:call", { workspaceId, fileName: file?.name, path: options?.path });
 
       const result = await requestMultipartRaw(baseUrl, `/workspace/${encodeURIComponent(id)}/inbox`, {
         token,
@@ -1162,11 +1219,13 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
         } catch {
           // ignore
         }
-        throw new AiWorkServerError(
+        const error = new AiWorkServerError(
           result.status,
           "request_failed",
           message || "Shared folder upload failed",
         );
+        ConsoleLog.log(LOG_SCOPE, "uploadInbox:error", error);
+        throw error;
       }
 
       const body = result.text.trim();
@@ -1174,113 +1233,128 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
         try {
           const parsed = JSON.parse(body) as Partial<AiWorkInboxUploadResult>;
           if (typeof parsed.path === "string" && parsed.path.trim()) {
-            return {
+            const output = {
               ok: parsed.ok ?? true,
               path: parsed.path.trim(),
               bytes: typeof parsed.bytes === "number" ? parsed.bytes : file.size,
             } satisfies AiWorkInboxUploadResult;
+            ConsoleLog.log(LOG_SCOPE, "uploadInbox:ok", output);
+            return output;
           }
         } catch {
           // ignore invalid JSON and fall back
         }
       }
 
-      return {
+      const output = {
         ok: true,
         path: options?.path?.trim() || file.name,
         bytes: file.size,
       } satisfies AiWorkInboxUploadResult;
+      ConsoleLog.log(LOG_SCOPE, "uploadInbox:ok", output);
+      return output;
     },
 
     listInbox: (workspaceId: string) =>
-      requestJson<AiWorkInboxList>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/inbox`, {
-        token,
-        hostToken,
-      }),
+      logCall("listInbox", { workspaceId },
+        requestJson<AiWorkInboxList>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/inbox`, {
+          token,
+          hostToken,
+        })),
 
     downloadInboxItem: (workspaceId: string, inboxId: string) =>
-      requestBinary(
-        baseUrl,
-        `/workspace/${encodeURIComponent(workspaceId)}/inbox/${encodeURIComponent(inboxId)}`,
-        { token, hostToken, timeoutMs: timeouts.binary },
-      ),
+      logCall("downloadInboxItem", { workspaceId, inboxId },
+        requestBinary(
+          baseUrl,
+          `/workspace/${encodeURIComponent(workspaceId)}/inbox/${encodeURIComponent(inboxId)}`,
+          { token, hostToken, timeoutMs: timeouts.binary },
+        )),
 
     readWorkspaceFile: (workspaceId: string, path: string, options?: { optional?: boolean }) =>
-      requestJson<AiWorkWorkspaceFileContent>(
-        baseUrl,
-        `/workspace/${encodeURIComponent(workspaceId)}/files/content?path=${encodeURIComponent(path)}${
-          options?.optional ? "&optional=1" : ""
-        }`,
-        { token, hostToken },
-      ),
+      logCall("readWorkspaceFile", { workspaceId, path, options },
+        requestJson<AiWorkWorkspaceFileContent>(
+          baseUrl,
+          `/workspace/${encodeURIComponent(workspaceId)}/files/content?path=${encodeURIComponent(path)}${
+            options?.optional ? "&optional=1" : ""
+          }`,
+          { token, hostToken },
+        )),
 
     listWorkspaceDirectory: (workspaceId: string, path?: string) =>
-      requestJson<AiWorkWorkspaceDirectoryList>(
-        baseUrl,
-        `/workspace/${encodeURIComponent(workspaceId)}/files/list${path?.trim() ? `?path=${encodeURIComponent(path.trim())}` : ""}`,
-        { token, hostToken },
-      ),
+      logCall("listWorkspaceDirectory", { workspaceId, path },
+        requestJson<AiWorkWorkspaceDirectoryList>(
+          baseUrl,
+          `/workspace/${encodeURIComponent(workspaceId)}/files/list${path?.trim() ? `?path=${encodeURIComponent(path.trim())}` : ""}`,
+          { token, hostToken },
+        )),
 
     writeWorkspaceFile: (
       workspaceId: string,
       payload: { path: string; content: string; baseUpdatedAt?: number | null; force?: boolean },
     ) =>
-      requestJson<AiWorkWorkspaceFileWriteResult>(
-        baseUrl,
-        `/workspace/${encodeURIComponent(workspaceId)}/files/content`,
-        {
-          token,
-          hostToken,
-          method: "POST",
-          body: payload,
-        },
-      ),
+      logCall("writeWorkspaceFile", { workspaceId, path: payload.path },
+        requestJson<AiWorkWorkspaceFileWriteResult>(
+          baseUrl,
+          `/workspace/${encodeURIComponent(workspaceId)}/files/content`,
+          {
+            token,
+            hostToken,
+            method: "POST",
+            body: payload,
+          },
+        )),
 
     listArtifacts: (workspaceId: string) =>
-      requestJson<AiWorkArtifactList>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/artifacts`, {
-        token,
-        hostToken,
-      }),
+      logCall("listArtifacts", { workspaceId },
+        requestJson<AiWorkArtifactList>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/artifacts`, {
+          token,
+          hostToken,
+        })),
 
     downloadArtifact: (workspaceId: string, artifactId: string) =>
-      requestBinary(
-        baseUrl,
-        `/workspace/${encodeURIComponent(workspaceId)}/artifacts/${encodeURIComponent(artifactId)}`,
-        { token, hostToken, timeoutMs: timeouts.binary },
-      ),
+      logCall("downloadArtifact", { workspaceId, artifactId },
+        requestBinary(
+          baseUrl,
+          `/workspace/${encodeURIComponent(workspaceId)}/artifacts/${encodeURIComponent(artifactId)}`,
+          { token, hostToken, timeoutMs: timeouts.binary },
+        )),
     
     // User-level env vars (host-auth only — desktop shell is the sole caller).
     // See apps/server/src/env-file.ts and apps/app/pr/environment-variables.md.
     listUserEnvKeys: () =>
-      requestJson<{ keys: string[] }>(
-        baseUrl,
-        "/env/keys",
-        { token, hostToken, timeoutMs: timeouts.config },
-      ),
+      logCall("listUserEnvKeys", undefined,
+        requestJson<{ keys: string[] }>(
+          baseUrl,
+          "/env/keys",
+          { token, hostToken, timeoutMs: timeouts.config },
+        )),
 
     listUserEnv: () =>
-      requestJson<{ items: Array<{ key: string; value: string; updatedAt: number }> }>(
-        baseUrl,
-        "/env",
-        { token, hostToken, timeoutMs: timeouts.config },
-      ),
+      logCall("listUserEnv", undefined,
+        requestJson<{ items: Array<{ key: string; value: string; updatedAt: number }> }>(
+          baseUrl,
+          "/env",
+          { token, hostToken, timeoutMs: timeouts.config },
+        )),
 
     upsertUserEnv: (entries: Array<{ key: string; value: string }>) =>
-      requestJson<{ ok: true; count: number }>(baseUrl, "/env", {
-        token,
-        hostToken,
-        method: "PUT",
-        body: { entries },
-        timeoutMs: timeouts.config,
-      }),
+      logCall("upsertUserEnv", { count: entries.length },
+        requestJson<{ ok: true; count: number }>(baseUrl, "/env", {
+          token,
+          hostToken,
+          method: "PUT",
+          body: { entries },
+          timeoutMs: timeouts.config,
+        })),
 
     deleteUserEnv: (key: string) =>
-      requestJson<{ ok: true }>(baseUrl, `/env/${encodeURIComponent(key)}`, {
-        token,
-        hostToken,
-        method: "DELETE",
-        timeoutMs: timeouts.config,
-      }),
+      logCall("deleteUserEnv", { key },
+        requestJson<{ ok: true }>(baseUrl, `/env/${encodeURIComponent(key)}`, {
+          token,
+          hostToken,
+          method: "DELETE",
+          timeoutMs: timeouts.config,
+        })),
   };
 }
 

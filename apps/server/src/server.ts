@@ -2515,7 +2515,7 @@ function createRoutes(
     const repo = ctx.url.searchParams.get("repo")?.trim();
     const ref = ctx.url.searchParams.get("ref")?.trim();
     const items = await listHubSkills({
-      owner: owner || "aiworkgroup2",
+      owner: owner || "aiworkgroup",
       repo: repo || "aiwork-hub",
       ref: ref || "main",
     });
