@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::fs::copy_dir_recursive;
-use crate::paths::{candidate_xdg_config_dirs, home_dir};
+use crate::paths::candidate_xdg_config_dirs;
 use crate::types::ExecResult;
 
 fn ensure_project_skill_root(project_dir: &str) -> Result<PathBuf, String> {
