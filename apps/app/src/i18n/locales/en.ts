@@ -112,8 +112,6 @@ export default {
   "config.host_offline": "Offline",
   "config.local_ip_hint": "Use your local IP on the same Wi-Fi for the fastest connection.",
   "config.mdns_hint": ".local names are easier to remember but may not resolve on all networks.",
-  "config.messaging_identities_desc": "Manage Telegram/Slack identities and routing in the Identities tab.",
-  "config.messaging_identities_title": "Messaging identities",
   "config.not_set": "Not set",
   "config.owner_token_disabled_hint": "Use when another client must approve prompts or perform owner-only actions for this workspace.",
   "config.owner_token_label": "Owner token",

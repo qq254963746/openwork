@@ -113,8 +113,6 @@ export default {
   "config.host_offline": "离线",
   "config.local_ip_hint": "在同一Wi-Fi下使用本地IP可获得最快连接。",
   "config.mdns_hint": ".local名称更易记忆，但可能无法在所有网络上解析。",
-  "config.messaging_identities_desc": "在身份标签页中管理Telegram/Slack身份和路由。",
-  "config.messaging_identities_title": "消息身份",
   "config.not_set": "未设置",
   "config.owner_token_disabled_hint": "当其他客户端需要代你审批或执行仅所有者可用操作时使用。",
   "config.owner_token_label": "所有者令牌",

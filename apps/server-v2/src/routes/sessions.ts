@@ -435,29 +435,6 @@ export function registerSessionRoutes(app: Hono<AppBindings>) {
     ({ requestContext, sessionId, workspaceId }) => requestContext.services.sessions.abortSession(workspaceId, sessionId),
   );
   actionRoute(
-    routePaths.workspaces.sessions.share(),
-    "Share a session",
-    "Calls the upstream share primitive when the resolved backend supports it.",
-    ({ requestContext, sessionId, workspaceId }) => requestContext.services.sessions.shareSession(workspaceId, sessionId),
-  );
-  app.delete(
-    routePaths.workspaces.sessions.share(),
-    describeRoute({
-      tags: ["Sessions"],
-      summary: "Unshare a session",
-      description: "Calls the upstream unshare primitive when the resolved backend supports it.",
-      responses: withCommonErrorResponses({
-        200: jsonResponse("Session unshared successfully.", acceptedActionResponseSchema),
-      }, { includeNotFound: true, includeUnauthorized: true }),
-    }),
-    async (c) => {
-      const { requestContext, workspaceId } = requireReadableWorkspace(c);
-      const params = sessionIdParamsSchema.parse(c.req.param());
-      await requestContext.services.sessions.unshareSession(workspaceId, params.sessionId);
-      return c.json(buildSuccessResponse(requestContext.requestId, { accepted: true }));
-    },
-  );
-  actionRoute(
     routePaths.workspaces.sessions.summarize(),
     "Summarize a session",
     "Runs the upstream summarize or compact primitive for the selected session.",

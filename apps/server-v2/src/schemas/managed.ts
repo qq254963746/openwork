@@ -124,31 +124,6 @@ export const hubSkillInstallResponseSchema = successResponseSchema(
   }),
 );
 
-export const cloudSigninSchema = z.object({
-  auth: jsonObjectSchema.nullable(),
-  cloudBaseUrl: z.string(),
-  createdAt: isoTimestampSchema,
-  id: identifierSchema,
-  lastValidatedAt: isoTimestampSchema.nullable(),
-  metadata: jsonObjectSchema.nullable(),
-  orgId: z.string().nullable(),
-  serverId: identifierSchema,
-  updatedAt: isoTimestampSchema,
-  userId: z.string().nullable(),
-}).meta({ ref: "AiWorkServerV2CloudSignin" });
-
-export const workspaceShareSchema = z.object({
-  accessKey: z.string().nullable(),
-  audit: jsonObjectSchema.nullable(),
-  createdAt: isoTimestampSchema,
-  id: identifierSchema,
-  lastUsedAt: isoTimestampSchema.nullable(),
-  revokedAt: isoTimestampSchema.nullable(),
-  status: z.enum(["active", "disabled", "revoked"]),
-  updatedAt: isoTimestampSchema,
-  workspaceId: identifierSchema,
-}).meta({ ref: "AiWorkServerV2WorkspaceShare" });
-
 export const workspaceExportWarningSchema = z.object({
   detail: z.string(),
   id: z.string(),

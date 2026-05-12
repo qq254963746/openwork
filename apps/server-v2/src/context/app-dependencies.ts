@@ -41,8 +41,6 @@ export type AppDependencies = {
 type CreateAppDependenciesOverrides = Partial<Omit<AppDependencies, "services" | "close" | "database" | "persistence">> & {
   inMemory?: boolean;
   legacy?: {
-    cloudSigninJson?: string;
-    cloudSigninPath?: string;
     desktopDataDir?: string;
     orchestratorDataDir?: string;
   };

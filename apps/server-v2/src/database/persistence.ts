@@ -75,24 +75,10 @@ const orchestratorAuthSchema = z.object({
   updatedAt: z.number().optional().nullable(),
 });
 
-const cloudSigninSchema = z.object({
-  activeOrgId: z.string().optional().nullable(),
-  activeOrgName: z.string().optional().nullable(),
-  activeOrgSlug: z.string().optional().nullable(),
-  authToken: z.string().optional().nullable(),
-  baseUrl: z.string().optional().nullable(),
-  cloudBaseUrl: z.string().optional().nullable(),
-  lastValidatedAt: z.string().optional().nullable(),
-  orgId: z.string().optional().nullable(),
-  userId: z.string().optional().nullable(),
-});
-
 type CreateServerPersistenceOptions = {
   environment: string;
   inMemory?: boolean;
   legacy?: {
-    cloudSigninJson?: string;
-    cloudSigninPath?: string;
     desktopDataDir?: string;
     orchestratorDataDir?: string;
   };
@@ -257,11 +243,6 @@ function createEmptyReport(status: ImportSourceReport["status"], sourcePath: str
     status,
     warnings: [],
   };
-}
-
-function mergeReportWarnings(report: ImportSourceReport, warnings: string[]) {
-  report.warnings.push(...warnings);
-  return report;
 }
 
 function asJsonObject(value: unknown): JsonObject | null {

@@ -107,9 +107,6 @@ export const capabilitiesDataSchema = z.object({
     runtimeUpgrade: z.literal(true),
     runtimeVersions: z.literal(true),
   }),
-  shares: z.object({
-    workspaceScoped: z.literal(true),
-  }),
   workspaces: z.object({
     activate: z.literal(true),
     createLocal: z.literal(true),

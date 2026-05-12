@@ -45,7 +45,6 @@ export const importSourceReportSchema = z.object({
 export const startupDiagnosticsSchema = z.object({
   completedAt: isoTimestampSchema,
   importReports: z.object({
-    cloudSignin: importSourceReportSchema,
     desktopWorkspaceState: importSourceReportSchema,
     orchestratorAuth: importSourceReportSchema,
     orchestratorState: importSourceReportSchema,

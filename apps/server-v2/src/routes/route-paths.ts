@@ -47,7 +47,6 @@ export const routePaths = {
   system: {
     base: routeNamespaces.system,
     capabilities: `${routeNamespaces.system}/capabilities`,
-    cloudSignin: `${routeNamespaces.system}/cloud-signin`,
     health: `${routeNamespaces.system}/health`,
     managed: {
       item: (kind: string, itemId: string = ":itemId") => `${routeNamespaces.system}/managed/${kind}/${itemId}`,
@@ -80,7 +79,6 @@ export const routePaths = {
     },
     config: (workspaceId: string = WORKSPACE_ID_PARAMETER) => `${workspaceRoutePath(workspaceId)}/config`,
     engineReload: (workspaceId: string = WORKSPACE_ID_PARAMETER) => `${workspaceRoutePath(workspaceId)}/engine/reload`,
-    export: (workspaceId: string = WORKSPACE_ID_PARAMETER) => `${workspaceRoutePath(workspaceId)}/export`,
     fileSessions: {
       base: workspaceFileSessionsBasePath,
       byId: workspaceFileSessionPath,
@@ -139,8 +137,6 @@ export const routePaths = {
         `${workspaceSessionPath(sessionId, workspaceId)}/fork`,
       abort: (sessionId: string = ":sessionId", workspaceId: string = WORKSPACE_ID_PARAMETER) =>
         `${workspaceSessionPath(sessionId, workspaceId)}/abort`,
-      share: (sessionId: string = ":sessionId", workspaceId: string = WORKSPACE_ID_PARAMETER) =>
-        `${workspaceSessionPath(sessionId, workspaceId)}/share`,
       summarize: (sessionId: string = ":sessionId", workspaceId: string = WORKSPACE_ID_PARAMETER) =>
         `${workspaceSessionPath(sessionId, workspaceId)}/summarize`,
       revert: (sessionId: string = ":sessionId", workspaceId: string = WORKSPACE_ID_PARAMETER) =>

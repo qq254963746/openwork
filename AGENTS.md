@@ -17,7 +17,7 @@ AiWork is a practical control surface for agentic work:
 * **Server-consumption first**: the app should consume AiWork server surfaces (self-hosted or hosted), not invent parallel behavior.
 * **Composable**: use the desktop app, or server mode based on the task.
 * **Ejectable**: AiWork is powered by OpenCode, so anything OpenCode can do is available in AiWork, even before a dedicated UI exists.
-* **Sharing is caring**: start solo, then share quickly; one CLI or desktop command can spin up an instantly shareable instance.
+
 
 ## Core Runtime Model (Updated)
 

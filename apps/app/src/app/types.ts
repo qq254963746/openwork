@@ -162,7 +162,7 @@ export type SessionCompactionState = {
   messageID: string | null;
 };
 
-export type View = "settings" | "session" | "signin";
+export type View = "settings" | "session";
 
 export type StartupPreference = "local" | "server";
 
@@ -279,17 +279,6 @@ export type HubSkillCard = {
   source: HubSkillRepo & {
     path: string;
   };
-};
-
-/** AiWork Cloud (Den) org skill surfaced in the Skills catalog (team hub + shared). */
-export type DenOrgSkillCard = {
-  id: string;
-  title: string;
-  description: string | null;
-  skillText: string;
-  hubName: string | null;
-  shared: "org" | "public" | null;
-  updatedAt: string | null;
 };
 
 export type PluginInstallStep = {

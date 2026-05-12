@@ -98,19 +98,6 @@ export type WorkspaceAssignmentRecord = {
   workspaceId: string;
 };
 
-export type WorkspaceShareRecord = {
-  accessKey: string | null;
-  audit: JsonObject | null;
-  createdAt: string;
-  id: string;
-  lastUsedAt: string | null;
-  revokedAt: string | null;
-  status: "active" | "disabled" | "revoked";
-  updatedAt: string;
-  workspaceId: string;
-};
-
-
 export type MigrationRecord = {
   appliedAt: string;
   checksum: string;

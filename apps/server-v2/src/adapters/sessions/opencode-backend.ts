@@ -231,10 +231,6 @@ export function createOpenCodeSessionBackend(options: OpenCodeBackendOptions) {
       await requestVoid(`/session/${encodeURIComponent(sessionId)}/message`, { body, method: "POST" });
     },
 
-    async shareSession(sessionId: string) {
-      await requestVoid(`/session/${encodeURIComponent(sessionId)}/share`, { method: "POST" });
-    },
-
     async shell(sessionId: string, body: Record<string, unknown>) {
       await requestVoid(`/session/${encodeURIComponent(sessionId)}/shell`, { body, method: "POST" });
     },
@@ -270,11 +266,6 @@ export function createOpenCodeSessionBackend(options: OpenCodeBackendOptions) {
     async summarizeSession(sessionId: string, body: Record<string, unknown>) {
       await requestVoid(`/session/${encodeURIComponent(sessionId)}/summarize`, { body, method: "POST" });
     },
-
-    async unshareSession(sessionId: string) {
-      await requestVoid(`/session/${encodeURIComponent(sessionId)}/share`, { method: "DELETE" });
-    },
-
     async unrevert(sessionId: string) {
       return parseSessionData(await requestJson(`/session/${encodeURIComponent(sessionId)}/unrevert`, { method: "POST" }));
     },

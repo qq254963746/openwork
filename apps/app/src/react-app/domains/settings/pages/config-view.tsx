@@ -588,15 +588,6 @@ export function ConfigView(props: ConfigViewProps) {
         ) : null}
       </div>
 
-      <div className="bg-gray-2/30 border border-gray-6/50 rounded-2xl p-5 space-y-2">
-        <div className="text-sm font-medium text-gray-12">
-          {t("config.messaging_identities_title")}
-        </div>
-        <div className="text-xs text-gray-10">
-          {t("config.messaging_identities_desc")}
-        </div>
-      </div>
-
     </section>
   );
 }

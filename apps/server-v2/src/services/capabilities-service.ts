@@ -62,9 +62,6 @@ export type CapabilitiesData = {
     runtimeUpgrade: true;
     runtimeVersions: true;
   };
-  shares: {
-    workspaceScoped: true;
-  };
   workspaces: {
     activate: true;
     createLocal: true;
@@ -145,9 +142,6 @@ export function createCapabilitiesService(input: {
           runtimeSummary: true,
           runtimeUpgrade: true,
           runtimeVersions: true,
-        },
-        shares: {
-          workspaceScoped: true,
         },
         workspaces: {
           activate: true,

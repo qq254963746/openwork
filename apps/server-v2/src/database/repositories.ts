@@ -9,7 +9,6 @@ import type {
   WorkspaceConfigStateRecord,
   WorkspaceRecord,
   WorkspaceRuntimeStateRecord,
-  WorkspaceShareRecord,
 } from "./types.js";
 
 function toBoolean(value: number | boolean | null | undefined) {
@@ -106,30 +105,6 @@ type RawManagedConfigRow = {
   updated_at: string;
 };
 
-type RawCloudSigninRow = {
-  auth_json: string | null;
-  cloud_base_url: string;
-  created_at: string;
-  id: string;
-  last_validated_at: string | null;
-  metadata_json: string | null;
-  org_id: string | null;
-  server_id: string;
-  updated_at: string;
-  user_id: string | null;
-};
-
-type RawWorkspaceShareRow = {
-  access_key: string | null;
-  audit_json: string | null;
-  created_at: string;
-  id: string;
-  last_used_at: string | null;
-  revoked_at: string | null;
-  status: WorkspaceShareRecord["status"];
-  updated_at: string;
-  workspace_id: string;
-};
 
 function mapServer(row: RawServerRow | null | undefined): ServerRecord | null {
   if (!row) {
@@ -252,25 +227,6 @@ function mapManagedConfig(row: RawManagedConfigRow | null | undefined): ManagedC
     metadata: parseJsonValue(row.metadata_json, null),
     source: row.source,
     updatedAt: row.updated_at,
-  };
-}
-
-
-function mapWorkspaceShare(row: RawWorkspaceShareRow | null | undefined): WorkspaceShareRecord | null {
-  if (!row) {
-    return null;
-  }
-
-  return {
-    accessKey: row.access_key,
-    audit: parseJsonValue(row.audit_json, null),
-    createdAt: row.created_at,
-    id: row.id,
-    lastUsedAt: row.last_used_at,
-    revokedAt: row.revoked_at,
-    status: row.status,
-    updatedAt: row.updated_at,
-    workspaceId: row.workspace_id,
   };
 }
 
@@ -725,60 +681,6 @@ export class WorkspaceAssignmentRepository {
   }
 }
 
-export class WorkspaceSharesRepository {
-  constructor(private readonly database: Database) {}
-
-  getById(id: string) {
-    return mapWorkspaceShare(this.database.query("SELECT * FROM workspace_shares WHERE id = ?1").get(id) as RawWorkspaceShareRow | null);
-  }
-
-  listByWorkspace(workspaceId: string) {
-    return (this.database
-      .query("SELECT * FROM workspace_shares WHERE workspace_id = ?1 ORDER BY updated_at DESC")
-      .all(workspaceId) as RawWorkspaceShareRow[]).map(mapWorkspaceShare).filter(Boolean) as WorkspaceShareRecord[];
-  }
-
-  getLatestByWorkspace(workspaceId: string) {
-    return mapWorkspaceShare(
-      this.database.query("SELECT * FROM workspace_shares WHERE workspace_id = ?1 ORDER BY updated_at DESC LIMIT 1").get(workspaceId) as RawWorkspaceShareRow | null,
-    );
-  }
-
-  upsert(input: Omit<WorkspaceShareRecord, "createdAt" | "updatedAt"> & { createdAt?: string; updatedAt?: string }) {
-    const createdAt = input.createdAt ?? nowIso();
-    const updatedAt = input.updatedAt ?? nowIso();
-    this.database
-      .query(
-        `
-          INSERT INTO workspace_shares (
-            id, workspace_id, access_key, status, last_used_at, audit_json, created_at, updated_at, revoked_at
-          )
-          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
-          ON CONFLICT(id) DO UPDATE SET
-            workspace_id = excluded.workspace_id,
-            access_key = excluded.access_key,
-            status = excluded.status,
-            last_used_at = excluded.last_used_at,
-            audit_json = excluded.audit_json,
-            updated_at = excluded.updated_at,
-            revoked_at = excluded.revoked_at
-        `,
-      )
-      .run(
-        input.id,
-        input.workspaceId,
-        input.accessKey,
-        input.status,
-        input.lastUsedAt,
-        stringifyJsonValue(input.audit),
-        createdAt,
-        updatedAt,
-        input.revokedAt,
-      );
-    return this.listByWorkspace(input.workspaceId).find((item) => item.id === input.id)!;
-  }
-}
-
 export type ServerRepositories = {
   mcps: ManagedConfigRepository;
   plugins: ManagedConfigRepository;
@@ -792,7 +694,6 @@ export type ServerRepositories = {
   workspacePlugins: WorkspaceAssignmentRepository;
   workspaceProviderConfigs: WorkspaceAssignmentRepository;
   workspaceRuntimeState: WorkspaceRuntimeStateRepository;
-  workspaceShares: WorkspaceSharesRepository;
   workspaceSkills: WorkspaceAssignmentRepository;
   workspaces: WorkspacesRepository;
 };
@@ -811,7 +712,6 @@ export function createRepositories(database: Database): ServerRepositories {
     workspacePlugins: new WorkspaceAssignmentRepository(database, "workspace_plugins"),
     workspaceProviderConfigs: new WorkspaceAssignmentRepository(database, "workspace_provider_configs"),
     workspaceRuntimeState: new WorkspaceRuntimeStateRepository(database),
-    workspaceShares: new WorkspaceSharesRepository(database),
     workspaceSkills: new WorkspaceAssignmentRepository(database, "workspace_skills"),
     workspaces: new WorkspacesRepository(database),
   };

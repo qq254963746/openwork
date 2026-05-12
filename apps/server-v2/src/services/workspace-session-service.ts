@@ -240,10 +240,6 @@ export function createWorkspaceSessionService(input: {
       return runMutation(workspaceId, (backend) => backend.sendMessage(sessionId, body));
     },
 
-    shareSession(workspaceId: string, sessionId: string) {
-      return runMutation(workspaceId, (backend) => backend.shareSession(sessionId));
-    },
-
     shell(workspaceId: string, sessionId: string, body: Record<string, unknown>) {
       return runMutation(workspaceId, (backend) => backend.shell(sessionId, body));
     },
@@ -268,10 +264,6 @@ export function createWorkspaceSessionService(input: {
 
     summarizeSession(workspaceId: string, sessionId: string, body: Record<string, unknown>) {
       return runMutation(workspaceId, (backend) => backend.summarizeSession(sessionId, body));
-    },
-
-    unshareSession(workspaceId: string, sessionId: string) {
-      return runMutation(workspaceId, (backend) => backend.unshareSession(sessionId));
     },
 
     unrevert(workspaceId: string, sessionId: string) {

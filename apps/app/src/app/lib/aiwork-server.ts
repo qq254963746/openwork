@@ -850,7 +850,6 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
     config: 10_000,
     workspaceExport: 30_000,
     workspaceImport: 30_000,
-    shareBundle: 20_000,
     binary: 60_000,
     openAiCompatibleModels: 65_000,
   };
@@ -1001,19 +1000,6 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
           timeoutMs: timeouts.workspaceImport,
         },
       ),
-    publishBundle: (payload: unknown, bundleType: "skill" | "skills-set", options?: { name?: string; timeoutMs?: number }) =>
-      requestJson<{ url: string }>(baseUrl, "/share/bundles/publish", {
-        token,
-        hostToken,
-        method: "POST",
-        body: {
-          payload,
-          bundleType,
-          name: options?.name,
-          timeoutMs: options?.timeoutMs,
-        },
-        timeoutMs: options?.timeoutMs ?? timeouts.shareBundle,
-      }),
     getConfig: (workspaceId: string) =>
       requestJson<{ opencode: Record<string, unknown>; aiwork: Record<string, unknown>; updatedAt?: number | null }>(
         baseUrl,
