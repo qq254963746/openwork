@@ -1085,7 +1085,6 @@ export function createRuntimeManager({ app, desktopRoot, listLocalWorkspacePaths
     return engineStart(projectDir, {
       runtime: engineState.runtime,
       workspacePaths: [projectDir],
-      opencodeEnableExa: options.opencodeEnableExa,
     });
   }
 

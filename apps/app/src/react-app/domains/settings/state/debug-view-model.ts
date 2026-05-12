@@ -28,19 +28,14 @@ import {
 } from "../../../../app/lib/aiwork-server";
 import {
   clearStartupPreference,
-  isElectronRuntime,
-  isMacPlatform,
-  isTauriRuntime,
   safeStringify,
 } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import type { DebugViewProps } from "../pages/debug-view";
 import type { AiWorkServerStore, AiWorkServerStoreSnapshot } from "../../connections/aiwork-server-store";
 
-const STARTUP_PREFERENCE_KEY = "aiwork.startupPreference";
 const ENGINE_SOURCE_KEY = "aiwork.engineSource";
 const ENGINE_CUSTOM_BIN_KEY = "aiwork.engineCustomBinPath";
-const OPENCODE_ENABLE_EXA_KEY = "aiwork.opencodeEnableExa";
 
 type ResetModalMode = "onboarding" | "all";
 
@@ -456,8 +451,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
 
     const info = await engineStartCmd(workspacePath, {
       runtime: "direct",
-      workspacePaths,
-      opencodeEnableExa: readOpencodeEnableExa(),
+      workspacePaths
     });
 
     // engine_start restarts aiwork-server on a NEW port and lets that server

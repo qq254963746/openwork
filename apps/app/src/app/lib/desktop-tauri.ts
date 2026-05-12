@@ -154,14 +154,12 @@ export async function engineStart(
     runtime?: "direct";
     workspacePaths?: string[];
     opencodeBinPath?: string | null;
-    opencodeEnableExa?: boolean;
   },
 ): Promise<EngineInfo> {
   return invoke<EngineInfo>("engine_start", {
     projectDir,
     preferSidecar: options?.preferSidecar ?? true,
     opencodeBinPath: options?.opencodeBinPath ?? null,
-    opencodeEnableExa: options?.opencodeEnableExa ?? null,
     runtime: options?.runtime ?? null,
     workspacePaths: options?.workspacePaths ?? null,
   });
@@ -298,11 +296,8 @@ export async function engineStop(): Promise<EngineInfo> {
   return invoke<EngineInfo>("engine_stop");
 }
 
-export async function engineRestart(options?: {
-  opencodeEnableExa?: boolean;
-}): Promise<EngineInfo> {
+export async function engineRestart(options?: {}): Promise<EngineInfo> {
   return invoke<EngineInfo>("engine_restart", {
-    opencodeEnableExa: options?.opencodeEnableExa ?? null,
   });
 }
 

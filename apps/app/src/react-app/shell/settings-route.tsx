@@ -1448,10 +1448,6 @@ export function SettingsRoute() {
             toggleDeveloperMode={() => setDeveloperMode((current) => !current)}
             opencodeDevModeEnabled={false}
             openDebugDeepLink={async () => ({ ok: false, message: "Debug deep links are not wired into the React settings route yet." })}
-            opencodeEnableExa={false}
-            toggleOpencodeEnableExa={() => {
-              setRouteError("EXA controls are not wired into the React settings route yet.");
-            }}
             configView={{
               busy,
               clientConnected: Boolean(opencodeClient),

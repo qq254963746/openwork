@@ -659,8 +659,6 @@ export default {
   "settings.disconnecting": "正在断开…",
   "settings.done": "完成",
   "settings.enable_developer_mode": "启用开发者模式",
-  "settings.enable_exa": "启用Exa网页搜索",
-  "settings.enable_exa_desc": "在AiWork编排器启动OpenCode时生效。",
   "settings.engine_bundled": "内置（推荐）",
   "settings.engine_bundled_hint": "内置引擎是最可靠的选项。使用系统",
   "settings.engine_custom_binary": "自定义二进制文件",

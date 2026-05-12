@@ -40,8 +40,6 @@ export type AdvancedViewProps = {
   toggleDeveloperMode: () => void;
   opencodeDevModeEnabled: boolean;
   openDebugDeepLink: (rawUrl: string) => Promise<{ ok: boolean; message: string }>;
-  opencodeEnableExa: boolean;
-  toggleOpencodeEnableExa: () => void;
   configView: ConfigViewProps;
 };
 
@@ -216,30 +214,6 @@ export function AdvancedView(props: AdvancedViewProps) {
             statusDot={aiworkStatusDot}
           />
         </div>
-      </div>
-
-      <div className={`${settingsPanelClass} space-y-3`}>
-        <div>
-          <div className="text-sm font-medium text-gray-12">{t("settings.opencode_section_label")}</div>
-          <div className="text-xs text-gray-9">{t("settings.opencode_engine_desc")}</div>
-        </div>
-
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-6 bg-gray-1 p-3">
-          <div className="min-w-0">
-            <div className="text-sm text-gray-12">{t("settings.enable_exa")}</div>
-            <div className="text-xs text-gray-7">{t("settings.enable_exa_desc")}</div>
-          </div>
-          <Button
-            variant="outline"
-            className="h-8 shrink-0 px-3 py-0 text-xs"
-            onClick={props.toggleOpencodeEnableExa}
-            disabled={props.busy}
-          >
-            {props.opencodeEnableExa ? t("settings.on") : t("settings.off")}
-          </Button>
-        </div>
-
-        <div className="text-[11px] text-gray-7">{t("settings.exa_restart_hint")}</div>
       </div>
 
       <div className={`${settingsPanelClass} space-y-3`}>

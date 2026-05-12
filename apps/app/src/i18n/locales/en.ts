@@ -709,8 +709,6 @@ export default {
   "settings.disconnecting": "Disconnecting...",
   "settings.done": "Done",
   "settings.enable_developer_mode": "Enable Developer Mode",
-  "settings.enable_exa": "Enable Exa web search",
-  "settings.enable_exa_desc": "Applies the next time OpenCode is started by AiWork. Off by default.",
   "settings.engine_bundled": "Bundled (recommended)",
   "settings.engine_bundled_hint": "Bundled engine is the most reliable option. Use System",
   "settings.engine_custom_binary": "Custom binary",
