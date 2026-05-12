@@ -12,4 +12,5 @@ else
   echo "No process found on port $PORT."
 fi
 
+pnpm install
 pnpm dev

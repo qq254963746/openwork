@@ -11,10 +11,8 @@ import {
   workspaceSetRuntimeActive,
   workspaceSetSelected,
 } from "../../app/lib/desktop";
-import { ingestMigrationSnapshotOnElectronBoot } from "../../app/lib/migration";
 import {
   hydrateAiWorkServerSettingsFromEnv,
-  readAiWorkServerSettings,
   writeAiWorkServerSettings,
 } from "../../app/lib/aiwork-server";
 import { isElectronRuntime, safeStringify } from "../../app/utils";
@@ -61,18 +59,6 @@ export function useDesktopRuntimeBoot() {
 
     void (async () => {
       try {
-        // On Electron specifically: if the previous Tauri install dropped
-        // a migration snapshot, fold it into localStorage before any of
-        // the boot code reads workspace preferences. Idempotent across
-        // launches (the helper only writes keys that are still empty
-        // and acks the file after ingestion).
-        if (isElectronRuntime()) {
-          const hydrated = await ingestMigrationSnapshotOnElectronBoot();
-          if (hydrated > 0) {
-            // eslint-disable-next-line no-console -- valuable one-time signal
-            console.info(`[migration] hydrated ${hydrated} localStorage keys from Tauri snapshot`);
-          }
-        }
         hydrateAiWorkServerSettingsFromEnv();
 
         setPhase("bootstrapping-workspaces");

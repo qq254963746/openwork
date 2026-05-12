@@ -2,7 +2,6 @@ pub mod command_files;
 pub mod config;
 pub mod engine;
 pub mod host_desktop;
-pub mod migration;
 pub mod misc;
 pub mod aiwork_server;
 pub mod shell_events_bridge;

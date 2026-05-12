@@ -30,7 +30,7 @@ dependencies = [
 
 [[package]]
 name = "aiwork"
-version = "0.13.36"
+version = "0.13.37"
 dependencies = [
  "dirs",
  "json5",

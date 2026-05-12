@@ -17,7 +17,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
-import { registerMigrationIpc } from "./migration.mjs";
 import { createRuntimeManager } from "./runtime.mjs";
 import { exportWorkspaceConfig, importWorkspaceConfig } from "./workspace-archive.mjs";
 
@@ -30,8 +29,7 @@ const isDevMode = process.env.AIWORK_DEV_MODE === "1";
 const APP_NAME = isDevMode ? "AiWork - Dev" : "AiWork";
 const APP_IDENTIFIER = isDevMode ? DEV_APP_IDENTIFIER : TAURI_APP_IDENTIFIER;
 
-// Production Electron shares the same on-disk state folder as the Tauri shell
-// so in-place migration is a no-op for almost every file. Dev mode uses the
+// Production Electron shares the same on-disk state folder as the Tauri shell. Dev mode uses the
 // separate dev identifier so it can run beside the production app.
 //
 // Override via AIWORK_ELECTRON_USERDATA so dogfooders can isolate their
@@ -163,33 +161,6 @@ function flushPendingDeepLinks() {
 
 function workspaceStatePath() {
   return path.join(app.getPath("userData"), "aiwork-workspaces.json");
-}
-
-// Earlier Electron alpha builds copied Tauri's aiwork-workspaces.json into an
-// Electron-only workspace-state.json. Keep importing that file when the shared
-// canonical file is missing, but write aiwork-workspaces.json going forward so
-// Tauri rollback and Electron both read the same desktop workspace state.
-function legacyElectronWorkspaceStatePath() {
-  return path.join(app.getPath("userData"), "workspace-state.json");
-}
-
-async function migrateLegacyElectronWorkspaceStateIfNeeded() {
-  const current = workspaceStatePath();
-  const legacy = legacyElectronWorkspaceStatePath();
-  try {
-    if (existsSync(current)) return false;
-    if (!existsSync(legacy)) return false;
-    await mkdir(path.dirname(current), { recursive: true });
-    const raw = await readFile(legacy, "utf8");
-    await writeFile(current, raw, "utf8");
-    console.info(
-      "[migration] copied workspace-state.json → aiwork-workspaces.json",
-    );
-    return true;
-  } catch (error) {
-    console.warn("[migration] legacy Electron workspace-state copy failed", error);
-    return false;
-  }
 }
 
 function configHomePath() {
@@ -1284,8 +1255,6 @@ ipcMain.handle("aiwork:shell:relaunch", async () => {
   app.exit(0);
 });
 
-registerMigrationIpc({ app, ipcMain });
-
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
@@ -1314,15 +1283,6 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(async () => {
     await installReactDevToolsForDev();
     await runtimeManager.prepareFreshRuntime().catch(() => undefined);
-
-    // Use Tauri's existing workspace state file as canonical so rollback and
-    // Electron see the same workspace list. Import the short-lived
-    // Electron-only filename only when the shared file is missing.
-    await migrateLegacyElectronWorkspaceStateIfNeeded();
-    runtimeBootstrapPromise = bootRuntimeForSelectedWorkspace().catch((error) => ({
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-    }));
 
     queueDeepLinks(forwardedDeepLinks(process.argv));
     const win = await createMainWindow();

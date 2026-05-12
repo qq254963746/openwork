@@ -77,22 +77,7 @@ export type DebugViewProps = {
   onClearDeveloperLog: () => void | Promise<void>;
   onCopyDeveloperLog: () => void | Promise<void>;
   onExportDeveloperLog: () => void | Promise<void>;
-  electronMigrationAvailable: boolean;
-  electronMigrationUrl: string;
-  electronMigrationSha256: string;
-  electronMigrationSha512: string;
-  electronMigrationArtifactLabel: string | null;
-  electronMigrationBusy: boolean;
-  electronMigrationStatus: string | null;
   electronPreviewReleaseUrl: string;
-  onSetElectronMigrationUrl: (value: string) => void;
-  onSetElectronMigrationSha256: (value: string) => void;
-  onSetElectronMigrationSha512: (value: string) => void;
-  onOpenElectronPreviewRelease: () => void | Promise<void>;
-  onResolveElectronAlphaArtifact: () => void | Promise<void>;
-  onRevealElectronMigrationBackup: () => void | Promise<void>;
-  onPrepareElectronMigrationSnapshot: () => void | Promise<void>;
-  onInstallElectronPreviewFromTauri: () => void | Promise<void>;
   onStopHost: () => void | Promise<void>;
   onResetStartupPreference: () => void | Promise<void>;
   engineSource: "path" | "sidecar" | "custom";
@@ -790,126 +775,6 @@ export function DebugView(props: DebugViewProps) {
         <div className="text-[11px] text-dls-secondary">{t("settings.reset_requires_confirm")}</div>
         {props.resetStatus ? <StatusBanner tone="info" message={props.resetStatus} /> : null}
       </div>
-
-      {/* Section: Electron alpha migration (debug only) */}
-      {props.electronMigrationAvailable ? (
-        <div className={cardClass}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className={sectionTitleClass}>Electron alpha migration</div>
-              <div className={sectionDescClass}>
-                Debug-only Tauri controls. Preparing migration data is non-destructive; installing requires a URL and two
-                confirmations.
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              className="h-8 shrink-0 px-3 py-0 text-xs"
-              onClick={() => void props.onOpenElectronPreviewRelease()}
-            >
-              <ExternalLink size={13} className="mr-1.5" />
-              Alpha release
-            </Button>
-          </div>
-
-          <div className="rounded-xl border border-green-7/25 bg-green-3/10 px-3 py-2 text-[12px] leading-relaxed text-green-11">
-            Safe default: use <strong>Prepare migration data</strong> first. It writes the Electron snapshot only and does
-            not replace, quit, or delete the Tauri app. The install handoff keeps rollback backup at{" "}
-            <code className="font-mono">AiWork.app.migrate-bak</code>.
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="secondary"
-              className="h-9 px-3 py-0 text-xs"
-              onClick={() => void props.onResolveElectronAlphaArtifact()}
-              disabled={props.electronMigrationBusy}
-            >
-              {props.electronMigrationBusy ? "Resolving…" : "Resolve latest Electron alpha"}
-            </Button>
-            {props.electronMigrationArtifactLabel ? (
-              <div className="min-w-0 flex-1 truncate text-[11px] text-dls-secondary">
-                {props.electronMigrationArtifactLabel}
-              </div>
-            ) : (
-              <div className="text-[11px] text-dls-secondary">Uses latest-mac.yml from the rolling alpha release.</div>
-            )}
-          </div>
-
-          <details className="rounded-xl border border-dls-border bg-dls-sidebar/30 p-3">
-            <summary className="cursor-pointer select-none text-[11px] font-medium uppercase tracking-wider text-dls-secondary">
-              Advanced manual artifact override
-            </summary>
-            <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
-              <label className="space-y-1 text-[12px] text-dls-secondary">
-                <span>Electron artifact URL</span>
-                <input
-                  type="url"
-                  value={props.electronMigrationUrl}
-                  onChange={(event) => props.onSetElectronMigrationUrl(event.currentTarget.value)}
-                  placeholder="Paste a trusted Electron .zip/.exe/AppImage URL"
-                  className="h-10 w-full rounded-xl border border-dls-border bg-dls-surface px-3 font-mono text-[11px] text-dls-text outline-none transition-colors placeholder:text-dls-secondary focus:border-dls-accent"
-                />
-              </label>
-              <label className="space-y-1 text-[12px] text-dls-secondary">
-                <span>sha512 from latest-mac.yml</span>
-                <input
-                  type="text"
-                  value={props.electronMigrationSha512}
-                  onChange={(event) => props.onSetElectronMigrationSha512(event.currentTarget.value)}
-                  placeholder="recommended"
-                  className="h-10 w-full rounded-xl border border-dls-border bg-dls-surface px-3 font-mono text-[11px] text-dls-text outline-none transition-colors placeholder:text-dls-secondary focus:border-dls-accent"
-                />
-              </label>
-              <label className="space-y-1 text-[12px] text-dls-secondary md:col-span-2">
-                <span>sha256 override (legacy optional)</span>
-                <input
-                  type="text"
-                  value={props.electronMigrationSha256}
-                  onChange={(event) => props.onSetElectronMigrationSha256(event.currentTarget.value)}
-                  placeholder="Only needed when the artifact provider gives sha256 instead of latest-mac.yml sha512"
-                  className="h-10 w-full rounded-xl border border-dls-border bg-dls-surface px-3 font-mono text-[11px] text-dls-text outline-none transition-colors placeholder:text-dls-secondary focus:border-dls-accent"
-                />
-              </label>
-            </div>
-          </details>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="secondary"
-              className="h-9 px-3 py-0 text-xs"
-              onClick={() => void props.onPrepareElectronMigrationSnapshot()}
-              disabled={props.electronMigrationBusy}
-            >
-              {props.electronMigrationBusy ? "Preparing…" : "Prepare migration data"}
-            </Button>
-            <Button
-              variant="outline"
-              className="h-9 border-amber-7/50 px-3 py-0 text-xs text-amber-11 hover:bg-amber-3/40"
-              onClick={() => void props.onInstallElectronPreviewFromTauri()}
-              disabled={props.electronMigrationBusy || !props.electronMigrationUrl.trim()}
-              title="Requires a trusted artifact URL. macOS keeps AiWork.app.migrate-bak for rollback."
-            >
-              Start install handoff…
-            </Button>
-            <Button
-              variant="outline"
-              className="h-9 px-3 py-0 text-xs"
-              onClick={() => void props.onRevealElectronMigrationBackup()}
-              disabled={props.electronMigrationBusy}
-            >
-              Open backup in Finder
-            </Button>
-            <div className="text-[11px] text-dls-secondary">
-              Release page: <span className="font-mono">{props.electronPreviewReleaseUrl}</span>
-            </div>
-          </div>
-
-          {props.electronMigrationStatus ? (
-            <StatusBanner tone="info" message={props.electronMigrationStatus} />
-          ) : null}
-        </div>
-      ) : null}
 
       {/* Section: Danger zone */}
       {isDesktop ? (

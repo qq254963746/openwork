@@ -20,7 +20,6 @@ use commands::config::{read_opencode_auth_json, read_opencode_config, write_open
 use commands::engine::{
     engine_doctor, engine_info, engine_install, engine_restart, engine_start, engine_stop,
 };
-use commands::migration::{migrate_to_electron, write_migration_snapshot};
 use commands::misc::{
     app_build_info, desktop_app_paths, nuke_aiwork_and_opencode_config_and_exit, opencode_mcp_auth,
     read_opencode_engine_disk_logs, reset_opencode_cache, reset_aiwork_state,
@@ -174,8 +173,6 @@ pub fn run() {
             read_opencode_auth_json,
             write_opencode_config,
             desktop_app_paths,
-            migrate_to_electron,
-            write_migration_snapshot,
             app_build_info,
             nuke_aiwork_and_opencode_config_and_exit,
             reset_aiwork_state,

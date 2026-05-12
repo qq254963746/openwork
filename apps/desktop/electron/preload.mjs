@@ -20,14 +20,6 @@ contextBridge.exposeInMainWorld("__AIWORK_ELECTRON__", {
       return ipcRenderer.invoke("aiwork:shell:relaunch");
     },
   },
-  migration: {
-    readSnapshot() {
-      return ipcRenderer.invoke("aiwork:migration:read");
-    },
-    ackSnapshot() {
-      return ipcRenderer.invoke("aiwork:migration:ack");
-    },
-  },
   meta: {
     initialDeepLinks: [],
     platform: normalizePlatform(process.platform),

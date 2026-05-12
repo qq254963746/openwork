@@ -102,7 +102,6 @@ export function LocalProvider({ children }: LocalProviderProps) {
     };
   });
   const [ready, setReady] = useState(false);
-  const migratedThinkingRef = useRef(false);
 
   useEffect(() => {
     writePersisted(UI_STORAGE_KEY, ui);
@@ -119,8 +118,6 @@ export function LocalProvider({ children }: LocalProviderProps) {
   useEffect(() => {
     if (!ready) return;
     if (typeof window === "undefined") return;
-    if (migratedThinkingRef.current) return;
-    migratedThinkingRef.current = true;
 
     const raw = window.localStorage.getItem(THINKING_PREF_KEY);
     if (raw == null) return;

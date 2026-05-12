@@ -336,11 +336,6 @@ Both should resolve to the same token logic and visual rules.
 
 ---
 
-## 12. Migration strategy
-
-Do not redesign everything at once.
-Use this sequence.
-
 ### Phase 1: lock the foundations
 
 1. create canonical semantic tokens

@@ -13,10 +13,6 @@ declare global {
         openExternal?: (url: string) => Promise<void>;
         relaunch?: () => Promise<void>;
       };
-      migration?: {
-        readSnapshot?: () => Promise<unknown>;
-        ackSnapshot?: () => Promise<{ ok: boolean; moved: boolean }>;
-      };
       meta?: {
         initialDeepLinks?: string[];
         platform?: "darwin" | "linux" | "windows";

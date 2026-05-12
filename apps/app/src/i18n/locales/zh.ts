@@ -833,7 +833,7 @@ export default {
   "settings.tab_description_extensions": "管理此工作区的MCP应用和OpenCode插件。",
   "settings.tab_description_general": "添加提供商、选择默认模型、授权文件夹，以及控制所选AiWork工作区和运行时连接。",
   "settings.tab_description_environment": "保存本机 agents、skills 和 MCP servers 使用的 API keys 与 tokens。Secret 只保留在这台设备上。",
-  "settings.tab_description_recovery": "修复迁移状态、重置工作区默认值和恢复本地设置。",
+  "settings.tab_description_recovery": "重置工作区默认值和恢复本地设置。",
   "settings.tab_description_skills": "在设置中浏览、编辑和安装skills。",
   "settings.tab_environment": "环境变量",
   "settings.tab_extensions": "扩展",

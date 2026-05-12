@@ -647,19 +647,6 @@ mod tests {
     }
 
     #[test]
-    fn migrates_legacy_fixed_port_to_no_preference() {
-        let path = unique_temp_path("port-migrate");
-        fs::write(&path, r#"{"version":1,"preferred_port":8787}"#).expect("write legacy state");
-
-        let state = load_aiwork_server_state(&path).expect("load migrated state");
-        assert_eq!(state.version, AIWORK_SERVER_STATE_VERSION);
-        assert_eq!(state.preferred_port, None);
-        assert!(state.workspace_ports.is_empty());
-
-        let _ = fs::remove_file(path);
-    }
-
-    #[test]
     fn reuses_workspace_tokens_across_canonical_path_aliases() {
         let path = unique_temp_path("token-path-alias");
         let workspace = PathBuf::from(format!(

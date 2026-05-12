@@ -24,10 +24,6 @@ import {
   type ElectronAlphaArtifact,
 } from "../../../../app/lib/electron-alpha";
 import {
-  migrateToElectron,
-  writeMigrationSnapshotFromTauri,
-} from "../../../../app/lib/migration";
-import {
   writeAiWorkServerSettings,
 } from "../../../../app/lib/aiwork-server";
 import {
@@ -254,12 +250,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   );
   const [developerLog, setDeveloperLog] = useState<string[]>([]);
   const [developerLogStatus, setDeveloperLogStatus] = useState<string | null>(null);
-  const [electronMigrationUrl, setElectronMigrationUrl] = useState("");
-  const [electronMigrationSha256, setElectronMigrationSha256] = useState("");
-  const [electronMigrationSha512, setElectronMigrationSha512] = useState("");
-  const [electronMigrationArtifact, setElectronMigrationArtifact] = useState<ElectronAlphaArtifact | null>(null);
-  const [electronMigrationBusy, setElectronMigrationBusy] = useState(false);
-  const [electronMigrationStatus, setElectronMigrationStatus] = useState<string | null>(null);
   const refreshEngineInfo = useCallback(async () => {
     try {
       const info = await engineInfoCmd();
@@ -405,158 +395,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       setDeveloperLogStatus(error instanceof Error ? error.message : safeStringify(error));
     }
   }, [developerLog]);
-
-  const onOpenElectronPreviewRelease = useCallback(async () => {
-    try {
-      await openDesktopUrl(ELECTRON_ALPHA_RELEASE_PAGE_URL);
-      setElectronMigrationStatus("Opened the rolling Electron alpha release. Download links live there after dev builds finish.");
-    } catch (error) {
-      setElectronMigrationStatus(error instanceof Error ? error.message : safeStringify(error));
-    }
-  }, []);
-
-  const onSetElectronMigrationUrl = useCallback((value: string) => {
-    setElectronMigrationUrl(value);
-    setElectronMigrationArtifact(null);
-  }, []);
-
-  const onSetElectronMigrationSha512 = useCallback((value: string) => {
-    setElectronMigrationSha512(value);
-    setElectronMigrationArtifact(null);
-  }, []);
-
-  const electronMigrationArtifactLabel = useMemo(() => {
-    if (!electronMigrationArtifact) return null;
-    return `Resolved v${electronMigrationArtifact.version} (${electronMigrationArtifact.arch}) · ${electronMigrationArtifact.path}`;
-  }, [electronMigrationArtifact]);
-
-  const onResolveElectronAlphaArtifact = useCallback(async () => {
-    if (!isTauriRuntime()) {
-      setElectronMigrationStatus("Electron alpha migration resolution is only available in the Tauri desktop app.");
-      return;
-    }
-    if (!isMacPlatform()) {
-      setElectronMigrationStatus("Electron alpha migration is macOS-only for now.");
-      return;
-    }
-    setElectronMigrationBusy(true);
-    setElectronMigrationStatus(null);
-    try {
-      const artifact = await resolveElectronAlphaArtifact("arm64");
-      setElectronMigrationArtifact(artifact);
-      setElectronMigrationUrl(artifact.url);
-      setElectronMigrationSha512(artifact.sha512);
-      setElectronMigrationSha256("");
-      setElectronMigrationStatus(
-        `Resolved Electron alpha v${artifact.version} from latest-mac.yml. Review Advanced if you need to override the artifact URL.`,
-      );
-      pushDeveloperLog(`resolved Electron alpha artifact version=${artifact.version} path=${artifact.path}`);
-    } catch (error) {
-      setElectronMigrationStatus(error instanceof Error ? error.message : safeStringify(error));
-    } finally {
-      setElectronMigrationBusy(false);
-    }
-  }, [pushDeveloperLog]);
-
-  const onRevealElectronMigrationBackup = useCallback(async () => {
-    try {
-      const env = await desktopAppPathsCmd();
-      const appBundlePath = env.appBundlePath?.trim();
-      if (!appBundlePath) {
-        setElectronMigrationStatus("Could not resolve the current AiWork.app bundle path.");
-        return;
-      }
-      await revealDesktopItemInDir(`${appBundlePath}.migrate-bak`);
-      setElectronMigrationStatus("Requested Finder reveal for AiWork.app.migrate-bak. The backup exists after an install handoff completes.");
-    } catch (error) {
-      setElectronMigrationStatus(error instanceof Error ? error.message : safeStringify(error));
-    }
-  }, []);
-
-  const onPrepareElectronMigrationSnapshot = useCallback(async () => {
-    if (!isTauriRuntime()) {
-      setElectronMigrationStatus("Migration snapshot export is only available in the Tauri desktop app.");
-      return;
-    }
-    setElectronMigrationBusy(true);
-    setElectronMigrationStatus(null);
-    try {
-      const result = await writeMigrationSnapshotFromTauri();
-      if (!result.ok) {
-        throw new Error(result.reason ?? "Failed to write migration snapshot.");
-      }
-      setElectronMigrationStatus(
-        `Prepared Electron migration data (${result.keyCount} localStorage key${result.keyCount === 1 ? "" : "s"}). This did not replace or quit Tauri.`,
-      );
-      pushDeveloperLog(`prepared Electron migration snapshot keyCount=${result.keyCount}`);
-    } catch (error) {
-      setElectronMigrationStatus(error instanceof Error ? error.message : safeStringify(error));
-    } finally {
-      setElectronMigrationBusy(false);
-    }
-  }, [pushDeveloperLog]);
-
-  const onInstallElectronPreviewFromTauri = useCallback(async () => {
-    if (!isTauriRuntime()) {
-      setElectronMigrationStatus("Electron install handoff is only available in the Tauri desktop app.");
-      return;
-    }
-
-    const url = electronMigrationUrl.trim();
-    if (!url) {
-      setElectronMigrationStatus("Paste a trusted Electron artifact URL before starting the install handoff.");
-      return;
-    }
-    try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== "https:") {
-        setElectronMigrationStatus("Electron artifact URLs must use https://.");
-        return;
-      }
-    } catch {
-      setElectronMigrationStatus("Paste a valid https:// Electron artifact URL before starting the install handoff.");
-      return;
-    }
-
-    const confirmed =
-      typeof window === "undefined" ||
-      window.confirm(
-        "This debug-only migration action first writes a migration snapshot, then starts the Tauri → Electron handoff. On macOS, the installer swaps AiWork.app in place and keeps AiWork.app.migrate-bak for rollback. Continue?",
-      );
-    if (!confirmed) return;
-
-    const doubleConfirmed =
-      typeof window === "undefined" ||
-      window.confirm(
-        "Final confirmation: quit Tauri and start installing the resolved Electron alpha now? The current app bundle will be moved to AiWork.app.migrate-bak before replacement.",
-      );
-    if (!doubleConfirmed) {
-      setElectronMigrationStatus("Install handoff cancelled before any app replacement step.");
-      return;
-    }
-
-    setElectronMigrationBusy(true);
-    setElectronMigrationStatus(null);
-    try {
-      const snapshot = await writeMigrationSnapshotFromTauri();
-      if (!snapshot.ok) {
-        throw new Error(snapshot.reason ?? "Failed to write migration snapshot.");
-      }
-      pushDeveloperLog(`prepared Electron migration snapshot before install keyCount=${snapshot.keyCount}`);
-      const result = await migrateToElectron({
-        url,
-        sha256: electronMigrationSha256.trim() || undefined,
-        sha512: electronMigrationSha512.trim() || undefined,
-      });
-      if (!result.ok) {
-        throw new Error(result.reason ?? "Electron install handoff failed.");
-      }
-      setElectronMigrationStatus("Electron install handoff started. Tauri will quit if the native handoff accepted the request.");
-    } catch (error) {
-      setElectronMigrationStatus(error instanceof Error ? error.message : safeStringify(error));
-      setElectronMigrationBusy(false);
-    }
-  }, [electronMigrationSha256, electronMigrationSha512, electronMigrationUrl, pushDeveloperLog]);
 
   const [startupStatus, setStartupStatus] = useState<string | null>(null);
 
@@ -848,22 +686,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       onClearDeveloperLog,
       onCopyDeveloperLog,
       onExportDeveloperLog,
-      electronMigrationAvailable: isTauriRuntime(),
-      electronMigrationUrl,
-      electronMigrationSha256,
-      electronMigrationSha512,
-      electronMigrationArtifactLabel,
-      electronMigrationBusy,
-      electronMigrationStatus,
       electronPreviewReleaseUrl: ELECTRON_ALPHA_RELEASE_PAGE_URL,
-      onSetElectronMigrationUrl,
-      onSetElectronMigrationSha256: setElectronMigrationSha256,
-      onSetElectronMigrationSha512,
-      onOpenElectronPreviewRelease,
-      onResolveElectronAlphaArtifact,
-      onRevealElectronMigrationBackup,
-      onPrepareElectronMigrationSnapshot,
-      onInstallElectronPreviewFromTauri,
       onStopHost,
       onResetStartupPreference,
       engineSource,
@@ -915,12 +738,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       developerLog,
       developerLogStatus,
       developerMode,
-      electronMigrationBusy,
-      electronMigrationArtifactLabel,
-      electronMigrationSha256,
-      electronMigrationSha512,
-      electronMigrationStatus,
-      electronMigrationUrl,
       engineCard,
       engineCustomBinPath,
       engineSource,
@@ -933,19 +750,12 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       onCopyRuntimeDebugReport,
       onExportDeveloperLog,
       onExportRuntimeDebugReport,
-      onInstallElectronPreviewFromTauri,
       onNukeAiWorkAndOpencodeConfig,
-      onOpenElectronPreviewRelease,
       onOpenResetModal,
-      onPrepareElectronMigrationSnapshot,
       onPickEngineBinary,
-      onResolveElectronAlphaArtifact,
-      onRevealElectronMigrationBackup,
       onResetStartupPreference,
       onRestartOpencode,
       onRestartAiWorkServer,
-      onSetElectronMigrationSha512,
-      onSetElectronMigrationUrl,
       onSetEngineSource,
       onStopHost,
       onCopyOpencodeLogs,

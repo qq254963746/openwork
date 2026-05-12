@@ -287,7 +287,7 @@ export function writeStoredDefaultModel(model: ModelRef): void {
 /**
  * Minimal React hook covering the default model picker state. The richer
  * session/workspace model overrides from context/model-config.ts will be
- * ported incrementally as the session and settings surfaces migrate.
+ * ported incrementally as the session.
  */
 export function useDefaultModel(): [ModelRef, (next: ModelRef) => void] {
   const [model, setModel] = useState<ModelRef>(() => readStoredDefaultModel());
