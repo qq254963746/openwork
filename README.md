@@ -106,21 +106,6 @@ You can still edit `opencode.json` manually; AiWork uses the same format as the 
 }
 ```
 
-## Useful Commands
-
-```bash
-pnpm dev
-pnpm dev:ui
-pnpm typecheck
-pnpm build
-pnpm build:ui
-pnpm test:e2e
-```
-
-## Troubleshooting
-
-If you need to report a desktop or session bug, open Settings -> Debug and export both the runtime debug report and developer logs before filing an issue.
-
 ### Linux / Wayland (Hyprland)
 
 If AiWork crashes on launch with WebKitGTK errors like `Failed to create GBM buffer`, disable dmabuf or compositing before launch. Try one of the following environment flags.
@@ -132,8 +117,3 @@ WEBKIT_DISABLE_DMABUF_RENDERER=1 aiwork
 ```bash
 WEBKIT_DISABLE_COMPOSITING_MODE=1 aiwork
 ```
-
-## Security Notes
-
-- AiWork hides model reasoning and sensitive tool metadata by default.
-- Host mode binds to `127.0.0.1` by default.

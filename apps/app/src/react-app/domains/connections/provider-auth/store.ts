@@ -979,7 +979,6 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
 
   const syncFromOptions = () => {
     const workspaceKey = currentWorkspaceKey();
-    const workspaceChanged = workspaceKey !== lastWorkspaceKey;
     lastWorkspaceKey = workspaceKey;
     refreshSnapshot();
     emitChange();
