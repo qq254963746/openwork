@@ -215,28 +215,6 @@ export async function workspaceAddAuthorizedRoot(input: {
   });
 }
 
-export async function workspaceExportConfig(input: {
-  workspaceId: string;
-  outputPath: string;
-}): Promise<WorkspaceExportSummary> {
-  return invoke<WorkspaceExportSummary>("workspace_export_config", {
-    workspaceId: input.workspaceId,
-    outputPath: input.outputPath,
-  });
-}
-
-export async function workspaceImportConfig(input: {
-  archivePath: string;
-  targetDir: string;
-  name?: string | null;
-}): Promise<WorkspaceList> {
-  return invoke<WorkspaceList>("workspace_import_config", {
-    archivePath: input.archivePath,
-    targetDir: input.targetDir,
-    name: input.name ?? null,
-  });
-}
-
 export type OpencodeCommandDraft = {
   name: string;
   description?: string;

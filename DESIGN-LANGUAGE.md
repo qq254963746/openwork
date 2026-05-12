@@ -599,8 +599,6 @@ Meaning:
 
 ### Packaged workflow surfaces
 
-When showing a workflow like share/package/export:
-
 - prefer a soft shell over default modal chrome
 - make the core object the hero (template, worker, integration, package)
 - reduce the number of nested bordered panels

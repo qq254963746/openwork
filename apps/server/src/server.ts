@@ -1,21 +1,20 @@
 import { existsSync } from "node:fs";
-import { readFile, writeFile, rm, readdir, rename, stat, appendFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, rm, readdir, rename, stat } from "node:fs/promises";
 import { homedir, hostname } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import type { ApprovalRequest, Capabilities, ServerConfig, WorkspaceInfo, Actor, ReloadReason, ReloadTrigger, TokenScope } from "./types.js";
 import { ApprovalService } from "./approvals.js";
 import { addPlugin, listPlugins, normalizePluginSpec, removePlugin } from "./plugins.js";
-import { sanitizePortableOpencodeConfig } from "./portable-opencode.js";
 import { addMcp, listMcp, removeMcp, setMcpEnabled } from "./mcp.js";
 import { deleteSkill, listSkills, upsertSkill } from "./skills.js";
 import { installHubSkill, listHubSkills } from "./skill-hub.js";
 import { deleteCommand, listCommands, repairCommands, upsertCommand } from "./commands.js";
 import { ApiError, formatError } from "./errors.js";
-import { readJsoncFile, updateJsoncPath, updateJsoncTopLevel, writeJsoncFile } from "./jsonc.js";
+import { readJsoncFile, updateJsoncPath, updateJsoncTopLevel } from "./jsonc.js";
 import { recordAudit, readAuditEntries, readLastAudit } from "./audit.js";
 import { ReloadEventStore } from "./events.js";
 import { startReloadWatchers } from "./reload-watcher.js";
-import { opencodeConfigPath, aiworkConfigPath, projectCommandsDir, projectSkillsDir } from "./workspace-files.js";
+import { opencodeConfigPath, aiworkConfigPath } from "./workspace-files.js";
 import { ensureDir, exists, hashToken, shortId } from "./utils.js";
 import { workspaceIdForPath } from "./workspaces.js";
 import { ensureWorkspaceFiles, readRawOpencodeConfig } from "./workspace-init.js";
@@ -28,27 +27,11 @@ import {
   applyMaterializedBlueprintSessions,
   normalizeBlueprintSessionTemplates,
   readMaterializedBlueprintSessions,
-  sanitizeAiWorkTemplateConfig,
 } from "./blueprint-sessions.js";
 import { inheritWorkspaceOpencodeConnection, resolveWorkspaceOpencodeConnection } from "./opencode-connection.js";
 import { seedOpencodeSessionMessages } from "./opencode-db.js";
-import { listPortableFiles } from "./portable-files.js";
-import {
-  buildWorkspaceImportPreview,
-  normalizeWorkspaceImportPayload,
-  publicWorkspaceImportPreview,
-  summarizeWorkspaceImportApplied,
-  summarizeWorkspaceImportPreview,
-  type WorkspaceImportPlan,
-  workspaceImportPreviewApprovalPaths,
-} from "./workspace-import-preview.js";
 import { listModelsByProviderType, parseModelProviderType } from "./ai-model-service/list-models.js";
-import { buildSession, buildSessionList, buildSessionMessages, buildSessionSnapshot, buildSessionStatuses, buildSessionTodos } from "./session-read-model.js";
-import {
-  collectWorkspaceExportWarnings,
-  stripSensitiveWorkspaceExportData,
-  type WorkspaceExportSensitiveMode,
-} from "./workspace-export-safety.js";
+import { buildSession, buildSessionList, buildSessionMessages, buildSessionSnapshot } from "./session-read-model.js";
 import pkg from "../package.json" with { type: "json" };
 import constants from "../../../constants.json" with { type: "json" };
 
@@ -636,7 +619,7 @@ function buildCapabilities(config: ServerConfig): Capabilities {
       skills: {
         read: true,
         install: writeEnabled,
-        repo: { owner: "fengai", name: "aiwork-hub", ref: "main" },
+        repo: { owner: "anthropic", name: "skills", ref: "main" },
       },
     },
     plugins: { read: true, write: writeEnabled },
@@ -2917,86 +2900,6 @@ function createRoutes(
     return jsonResponse({ ok: true });
   });
 
-  addRoute(routes, "GET", "/workspace/:id/export", "client", async (ctx) => {
-    const workspace = await resolveWorkspace(config, ctx.params.id);
-    const sensitiveMode = parseWorkspaceExportSensitiveMode(ctx.url.searchParams.get("sensitive"));
-    const exportPayload = await exportWorkspace(workspace, { sensitiveMode });
-    return jsonResponse(exportPayload);
-  });
-
-  addRoute(routes, "POST", "/workspace/:id/import/preview", "client", async (ctx) => {
-    requireClientScope(ctx, "viewer");
-    const workspace = await resolveWorkspace(config, ctx.params.id);
-    const body = await readJsonBody(ctx.request);
-    const preview = await buildWorkspaceImportPreview(workspace.path, body);
-    return jsonResponse(publicWorkspaceImportPreview(preview));
-  });
-
-  addRoute(routes, "POST", "/workspace/:id/import", "client", async (ctx) => {
-    ensureWritable(config);
-    requireClientScope(ctx, "collaborator");
-    const workspace = await resolveWorkspace(config, ctx.params.id);
-    const body = await readJsonBody(ctx.request);
-    const expectedFingerprint = parseWorkspaceImportPreviewFingerprint(body);
-    const preview = await buildWorkspaceImportPreview(workspace.path, body);
-    if (expectedFingerprint && expectedFingerprint !== preview.fingerprint) {
-      return jsonResponse(
-        {
-          ok: false,
-          code: "workspace_import_preview_stale",
-          message: "Workspace changed after this import was previewed. Review the latest preview before importing.",
-          preview: publicWorkspaceImportPreview(preview),
-        },
-        409,
-      );
-    }
-    const approvalPaths = workspaceImportPreviewApprovalPaths(preview);
-    if (approvalPaths.length === 0) {
-      return jsonResponse({ ok: true, preview: publicWorkspaceImportPreview(preview) });
-    }
-    if (!expectedFingerprint) {
-      return jsonResponse(
-        {
-          ok: false,
-          code: "workspace_import_preview_required",
-          message: "Review this import preview before applying workspace changes.",
-          preview: publicWorkspaceImportPreview(preview),
-        },
-        409,
-      );
-    }
-    await requireApproval(ctx, {
-      workspaceId: workspace.id,
-      action: "config.import",
-      summary: summarizeWorkspaceImportPreview(preview),
-      paths: approvalPaths,
-    });
-    const latestPreview = await buildWorkspaceImportPreview(workspace.path, body);
-    if (latestPreview.fingerprint !== expectedFingerprint) {
-      return jsonResponse(
-        {
-          ok: false,
-          code: "workspace_import_preview_stale",
-          message: "Workspace changed after this import was previewed. Review the latest preview before importing.",
-          preview: publicWorkspaceImportPreview(latestPreview),
-        },
-        409,
-      );
-    }
-    await importWorkspace(workspace, body, latestPreview);
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "config.import",
-      target: "workspace",
-      summary: summarizeWorkspaceImportApplied(latestPreview),
-      timestamp: Date.now(),
-    });
-    emitReloadEvent(ctx.reloadEvents, workspace, "config", buildConfigTrigger(opencodeConfigPath(workspace.path)));
-    return jsonResponse({ ok: true, preview: publicWorkspaceImportPreview(latestPreview) });
-  });
-
   addRoute(routes, "POST", "/workspace/:id/blueprint/sessions/materialize", "client", async (ctx) => {
     ensureWritable(config);
     requireClientScope(ctx, "collaborator");
@@ -3093,30 +2996,6 @@ async function readWorkspaceSessionMessages(
       await fetchOpencodeJson(config, workspace, `/session/${encodeURIComponent(sessionId)}/message`, {
         method: "GET",
         query: { limit: input.limit },
-      }),
-    );
-  } catch (error) {
-    remapSessionReadError(error);
-  }
-}
-
-async function readWorkspaceSessionTodos(config: ServerConfig, workspace: WorkspaceInfo, sessionId: string) {
-  try {
-    return buildSessionTodos(
-      await fetchOpencodeJson(config, workspace, `/session/${encodeURIComponent(sessionId)}/todo`, {
-        method: "GET",
-      }),
-    );
-  } catch (error) {
-    remapSessionReadError(error);
-  }
-}
-
-async function readWorkspaceSessionStatuses(config: ServerConfig, workspace: WorkspaceInfo) {
-  try {
-    return buildSessionStatuses(
-      await fetchOpencodeJson(config, workspace, "/session/status", {
-        method: "GET",
       }),
     );
   } catch (error) {
@@ -3458,161 +3337,6 @@ async function requireApproval(
       requestId: result.id,
       reason: result.reason,
     });
-  }
-}
-
-async function exportWorkspace(
-  workspace: WorkspaceInfo,
-  options?: { sensitiveMode?: WorkspaceExportSensitiveMode },
-) {
-  const sensitiveMode = options?.sensitiveMode ?? "auto";
-  const rawOpencode = await readOpencodeConfig(workspace.path);
-  let opencode = sanitizePortableOpencodeConfig(rawOpencode);
-  const aiwork = sanitizeAiWorkTemplateConfig(await readAiWorkConfig(workspace.path));
-  const skills = await listSkills(workspace.path, false);
-  const commands = await listCommands(workspace.path, "workspace");
-  let files = await listPortableFiles(workspace.path);
-  const warnings = collectWorkspaceExportWarnings({ opencode: rawOpencode, files });
-  if (warnings.length && sensitiveMode === "auto") {
-    throw new ApiError(
-      409,
-      "workspace_export_requires_decision",
-      "This workspace includes sensitive config. Choose whether to exclude it or include it before exporting.",
-      { warnings },
-    );
-  }
-  if (sensitiveMode === "exclude") {
-    const sanitized = stripSensitiveWorkspaceExportData({ opencode, files });
-    opencode = sanitized.opencode;
-    files = sanitized.files;
-  }
-  const skillContents = await Promise.all(
-    skills.map(async (skill) => ({
-      name: skill.name,
-      description: skill.description,
-      content: await readFile(skill.path, "utf8"),
-    })),
-  );
-  const commandContents = await Promise.all(
-    commands.map(async (command) => ({
-      name: command.name,
-      description: command.description,
-      template: command.template,
-    })),
-  );
-
-  return {
-    workspaceId: workspace.id,
-    exportedAt: Date.now(),
-    opencode,
-    aiwork,
-    skills: skillContents,
-    commands: commandContents,
-    ...(files.length ? { files } : {}),
-  };
-}
-
-function parseWorkspaceExportSensitiveMode(input: string | null): WorkspaceExportSensitiveMode {
-  const trimmed = (input ?? "").trim();
-  if (!trimmed) return "auto";
-  if (trimmed === "auto" || trimmed === "include" || trimmed === "exclude") {
-    return trimmed;
-  }
-  throw new ApiError(400, "invalid_workspace_export_sensitive_mode", `Invalid workspace export sensitive mode: ${trimmed}`);
-}
-
-function parseWorkspaceImportPreviewFingerprint(payload: Record<string, unknown>): string | null {
-  const value = payload.previewFingerprint;
-  if (value === undefined || value === null || value === "") return null;
-  if (typeof value !== "string") {
-    throw new ApiError(
-      400,
-      "invalid_workspace_import_preview_fingerprint",
-      "Workspace import preview fingerprint must be a string",
-    );
-  }
-  return value;
-}
-
-function workspaceImportRelativePath(workspace: WorkspaceInfo, path: string): string {
-  return relative(workspace.path, path).replaceAll("\\", "/");
-}
-
-async function importWorkspace(workspace: WorkspaceInfo, payload: Record<string, unknown>, preview: WorkspaceImportPlan): Promise<void> {
-  const input = normalizeWorkspaceImportPayload(workspace.path, payload);
-  const changed = new Set(
-    preview.changes
-      .filter((change) => change.action !== "unchanged")
-      .map((change) => `${change.kind}:${change.path}`),
-  );
-  const changedPath = (kind: string, path: string) => changed.has(`${kind}:${path}`);
-
-  if (
-    input.opencode !== undefined &&
-    changedPath("opencode", workspaceImportRelativePath(workspace, opencodeConfigPath(workspace.path)))
-  ) {
-    if (input.modes.opencode === "replace") {
-      await writeJsoncFile(opencodeConfigPath(workspace.path), input.opencode);
-    } else {
-      await updateJsoncTopLevel(opencodeConfigPath(workspace.path), input.opencode);
-    }
-  }
-
-  if (
-    input.aiwork !== undefined &&
-    changedPath("aiwork", workspaceImportRelativePath(workspace, aiworkConfigPath(workspace.path)))
-  ) {
-    if (input.modes.aiwork === "replace") {
-      await writeAiWorkConfig(workspace.path, input.aiwork, false);
-    } else {
-      await writeAiWorkConfig(workspace.path, input.aiwork, true);
-    }
-  }
-
-  if (input.sections.skills) {
-    for (const skill of input.skills) {
-      const path = workspaceImportRelativePath(workspace, join(projectSkillsDir(workspace.path), skill.name, "SKILL.md"));
-      if (!changedPath("skill", path)) continue;
-      await upsertSkill(workspace.path, skill);
-    }
-    if (input.modes.skills === "replace") {
-      for (const change of preview.changes) {
-        if (change.kind === "skill" && change.action === "delete") {
-          await rm(change.absolutePath, { recursive: true, force: true });
-        }
-      }
-    }
-  }
-
-  if (input.sections.commands) {
-    for (const command of input.commands) {
-      const path = workspaceImportRelativePath(workspace, join(projectCommandsDir(workspace.path), `${command.name}.md`));
-      if (!changedPath("command", path)) continue;
-      await upsertCommand(workspace.path, command);
-    }
-    if (input.modes.commands === "replace") {
-      for (const change of preview.changes) {
-        if (change.kind === "command" && change.action === "delete") {
-          await rm(change.absolutePath, { force: true });
-        }
-      }
-    }
-  }
-
-  if (input.sections.files) {
-    for (const file of input.files) {
-      if (!changedPath("file", file.path)) continue;
-      const path = join(workspace.path, file.path);
-      await ensureDir(dirname(path));
-      await writeFile(path, file.content, "utf8");
-    }
-    if (input.modes.files === "replace") {
-      for (const change of preview.changes) {
-        if (change.kind === "file" && change.action === "delete") {
-          await rm(change.absolutePath, { force: true });
-        }
-      }
-    }
   }
 }
 

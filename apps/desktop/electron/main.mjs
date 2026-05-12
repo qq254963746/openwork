@@ -18,7 +18,6 @@ import { fileURLToPath } from "node:url";
 
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
 import { createRuntimeManager } from "./runtime.mjs";
-import { exportWorkspaceConfig, importWorkspaceConfig } from "./workspace-archive.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const NATIVE_DEEP_LINK_EVENT = "aiwork:deep-link-native";
@@ -875,48 +874,7 @@ async function handleDesktopInvoke(event, command, ...args) {
         String(args[0]?.workspacePath ?? "").trim(),
         args[0]?.config ?? defaultWorkspaceAiWorkConfig(""),
       );
-    case "workspaceExportConfig": {
-      const input = args[0] ?? {};
-      const workspaceId = String(input.workspaceId ?? "").trim();
-      const outputPath = String(input.outputPath ?? "").trim();
-      if (!workspaceId) throw new Error("workspaceId is required");
-      if (!outputPath) throw new Error("outputPath is required");
-      const state = await readWorkspaceState();
-      const workspace = state.workspaces.find((entry) => entry.id === workspaceId);
-      if (!workspace) throw new Error("Unknown workspaceId");
-      return exportWorkspaceConfig({ workspace, outputPath });
-    }
-    case "workspaceImportConfig": {
-      const input = args[0] ?? {};
-      const archivePath = String(input.archivePath ?? "").trim();
-      const targetDirRaw = String(input.targetDir ?? "").trim();
-      if (!archivePath) throw new Error("archivePath is required");
-      if (!targetDirRaw) throw new Error("targetDir is required");
-      const targetDir = await normalizeLocalWorkspacePath(targetDirRaw);
-      const imported = await importWorkspaceConfig({
-        archivePath,
-        targetDir,
-        name: input.name ?? null,
-      });
-      const workspace = normalizeWorkspaceEntry({
-        id: localWorkspaceId(targetDir),
-        name: imported.workspaceName,
-        displayName: null,
-        path: targetDir,
-        preset: imported.preset,
-      });
-      return mutateWorkspaceState((state) => {
-        const workspacePathKey = normalizeWorkspacePathKey(workspace.path);
-        state.workspaces = state.workspaces.filter(
-          (entry) => entry.id !== workspace.id && normalizeWorkspacePathKey(entry.path) !== workspacePathKey,
-        );
-        state.workspaces.push(workspace);
-        state.selectedId = workspace.id;
-        state.activeId = workspace.id;
-        state.watchedId = workspace.id;
-        return state;
-      });
-    }
+
     case "opencodeCommandList":
       return listCommandNames(String(args[0]?.scope ?? "").trim(), String(args[0]?.projectDir ?? "").trim());
     case "opencodeCommandWrite":

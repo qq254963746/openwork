@@ -89,7 +89,6 @@ export interface Capabilities {
   config: { read: boolean; write: boolean };
 
   approvals: { mode: ApprovalMode; timeoutMs: number };
-  ui: { toy: boolean };
   tokens: { scoped: boolean; scopes: TokenScope[] };
   proxy: {
     opencode: boolean;

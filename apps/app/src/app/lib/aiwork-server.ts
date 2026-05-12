@@ -200,43 +200,6 @@ export type AiWorkMcpItem = {
   disabledByTools?: boolean;
 };
 
-export type AiWorkWorkspaceExport = {
-  workspaceId: string;
-  exportedAt: number;
-  opencode?: Record<string, unknown>;
-  aiwork?: Record<string, unknown>;
-  skills?: Array<{ name: string; description?: string; trigger?: string; content: string }>;
-  commands?: Array<{ name: string; description?: string; template?: string }>;
-  files?: Array<{ path: string; content: string }>;
-};
-
-export type AiWorkWorkspaceImportChange = {
-  kind: "opencode" | "aiwork" | "skill" | "command" | "file";
-  action: "create" | "update" | "replace" | "delete" | "unchanged";
-  label: string;
-  path: string;
-};
-
-export type AiWorkWorkspaceImportPreview = {
-  fingerprint: string;
-  summary: {
-    total: number;
-    create: number;
-    update: number;
-    replace: number;
-    delete: number;
-    unchanged: number;
-  };
-  changes: AiWorkWorkspaceImportChange[];
-};
-
-export type AiWorkWorkspaceExportSensitiveMode = "auto" | "include" | "exclude";
-
-export type AiWorkWorkspaceExportWarning = {
-  id: string;
-  label: string;
-  detail: string;
-};
 
 export type AiWorkBlueprintSessionsMaterializeResult = {
   ok: boolean;
@@ -950,41 +913,6 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
         { token, hostToken, timeoutMs: timeouts.sessionRead },
       );
     },
-    exportWorkspace: (
-      workspaceId: string,
-      options?: { sensitiveMode?: AiWorkWorkspaceExportSensitiveMode },
-    ) => {
-      const query = new URLSearchParams();
-      if (options?.sensitiveMode) {
-        query.set("sensitive", options.sensitiveMode);
-      }
-      const suffix = query.size ? `?${query.toString()}` : "";
-      return requestJson<AiWorkWorkspaceExport>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/export${suffix}`, {
-        token,
-        hostToken,
-        timeoutMs: timeouts.workspaceExport,
-      });
-    },
-    importWorkspace: (workspaceId: string, payload: Record<string, unknown>) =>
-      requestJson<{ ok: boolean; preview?: AiWorkWorkspaceImportPreview }>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/import`, {
-        token,
-        hostToken,
-        method: "POST",
-        body: payload,
-        timeoutMs: timeouts.workspaceImport,
-      }),
-    previewWorkspaceImport: (workspaceId: string, payload: Record<string, unknown>) =>
-      requestJson<AiWorkWorkspaceImportPreview>(
-        baseUrl,
-        `/workspace/${encodeURIComponent(workspaceId)}/import/preview`,
-        {
-          token,
-          hostToken,
-          method: "POST",
-          body: payload,
-          timeoutMs: timeouts.workspaceImport,
-        },
-      ),
     materializeBlueprintSessions: (workspaceId: string) =>
       requestJson<AiWorkBlueprintSessionsMaterializeResult>(
         baseUrl,
