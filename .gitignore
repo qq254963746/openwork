@@ -31,8 +31,6 @@ apps/desktop/resources/sidecars/
 # Bun build artifacts
 *.bun-build
 apps/server/cli
-apps/server-v2/openapi/openapi.json
-packages/aiwork-server-sdk/generated/
 
 # pnpm store (created by Docker volume mounts)
 .pnpm-store/
