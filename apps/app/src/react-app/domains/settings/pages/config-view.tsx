@@ -5,15 +5,12 @@ import { RefreshCcw } from "lucide-react";
 import { readDevLogs } from "../../../../app/lib/dev-log";
 import { readPerfLogs } from "../../../../app/lib/perf-log";
 import {
-  buildAiWorkWorkspaceBaseUrl,
-  parseAiWorkWorkspaceIdFromUrl,
   type AiWorkServerSettings,
   type AiWorkServerStatus,
 } from "../../../../app/lib/aiwork-server";
 import type { AiWorkServerInfo } from "../../../../app/lib/desktop";
 import { t } from "../../../../i18n";
 import { Button } from "../../../design-system/button";
-import { TextInput } from "../../../design-system/text-input";
 
 export type ConfigViewProps = {
   busy: boolean;
@@ -45,15 +42,8 @@ type AiWorkTestState = "idle" | "testing" | "success" | "error";
 export function ConfigView(props: ConfigViewProps) {
   const [aiworkUrl, setAiWorkUrl] = useState("");
   const [aiworkToken, setAiWorkToken] = useState("");
-  const [aiworkTokenVisible, setAiWorkTokenVisible] = useState(false);
   const [aiworkTestState, setAiWorkTestState] =
     useState<AiWorkTestState>("idle");
-  const [aiworkTestMessage, setAiWorkTestMessage] = useState<string | null>(
-    null,
-  );
-  const [clientTokenVisible, setClientTokenVisible] = useState(false);
-  const [ownerTokenVisible, setOwnerTokenVisible] = useState(false);
-  const [hostTokenVisible, setHostTokenVisible] = useState(false);
   const [copyingField, setCopyingField] = useState<string | null>(null);
   const copyTimeoutRef = useRef<number | undefined>(undefined);
 
@@ -64,7 +54,6 @@ export function ConfigView(props: ConfigViewProps) {
 
   useEffect(() => {
     setAiWorkTestState("idle");
-    setAiWorkTestMessage(null);
   }, [aiworkUrl, aiworkToken]);
 
   useEffect(() => {
@@ -74,28 +63,6 @@ export function ConfigView(props: ConfigViewProps) {
       }
     };
   }, []);
-
-  const aiworkStatusLabel = (() => {
-    switch (props.aiworkServerStatus) {
-      case "connected":
-        return t("config.status_connected");
-      case "limited":
-        return t("config.status_limited");
-      default:
-        return t("config.status_not_connected");
-    }
-  })();
-
-  const aiworkStatusStyle = (() => {
-    switch (props.aiworkServerStatus) {
-      case "connected":
-        return "bg-green-7/10 text-green-11 border-green-7/20";
-      case "limited":
-        return "bg-amber-7/10 text-amber-11 border-amber-7/20";
-      default:
-        return "bg-gray-4/60 text-gray-11 border-gray-7/50";
-    }
-  })();
 
   const reloadAvailabilityReason = (() => {
     if (!props.clientConnected) return t("config.reload_connect_hint");
@@ -112,39 +79,8 @@ export function ConfigView(props: ConfigViewProps) {
   const reloadButtonDisabled =
     props.reloadBusy || Boolean(reloadAvailabilityReason);
 
-  const buildAiWorkSettings = (): AiWorkServerSettings => ({
-    ...props.aiworkServerSettings,
-    urlOverride: aiworkUrl.trim() || undefined,
-    token: aiworkToken.trim() || undefined,
-  });
-
-  const hasAiWorkChanges = (() => {
-    const currentUrl = props.aiworkServerSettings.urlOverride ?? "";
-    const currentToken = props.aiworkServerSettings.token ?? "";
-    return (
-      aiworkUrl.trim() !== currentUrl || aiworkToken.trim() !== currentToken
-    );
-  })();
-
-  const resolvedWorkspaceId = (() => {
-    const explicitId = props.runtimeWorkspaceId?.trim() ?? "";
-    if (explicitId) return explicitId;
-    return parseAiWorkWorkspaceIdFromUrl(aiworkUrl) ?? "";
-  })();
-
-  const resolvedWorkspaceUrl = (() => {
-    const baseUrl = aiworkUrl.trim();
-    if (!baseUrl) return "";
-    return buildAiWorkWorkspaceBaseUrl(baseUrl, resolvedWorkspaceId) ?? baseUrl;
-  })();
-
   const hostInfo = props.aiworkServerHostInfo;
-  const hostStatusLabel = !hostInfo?.running
-    ? t("config.host_offline")
-    : t("config.host_local_only");
-  const hostStatusStyle = !hostInfo?.running
-    ? "bg-gray-4/60 text-gray-11 border-gray-7/50"
-    : "bg-green-7/10 text-green-11 border-green-7/20";
+
   const hostConnectUrl =
     hostInfo?.connectUrl ??
     hostInfo?.mdnsUrl ??
@@ -234,65 +170,6 @@ export function ConfigView(props: ConfigViewProps) {
       // ignore
     }
   };
-
-  const handleTestConnection = async () => {
-    if (aiworkTestState === "testing") return;
-    const next = buildAiWorkSettings();
-    props.updateAiWorkServerSettings(next);
-    setAiWorkTestState("testing");
-    setAiWorkTestMessage(null);
-    try {
-      const ok = await props.testAiWorkServerConnection(next);
-      setAiWorkTestState(ok ? "success" : "error");
-      setAiWorkTestMessage(
-        ok ? t("config.connection_successful") : t("config.connection_failed"),
-      );
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : t("config.connection_failed_check");
-      setAiWorkTestState("error");
-      setAiWorkTestMessage(message);
-    }
-  };
-
-  const renderTokenRow = (
-    label: string,
-    tokenValue: string | null | undefined,
-    hint: string,
-    visible: boolean,
-    toggle: () => void,
-    copyKey: string,
-  ) => (
-    <div className="flex items-center justify-between bg-gray-1 p-3 rounded-xl border border-gray-6 gap-3">
-      <div className="min-w-0">
-        <div className="text-xs font-medium text-gray-11">{label}</div>
-        <div className="text-xs text-gray-7 font-mono truncate">
-          {visible ? tokenValue || "—" : tokenValue ? "••••••••••••" : "—"}
-        </div>
-        <div className="text-[11px] text-gray-8 mt-1">{hint}</div>
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <Button
-          variant="outline"
-          className="text-xs h-8 py-0 px-3"
-          onClick={toggle}
-          disabled={!tokenValue}
-        >
-          {visible ? t("common.hide") : t("common.show")}
-        </Button>
-        <Button
-          variant="outline"
-          className="text-xs h-8 py-0 px-3"
-          onClick={() => handleCopy(tokenValue ?? "", copyKey)}
-          disabled={!tokenValue}
-        >
-          {copyingField === copyKey ? t("config.copied") : t("config.copy")}
-        </Button>
-      </div>
-    </div>
-  );
 
   return (
     <section className="space-y-6">
@@ -387,207 +264,6 @@ export function ConfigView(props: ConfigViewProps) {
           </pre>
         </div>
       ) : null}
-
-      {hostInfo ? (
-        <div className="bg-gray-2/30 border border-gray-6/50 rounded-2xl p-5 space-y-4">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="text-sm font-medium text-gray-12">
-                {t("config.server_sharing_title")}
-              </div>
-              <div className="text-xs text-gray-10">
-                {t("config.server_sharing_desc")}
-              </div>
-            </div>
-            <div
-              className={`text-xs px-2 py-1 rounded-full border ${hostStatusStyle}`}
-            >
-              {hostStatusLabel}
-            </div>
-          </div>
-
-          <div className="grid gap-3">
-            <div className="flex items-center justify-between bg-gray-1 p-3 rounded-xl border border-gray-6 gap-3">
-              <div className="min-w-0">
-                <div className="text-xs font-medium text-gray-11">
-                  {t("config.server_url_label")}
-                </div>
-                <div className="text-xs text-gray-7 font-mono truncate">
-                  {hostConnectUrl || t("config.starting_server")}
-                </div>
-                {hostConnectUrl ? (
-                  <div className="text-[11px] text-gray-8 mt-1">
-                    {hostConnectUrlUsesMdns
-                      ? t("config.mdns_hint")
-                      : t("config.local_ip_hint")}
-                  </div>
-                ) : null}
-              </div>
-              <Button
-                variant="outline"
-                className="text-xs h-8 py-0 px-3 shrink-0"
-                onClick={() => handleCopy(hostConnectUrl, "host-url")}
-                disabled={!hostConnectUrl}
-              >
-                {copyingField === "host-url"
-                  ? t("config.copied")
-                  : t("config.copy")}
-              </Button>
-            </div>
-
-            {renderTokenRow(
-              t("config.collaborator_token_label"),
-              hostInfo?.clientToken,
-              t("config.collaborator_token_disabled_hint"),
-              clientTokenVisible,
-              () => setClientTokenVisible((prev) => !prev),
-              "client-token",
-            )}
-
-            {renderTokenRow(
-              t("config.owner_token_label"),
-              hostInfo?.ownerToken,
-              t("config.owner_token_disabled_hint"),
-              ownerTokenVisible,
-              () => setOwnerTokenVisible((prev) => !prev),
-              "owner-token",
-            )}
-
-            {renderTokenRow(
-              t("config.host_admin_token_label"),
-              hostInfo?.hostToken,
-              t("config.host_admin_token_hint"),
-              hostTokenVisible,
-              () => setHostTokenVisible((prev) => !prev),
-              "host-token",
-            )}
-          </div>
-
-          <div className="text-xs text-gray-9">
-            {t("config.server_sharing_menu_hint")}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="bg-gray-2/30 border border-gray-6/50 rounded-2xl p-5 space-y-4">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="text-sm font-medium text-gray-12">
-              {t("config.server_section_title")}
-            </div>
-            <div className="text-xs text-gray-10">
-              {t("config.server_section_desc")}
-            </div>
-          </div>
-          <div
-            className={`text-xs px-2 py-1 rounded-full border ${aiworkStatusStyle}`}
-          >
-            {aiworkStatusLabel}
-          </div>
-        </div>
-
-        <div className="grid gap-3">
-          <TextInput
-            label={t("config.server_url_input_label")}
-            value={aiworkUrl}
-            onChange={(event) => setAiWorkUrl(event.currentTarget.value)}
-            placeholder="http://127.0.0.1:<port>"
-            hint={t("config.server_url_hint")}
-            disabled={props.busy}
-          />
-
-          <label className="block">
-            <div className="mb-1 text-xs font-medium text-gray-11">
-              {t("config.token_label")}
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type={aiworkTokenVisible ? "text" : "password"}
-                value={aiworkToken}
-                onChange={(event) => setAiWorkToken(event.currentTarget.value)}
-                placeholder={t("config.token_placeholder")}
-                disabled={props.busy}
-                className="w-full rounded-xl bg-gray-2/60 px-3 py-2 text-sm text-gray-12 placeholder:text-gray-10 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] focus:outline-none focus:ring-2 focus:ring-gray-6/20"
-              />
-              <Button
-                variant="outline"
-                className="text-xs h-9 px-3 shrink-0"
-                onClick={() => setAiWorkTokenVisible((prev) => !prev)}
-                disabled={props.busy}
-              >
-                {aiworkTokenVisible ? t("common.hide") : t("common.show")}
-              </Button>
-            </div>
-            <div className="mt-1 text-xs text-gray-10">
-              {t("config.token_hint")}
-            </div>
-          </label>
-        </div>
-
-        <div className="space-y-1">
-          <div className="text-[11px] text-gray-7 font-mono truncate">
-            {t("config.resolved_worker_url")}
-            {resolvedWorkspaceUrl || t("config.not_set")}
-          </div>
-          <div className="text-[11px] text-gray-8 font-mono truncate">
-            {t("config.worker_id")}
-            {resolvedWorkspaceId || t("config.unavailable")}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => void handleTestConnection()}
-            disabled={props.busy || aiworkTestState === "testing"}
-          >
-            {aiworkTestState === "testing"
-              ? t("config.testing")
-              : t("config.test_connection")}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() =>
-              props.updateAiWorkServerSettings(buildAiWorkSettings())
-            }
-            disabled={props.busy || !hasAiWorkChanges}
-          >
-            {t("common.save")}
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={props.resetAiWorkServerSettings}
-            disabled={props.busy}
-          >
-            {t("common.reset")}
-          </Button>
-        </div>
-
-        {aiworkTestState !== "idle" ? (
-          <div
-            className={`text-xs ${
-              aiworkTestState === "success"
-                ? "text-green-11"
-                : aiworkTestState === "error"
-                  ? "text-red-11"
-                  : "text-gray-9"
-            }`}
-            role="status"
-            aria-live="polite"
-          >
-            {aiworkTestState === "testing"
-              ? t("config.testing_connection")
-              : (aiworkTestMessage ?? t("config.connection_status_updated"))}
-          </div>
-        ) : null}
-
-        {aiworkStatusLabel !== t("config.status_connected") ? (
-          <div className="text-xs text-gray-9">
-            {t("config.server_needed_hint")}
-          </div>
-        ) : null}
-      </div>
-
     </section>
   );
 }
