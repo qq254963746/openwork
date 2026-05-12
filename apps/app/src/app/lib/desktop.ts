@@ -150,6 +150,14 @@ export async function openDesktopPath(target: string): Promise<void> {
   await tauriBridge.openDesktopPath(target);
 }
 
+export async function ensureDirExist(path: string): Promise<void> {
+  if (isElectronDesktopRuntime()) {
+    await invokeElectronHelper<void>("__ensureDirExist", path);
+    return;
+  }
+  await tauriBridge.ensureDirExist(path);
+}
+
 export async function revealDesktopItemInDir(target: string): Promise<void> {
   if (isElectronDesktopRuntime()) {
     await invokeElectronHelper<void>("__revealItemInDir", target);

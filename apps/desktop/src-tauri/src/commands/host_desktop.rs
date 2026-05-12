@@ -46,6 +46,21 @@ pub fn open_app_log_window(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn ensure_dir_exist(path: String) -> Result<(), String> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err("empty path".into());
+    }
+
+    let p = Path::new(trimmed);
+    if !p.exists() {
+        std::fs::create_dir_all(p).map_err(|e| format!("Failed to create directory: {e}"))?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn host_open_path_native(path: String) -> Result<(), String> {
     let trimmed = path.trim();
     if trimmed.is_empty() {

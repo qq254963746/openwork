@@ -46,12 +46,6 @@ fn collect_project_skill_roots(project_dir: &Path) -> Vec<PathBuf> {
                 roots.push(legacy_root);
             }
         }
-
-        let claude_root = dir.join(".claude").join("skills");
-        if claude_root.is_dir() {
-            roots.push(claude_root);
-        }
-
         if dir.join(".git").exists() {
             break;
         }
@@ -70,24 +64,6 @@ fn collect_global_skill_roots() -> Vec<PathBuf> {
             roots.push(opencode_root);
         }
     }
-
-    if let Some(home) = home_dir() {
-        let claude_root = home.join(".claude").join("skills");
-        if claude_root.is_dir() {
-            roots.push(claude_root);
-        }
-
-        let agents_root = home.join(".agents").join("skills");
-        if agents_root.is_dir() {
-            roots.push(agents_root);
-        }
-
-        let legacy_agents_root = home.join(".agent").join("skills");
-        if legacy_agents_root.is_dir() {
-            roots.push(legacy_agents_root);
-        }
-    }
-
     roots
 }
 

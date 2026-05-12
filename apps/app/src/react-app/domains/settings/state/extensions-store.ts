@@ -21,6 +21,7 @@ import {
   stripPluginVersion,
 } from "../../../../app/utils/plugins";
 import {
+  ensureDirExist,
   importSkill,
   installSkillTemplate,
   joinDesktopPath,
@@ -1100,8 +1101,6 @@ export function createExtensionsStore(options: {
 
     try {
       const opencodeSkills = await joinDesktopPath(root, ".aiwork-opencode", "skills");
-      const claudeSkills = await joinDesktopPath(root, ".claude", "skills");
-      const legacySkills = await joinDesktopPath(root, ".aiwork-opencode", "skill");
       const tryOpen = async (target: string) => {
         try {
           await openDesktopPath(target);
@@ -1110,9 +1109,16 @@ export function createExtensionsStore(options: {
           return false;
         }
       };
+      
+      // 确保目录存在，不存在则创建
+      try {
+        await ensureDirExist(opencodeSkills);
+      } catch (error) {
+        setStateField("skillsStatus", error instanceof Error ? error.message : t("skills.create_dir_failed"));
+        return;
+      }
+
       if (await tryOpen(opencodeSkills)) return;
-      if (await tryOpen(claudeSkills)) return;
-      if (await tryOpen(legacySkills)) return;
       await revealDesktopItemInDir(opencodeSkills);
     } catch (error) {
       setStateField("skillsStatus", error instanceof Error ? error.message : t("skills.reveal_failed"));

@@ -14,6 +14,10 @@ export async function openDesktopPath(target: string): Promise<void> {
   await invoke<void>("host_open_path_native", { path: target });
 }
 
+export async function ensureDirExist(path: string): Promise<void> {
+  await invoke<void>("ensure_dir_exist", { path });
+}
+
 export async function revealDesktopItemInDir(target: string): Promise<void> {
   await invoke<void>("host_reveal_path_native", { path: target });
 }

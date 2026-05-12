@@ -591,12 +591,8 @@ async function collectProjectSkillRoots(projectDir) {
 
   while (true) {
     const opencodeSkills = path.join(current, ".aiwork-opencode", "skills");
-    const legacySkills = path.join(current, ".aiwork-opencode", "skill");
-    const claudeSkills = path.join(current, ".claude", "skills");
 
     if (await isDirectory(opencodeSkills)) roots.push(opencodeSkills);
-    if (await isDirectory(legacySkills)) roots.push(legacySkills);
-    if (await isDirectory(claudeSkills)) roots.push(claudeSkills);
 
     if (await pathExists(path.join(current, ".git"))) {
       break;
@@ -614,9 +610,6 @@ async function collectGlobalSkillRoots() {
   const roots = [];
   const candidates = [
     path.join(globalOpencodeRoot(), "skills"),
-    path.join(os.homedir(), ".claude", "skills"),
-    path.join(os.homedir(), ".agents", "skills"),
-    path.join(os.homedir(), ".agent", "skills"),
   ];
 
   for (const candidate of candidates) {
@@ -1064,6 +1057,14 @@ async function handleDesktopInvoke(event, command, ...args) {
       const target = String(args[0] ?? "").trim();
       if (!target) return "Path is required.";
       return shell.openPath(target);
+    }
+    case "__ensureDirExist": {
+      const target = String(args[0] ?? "").trim();
+      if (!target) throw new Error("Path is required.");
+      if (!existsSync(target)) {
+        await mkdir(target, { recursive: true });
+      }
+      return undefined;
     }
     case "__revealItemInDir": {
       const target = String(args[0] ?? "").trim();

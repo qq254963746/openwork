@@ -29,7 +29,7 @@ use commands::skills::{
     import_skill, install_skill_template, list_local_skills, read_local_skill, uninstall_skill,
     write_local_skill,
 };
-use commands::host_desktop::{host_open_path_native, host_reveal_path_native, open_app_log_window};
+use commands::host_desktop::{ensure_dir_exist, host_open_path_native, host_reveal_path_native, open_app_log_window};
 use commands::shell_events_bridge::{
     pull_shell_events_from_main, request_clear_main_shell_events, shell_events_bridge_reply,
     shell_events_clear_bridge_ack, ShellEventsBridge,
@@ -181,6 +181,7 @@ pub fn run() {
             opencode_mcp_auth,
             set_window_decorations,
             open_app_log_window,
+            ensure_dir_exist,
             host_open_path_native,
             host_reveal_path_native,
             pull_shell_events_from_main,
