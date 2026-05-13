@@ -14,7 +14,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { t } from "../../../../i18n";
 import { openDesktopPath, workspaceAddAuthorizedRoot } from "../../../../app/lib/desktop";
-import type { AiWorkServerClient } from "../../../../app/lib/aiwork-server";
+import type { AiWorkServerClient, AiWorkWorkspaceDirEntry } from "../../../../app/lib/aiwork-server";
 import { AiWorkServerError } from "../../../../app/lib/aiwork-server";
 import {
   looksAbsoluteWorkspacePath,
@@ -293,6 +293,98 @@ function collectSessionToolNames(messages: UIMessage[]): string[] {
   return ordered;
 }
 
+function WorkspaceTreeNode(props: {
+  entry: AiWorkWorkspaceDirEntry;
+  relativePath: string;
+  depth: number;
+  client: AiWorkServerClient;
+  workspaceId: string;
+  selectedPath: string | null;
+  expandedPaths: Set<string>;
+  onToggleExpand: (path: string) => void;
+  onSelectEntry: (relativePath: string) => void;
+  liveWorkspacePreview?: boolean;
+}) {
+  const isDirectory = props.entry.kind === "directory";
+  const isExpanded = props.expandedPaths.has(props.relativePath);
+  const isSelected = !isDirectory && props.selectedPath === props.relativePath;
+
+  const childrenQuery = useQuery({
+    queryKey: ["workspaceTreeDir", props.workspaceId, props.relativePath],
+    queryFn: () => props.client.listWorkspaceDirectory(props.workspaceId, props.relativePath),
+    enabled: isDirectory && isExpanded && Boolean(props.workspaceId),
+    staleTime: props.liveWorkspacePreview ? 0 : 15_000,
+    refetchInterval: props.liveWorkspacePreview ? 800 : false,
+  });
+
+  const handleClick = () => {
+    if (isDirectory) {
+      props.onToggleExpand(props.relativePath);
+    } else {
+      props.onSelectEntry(props.relativePath);
+    }
+  };
+
+  const indent = 8 + props.depth * 16;
+
+  return (
+    <>
+      <li key={props.relativePath}>
+        <button
+          type="button"
+          className={`flex w-full items-center gap-1.5 rounded-lg py-1.5 text-left text-[12px] transition-colors ${
+            isSelected
+              ? "bg-dls-accent/15 text-dls-text"
+              : "hover:bg-dls-hover text-dls-text"
+          }`}
+          style={{ paddingLeft: `${indent}px`, paddingRight: "8px" }}
+          onClick={handleClick}
+        >
+          {isDirectory ? (
+            <ChevronRight
+              size={14}
+              className={`shrink-0 text-[#000000] transition-transform ${isExpanded ? "rotate-90" : ""}`}
+            />
+          ) : (
+            <WorkspacePanelFileGlyph filename={props.entry.name} className="shrink-0 text-[#000000]" />
+          )}
+          {isDirectory ? (
+            isExpanded ? (
+              <FolderOpen size={14} className="shrink-0 text-[#000000]" aria-hidden />
+            ) : (
+              <Folder size={14} className="shrink-0 text-[#000000]" aria-hidden />
+            )
+          ) : null}
+          <span className="min-w-0 flex-1 truncate font-mono">{props.entry.name}</span>
+          {isDirectory && isExpanded && childrenQuery.isFetching ? (
+            <Loader2 size={12} className="shrink-0 animate-spin text-dls-secondary" />
+          ) : null}
+        </button>
+      </li>
+      {isDirectory && isExpanded && childrenQuery.data ? (
+        childrenQuery.data.entries.map((child) => {
+          const childRelativePath = joinRelativePath(props.relativePath, child.name);
+          return (
+            <WorkspaceTreeNode
+              key={childRelativePath}
+              entry={child}
+              relativePath={childRelativePath}
+              depth={props.depth + 1}
+              client={props.client}
+              workspaceId={props.workspaceId}
+              selectedPath={props.selectedPath}
+              expandedPaths={props.expandedPaths}
+              onToggleExpand={props.onToggleExpand}
+              onSelectEntry={props.onSelectEntry}
+              liveWorkspacePreview={props.liveWorkspacePreview}
+            />
+          );
+        })
+      ) : null}
+    </>
+  );
+}
+
 export type SessionWorkspacePanelProps = {
   client: AiWorkServerClient;
   workspaceId: string;
@@ -313,6 +405,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
   function SessionWorkspacePanel(props, ref) {
   const [dirPath, setDirPath] = useState("");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [panelWidth, setPanelWidth] = useState(readStoredWorkspacePanelWidth);
   const panelWidthRef = useRef(panelWidth);
   const dragCleanupRef = useRef<(() => void) | null>(null);
@@ -599,12 +692,23 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
   const handleEntryClick = (name: string, kind: "file" | "directory") => {
     const rel = joinRelativePath(dirPath, name);
     if (kind === "directory") {
-      setDirPath(rel);
-      setSelectedFile(null);
+      toggleExpandPath(rel);
       return;
     }
     selectWorkspaceRelativePath(rel);
   };
+
+  const toggleExpandPath = useCallback((path: string) => {
+    setExpandedPaths((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  }, []);
 
   const selectedFileTitle = selectedFile
     ? selectedFile.split("/").filter(Boolean).pop() ?? selectedFile
@@ -928,26 +1032,24 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
             <div className="px-1 text-[11px] text-dls-secondary">{t("session.workspace_panel_empty_dir")}</div>
           ) : (
             <ul className="space-y-0.5">
-              {listQuery.data?.entries.map((entry) => (
-                <li key={`${entry.kind}:${entry.name}`}>
-                  <button
-                    type="button"
-                    className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] transition-colors ${
-                      selectedFile === joinRelativePath(dirPath, entry.name) && entry.kind === "file"
-                        ? "bg-dls-accent/15 text-dls-text"
-                        : "hover:bg-dls-hover text-dls-text"
-                    }`}
-                    onClick={() => handleEntryClick(entry.name, entry.kind)}
-                  >
-                    {entry.kind === "directory" ? (
-                      <Folder size={14} className="shrink-0 text-[#000000]" aria-hidden />
-                    ) : (
-                      <WorkspacePanelFileGlyph filename={entry.name} className="shrink-0 text-[#000000]" />
-                    )}
-                    <span className="min-w-0 flex-1 truncate font-mono">{entry.name}</span>
-                  </button>
-                </li>
-              ))}
+              {listQuery.data?.entries.map((entry) => {
+                const entryRelativePath = joinRelativePath(dirPath, entry.name);
+                return (
+                  <WorkspaceTreeNode
+                    key={entryRelativePath}
+                    entry={entry}
+                    relativePath={entryRelativePath}
+                    depth={0}
+                    client={props.client}
+                    workspaceId={props.workspaceId}
+                    selectedPath={selectedFile}
+                    expandedPaths={expandedPaths}
+                    onToggleExpand={toggleExpandPath}
+                    onSelectEntry={(relPath) => selectWorkspaceRelativePath(relPath)}
+                    liveWorkspacePreview={props.liveWorkspacePreview}
+                  />
+                );
+              })}
             </ul>
           )}
           {listQuery.data?.truncated ? (
