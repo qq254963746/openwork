@@ -14,7 +14,7 @@ import { isToolUIPart, type DynamicToolUIPart, type UIMessage } from "ai";
 import type { Part } from "@opencode-ai/sdk/v2/client";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Atom, Check, ChevronDown, CircleAlert, Copy, File as FileIcon } from "lucide-react";
+import { Atom, Check, ChevronDown, ChevronUp, CircleAlert, Copy, File as FileIcon } from "lucide-react";
 
 import { resolveWorkspaceApiUrl } from "../../../../app/lib/aiwork-server";
 import { joinDesktopPath, openDesktopPath, revealDesktopItemInDir } from "../../../../app/lib/desktop";
@@ -38,6 +38,7 @@ import { MarkdownBlock } from "./markdown";
 import { ToolStepTitleGlyph } from "./tool-step-title-glyph";
 import { applyTextHighlights } from "./text-highlights";
 import { buildWebPreviewSrcDoc } from "./web-preview-srcdoc";
+import { DiffCodePreview } from "./diff-code-preview";
 
 type TranscriptPart = Part;
 
@@ -896,6 +897,8 @@ function WrittenFileRow(props: {
   fetchWorkspaceFileText?: (relativePath: string) => Promise<string | undefined>;
   writtenFileSvgQueryKey?: string;
 }) {
+  const [diffExpanded, setDiffExpanded] = useState(false);
+
   const badge =
     props.touch.kind === "created"
       ? t("session.written_file_badge_new")
@@ -906,6 +909,8 @@ function WrittenFileRow(props: {
     Boolean(props.onAiWorkspaceRelativePath) ||
     (props.desktop &&
       (looksAbsoluteWorkspacePath(props.touch.displayPath) || Boolean(props.workspaceRoot.trim())));
+
+  const hasDiff = Boolean(props.touch.diffText?.trim());
 
   const previewKind = writtenFileRichPreviewKind(props.touch.filename);
   const previewFetchPath = useMemo(() => {
@@ -973,6 +978,65 @@ function WrittenFileRow(props: {
     })();
   };
 
+  /**
+   * Diff panel — always visible for non-rich-preview files when diff exists.
+   * Collapsed to 200px by default, expand button appears on hover.
+   * Uses CodeMirror-based DiffCodePreview for syntax highlighting.
+   */
+  const diffPanel = hasDiff && !showRichPreview ? (
+    <div className="group/diff relative border-t border-gray-6/20">
+      {/* Syntax-highlighted diff — no padding, fills the card edge-to-edge */}
+      <div className={`overflow-hidden ${diffExpanded ? "" : "max-h-[200px]"}`}>
+        <DiffCodePreview
+          filePath={props.touch.displayPath}
+          diffText={props.touch.diffText!}
+        />
+      </div>
+
+      {/* Expand button — fades in on panel hover, hidden when already expanded */}
+      {!diffExpanded ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-1.5 opacity-0 transition-opacity group-hover/diff:opacity-100 group-hover/diff:pointer-events-auto">
+          {/* gradient fade to mask clipped content */}
+          <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-gray-3/60 to-transparent dark:from-gray-2/60 rounded-b-2xl" />
+          <button
+            type="button"
+            className="relative z-10 flex h-6 w-6 items-center justify-center rounded-full border border-gray-6/50 bg-dls-surface text-gray-10 shadow-sm transition-colors hover:bg-gray-3/60 hover:text-gray-12"
+            onClick={() => setDiffExpanded(true)}
+            title="Expand diff"
+          >
+            <ChevronDown size={13} strokeWidth={2} />
+          </button>
+        </div>
+      ) : (
+        <div className="flex justify-center py-1.5 opacity-0 transition-opacity group-hover/diff:opacity-100">
+          <button
+            type="button"
+            className="flex h-6 w-6 items-center justify-center rounded-full border border-gray-6/50 bg-dls-surface text-gray-10 shadow-sm transition-colors hover:bg-gray-3/60 hover:text-gray-12"
+            onClick={() => setDiffExpanded(false)}
+            title="Collapse diff"
+          >
+            <ChevronUp size={13} strokeWidth={2} />
+          </button>
+        </div>
+      )}
+    </div>
+  ) : null;
+
+  /** Buttons row — View only (Diff button removed) */
+  const actionButtons = (
+    <div className="flex shrink-0 items-center gap-2">
+      {canTryOpen ? (
+        <button
+          type="button"
+          className="shrink-0 rounded-xl border border-gray-6/60 bg-dls-surface px-3 py-1.5 text-[13px] font-medium text-gray-12 transition-colors hover:bg-gray-3/40 dark:border-gray-6/50"
+          onClick={handleView}
+        >
+          {t("session.written_file_view")}
+        </button>
+      ) : null}
+    </div>
+  );
+
   if (showRichPreview) {
     return (
       <div
@@ -987,15 +1051,7 @@ function WrittenFileRow(props: {
             <div className="truncate text-[13px] font-medium leading-snug text-gray-12">{props.touch.filename}</div>
             <div className="mt-0.5 text-[12px] leading-snug text-gray-9">{metaLine}</div>
           </div>
-          {canTryOpen ? (
-            <button
-              type="button"
-              className="shrink-0 rounded-xl border border-gray-6/60 bg-dls-surface px-3 py-1.5 text-[13px] font-medium text-gray-12 transition-colors hover:bg-gray-3/40 dark:border-gray-6/50"
-              onClick={handleView}
-            >
-              {t("session.written_file_view")}
-            </button>
-          ) : null}
+          {actionButtons}
         </div>
         {previewKind === "svg" && svgMarkup ? (
           <div
@@ -1024,7 +1080,7 @@ function WrittenFileRow(props: {
   return (
     <div
       role="listitem"
-      className="relative flex w-full min-w-0 flex-col rounded-2xl border border-gray-6/40 bg-gray-3/40 transition-colors hover:bg-gray-3/70 dark:bg-gray-3/20 dark:hover:bg-gray-3/35"
+      className="relative flex w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-gray-6/40 bg-gray-3/40 transition-colors hover:bg-gray-3/70 dark:bg-gray-3/20 dark:hover:bg-gray-3/35"
     >
       <div className="flex w-full min-w-0 items-center gap-3 px-4 py-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center" aria-hidden>
@@ -1034,16 +1090,9 @@ function WrittenFileRow(props: {
           <div className="truncate text-[13px] font-medium leading-snug text-gray-12">{props.touch.filename}</div>
           <div className="mt-0.5 text-[12px] leading-snug text-gray-9">{metaLine}</div>
         </div>
-        {canTryOpen ? (
-          <button
-            type="button"
-            className="shrink-0 rounded-xl border border-gray-6/60 bg-dls-surface px-3 py-1.5 text-[13px] font-medium text-gray-12 transition-colors hover:bg-gray-3/40 dark:border-gray-6/50"
-            onClick={handleView}
-          >
-            {t("session.written_file_view")}
-          </button>
-        ) : null}
+        {actionButtons}
       </div>
+      {diffPanel}
       {previewWaiting ? (
         <div className="border-t border-gray-6/25 px-4 pb-3 pt-2">
           <div

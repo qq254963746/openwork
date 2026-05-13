@@ -1,6 +1,6 @@
 [package]
 name = "aiwork"
-version = "0.13.43"
+version = "0.13.44"
 description = "AiWork"
 authors = ["Different AI"]
 edition = "2021"

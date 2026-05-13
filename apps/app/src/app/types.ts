@@ -147,6 +147,11 @@ export type WorkspaceWriteTouch = {
   kind: WorkspaceWriteTouchKind;
   /** Uppercase extension label for subtitle, e.g. "MD", "TS" */
   extLabel: string;
+  /**
+   * Unified diff text for this file change, if available from the tool output/input.
+   * Lines starting with "+" are additions, "-" deletions, "@@" hunk headers.
+   */
+  diffText?: string;
 };
 
 export type OpencodeEvent = {
