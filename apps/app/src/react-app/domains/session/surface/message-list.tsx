@@ -774,8 +774,8 @@ function FileCard(props: {
     <div
       className={`group relative flex items-center gap-3 rounded-2xl border px-4 py-3 transition-colors ${
         props.tone === "user"
-          ? "border-gray-6/60 bg-white hover:bg-gray-2/60 dark:bg-gray-2/40"
-          : "border-gray-6/40 bg-gray-1/40 hover:bg-gray-2/30"
+          ? "border-gray-6/60 bg-gray-3/40 hover:bg-gray-3/70 dark:bg-gray-3/20 dark:hover:bg-gray-3/35"
+          : "border-gray-6/40 bg-gray-3/40 hover:bg-gray-3/70 dark:bg-gray-3/20 dark:hover:bg-gray-3/35"
       }`}
     >
       {isImage && displayUrl ? (
@@ -977,7 +977,7 @@ function WrittenFileRow(props: {
     return (
       <div
         role="listitem"
-        className="relative w-full min-w-0 overflow-hidden rounded-2xl border border-gray-6/40 bg-dls-surface dark:bg-gray-1/30"
+        className="relative w-full min-w-0 overflow-hidden rounded-2xl border border-gray-6/40 bg-gray-3/40 transition-colors hover:bg-gray-3/70 dark:bg-gray-3/20 dark:hover:bg-gray-3/35"
       >
         <div className="flex items-center gap-3 px-4 py-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center" aria-hidden>
@@ -1024,7 +1024,7 @@ function WrittenFileRow(props: {
   return (
     <div
       role="listitem"
-      className="relative flex w-full min-w-0 flex-col rounded-2xl border border-gray-6/40 bg-dls-surface dark:bg-gray-1/30"
+      className="relative flex w-full min-w-0 flex-col rounded-2xl border border-gray-6/40 bg-gray-3/40 transition-colors hover:bg-gray-3/70 dark:bg-gray-3/20 dark:hover:bg-gray-3/35"
     >
       <div className="flex w-full min-w-0 items-center gap-3 px-4 py-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center" aria-hidden>

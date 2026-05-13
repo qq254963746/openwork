@@ -1,7 +1,7 @@
 {
   "name": "@aiwork/app",
   "private": true,
-  "version": "0.13.42",
+  "version": "0.13.43",
   "type": "module",
   "scripts": {
     "dev": "AIWORK_DEV_MODE=1 vite",
