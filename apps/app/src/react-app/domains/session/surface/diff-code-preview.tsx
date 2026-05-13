@@ -150,15 +150,15 @@ const diffTheme = EditorView.theme(
 // CSS variables injected once into <head>
 const DIFF_CSS_VARS = `
 :root {
-  --diff-added-bg:   rgba(46,160,67,0.15);
-  --diff-removed-bg: rgba(248,81,73,0.15);
+  --diff-added-bg:   #d3e2b2;
+  --diff-removed-bg: #f9cccc;
   --diff-hunk-bg:    rgba(88,166,255,0.10);
   --diff-header-bg:  transparent;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --diff-added-bg:   rgba(46,160,67,0.20);
-    --diff-removed-bg: rgba(248,81,73,0.20);
+    --diff-added-bg:   rgba(211,226,178,0.25);
+    --diff-removed-bg: rgba(249,204,204,0.25);
     --diff-hunk-bg:    rgba(88,166,255,0.12);
   }
 }
@@ -193,9 +193,17 @@ export function DiffCodePreview({ filePath, diffText, className }: DiffCodePrevi
     if (!parent) return;
 
     const rawLines = diffText.split("\n");
-    const kinds    = rawLines.map(classifyDiffLine);
+    // Filter out header (---/+++) and hunk (@@) lines — these are shown in the card header instead
+    const filteredLines: string[] = [];
+    const filteredKinds: DiffLineKind[] = [];
+    for (const line of rawLines) {
+      const kind = classifyDiffLine(line);
+      if (kind === "header" || kind === "hunk") continue;
+      filteredLines.push(line);
+      filteredKinds.push(kind);
+    }
     // Build the document: strip sigils so CodeMirror syntax-highlights pure code
-    const codeLines = rawLines.map(stripSigil);
+    const codeLines = filteredLines.map(stripSigil);
     const doc = codeLines.join("\n");
 
     viewRef.current?.destroy();
@@ -205,7 +213,7 @@ export function DiffCodePreview({ filePath, diffText, className }: DiffCodePrevi
       extensions: [
         ...languageExtensionsForPath(filePath),
         syntaxHighlighting(defaultHighlightStyle),
-        makeDiffLinePlugin(kinds),
+        makeDiffLinePlugin(filteredKinds),
         EditorView.lineWrapping,
         EditorState.readOnly.of(true),
         EditorView.editable.of(false),

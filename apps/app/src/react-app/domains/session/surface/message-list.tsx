@@ -912,6 +912,27 @@ function WrittenFileRow(props: {
 
   const hasDiff = Boolean(props.touch.diffText?.trim());
 
+  /** Parse additions/deletions count and rename info from diffText */
+  const diffStats = useMemo(() => {
+    if (!props.touch.diffText) return null;
+    let additions = 0;
+    let deletions = 0;
+    let renamedFrom: string | null = null;
+    for (const line of props.touch.diffText.split("\n")) {
+      if (line.startsWith("+") && !line.startsWith("+++")) { additions++; continue; }
+      if (line.startsWith("-") && !line.startsWith("---")) { deletions++; continue; }
+      // Detect rename: "--- a/old/path" and "+++ b/new/path" differ
+      if (line.startsWith("--- ")) {
+        const old = line.slice(4).replace(/^a\//, "");
+        const newFilename = props.touch.filename;
+        if (old && old !== newFilename && !old.startsWith("/dev/null")) {
+          renamedFrom = old.split("/").pop() ?? old;
+        }
+      }
+    }
+    return { additions, deletions, renamedFrom };
+  }, [props.touch.diffText, props.touch.filename]);
+
   const previewKind = writtenFileRichPreviewKind(props.touch.filename);
   const previewFetchPath = useMemo(() => {
     if (!previewKind || !props.fetchWorkspaceFileText) return null;
@@ -1008,10 +1029,10 @@ function WrittenFileRow(props: {
           </button>
         </div>
       ) : (
-        <div className="flex justify-center py-1.5 opacity-0 transition-opacity group-hover/diff:opacity-100">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-1.5 opacity-0 transition-opacity group-hover/diff:opacity-100 group-hover/diff:pointer-events-auto">
           <button
             type="button"
-            className="flex h-6 w-6 items-center justify-center rounded-full border border-gray-6/50 bg-dls-surface text-gray-10 shadow-sm transition-colors hover:bg-gray-3/60 hover:text-gray-12"
+            className="relative z-10 flex h-6 w-6 items-center justify-center rounded-full border border-gray-6/50 bg-dls-surface text-gray-10 shadow-sm transition-colors hover:bg-gray-3/60 hover:text-gray-12"
             onClick={() => setDiffExpanded(false)}
             title="Collapse diff"
           >
@@ -1048,8 +1069,18 @@ function WrittenFileRow(props: {
             <WorkspacePanelFileGlyph filename={props.touch.displayPath} size={18} className="shrink-0 text-[#000000]" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[13px] font-medium leading-snug text-gray-12">{props.touch.filename}</div>
-            <div className="mt-0.5 text-[12px] leading-snug text-gray-9">{metaLine}</div>
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="truncate text-[13px] font-medium leading-snug text-gray-12">{props.touch.filename}</div>
+              {diffStats && (diffStats.additions > 0 || diffStats.deletions > 0) ? (
+                <span className="flex shrink-0 items-center gap-1 font-mono text-[12px]">
+                  {diffStats.additions > 0 ? <span className="text-green-11">+{diffStats.additions}</span> : null}
+                  {diffStats.deletions > 0 ? <span className="text-red-11">-{diffStats.deletions}</span> : null}
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-0.5 text-[12px] leading-snug text-gray-9">
+              {diffStats?.renamedFrom ? `${diffStats.renamedFrom} → ${props.touch.filename} · ` : ""}{metaLine}
+            </div>
           </div>
           {actionButtons}
         </div>
@@ -1087,8 +1118,18 @@ function WrittenFileRow(props: {
           <WorkspacePanelFileGlyph filename={props.touch.displayPath} size={18} className="shrink-0 text-[#000000]" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-medium leading-snug text-gray-12">{props.touch.filename}</div>
-          <div className="mt-0.5 text-[12px] leading-snug text-gray-9">{metaLine}</div>
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="truncate text-[13px] font-medium leading-snug text-gray-12">{props.touch.filename}</div>
+            {diffStats && (diffStats.additions > 0 || diffStats.deletions > 0) ? (
+              <span className="flex shrink-0 items-center gap-1 font-mono text-[12px]">
+                {diffStats.additions > 0 ? <span className="text-green-11">+{diffStats.additions}</span> : null}
+                {diffStats.deletions > 0 ? <span className="text-red-11">-{diffStats.deletions}</span> : null}
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-0.5 text-[12px] leading-snug text-gray-9">
+            {diffStats?.renamedFrom ? `${diffStats.renamedFrom} → ${props.touch.filename} · ` : ""}{metaLine}
+          </div>
         </div>
         {actionButtons}
       </div>

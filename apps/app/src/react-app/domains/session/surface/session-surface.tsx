@@ -1142,7 +1142,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
             sessionScroll.markScrollGesture(event.currentTarget);
           }}
           onScroll={sessionScroll.handleScroll}
-          className={`absolute inset-0 overflow-x-hidden overflow-y-auto overscroll-y-contain py-4 pl-3 pr-4 md:pl-7 md:pr-8${
+          className={`absolute inset-0 overflow-x-hidden overflow-y-auto overscroll-y-contain py-4 px-4 md:px-8${
             showEmptyTranscriptWelcome ? " flex min-h-0 flex-col" : ""
           }`}
         >
