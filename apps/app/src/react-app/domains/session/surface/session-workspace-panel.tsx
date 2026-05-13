@@ -78,72 +78,111 @@ function joinRelativePath(dir: string, name: string): string {
 function isWorkspacePreviewablePath(path: string): boolean {
   const lowered = path.trim().toLowerCase();
   const base = lowered.split("/").pop() ?? lowered;
+
+  // ── Exact basenames (no extension) ──────────────────────────────────────
   if (base.startsWith("dockerfile.")) return true;
-  if (
-    base === "dockerfile" ||
-    base === "gnumakefile" ||
-    base === "makefile" ||
-    base === "rakefile" ||
-    base === "jenkinsfile" ||
-    base === "gemfile" ||
-    base === "podfile" ||
-    base === "vagrantfile"
-  ) {
-    return true;
-  }
+  const KNOWN_EXACT_NAMES = new Set([
+    // Build / make
+    "dockerfile", "gnumakefile", "makefile", "rakefile",
+    "jenkinsfile", "gemfile", "podfile", "vagrantfile",
+    // Git
+    ".gitignore", ".gitattributes", ".gitmodules", ".gitkeep",
+    ".gitmessage", ".gitconfig",
+    // Node / JS tooling
+    ".npmrc", ".npmignore", ".nvmrc", ".node-version",
+    ".babelrc", ".browserslistrc", ".eslintignore",
+    ".prettierignore", ".prettierrc", ".stylelintignore",
+    ".nycrc", ".jshintrc", ".jshintignore",
+    // Python
+    ".python-version", "pipfile", "requirements",
+    // Ruby
+    ".rubocop.yml", ".ruby-version", "gemfile.lock",
+    // Shell / environment
+    ".env", ".env.local", ".env.development", ".env.production",
+    ".env.test", ".env.example", ".env.sample",
+    ".bashrc", ".bash_profile", ".bash_logout",
+    ".zshrc", ".zshenv", ".zprofile", ".zlogin", ".zlogout",
+    ".profile", ".inputrc", ".vimrc", ".vim", ".emacs",
+    ".editorconfig", ".direnvrc", ".envrc",
+    // Linting / formatting
+    ".eslintrc", ".eslintrc.js", ".eslintrc.cjs",
+    ".eslintrc.json", ".eslintrc.yaml", ".eslintrc.yml",
+    ".stylelintrc", ".markdownlint", ".commitlintrc",
+    ".lintstagedrc",
+    // Package managers / lockfiles (text)
+    "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
+    "pipfile.lock", "composer.lock",
+    // CI / CD
+    ".travis.yml", "procfile",
+    // Misc config
+    ".htaccess", ".curlrc", ".wgetrc", ".netrc",
+    "license", "licence", "copying", "notice",
+    "authors", "contributors", "changelog", "history",
+    "readme", "todo", "install", "news",
+  ]);
+  if (KNOWN_EXACT_NAMES.has(base)) return true;
+
+  // ── Extension-based matching ─────────────────────────────────────────────
   return [
-    ".md",
-    ".mdx",
-    ".markdown",
-    ".json",
-    ".jsonc",
-    ".ts",
-    ".tsx",
-    ".mts",
-    ".cts",
-    ".js",
-    ".jsx",
-    ".mjs",
-    ".cjs",
-    ".txt",
-    ".py",
-    ".java",
-    ".sh",
-    ".bash",
-    ".zsh",
-    ".yaml",
-    ".yml",
-    ".toml",
-    ".sql",
-    ".xml",
-    ".plist",
-    ".css",
-    ".scss",
-    ".sass",
-    ".less",
-    ".c",
-    ".h",
-    ".cc",
-    ".cpp",
-    ".cxx",
-    ".hh",
-    ".hpp",
+    // Markdown
+    ".md", ".mdx", ".markdown",
+    // Data / config
+    ".json", ".jsonc", ".json5",
+    ".yaml", ".yml", ".toml", ".ini", ".cfg", ".conf",
+    ".properties", ".env", ".envrc",
+    ".xml", ".plist", ".xhtml",
+    // TypeScript / JavaScript
+    ".ts", ".tsx", ".mts", ".cts",
+    ".js", ".jsx", ".mjs", ".cjs",
+    // Web
+    ".html", ".htm", ".htmlx", ".svg",
+    ".css", ".scss", ".sass", ".less", ".styl",
+    // Scripting
+    ".sh", ".bash", ".zsh", ".fish", ".ksh", ".csh",
+    ".ps1", ".psm1", ".psd1",
+    ".py", ".pyw", ".pyi",
+    ".rb", ".rake", ".gemspec",
+    ".pl", ".pm",
+    ".lua",
+    ".r",
+    // Systems / compiled
+    ".c", ".h", ".cc", ".cpp", ".cxx", ".hh", ".hpp", ".hxx",
     ".rs",
     ".go",
-    ".cs",
-    ".php",
-    ".rb",
-    ".kt",
+    ".java", ".kt", ".kts",
     ".swift",
-    ".vue",
-    ".env",
-    ".ini",
-    ".properties",
-    ".gradle",
-    ".svg",
-    ".html",
-    ".htm",
-    ".htmlx",
+    ".cs", ".vb",
+    ".php",
+    ".scala",
+    ".clj", ".cljs", ".cljc",
+    ".ex", ".exs",
+    ".erl", ".hrl",
+    ".elm",
+    ".ml", ".mli",
+    ".hs", ".lhs",
+    ".dart",
+    // Templates
+    ".erb", ".haml", ".slim",
+    ".jinja", ".jinja2", ".j2",
+    ".ejs", ".mustache", ".hbs",
+    ".liquid",
+    // Infrastructure / build
+    ".tf", ".tfvars",
+    ".gradle", ".groovy",
+    ".bazel", ".bzl",
+    ".cmake",
+    ".nix",
+    // Data / text
+    ".sql", ".graphql", ".gql",
+    ".csv", ".tsv",
+    ".txt", ".log", ".diff", ".patch",
+    ".rst", ".adoc", ".asciidoc", ".org",
+    // Misc
+    ".lock", ".sum", ".mod",
+    ".vue", ".svelte",
+    ".astro",
+    ".mdoc",
+    ".tex", ".sty", ".cls", ".bib",
   ].some((ext) => lowered.endsWith(ext));
 }
 
@@ -663,40 +702,15 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         return;
       }
 
-      if (isMarkdownDocumentPath(sel)) {
-        setSelectedFile(sel);
-        return;
-      }
-      if (isWebPreviewDocumentPath(sel)) {
-        setSelectedFile(sel);
-        return;
-      }
-      if (isWorkspacePreviewablePath(sel)) {
-        setSelectedFile(sel);
-        return;
-      }
-      if (root) {
-        const abs = absoluteWorkspaceFilePath(root, sel);
-        if (abs) {
-          void openDesktopPath(abs).catch(() => undefined);
-          return;
-        }
-      }
+      // Always open text files inside the App — never call the OS opener for any file.
+      // isWorkspacePreviewablePath covers the known-text whitelist; everything else
+      // falls through to setSelectedFile so we at least attempt an in-app text preview.
       setSelectedFile(sel);
     },
     [props.workspaceRoot],
   );
 
   useImperativeHandle(ref, () => ({ selectWorkspaceRelativePath }), [selectWorkspaceRelativePath]);
-
-  const handleEntryClick = (name: string, kind: "file" | "directory") => {
-    const rel = joinRelativePath(dirPath, name);
-    if (kind === "directory") {
-      toggleExpandPath(rel);
-      return;
-    }
-    selectWorkspaceRelativePath(rel);
-  };
 
   const toggleExpandPath = useCallback((path: string) => {
     setExpandedPaths((prev) => {
@@ -714,171 +728,80 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
     ? selectedFile.split("/").filter(Boolean).pop() ?? selectedFile
     : "";
 
-  return (
-    <aside
-      className="relative flex min-h-0 h-full min-w-0 shrink flex-col border-l border-dls-divider bg-dls-sidebar"
-      style={{ width: panelWidth, minWidth: MIN_WORKSPACE_PANEL_WIDTH, maxWidth: "100%" }}
+  /** Whether a file preview pane should be shown alongside the file list */
+  const previewPaneOpen = Boolean(
+    selectedFile && (markdownPreviewOpen || webPreviewOpen || codeDocumentPreviewOpen || isWorkspacePreviewablePath(selectedFile || "")),
+  );
+
+  /** Minimum width of the file-list column when preview is open */
+  const FILE_LIST_MIN_WIDTH = 180;
+  /** Default width of the file-list column when preview is open */
+  const FILE_LIST_DEFAULT_WIDTH = 200;
+
+  const [fileListWidth, setFileListWidth] = useState(FILE_LIST_DEFAULT_WIDTH);
+  const fileListWidthRef = useRef(fileListWidth);
+  const previewDragCleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    fileListWidthRef.current = fileListWidth;
+  }, [fileListWidth]);
+
+  const stopPreviewDividerResize = useCallback(() => {
+    previewDragCleanupRef.current?.();
+    previewDragCleanupRef.current = null;
+    if (typeof document === "undefined") return;
+    document.body.style.removeProperty("cursor");
+    document.body.style.removeProperty("user-select");
+  }, []);
+
+  const startPreviewDividerResize = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0 || typeof window === "undefined") return;
+      event.preventDefault();
+      const grip = event.currentTarget;
+      stopPreviewDividerResize();
+      const pointerId = event.pointerId;
+      try { grip.setPointerCapture(pointerId); } catch { /* ignore */ }
+      const initialX = event.clientX;
+      const initialW = fileListWidthRef.current;
+
+      const handleMove = (moveEvent: PointerEvent) => {
+        const delta = moveEvent.clientX - initialX;
+        const next = Math.max(FILE_LIST_MIN_WIDTH, initialW + delta);
+        fileListWidthRef.current = next;
+        setFileListWidth(next);
+      };
+
+      const handleStop = (stopEvent: PointerEvent) => {
+        try {
+          if (grip.hasPointerCapture(stopEvent.pointerId)) grip.releasePointerCapture(stopEvent.pointerId);
+        } catch { /* ignore */ }
+        stopPreviewDividerResize();
+      };
+
+      window.addEventListener("pointermove", handleMove);
+      window.addEventListener("pointerup", handleStop);
+      window.addEventListener("pointercancel", handleStop);
+      previewDragCleanupRef.current = () => {
+        window.removeEventListener("pointermove", handleMove);
+        window.removeEventListener("pointerup", handleStop);
+        window.removeEventListener("pointercancel", handleStop);
+      };
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [stopPreviewDividerResize],
+  );
+
+  useEffect(() => () => stopPreviewDividerResize(), [stopPreviewDividerResize]);
+
+  /** Shared file-list column JSX — always rendered */
+  const fileListColumn = (
+    <div
+      className="flex min-h-0 min-w-0 flex-col border-r border-dls-divider bg-dls-sidebar"
+      style={previewPaneOpen ? { width: fileListWidth, minWidth: FILE_LIST_MIN_WIDTH, flexShrink: 0 } : { flex: 1 }}
     >
-      <div
-        role="separator"
-        aria-orientation="vertical"
-        aria-label={t("session.resize_workspace_column")}
-        className="absolute left-0 top-0 z-40 h-full w-1 -translate-x-1/2 cursor-col-resize rounded-full bg-transparent transition-colors hover:bg-gray-6/40 touch-none"
-        onPointerDown={startPanelResize}
-      />
-      {markdownPreviewOpen ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <WorkspacePanelFileGlyph
-                filename={selectedFile ?? ""}
-                size={16}
-                className="shrink-0 text-[#000000]"
-              />
-              <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
-                {selectedFileTitle}
-              </span>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
-                onClick={() => void previewQuery.refetch()}
-                aria-label={t("session.workspace_panel_refresh")}
-                title={t("session.workspace_panel_refresh")}
-              >
-                <RefreshCw size={16} strokeWidth={1.75} aria-hidden />
-              </button>
-              <button
-                type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
-                onClick={() => setSelectedFile(null)}
-                aria-label={t("session.workspace_panel_close_preview")}
-                title={t("session.workspace_panel_close_preview")}
-              >
-                <X size={16} strokeWidth={1.75} aria-hidden />
-              </button>
-            </div>
-          </div>
-          <div className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto bg-dls-surface px-4 py-4">
-            {previewQuery.isLoading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="animate-spin text-dls-secondary" size={22} />
-              </div>
-            ) : previewQuery.isError ? (
-              <div className="text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
-            ) : (
-              <div className="min-w-0 max-w-full">
-                <MarkdownBlock text={previewQuery.data?.content ?? ""} />
-              </div>
-            )}
-          </div>
-        </div>
-      ) : webPreviewOpen ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <WorkspacePanelFileGlyph
-                filename={selectedFile ?? ""}
-                size={16}
-                className="shrink-0 text-[#000000]"
-              />
-              <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
-                {selectedFileTitle}
-              </span>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
-                onClick={() => void previewQuery.refetch()}
-                aria-label={t("session.workspace_panel_refresh")}
-                title={t("session.workspace_panel_refresh")}
-              >
-                <RefreshCw size={16} strokeWidth={1.75} aria-hidden />
-              </button>
-              <button
-                type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
-                onClick={() => setSelectedFile(null)}
-                aria-label={t("session.workspace_panel_close_preview")}
-                title={t("session.workspace_panel_close_preview")}
-              >
-                <X size={16} strokeWidth={1.75} aria-hidden />
-              </button>
-            </div>
-          </div>
-          <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-dls-surface">
-            {previewQuery.isLoading ? (
-              <div className="flex min-h-[200px] items-center justify-center py-12">
-                <Loader2 className="animate-spin text-dls-secondary" size={22} />
-              </div>
-            ) : previewQuery.isError ? (
-              <div className="p-4 text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
-            ) : (
-              <iframe
-                key={`${props.workspaceId}:${selectedFile ?? ""}`}
-                title={selectedFileTitle}
-                className="absolute inset-0 h-full w-full border-0 bg-dls-surface"
-                srcDoc={webPreviewSrcDoc}
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
-              />
-            )}
-          </div>
-        </div>
-      ) : codeDocumentPreviewOpen ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <WorkspacePanelFileGlyph
-                filename={selectedFile ?? ""}
-                size={16}
-                className="shrink-0 text-[#000000]"
-              />
-              <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile ?? undefined}>
-                {selectedFileTitle}
-              </span>
-            </div>
-            <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
-                onClick={() => void previewQuery.refetch()}
-                aria-label={t("session.workspace_panel_refresh")}
-                title={t("session.workspace_panel_refresh")}
-              >
-                <RefreshCw size={16} strokeWidth={1.75} aria-hidden />
-              </button>
-              <button
-                type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
-                onClick={() => setSelectedFile(null)}
-                aria-label={t("session.workspace_panel_close_preview")}
-                title={t("session.workspace_panel_close_preview")}
-              >
-                <X size={16} strokeWidth={1.75} aria-hidden />
-              </button>
-            </div>
-          </div>
-          <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-dls-surface">
-            {previewQuery.isLoading ? (
-              <div className="flex min-h-[200px] items-center justify-center py-12">
-                <Loader2 className="animate-spin text-dls-secondary" size={22} />
-              </div>
-            ) : previewQuery.isError ? (
-              <div className="p-4 text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
-            ) : (
-              <WorkspaceCodePreview
-                filePath={selectedFile ?? ""}
-                content={previewQuery.data?.content ?? ""}
-                className="absolute inset-0 min-h-0 min-w-0"
-              />
-            )}
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="shrink-0 border-b border-dls-divider px-3 py-2.5">
+      <div className="shrink-0 border-b border-dls-divider px-3 py-2.5">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-[#000000]">
           {t("session.workspace_panel_context")}
         </div>
@@ -935,22 +858,15 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {/* Drag region must not wrap toolbar buttons (WKWebView hit-testing); mirror workspace-session-list. */}
         <div className="shrink-0 border-b border-dls-divider px-3 py-2">
-          <div
-            className="flex min-h-[28px] cursor-default items-center gap-2"
-          >
+          <div className="flex min-h-[28px] cursor-default items-center gap-2">
             <div
               className="flex min-w-0 flex-1 cursor-default items-center select-none text-[11px] font-semibold uppercase tracking-wide text-[#000000]"
               data-tauri-drag-region={true}
-              style={{
-                ...WORKSPACE_PANEL_HEADER_DRAG_STYLE,
-              }}
+              style={{ ...WORKSPACE_PANEL_HEADER_DRAG_STYLE }}
             >
               {t("session.workspace_panel_files")}
             </div>
-            <div
-              className="flex shrink-0 items-center gap-0.5"
-              data-tauri-drag-region="false"
-            >
+            <div className="flex shrink-0 items-center gap-0.5" data-tauri-drag-region="false">
               <button
                 type="button"
                 className="inline-flex items-center justify-center rounded-md p-1 text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] disabled:pointer-events-none disabled:opacity-40"
@@ -973,22 +889,13 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
               </button>
             </div>
           </div>
-          <div
-            className="mt-1 flex min-w-0 cursor-default flex-wrap items-center gap-x-0.5 gap-y-0.5 text-[11px] text-dls-secondary"
-          >
+          <div className="mt-1 flex min-w-0 cursor-default flex-wrap items-center gap-x-0.5 gap-y-0.5 text-[11px] text-dls-secondary">
             <button
               type="button"
               className="inline-flex max-w-full min-w-0 shrink cursor-pointer select-none truncate rounded px-1 py-0.5 hover:bg-dls-hover hover:text-dls-text"
               data-tauri-drag-region="false"
-              style={{
-                cursor: "pointer",
-                userSelect: "none",
-                WebkitUserSelect: "none",
-              }}
-              onClick={() => {
-                setDirPath("");
-                setSelectedFile(null);
-              }}
+              style={{ cursor: "pointer", userSelect: "none", WebkitUserSelect: "none" }}
+              onClick={() => { setDirPath(""); setSelectedFile(null); }}
             >
               {folderTitle}
             </button>
@@ -1002,11 +909,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
                   type="button"
                   className="inline-flex max-w-full min-w-0 shrink cursor-pointer select-none truncate rounded px-1 py-0.5 hover:bg-dls-hover hover:text-dls-text"
                   data-tauri-drag-region="false"
-                  style={{
-                    cursor: "pointer",
-                    userSelect: "none",
-                    WebkitUserSelect: "none",
-                  }}
+                  style={{ cursor: "pointer", userSelect: "none", WebkitUserSelect: "none" }}
                   onClick={() => navigateToSegment(index)}
                 >
                   {segment}
@@ -1056,32 +959,146 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
             <div className="mt-2 px-1 text-[10px] text-dls-secondary">{t("session.workspace_panel_truncated")}</div>
           ) : null}
         </div>
+      </div>
+    </div>
+  );
 
-        {selectedFile && !markdownPreviewOpen && !webPreviewOpen && !codeDocumentPreviewOpen ? (
-          <div className="flex max-h-[42%] min-h-[120px] shrink-0 flex-col border-t border-dls-border bg-dls-surface/90">
-            <div className="shrink-0 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wide text-dls-secondary">
-              {t("session.workspace_panel_preview")}
-            </div>
-            <div className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto px-3 pb-3">
-              {!isWorkspacePreviewablePath(selectedFile) ? (
-                <div className="text-[11px] text-dls-secondary">{t("session.workspace_panel_preview_unsupported")}</div>
-              ) : previewQuery.isLoading ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="animate-spin text-dls-secondary" size={16} />
+  /** Shared preview pane header */
+  const previewPaneHeader = selectedFile ? (
+    <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <WorkspacePanelFileGlyph
+          filename={selectedFile}
+          size={16}
+          className="shrink-0 text-[#000000]"
+        />
+        <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile}>
+          {selectedFileTitle}
+        </span>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+          onClick={() => void previewQuery.refetch()}
+          aria-label={t("session.workspace_panel_refresh")}
+          title={t("session.workspace_panel_refresh")}
+        >
+          <RefreshCw size={16} strokeWidth={1.75} aria-hidden />
+        </button>
+        <button
+          type="button"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+          onClick={() => setSelectedFile(null)}
+          aria-label={t("session.workspace_panel_close_preview")}
+          title={t("session.workspace_panel_close_preview")}
+        >
+          <X size={16} strokeWidth={1.75} aria-hidden />
+        </button>
+      </div>
+    </div>
+  ) : null;
+
+  return (
+    <aside
+      className="relative flex min-h-0 h-full min-w-0 shrink flex-col border-l border-dls-divider bg-dls-sidebar"
+      style={{ width: panelWidth, minWidth: MIN_WORKSPACE_PANEL_WIDTH, maxWidth: "100%" }}
+    >
+      {/* Left-edge drag handle to resize the whole workspace panel */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={t("session.resize_workspace_column")}
+        className="absolute left-0 top-0 z-40 h-full w-1 -translate-x-1/2 cursor-col-resize rounded-full bg-transparent transition-colors hover:bg-gray-6/40 touch-none"
+        onPointerDown={startPanelResize}
+      />
+
+      {/* Main horizontal layout: file list always visible, preview alongside when open */}
+      <div className="flex min-h-0 flex-1 flex-row overflow-hidden">
+        {fileListColumn}
+
+        {previewPaneOpen && selectedFile ? (
+          <>
+            {/* Divider between file list and preview — draggable to resize the file list column */}
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              className="relative z-10 w-1 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-gray-6/40 touch-none"
+              onPointerDown={startPreviewDividerResize}
+            />
+
+            {/* Preview pane */}
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
+              {previewPaneHeader}
+
+              {markdownPreviewOpen ? (
+                <div className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto bg-dls-surface px-4 py-4">
+                  {previewQuery.isLoading ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="animate-spin text-dls-secondary" size={22} />
+                    </div>
+                  ) : previewQuery.isError ? (
+                    <div className="text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
+                  ) : (
+                    <div className="min-w-0 max-w-full">
+                      <MarkdownBlock text={previewQuery.data?.content ?? ""} />
+                    </div>
+                  )}
                 </div>
-              ) : previewQuery.isError ? (
-                <div className="text-[11px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
+              ) : webPreviewOpen ? (
+                <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-dls-surface">
+                  {previewQuery.isLoading ? (
+                    <div className="flex min-h-[200px] items-center justify-center py-12">
+                      <Loader2 className="animate-spin text-dls-secondary" size={22} />
+                    </div>
+                  ) : previewQuery.isError ? (
+                    <div className="p-4 text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
+                  ) : (
+                    <iframe
+                      key={`${props.workspaceId}:${selectedFile}`}
+                      title={selectedFileTitle}
+                      className="absolute inset-0 h-full w-full border-0 bg-dls-surface"
+                      srcDoc={webPreviewSrcDoc}
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
+                    />
+                  )}
+                </div>
+              ) : codeDocumentPreviewOpen ? (
+                <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-dls-surface">
+                  {previewQuery.isLoading ? (
+                    <div className="flex min-h-[200px] items-center justify-center py-12">
+                      <Loader2 className="animate-spin text-dls-secondary" size={22} />
+                    </div>
+                  ) : previewQuery.isError ? (
+                    <div className="p-4 text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
+                  ) : (
+                    <WorkspaceCodePreview
+                      filePath={selectedFile}
+                      content={previewQuery.data?.content ?? ""}
+                      className="absolute inset-0 min-h-0 min-w-0"
+                    />
+                  )}
+                </div>
               ) : (
-                <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-dls-text">
-                  {previewQuery.data?.content ?? ""}
-                </pre>
+                /* Generic previewable file — plain text fallback */
+                <div className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto px-3 pb-3 pt-2">
+                  {previewQuery.isLoading ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="animate-spin text-dls-secondary" size={16} />
+                    </div>
+                  ) : previewQuery.isError ? (
+                    <div className="text-[11px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
+                  ) : (
+                    <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-dls-text">
+                      {previewQuery.data?.content ?? ""}
+                    </pre>
+                  )}
+                </div>
               )}
             </div>
-          </div>
+          </>
         ) : null}
       </div>
-        </>
-      )}
     </aside>
   );
 });
