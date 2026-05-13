@@ -798,7 +798,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
   /** Shared file-list column JSX — always rendered */
   const fileListColumn = (
     <div
-      className="flex min-h-0 min-w-0 flex-col border-r border-dls-divider bg-dls-sidebar"
+      className={`flex min-h-0 min-w-0 flex-col bg-dls-sidebar${previewPaneOpen ? " border-r border-dls-divider" : ""}`}
       style={previewPaneOpen ? { width: fileListWidth, minWidth: FILE_LIST_MIN_WIDTH, flexShrink: 0 } : { flex: 1 }}
     >
       <div className="shrink-0 border-b border-dls-divider px-3 py-2.5">
@@ -1019,13 +1019,15 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
 
         {previewPaneOpen && selectedFile ? (
           <>
-            {/* Divider between file list and preview — draggable to resize the file list column */}
-            <div
-              role="separator"
-              aria-orientation="vertical"
-              className="relative z-10 w-1 shrink-0 cursor-col-resize bg-transparent transition-colors hover:bg-gray-6/40 touch-none"
-              onPointerDown={startPreviewDividerResize}
-            />
+            {/* Divider between file list and preview — same look & feel as the left-edge panel resize handle */}
+            <div className="relative w-0 shrink-0">
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                className="absolute top-0 left-0 z-10 h-full w-1 -translate-x-1/2 cursor-col-resize rounded-full bg-transparent transition-colors hover:bg-gray-6/40 touch-none"
+                onPointerDown={startPreviewDividerResize}
+              />
+            </div>
 
             {/* Preview pane */}
             <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
