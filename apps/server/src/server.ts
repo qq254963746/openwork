@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { readFile, writeFile, rm, readdir, rename, stat } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import { homedir, hostname } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import type { ApprovalRequest, Capabilities, ServerConfig, WorkspaceInfo, Actor, ReloadReason, ReloadTrigger, TokenScope } from "./types.js";
@@ -719,6 +720,76 @@ export function normalizeWorkspaceRelativePath(input: string, options: { allowSu
     }
   }
   return parts.join("/");
+}
+
+/**
+ * Run `git status --porcelain=v1 -z` in `cwd` and return a map of
+ * workspace-relative POSIX path → single-character status code.
+ *
+ * Codes returned:
+ *   "M" modified  "A" added  "D" deleted  "R" renamed  "C" copied
+ *   "U" unmerged  "?" untracked
+ *
+ * Returns an empty object when the directory is not a git repo or git is unavailable.
+ */
+function runGitStatus(cwd: string): Promise<Record<string, string>> {
+  return new Promise((resolve) => {
+    let stdout = "";
+    let timedOut = false;
+    const child = spawn("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"], {
+      cwd,
+      env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      try { child.kill(); } catch { /* ignore */ }
+      resolve({});
+    }, 5000);
+
+    child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString("binary"); });
+
+    child.on("close", (code) => {
+      clearTimeout(timeout);
+      if (timedOut || code !== 0) {
+        resolve({});
+        return;
+      }
+      const entries: Record<string, string> = {};
+      // porcelain -z: records are NUL-terminated; each record is "XY path" (or "XY from\0to" for renames)
+      const records = stdout.split("\0");
+      for (const record of records) {
+        if (record.length < 4) continue;
+        const xy = record.slice(0, 2);
+        const path = record.slice(3).replace(/\\/g, "/");
+        if (!path) continue;
+        // Derive a single meaningful status character
+        // Priority: index (X) first, then worktree (Y), then "?" for untracked
+        const x = xy[0] ?? " ";
+        const y = xy[1] ?? " ";
+        let status: string;
+        if (x === "?" && y === "?") {
+          status = "?";
+        } else if (x === "U" || y === "U" || (x === "A" && y === "A") || (x === "D" && y === "D")) {
+          status = "U";
+        } else if (x !== " " && x !== "?") {
+          status = x; // staged change
+        } else if (y !== " " && y !== "?") {
+          status = y; // worktree change
+        } else {
+          status = x;
+        }
+        entries[path] = status;
+      }
+      resolve(entries);
+    });
+
+    child.on("error", () => {
+      clearTimeout(timeout);
+      if (!timedOut) resolve({});
+    });
+  });
 }
 
 const WORKSPACE_TEXT_SPECIAL_BASENAMES = new Set([
@@ -2418,6 +2489,33 @@ function createRoutes(
       entries: limited,
       truncated: entries.length > maxEntries,
     });
+  });
+
+  /**
+   * GET /workspace/:id/git/status
+   *
+   * Runs `git status --porcelain=v1 -z --untracked-files=all` in the workspace root and
+   * returns a map of workspace-relative POSIX paths → git status code.
+   *
+   * Status codes (XY from porcelain format, trimmed to meaningful single char):
+   *   "M"  — modified (index or worktree)
+   *   "A"  — added / new file staged
+   *   "D"  — deleted
+   *   "R"  — renamed
+   *   "C"  — copied
+   *   "U"  — unmerged / conflict
+   *   "?"  — untracked
+   *   "!"  — ignored  (not included by default, only if ?include_ignored=1)
+   *
+   * Returns { entries: Record<string, string> } on success.
+   * Returns { entries: {} } (empty) when the workspace is not a git repo or git is not installed.
+   */
+  addRoute(routes, "GET", "/workspace/:id/git/status", "client", async (ctx) => {
+    const workspace = await resolveWorkspace(config, ctx.params.id);
+    const cwd = resolve(workspace.path);
+
+    const entries = await runGitStatus(cwd);
+    return jsonResponse({ entries });
   });
 
   addRoute(routes, "GET", "/workspace/:id/files/content", "client", async (ctx) => {

@@ -194,6 +194,15 @@ export type AiWorkWorkspaceDirectoryList = {
   truncated?: boolean;
 };
 
+/**
+ * Map of workspace-relative POSIX path → single-character git status code.
+ * "M" modified · "A" added · "D" deleted · "R" renamed · "C" copied · "U" unmerged · "?" untracked
+ * Empty object when the workspace is not a git repo or git is unavailable.
+ */
+export type AiWorkWorkspaceGitStatus = {
+  entries: Record<string, string>;
+};
+
 export type AiWorkCommandItem = {
   name: string;
   description?: string;
@@ -1265,6 +1274,14 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
         requestJson<AiWorkWorkspaceDirectoryList>(
           baseUrl,
           `/workspace/${encodeURIComponent(workspaceId)}/files/list${path?.trim() ? `?path=${encodeURIComponent(path.trim())}` : ""}`,
+          { token, hostToken },
+        )),
+
+    getWorkspaceGitStatus: (workspaceId: string) =>
+      logCall("getWorkspaceGitStatus", { workspaceId },
+        requestJson<AiWorkWorkspaceGitStatus>(
+          baseUrl,
+          `/workspace/${encodeURIComponent(workspaceId)}/git/status`,
           { token, hostToken },
         )),
 

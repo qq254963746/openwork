@@ -5,6 +5,10 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import type { UIMessage } from "ai";
 import {
   ChevronRight,
+  Code,
+  ExternalLink,
+  Eye,
+  FileQuestion,
   Folder,
   FolderOpen,
   Loader2,
@@ -332,6 +336,75 @@ function collectSessionToolNames(messages: UIMessage[]): string[] {
   return ordered;
 }
 
+/**
+ * Returns Tailwind text-color class for a git status code.
+ * Palette matches VS Code's default Git decoration colors:
+ *   green  — new / untracked / staged-add
+ *   yellow — modified, renamed, copied
+ *   red    — deleted, conflict/unmerged
+ */
+function gitStatusColor(status: string | undefined): string {
+  if (!status) return "";
+  switch (status) {
+    case "?": return "text-[#73c991]";   // untracked (new file) — green
+    case "A": return "text-[#73c991]";   // staged add            — green
+    case "M": return "text-[#e2c08d]";   // modified              — yellow
+    case "R": return "text-[#e2c08d]";   // renamed               — yellow
+    case "C": return "text-[#e2c08d]";   // copied                — yellow
+    case "D": return "text-[#c74e39]";   // deleted               — red
+    case "U": return "text-[#c74e39]";   // unmerged / conflict   — red
+    default:  return "";
+  }
+}
+
+/**
+ * Right-side badge letter shown next to file names, matching VS Code convention:
+ *   U — untracked  M — modified  D — deleted  A — staged add  C — conflict
+ */
+function gitStatusBadge(status: string | undefined): string {
+  if (!status) return "";
+  switch (status) {
+    case "?": return "U"; // untracked shown as "U" (VS Code convention)
+    case "A": return "A";
+    case "M": return "M";
+    case "R": return "M"; // renamed shown as M for simplicity
+    case "C": return "M";
+    case "D": return "D";
+    case "U": return "C"; // conflict
+    default:  return "";
+  }
+}
+
+/**
+ * Given a git status map (file path → code) and a directory path,
+ * returns the representative status for that directory by scanning all
+ * files underneath it and picking the highest-priority one.
+ *
+ * Priority (highest → lowest): U (conflict) > D (deleted) > M/A/R/C (modified/added) > ? (untracked)
+ *
+ * This matches VS Code / JetBrains behaviour: directories are tinted based on
+ * the "worst" change present, not just the first one encountered.
+ */
+function directoryGitStatus(
+  gitStatusMap: Record<string, string>,
+  dirPath: string,
+): string | undefined {
+  const prefix = dirPath.endsWith("/") ? dirPath : `${dirPath}/`;
+  // Priority scores — higher = more important
+  const score: Record<string, number> = { U: 4, D: 3, M: 2, A: 2, R: 2, C: 2, "?": 1 };
+  let best: string | undefined;
+  let bestScore = 0;
+  for (const [filePath, code] of Object.entries(gitStatusMap)) {
+    if (!filePath.startsWith(prefix)) continue;
+    const s = score[code] ?? 0;
+    if (s > bestScore) {
+      bestScore = s;
+      best = code;
+    }
+  }
+  return best;
+}
+
 function WorkspaceTreeNode(props: {
   entry: AiWorkWorkspaceDirEntry;
   relativePath: string;
@@ -343,10 +416,21 @@ function WorkspaceTreeNode(props: {
   onToggleExpand: (path: string) => void;
   onSelectEntry: (relativePath: string) => void;
   liveWorkspacePreview?: boolean;
+  /** Flat map of workspace-relative POSIX path → git status code. */
+  gitStatusMap?: Record<string, string>;
 }) {
   const isDirectory = props.entry.kind === "directory";
   const isExpanded = props.expandedPaths.has(props.relativePath);
   const isSelected = !isDirectory && props.selectedPath === props.relativePath;
+
+  // Derive the git status color for this node
+  const rawStatus = props.gitStatusMap
+    ? isDirectory
+      ? directoryGitStatus(props.gitStatusMap, props.relativePath)
+      : props.gitStatusMap[props.relativePath]
+    : undefined;
+  const gitColor = gitStatusColor(rawStatus);
+  const gitBadge = gitStatusBadge(rawStatus);
 
   const childrenQuery = useQuery({
     queryKey: ["workspaceTreeDir", props.workspaceId, props.relativePath],
@@ -389,12 +473,15 @@ function WorkspaceTreeNode(props: {
           )}
           {isDirectory ? (
             isExpanded ? (
-              <FolderOpen size={14} className="shrink-0 text-[#000000]" aria-hidden />
+              <FolderOpen size={14} className={`shrink-0 ${gitColor || "text-[#000000]"}`} aria-hidden />
             ) : (
-              <Folder size={14} className="shrink-0 text-[#000000]" aria-hidden />
+              <Folder size={14} className={`shrink-0 ${gitColor || "text-[#000000]"}`} aria-hidden />
             )
           ) : null}
-          <span className="min-w-0 flex-1 truncate font-mono">{props.entry.name}</span>
+          <span className={`min-w-0 flex-1 truncate font-mono ${gitColor}`}>{props.entry.name}</span>
+          {gitBadge && !isDirectory ? (
+            <span className={`ml-1 shrink-0 font-mono text-[10px] font-semibold ${gitColor}`}>{gitBadge}</span>
+          ) : null}
           {isDirectory && isExpanded && childrenQuery.isFetching ? (
             <Loader2 size={12} className="shrink-0 animate-spin text-dls-secondary" />
           ) : null}
@@ -416,6 +503,7 @@ function WorkspaceTreeNode(props: {
               onToggleExpand={props.onToggleExpand}
               onSelectEntry={props.onSelectEntry}
               liveWorkspacePreview={props.liveWorkspacePreview}
+              gitStatusMap={props.gitStatusMap}
             />
           );
         })
@@ -444,6 +532,8 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
   function SessionWorkspacePanel(props, ref) {
   const [dirPath, setDirPath] = useState("");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  /** "preview" = rendered view (markdown/web), "source" = raw source code. Resets on file change. */
+  const [previewMode, setPreviewMode] = useState<"preview" | "source">("preview");
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [panelWidth, setPanelWidth] = useState(readStoredWorkspacePanelWidth);
   const panelWidthRef = useRef(panelWidth);
@@ -645,6 +735,18 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
     refetchInterval: pollRichPreviewWhileSessionBusy ? 800 : false,
   });
 
+  /** Git status for all files in the workspace — polled while session is live, otherwise refreshed every 10 s. */
+  const gitStatusQuery = useQuery({
+    queryKey: ["workspaceGitStatus", props.workspaceId],
+    queryFn: () => props.client.getWorkspaceGitStatus(props.workspaceId),
+    enabled: Boolean(props.workspaceId && workspaceRoot),
+    staleTime: pollWhileSessionBusy ? 0 : 10_000,
+    refetchInterval: pollWhileSessionBusy ? 2_000 : 10_000,
+    // Never throw — non-git workspaces silently return empty map
+    retry: false,
+  });
+  const gitStatusMap = gitStatusQuery.data?.entries ?? {};
+
   /** Only rebuild iframe document when raw file bytes change — avoids remount/flash on identical poll results. */
   const webPreviewSrcDoc = useMemo(
     () => buildWebPreviewSrcDoc(previewQuery.data?.content ?? ""),
@@ -706,6 +808,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
       // isWorkspacePreviewablePath covers the known-text whitelist; everything else
       // falls through to setSelectedFile so we at least attempt an in-app text preview.
       setSelectedFile(sel);
+      setPreviewMode("preview"); // reset to rendered view each time a new file is opened
     },
     [props.workspaceRoot],
   );
@@ -728,10 +831,8 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
     ? selectedFile.split("/").filter(Boolean).pop() ?? selectedFile
     : "";
 
-  /** Whether a file preview pane should be shown alongside the file list */
-  const previewPaneOpen = Boolean(
-    selectedFile && (markdownPreviewOpen || webPreviewOpen || codeDocumentPreviewOpen || isWorkspacePreviewablePath(selectedFile || "")),
-  );
+  /** Whether a file preview pane should be shown alongside the file list — true for any selected file */
+  const previewPaneOpen = Boolean(selectedFile);
 
   /** Minimum width of the file-list column when preview is open */
   const FILE_LIST_MIN_WIDTH = 180;
@@ -950,6 +1051,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
                     onToggleExpand={toggleExpandPath}
                     onSelectEntry={(relPath) => selectWorkspaceRelativePath(relPath)}
                     liveWorkspacePreview={props.liveWorkspacePreview}
+                    gitStatusMap={gitStatusMap}
                   />
                 );
               })}
@@ -964,6 +1066,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
   );
 
   /** Shared preview pane header */
+  const canTogglePreviewMode = Boolean(selectedFile && (markdownPreviewOpen || webPreviewOpen));
   const previewPaneHeader = selectedFile ? (
     <div className="flex shrink-0 items-center justify-between gap-2 border-b border-dls-divider bg-dls-surface/95 px-3 py-2.5">
       <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -977,6 +1080,36 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        {canTogglePreviewMode ? (
+          <div className="flex shrink-0 items-center gap-0.5">
+            <button
+              type="button"
+              className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+                previewMode === "preview"
+                  ? "bg-dls-hover text-dls-text"
+                  : "text-dls-secondary hover:bg-dls-hover hover:text-dls-text"
+              }`}
+              onClick={() => setPreviewMode("preview")}
+              aria-label="Rendered preview"
+              title="Rendered preview"
+            >
+              <Eye size={13} strokeWidth={1.75} />
+            </button>
+            <button
+              type="button"
+              className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+                previewMode === "source"
+                  ? "bg-dls-hover text-dls-text"
+                  : "text-dls-secondary hover:bg-dls-hover hover:text-dls-text"
+              }`}
+              onClick={() => setPreviewMode("source")}
+              aria-label="Source code"
+              title="Source code"
+            >
+              <Code size={13} strokeWidth={1.75} />
+            </button>
+          </div>
+        ) : null}
         <button
           type="button"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
@@ -1033,68 +1166,62 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
             <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-dls-sidebar">
               {previewPaneHeader}
 
-              {markdownPreviewOpen ? (
+              {!isWorkspacePreviewablePath(selectedFile) ? (
+                /* ── Unsupported file type ── */
+                <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-dls-surface p-6 text-center">
+                  <FileQuestion size={36} className="shrink-0 text-dls-secondary/60" strokeWidth={1.25} />
+                  <div className="space-y-1">
+                    <p className="text-[13px] font-medium text-dls-text">
+                      {t("session.workspace_panel_preview_unsupported")}
+                    </p>
+                    <p className="text-[11px] text-dls-secondary">
+                      {selectedFileTitle}
+                    </p>
+                  </div>
+                  {workspaceRoot ? (
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 rounded-lg border border-dls-border bg-dls-surface px-3 py-1.5 text-[12px] text-dls-text transition-colors hover:bg-dls-hover"
+                      onClick={() => {
+                        const abs = absoluteWorkspaceFilePath(workspaceRoot, selectedFile);
+                        if (abs) void openDesktopPath(abs).catch(() => undefined);
+                      }}
+                    >
+                      <ExternalLink size={13} strokeWidth={1.75} aria-hidden />
+                      {t("session.workspace_panel_open_with_system")}
+                    </button>
+                  ) : null}
+                </div>
+              ) : previewQuery.isLoading ? (
+                <div className="flex min-h-[200px] flex-1 items-center justify-center">
+                  <Loader2 className="animate-spin text-dls-secondary" size={22} />
+                </div>
+              ) : previewQuery.isError ? (
+                <div className="flex-1 p-4 text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
+              ) : markdownPreviewOpen && previewMode === "preview" ? (
                 <div className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto bg-dls-surface px-4 py-4">
-                  {previewQuery.isLoading ? (
-                    <div className="flex justify-center py-12">
-                      <Loader2 className="animate-spin text-dls-secondary" size={22} />
-                    </div>
-                  ) : previewQuery.isError ? (
-                    <div className="text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
-                  ) : (
-                    <div className="min-w-0 max-w-full">
-                      <MarkdownBlock text={previewQuery.data?.content ?? ""} />
-                    </div>
-                  )}
+                  <div className="min-w-0 max-w-full">
+                    <MarkdownBlock text={previewQuery.data?.content ?? ""} />
+                  </div>
                 </div>
-              ) : webPreviewOpen ? (
+              ) : webPreviewOpen && previewMode === "preview" ? (
                 <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-dls-surface">
-                  {previewQuery.isLoading ? (
-                    <div className="flex min-h-[200px] items-center justify-center py-12">
-                      <Loader2 className="animate-spin text-dls-secondary" size={22} />
-                    </div>
-                  ) : previewQuery.isError ? (
-                    <div className="p-4 text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
-                  ) : (
-                    <iframe
-                      key={`${props.workspaceId}:${selectedFile}`}
-                      title={selectedFileTitle}
-                      className="absolute inset-0 h-full w-full border-0 bg-dls-surface"
-                      srcDoc={webPreviewSrcDoc}
-                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
-                    />
-                  )}
-                </div>
-              ) : codeDocumentPreviewOpen ? (
-                <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-dls-surface">
-                  {previewQuery.isLoading ? (
-                    <div className="flex min-h-[200px] items-center justify-center py-12">
-                      <Loader2 className="animate-spin text-dls-secondary" size={22} />
-                    </div>
-                  ) : previewQuery.isError ? (
-                    <div className="p-4 text-[12px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
-                  ) : (
-                    <WorkspaceCodePreview
-                      filePath={selectedFile}
-                      content={previewQuery.data?.content ?? ""}
-                      className="absolute inset-0 min-h-0 min-w-0"
-                    />
-                  )}
+                  <iframe
+                    key={`${props.workspaceId}:${selectedFile}`}
+                    title={selectedFileTitle}
+                    className="absolute inset-0 h-full w-full border-0 bg-dls-surface"
+                    srcDoc={webPreviewSrcDoc}
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
+                  />
                 </div>
               ) : (
-                /* Generic previewable file — plain text fallback */
-                <div className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-auto px-3 pb-3 pt-2">
-                  {previewQuery.isLoading ? (
-                    <div className="flex justify-center py-4">
-                      <Loader2 className="animate-spin text-dls-secondary" size={16} />
-                    </div>
-                  ) : previewQuery.isError ? (
-                    <div className="text-[11px] text-red-11">{t("session.workspace_panel_preview_error")}</div>
-                  ) : (
-                    <pre className="whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-dls-text">
-                      {previewQuery.data?.content ?? ""}
-                    </pre>
-                  )}
+                /* Source mode (markdown/web switched to source) or code/text files */
+                <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden bg-dls-surface">
+                  <WorkspaceCodePreview
+                    filePath={selectedFile}
+                    content={previewQuery.data?.content ?? ""}
+                    className="absolute inset-0 min-h-0 min-w-0"
+                  />
                 </div>
               )}
             </div>
