@@ -12,6 +12,7 @@ import {
   Folder,
   FolderOpen,
   Loader2,
+  MoreHorizontal,
   RefreshCw,
   X,
 } from "lucide-react";
@@ -534,10 +535,22 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   /** "preview" = rendered view (markdown/web), "source" = raw source code. Resets on file change. */
   const [previewMode, setPreviewMode] = useState<"preview" | "source">("preview");
+  const [previewMenuOpen, setPreviewMenuOpen] = useState(false);
+  const previewMenuRef = useRef<HTMLDivElement | null>(null);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [panelWidth, setPanelWidth] = useState(readStoredWorkspacePanelWidth);
   const panelWidthRef = useRef(panelWidth);
   const dragCleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (!previewMenuOpen) return;
+    const handlePointerDown = (e: PointerEvent) => {
+      if (previewMenuRef.current?.contains(e.target as Node)) return;
+      setPreviewMenuOpen(false);
+    };
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [previewMenuOpen]);
 
   useEffect(() => {
     panelWidthRef.current = panelWidth;
@@ -1080,45 +1093,74 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        {canTogglePreviewMode ? (
-          <div className="flex shrink-0 items-center gap-0.5">
-            <button
-              type="button"
-              className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
-                previewMode === "preview"
-                  ? "bg-dls-hover text-dls-text"
-                  : "text-dls-secondary hover:bg-dls-hover hover:text-dls-text"
-              }`}
-              onClick={() => setPreviewMode("preview")}
-              aria-label="Rendered preview"
-              title="Rendered preview"
-            >
-              <Eye size={13} strokeWidth={1.75} />
-            </button>
-            <button
-              type="button"
-              className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
-                previewMode === "source"
-                  ? "bg-dls-hover text-dls-text"
-                  : "text-dls-secondary hover:bg-dls-hover hover:text-dls-text"
-              }`}
-              onClick={() => setPreviewMode("source")}
-              aria-label="Source code"
-              title="Source code"
-            >
-              <Code size={13} strokeWidth={1.75} />
-            </button>
-          </div>
-        ) : null}
-        <button
-          type="button"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] dark:text-gray-12 transition-colors hover:bg-dls-hover hover:text-[#000000] dark:hover:text-gray-12"
-          onClick={() => void previewQuery.refetch()}
-          aria-label={t("session.workspace_panel_refresh")}
-          title={t("session.workspace_panel_refresh")}
-        >
-          <RefreshCw size={16} strokeWidth={1.75} aria-hidden />
-        </button>
+        {/* Three-dots menu */}
+        <div className="relative" ref={previewMenuRef}>
+          <button
+            type="button"
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors text-[#000000] dark:text-gray-12 hover:bg-dls-hover ${previewMenuOpen ? "bg-dls-hover" : ""}`}
+            onClick={() => setPreviewMenuOpen((o) => !o)}
+            aria-label="More actions"
+            title="More actions"
+          >
+            <MoreHorizontal size={16} strokeWidth={1.75} aria-hidden />
+          </button>
+
+          {previewMenuOpen ? (
+            <div className="absolute right-0 top-[calc(100%+4px)] z-30 w-52 rounded-[14px] border border-dls-border bg-dls-surface p-1.5 shadow-[var(--dls-shell-shadow)]">
+              {/* Refresh */}
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-[13px] text-dls-text transition-colors hover:bg-dls-hover"
+                onClick={() => {
+                  void previewQuery.refetch();
+                  setPreviewMenuOpen(false);
+                }}
+              >
+                <RefreshCw size={14} strokeWidth={1.75} className="shrink-0 text-dls-secondary" aria-hidden />
+                {t("session.workspace_panel_refresh")}
+              </button>
+
+              {/* Toggle preview / source — only when applicable */}
+              {canTogglePreviewMode ? (
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-[13px] text-dls-text transition-colors hover:bg-dls-hover"
+                  onClick={() => {
+                    setPreviewMode((m) => (m === "preview" ? "source" : "preview"));
+                    setPreviewMenuOpen(false);
+                  }}
+                >
+                  {previewMode === "preview" ? (
+                    <Code size={14} strokeWidth={1.75} className="shrink-0 text-dls-secondary" aria-hidden />
+                  ) : (
+                    <Eye size={14} strokeWidth={1.75} className="shrink-0 text-dls-secondary" aria-hidden />
+                  )}
+                  {previewMode === "preview"
+                    ? t("session.workspace_panel_view_source")
+                    : t("session.workspace_panel_view_preview")}
+                </button>
+              ) : null}
+
+              {/* Open with system app */}
+              {workspaceRoot ? (
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-[13px] text-dls-text transition-colors hover:bg-dls-hover"
+                  onClick={() => {
+                    const abs = absoluteWorkspaceFilePath(workspaceRoot, selectedFile);
+                    if (abs) void openDesktopPath(abs).catch(() => undefined);
+                    setPreviewMenuOpen(false);
+                  }}
+                >
+                  <ExternalLink size={14} strokeWidth={1.75} className="shrink-0 text-dls-secondary" aria-hidden />
+                  {t("session.workspace_panel_open_with_system")}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        {/* Close button — kept outside the menu for quick access */}
         <button
           type="button"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] dark:text-gray-12 transition-colors hover:bg-dls-hover hover:text-[#000000] dark:hover:text-gray-12"
