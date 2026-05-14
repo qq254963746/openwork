@@ -939,7 +939,8 @@ function prepareWrittenFileSvgForFullWidthRender(svgText: string): string {
 function writtenFileRichPreviewKind(filename: string): "svg" | "html" | null {
   const l = filename.toLowerCase();
   if (l.endsWith(".svg")) return "svg";
-  if (l.endsWith(".html") || l.endsWith(".htm") || l.endsWith(".htmlx")) return "html";
+  // HTML/Htmlx files no longer show rich previews in conversation cards — they fall back to
+  // the standard file row with optional diff panel, same as other code file types.
   return null;
 }
 
