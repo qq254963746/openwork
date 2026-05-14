@@ -326,17 +326,56 @@ export class CheckpointStore {
         throw new ApiError(404, "checkpoint_not_found", `Checkpoint ${input.sha} not found`);
       }
 
-      // Files that exist NOW (relative paths) and files that should exist after restore.
+      // Stage current workdir so we can diff against the target.
+      await this.git(["add", "-A", "--"], { allowEmpty: true });
+
+      // Find files that differ between current HEAD and the target commit.
+      // "changed" = modified or deleted in workdir vs target
+      // "added"   = exists in target but not in current HEAD
+      const changedResult = await this.git(
+        ["diff", "--name-only", "-z", "HEAD", input.sha],
+        { allowFailure: true },
+      );
+      const changedFiles = changedResult.stdout
+        .split("\0")
+        .filter(Boolean);
+
+      const addedResult = await this.git(
+        ["diff", "--name-only", "--diff-filter=A", "-z", "HEAD", input.sha],
+        { allowFailure: true },
+      );
+
+      // Files that exist NOW (current HEAD -> workdir) and files in target.
       const before = await this.listTrackedFiles("HEAD");
-      const target = await this.listTrackedFiles(input.sha);
+      const targetFiles = await this.listTrackedFiles(input.sha);
 
-      // Stage the target tree, then materialize it.
-      await this.git(["read-tree", input.sha]);
-      await this.git(["checkout-index", "-a", "-f"]);
-
-      // Remove files that exist now but not in target.
+      let restored = 0;
       let removed = 0;
-      const targetSet = new Set(target);
+
+      if (changedFiles.length > 0) {
+        // Only restore the files that actually differ. `checkout` from
+        // the target commit for those specific paths. This avoids touching
+        // every file's mtime (and thus avoids spurious file-watcher events
+        // for unchanged files like opencode.jsonc).
+        //
+        // Strategy:
+        //   1. read-tree <target> to populate our shadow index with the target tree.
+        //   2. checkout-index with explicit path list so only those files are
+        //      materialised into the workdir.
+        await this.git(["read-tree", input.sha]);
+        for (const path of changedFiles) {
+          // checkout-index -f writes a single file from the index to the worktree.
+          // `--` ensures paths with special characters are handled safely.
+          const result = await this.git(
+            ["checkout-index", "-f", "--", path],
+            { allowFailure: true },
+          );
+          if (result.code === 0) restored += 1;
+        }
+      }
+
+      // Remove files present in current HEAD but absent from target.
+      const targetSet = new Set(targetFiles);
       for (const path of before) {
         if (!targetSet.has(path)) {
           const abs = resolve(this.workspaceRoot, path);
@@ -345,8 +384,12 @@ export class CheckpointStore {
         }
       }
 
+      // After partial restore, re-stage the workdir into shadow git so HEAD
+      // reflects reality. `git add -A` picks up restored + removed files.
+      await this.git(["add", "-A", "--"], { allowEmpty: true });
+
       return {
-        restored: target.length,
+        restored,
         removed,
         safetySha,
       };
