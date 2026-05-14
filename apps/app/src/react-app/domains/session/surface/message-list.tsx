@@ -1066,7 +1066,7 @@ function WrittenFileRow(props: {
       >
         <div className="flex items-center gap-3 px-4 py-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center" aria-hidden>
-            <WorkspacePanelFileGlyph filename={props.touch.displayPath} size={18} className="shrink-0 text-[#000000]" />
+            <WorkspacePanelFileGlyph filename={props.touch.displayPath} size={18} className="shrink-0 text-[#000000] dark:text-gray-12" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-2">
@@ -1115,7 +1115,7 @@ function WrittenFileRow(props: {
     >
       <div className="flex w-full min-w-0 items-center gap-3 px-4 py-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center" aria-hidden>
-          <WorkspacePanelFileGlyph filename={props.touch.displayPath} size={18} className="shrink-0 text-[#000000]" />
+          <WorkspacePanelFileGlyph filename={props.touch.displayPath} size={18} className="shrink-0 text-[#000000] dark:text-gray-12" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">

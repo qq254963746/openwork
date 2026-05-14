@@ -466,16 +466,16 @@ function WorkspaceTreeNode(props: {
           {isDirectory ? (
             <ChevronRight
               size={14}
-              className={`shrink-0 text-[#000000] transition-transform ${isExpanded ? "rotate-90" : ""}`}
+              className={`shrink-0 text-[#000000] dark:text-gray-12 transition-transform ${isExpanded ? "rotate-90" : ""}`}
             />
           ) : (
-            <WorkspacePanelFileGlyph filename={props.entry.name} className="shrink-0 text-[#000000]" />
+            <WorkspacePanelFileGlyph filename={props.entry.name} className="shrink-0 text-[#000000] dark:text-gray-12" />
           )}
           {isDirectory ? (
             isExpanded ? (
-              <FolderOpen size={14} className={`shrink-0 ${gitColor || "text-[#000000]"}`} aria-hidden />
+              <FolderOpen size={14} className={`shrink-0 ${gitColor || "text-[#000000] dark:text-gray-12"}`} aria-hidden />
             ) : (
-              <Folder size={14} className={`shrink-0 ${gitColor || "text-[#000000]"}`} aria-hidden />
+              <Folder size={14} className={`shrink-0 ${gitColor || "text-[#000000] dark:text-gray-12"}`} aria-hidden />
             )
           ) : null}
           <span className={`min-w-0 flex-1 truncate font-mono ${gitColor}`}>{props.entry.name}</span>
@@ -903,7 +903,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
       style={previewPaneOpen ? { width: fileListWidth, minWidth: FILE_LIST_MIN_WIDTH, flexShrink: 0 } : { flex: 1 }}
     >
       <div className="shrink-0 border-b border-dls-divider px-3 py-2.5">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-[#000000]">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-[#000000] dark:text-gray-12">
           {t("session.workspace_panel_context")}
         </div>
         <div className="mt-2 space-y-2 text-[12px] text-dls-text">
@@ -961,7 +961,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         <div className="shrink-0 border-b border-dls-divider px-3 py-2">
           <div className="flex min-h-[28px] cursor-default items-center gap-2">
             <div
-              className="flex min-w-0 flex-1 cursor-default items-center select-none text-[11px] font-semibold uppercase tracking-wide text-[#000000]"
+              className="flex min-w-0 flex-1 cursor-default items-center select-none text-[11px] font-semibold uppercase tracking-wide text-[#000000] dark:text-gray-12"
               data-tauri-drag-region={true}
               style={{ ...WORKSPACE_PANEL_HEADER_DRAG_STYLE }}
             >
@@ -970,7 +970,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
             <div className="flex shrink-0 items-center gap-0.5" data-tauri-drag-region="false">
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-md p-1 text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] disabled:pointer-events-none disabled:opacity-40"
+                className="inline-flex items-center justify-center rounded-md p-1 text-[#000000] dark:text-gray-12 transition-colors hover:bg-dls-hover hover:text-[#000000] dark:hover:text-gray-12 disabled:pointer-events-none disabled:opacity-40"
                 onClick={openCurrentFolderOnDesktop}
                 disabled={!canOpenCurrentFolderOnDesktop}
                 title={openFolderTitle}
@@ -980,7 +980,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
               </button>
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-md p-1 text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000] disabled:pointer-events-none disabled:opacity-40"
+                className="inline-flex items-center justify-center rounded-md p-1 text-[#000000] dark:text-gray-12 transition-colors hover:bg-dls-hover hover:text-[#000000] dark:hover:text-gray-12 disabled:pointer-events-none disabled:opacity-40"
                 onClick={refreshWorkspaceFiles}
                 disabled={!props.workspaceId || listQuery.isFetching}
                 title={t("session.workspace_panel_refresh")}
@@ -1073,7 +1073,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         <WorkspacePanelFileGlyph
           filename={selectedFile}
           size={16}
-          className="shrink-0 text-[#000000]"
+          className="shrink-0 text-[#000000] dark:text-gray-12"
         />
         <span className="min-w-0 truncate font-mono text-[13px] font-medium text-dls-text" title={selectedFile}>
           {selectedFileTitle}
@@ -1112,7 +1112,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         ) : null}
         <button
           type="button"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] dark:text-gray-12 transition-colors hover:bg-dls-hover hover:text-[#000000] dark:hover:text-gray-12"
           onClick={() => void previewQuery.refetch()}
           aria-label={t("session.workspace_panel_refresh")}
           title={t("session.workspace_panel_refresh")}
@@ -1121,7 +1121,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
         </button>
         <button
           type="button"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] transition-colors hover:bg-dls-hover hover:text-[#000000]"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#000000] dark:text-gray-12 transition-colors hover:bg-dls-hover hover:text-[#000000] dark:hover:text-gray-12"
           onClick={() => setSelectedFile(null)}
           aria-label={t("session.workspace_panel_close_preview")}
           title={t("session.workspace_panel_close_preview")}
