@@ -69,6 +69,7 @@ function languageExtensionsForPath(relativePosix: string): Extension[] {
       return [css()];
     case ".xml":
     case ".plist":
+    case ".svg":
       return [xml()];
     case ".c":
     case ".h":
