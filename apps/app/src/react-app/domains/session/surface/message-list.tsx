@@ -1242,7 +1242,60 @@ function StepRow(props: {
   }
 
   if (props.part.type === "tool" && (toolNameLower === "todowrite" || toolNameLower === "todoread")) {
-    const todos = props.todos.filter((todo) => todo.content.trim());
+    /**
+     * Prefer the per-call todos snapshot stored in the tool part itself, so historical
+     * cards show what the tool wrote/read AT THAT TIME. Falls back to the session-wide
+     * live `props.todos` only when the snapshot can't be parsed (e.g. corrupted data).
+     *
+     * Why: `props.todos` is a single live cache of the session's CURRENT todo list.
+     * Without this fallback ladder, every old todoread/todowrite card on the timeline
+     * flips to "No tasks" the moment the agent later clears or replaces the todo list.
+     */
+    const parseTodosSnapshot = (value: unknown): TodoItem[] | null => {
+      if (!value) return null;
+      let candidate: unknown = value;
+      // Output may be a JSON string (some providers return text); try to JSON.parse it.
+      if (typeof candidate === "string") {
+        try {
+          candidate = JSON.parse(candidate);
+        } catch {
+          return null;
+        }
+      }
+      // Accept either { todos: [...] } or a raw array.
+      if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
+        const next = (candidate as { todos?: unknown }).todos;
+        if (Array.isArray(next)) candidate = next;
+      }
+      if (!Array.isArray(candidate)) return null;
+      const result: TodoItem[] = [];
+      for (let i = 0; i < candidate.length; i++) {
+        const entry = candidate[i];
+        if (!entry || typeof entry !== "object") continue;
+        const e = entry as Record<string, unknown>;
+        const content = typeof e.content === "string" ? e.content : "";
+        if (!content.trim()) continue;
+        result.push({
+          id: typeof e.id === "string" ? e.id : `${i}-${content}`,
+          content,
+          status: typeof e.status === "string" ? e.status : "pending",
+          priority: typeof e.priority === "string" ? e.priority : "medium",
+        });
+      }
+      return result.length > 0 ? result : null;
+    };
+
+    // todowrite: input.todos is the snapshot being written.
+    // todoread:  output is the snapshot being read.
+    const snapshotFromInput =
+      toolNameLower === "todowrite" && toolInput
+        ? parseTodosSnapshot((toolInput as { todos?: unknown }).todos ?? toolInput)
+        : null;
+    const snapshotFromOutput =
+      !snapshotFromInput && toolOutput !== undefined ? parseTodosSnapshot(toolOutput) : null;
+
+    const sourceTodos = snapshotFromInput ?? snapshotFromOutput ?? props.todos;
+    const todos = sourceTodos.filter((todo) => todo.content.trim());
     const completed = todos.filter((todo) => todo.status === "completed").length;
     const total = todos.length;
 
