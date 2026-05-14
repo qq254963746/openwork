@@ -1,10 +1,10 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Agent } from "@opencode-ai/sdk/v2/client";
-import { Check, ChevronDown, ChevronRight, FileText, Paperclip, Plug, Settings, Square, Terminal, X, Zap } from "lucide-react";
+import { Bot, Check, ChevronDown, ChevronRight, ClipboardList, FileText, Loader2, MessageCircle, Paperclip, Plug, Search, Settings, Square, Terminal, Wrench, X, Zap } from "lucide-react";
 import fuzzysort from "fuzzysort";
 import type { CloudImportedPlugin, CloudImportedPluginFile } from "../../../../../app/cloud/import-state";
-import type { ComposerAttachment, McpServerEntry, McpStatusMap, SkillCard, SlashCommandOption } from "../../../../../app/types";
+import type { ComposerAttachment, McpServerEntry, McpStatusMap, ModelOption, ModelRef, SkillCard, SlashCommandOption } from "../../../../../app/types";
 import { t } from "../../../../../i18n";
 import { LexicalPromptEditor } from "./editor";
 import {
@@ -48,6 +48,11 @@ type ComposerProps = {
   modelVariant: string | null;
   modelBehaviorOptions?: { value: string | null; label: string }[];
   onModelVariantChange: (value: string | null) => void;
+  /** Model dropdown – same pattern as the agent selector. */
+  listModels?: () => Promise<ModelOption[]>;
+  modelOptions?: ModelOption[];
+  currentModel?: ModelRef | null;
+  onSelectModel?: (model: ModelRef) => void;
   agentLabel: string;
   selectedAgent: string | null;
   listAgents: () => Promise<Agent[]>;
@@ -241,6 +246,21 @@ function formatPluginObjectType(type: string) {
   return `${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}`;
 }
 
+function agentIcon(name: string) {
+  switch (name.toLowerCase()) {
+    case "agent":
+      return Bot;
+    case "ask":
+      return MessageCircle;
+    case "build":
+      return Wrench;
+    case "plan":
+      return ClipboardList;
+    default:
+      return Zap;
+  }
+}
+
 function pluginSlashCommandName(file: CloudImportedPluginFile) {
   const path = file.path.trim();
   if (file.objectType === "command") {
@@ -300,6 +320,14 @@ export function ReactSessionComposer(props: ComposerProps) {
   const toolMenuRef = useRef<HTMLDivElement | null>(null);
   const variantMenuRef = useRef<HTMLDivElement | null>(null);
   const agentMenuRef = useRef<HTMLDivElement | null>(null);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const [modelOptionsState, setModelOptionsState] = useState<ModelOption[]>(props.modelOptions ?? []);
+  const [modelOptionsLoading, setModelOptionsLoading] = useState(false);
+  const [modelSearchQuery, setModelSearchQuery] = useState("");
+  const modelSearchInputRef = useRef<HTMLInputElement | null>(null);
+  const [modelMenuIndex, setModelMenuIndex] = useState(0);
+  const modelItemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const modelMenuRef = useRef<HTMLDivElement | null>(null);
   // IME composition guard: while an IME composition is active, we must not
   // treat Enter as a submit. Three signals keep this reliable across WebKit,
   // Chrome, and Safari: event.isComposing, event.keyCode === 229, and the
@@ -332,6 +360,40 @@ export function ReactSessionComposer(props: ComposerProps) {
     if (!agentMenuOpen) return;
     void props.listAgents().then(setAgents).catch(() => setAgents([]));
   }, [agentMenuOpen, props.listAgents]);
+
+  useEffect(() => {
+    setModelOptionsState(props.modelOptions ?? []);
+  }, [props.modelOptions]);
+
+  useEffect(() => {
+    if (!modelMenuOpen) return;
+    if (props.listModels) {
+      setModelOptionsLoading(true);
+      void props.listModels()
+        .then((opts) => {
+          setModelOptionsState(opts);
+          setModelOptionsLoading(false);
+        })
+        .catch(() => {
+          setModelOptionsState([]);
+          setModelOptionsLoading(false);
+        });
+    }
+  }, [modelMenuOpen, props.listModels]);
+
+  useEffect(() => {
+    setModelMenuIndex(0);
+    setModelSearchQuery("");
+  }, [modelMenuOpen]);
+
+  useEffect(() => {
+    if (!modelMenuOpen) return;
+    const frame = requestAnimationFrame(() => {
+      modelSearchInputRef.current?.focus();
+      modelSearchInputRef.current?.select();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [modelMenuOpen]);
 
   useEffect(() => {
     setSkills(props.skills ?? []);
@@ -371,6 +433,11 @@ export function ReactSessionComposer(props: ComposerProps) {
     const target = agentItemRefs.current[agentMenuIndex];
     target?.scrollIntoView({ block: "nearest" });
   }, [agentMenuIndex, agentMenuOpen]);
+
+  useEffect(() => {
+    const target = modelItemRefs.current[modelMenuIndex];
+    target?.scrollIntoView({ block: "nearest" });
+  }, [modelMenuIndex, modelMenuOpen]);
 
   useEffect(() => {
     commandsLoadVersionRef.current += 1;
@@ -513,6 +580,20 @@ export function ReactSessionComposer(props: ComposerProps) {
       window.removeEventListener("mousedown", handlePointerDown);
     };
   }, [agentMenuOpen]);
+
+  useEffect(() => {
+    if (!modelMenuOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (modelMenuRef.current?.contains(target)) return;
+      setModelMenuOpen(false);
+    };
+    window.addEventListener("mousedown", handlePointerDown);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+    };
+  }, [modelMenuOpen]);
 
   useEffect(() => {
     if (!toolMenuOpen) return;
@@ -757,6 +838,48 @@ export function ReactSessionComposer(props: ComposerProps) {
         event.preventDefault();
         setAgentMenuOpen(false);
         setVariantMenuOpen(false);
+        return;
+      }
+    }
+
+    if (modelMenuOpen) {
+      const connectedModels = modelOptionsState.filter((opt) => opt.isConnected);
+      const query = modelSearchQuery.trim().toLowerCase();
+      const filtered = query
+        ? connectedModels.filter(
+            (opt) =>
+              opt.title.toLowerCase().includes(query) ||
+              opt.providerID.toLowerCase().includes(query) ||
+              opt.modelID.toLowerCase().includes(query),
+          )
+        : connectedModels;
+      const total = filtered.length;
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        if (total > 0) setModelMenuIndex((current) => (current + 1) % total);
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        if (total > 0) setModelMenuIndex((current) => (current - 1 + total) % total);
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        event.preventDefault();
+        const selected = filtered[modelMenuIndex];
+        if (selected && props.onSelectModel) {
+          props.onSelectModel({ providerID: selected.providerID, modelID: selected.modelID });
+        }
+        setModelMenuOpen(false);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (modelSearchQuery) {
+          setModelSearchQuery("");
+        } else {
+          setModelMenuOpen(false);
+        }
         return;
       }
     }
@@ -1311,7 +1434,7 @@ export function ReactSessionComposer(props: ComposerProps) {
                     <ChevronDown size={13} />
                   </button>
                   {agentMenuOpen ? (
-                    <div className="absolute left-0 bottom-full z-40 mb-2 w-64 overflow-hidden rounded-[18px] border border-dls-border bg-dls-surface shadow-[var(--dls-shell-shadow)]">
+                    <div className="absolute left-0 bottom-full z-40 mb-2 w-52 overflow-hidden rounded-[18px] border border-dls-border bg-dls-surface shadow-[var(--dls-shell-shadow)]">
                       <div className="border-b border-dls-border px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-10">
                         {t("composer.agent_label")}
                       </div>
@@ -1324,7 +1447,7 @@ export function ReactSessionComposer(props: ComposerProps) {
                             agentItemRefs.current[0] = element;
                           }}
                           type="button"
-                          className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-colors ${!props.selectedAgent ? "bg-gray-2 text-gray-12" : "text-gray-11 hover:bg-gray-2/70"}`}
+                          className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs transition-colors ${!props.selectedAgent ? "bg-gray-2 text-gray-12" : "text-gray-11 hover:bg-gray-2/70"}`}
                           onMouseEnter={() => setAgentMenuIndex(0)}
                           onMouseDown={(event) => {
                             event.preventDefault();
@@ -1332,11 +1455,14 @@ export function ReactSessionComposer(props: ComposerProps) {
                             setAgentMenuOpen(false);
                           }}
                         >
+                          <Zap size={14} className="shrink-0 text-gray-9" />
                           <span>{t("composer.default_agent")}</span>
+                          <span className="flex-1" />
                           {!props.selectedAgent ? <Check size={14} className="text-gray-10" /> : null}
                         </button>
                         {agents.map((agent, index) => {
                           const active = props.selectedAgent === agent.name;
+                          const Icon = agentIcon(agent.name);
                           return (
                             <button
                               key={agent.name}
@@ -1344,7 +1470,7 @@ export function ReactSessionComposer(props: ComposerProps) {
                                 agentItemRefs.current[index + 1] = element;
                               }}
                               type="button"
-                              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-colors ${active ? "bg-gray-2 text-gray-12" : "text-gray-11 hover:bg-gray-2/70"}`}
+                              className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs transition-colors ${active ? "bg-gray-2 text-gray-12" : "text-gray-11 hover:bg-gray-2/70"}`}
                               onMouseEnter={() => setAgentMenuIndex(index + 1)}
                               onMouseDown={(event) => {
                                 event.preventDefault();
@@ -1352,8 +1478,10 @@ export function ReactSessionComposer(props: ComposerProps) {
                                 setAgentMenuOpen(false);
                               }}
                             >
+                              <Icon size={14} className="shrink-0 text-gray-9" />
                               <span className="truncate">{agent.name.charAt(0).toUpperCase() + agent.name.slice(1)}</span>
-                              {active ? <Check size={14} className="text-gray-10" /> : null}
+                              <span className="flex-1" />
+                              {active ? <Check size={14} className="text-gray-10 shrink-0" /> : null}
                             </button>
                           );
                         })}
@@ -1363,15 +1491,129 @@ export function ReactSessionComposer(props: ComposerProps) {
                 </div>
 
                 {/* Model selector */}
-                <button
-                  type="button"
-                  className="flex min-w-0 items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-[#000000] transition-colors hover:bg-gray-3 hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12"
-                  onClick={props.onModelClick}
-                  disabled={props.busy}
-                >
-                  <span className="truncate leading-tight">{props.modelLabel}</span>
-                  <ChevronDown size={13} className="shrink-0 ml-0.5" />
-                </button>
+                <div ref={modelMenuRef} className="relative">
+                  <button
+                    type="button"
+                    className="flex min-w-0 items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-[#000000] transition-colors hover:bg-gray-3 hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12"
+                    onClick={() => {
+                      const opening = !modelMenuOpen;
+                      setModelMenuOpen(opening);
+                      if (opening) setModelOptionsLoading(true);
+                    }}
+                    disabled={props.busy}
+                    aria-expanded={modelMenuOpen}
+                    title={t("model_picker.chat_model_title")}
+                  >
+                    <span className="leading-tight">{props.modelLabel}</span>
+                    <ChevronDown size={13} className="shrink-0 ml-0.5" />
+                  </button>
+                  {modelMenuOpen ? (
+                    <div className="absolute left-0 bottom-full z-40 mb-2 w-72 overflow-hidden rounded-[18px] border border-dls-border bg-dls-surface shadow-[var(--dls-shell-shadow)]">
+                      <div className="border-b border-dls-border px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-10">
+                        {t("model_picker.chat_model_title")}
+                      </div>
+                      <div className="border-b border-dls-border px-3 py-2">
+                        <div className="flex items-center gap-2 rounded-lg bg-gray-2 px-3 py-1.5">
+                          <Search size={13} className="shrink-0 text-gray-9" />
+                          <input
+                            ref={modelSearchInputRef}
+                            type="text"
+                            className="min-w-0 flex-1 bg-transparent text-[12px] text-gray-12 placeholder-gray-9 outline-none"
+                            placeholder={t("settings.search_models")}
+                            value={modelSearchQuery}
+                            onChange={(event) => {
+                              setModelSearchQuery(event.target.value);
+                              setModelMenuIndex(0);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Escape") {
+                                event.stopPropagation();
+                                if (modelSearchQuery) {
+                                  setModelSearchQuery("");
+                                } else {
+                                  setModelMenuOpen(false);
+                                }
+                              }
+                              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                                event.preventDefault();
+                                event.stopPropagation();
+                              }
+                            }}
+                          />
+                          {modelSearchQuery ? (
+                            <button
+                              type="button"
+                              className="shrink-0 rounded-full p-0.5 text-gray-9 hover:bg-gray-4 hover:text-gray-12"
+                              onClick={() => {
+                                setModelSearchQuery("");
+                                modelSearchInputRef.current?.focus();
+                              }}
+                            >
+                              <X size={12} />
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                      <div
+                        className="space-y-1 p-2 max-h-64 overflow-y-auto"
+                        onMouseDown={(event) => event.preventDefault()}
+                      >
+                        {(() => {
+                          const query = modelSearchQuery.trim().toLowerCase();
+                          const connectedModels = modelOptionsState.filter((opt) => opt.isConnected);
+                          const filtered = query
+                            ? connectedModels.filter(
+                                (opt) =>
+                                  opt.title.toLowerCase().includes(query) ||
+                                  opt.providerID.toLowerCase().includes(query) ||
+                                  opt.modelID.toLowerCase().includes(query),
+                              )
+                            : connectedModels;
+                          return filtered.length > 0 ? (
+                            filtered.map((opt, index) => {
+                              const active =
+                                props.currentModel?.providerID === opt.providerID &&
+                                props.currentModel?.modelID === opt.modelID;
+                              return (
+                                <button
+                                  key={`${opt.providerID}/${opt.modelID}`}
+                                  ref={(element) => {
+                                    modelItemRefs.current[index] = element;
+                                  }}
+                                  type="button"
+                                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-colors ${active ? "bg-gray-2 text-gray-12" : "text-gray-11 hover:bg-gray-2/70"}`}
+                                  onMouseEnter={() => setModelMenuIndex(index)}
+                                  onMouseDown={(event) => {
+                                    event.preventDefault();
+                                    props.onSelectModel?.({ providerID: opt.providerID, modelID: opt.modelID });
+                                    setModelMenuOpen(false);
+                                  }}
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <div className="truncate font-medium">{opt.title}</div>
+                                    <div className="truncate text-[10px] text-gray-10">{opt.providerID}</div>
+                                  </div>
+                                  {active ? <Check size={14} className="text-gray-10 shrink-0" /> : null}
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <div className="flex items-center justify-center gap-2 px-3 py-4 text-xs text-gray-10">
+                              {modelOptionsLoading ? (
+                                <>
+                                  <Loader2 size={14} className="animate-spin" />
+                                  {t("composer.loading_commands")}
+                                </>
+                              ) : (
+                                t("model_picker.no_results")
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
 
                 {/* Behavior variant */}
                 {props.modelBehaviorOptions?.length ? (
@@ -1395,7 +1637,7 @@ export function ReactSessionComposer(props: ComposerProps) {
                       <ChevronDown size={13} className="shrink-0 ml-0.5" />
                     </button>
                     {variantMenuOpen ? (
-                      <div className="absolute left-0 bottom-full z-40 mb-2 w-48 overflow-hidden rounded-[18px] border border-dls-border bg-dls-surface shadow-[var(--dls-shell-shadow)]">
+                      <div className="absolute left-0 bottom-full z-40 mb-2 w-40 overflow-hidden rounded-[18px] border border-dls-border bg-dls-surface shadow-[var(--dls-shell-shadow)]">
                         <div className="border-b border-dls-border px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-10">
                           {t("composer.behavior_label")}
                         </div>

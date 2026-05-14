@@ -26,6 +26,8 @@ import type {
   ComposerPart,
   McpServerEntry,
   McpStatusMap,
+  ModelOption,
+  ModelRef,
   SkillCard,
 } from "../../../../app/types";
 import { createCheckpointClient, type CheckpointDiffFile } from "../../../../app/lib/checkpoints";
@@ -137,6 +139,10 @@ export type SessionSurfaceProps = {
   recentFiles: string[];
   searchFiles: (query: string) => Promise<string[]>;
   onChangeModel?: (model: { providerID: string; modelID: string }) => void;
+  /** Model dropdown props – same pattern as the agent selector. */
+  listModels?: () => Promise<ModelOption[]>;
+  modelOptions?: ModelOption[];
+  currentModel?: ModelRef | null;
   onUploadInboxFiles?: ((files: File[], options?: { notify?: boolean }) => void | Promise<unknown>) | null;
   onOpenSettingsSection?: ((section: "commands" | "skills" | "mcps" | "plugins") => void) | undefined;
   /** Right column (workspace files / context): visibility is controlled only via SessionPage toggle, not breakpoints. */
@@ -1673,6 +1679,10 @@ export function SessionSurface(props: SessionSurfaceProps) {
                         statusLabel=""
                         modelLabel={props.modelLabel}
                         onModelClick={props.onModelClick}
+                        listModels={props.listModels}
+                        modelOptions={props.modelOptions}
+                        currentModel={props.currentModel}
+                        onSelectModel={props.onChangeModel}
                         attachments={editAttachments}
                         onAttachFiles={handleEditAttachFiles}
                         onRemoveAttachment={handleEditRemoveAttachment}
@@ -1768,6 +1778,10 @@ export function SessionSurface(props: SessionSurfaceProps) {
         statusLabel={statusLabel(snapshot ?? undefined, chatStreaming)}
         modelLabel={props.modelLabel}
         onModelClick={props.onModelClick}
+        listModels={props.listModels}
+        modelOptions={props.modelOptions}
+        currentModel={props.currentModel}
+        onSelectModel={props.onChangeModel}
         attachments={attachments}
         onAttachFiles={handleAttachFiles}
         onRemoveAttachment={handleRemoveAttachment}

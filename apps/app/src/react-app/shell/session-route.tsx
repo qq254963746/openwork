@@ -1296,10 +1296,11 @@ export function SessionRoute() {
     return { modelVariantLabel: summary.label, modelBehaviorOptions: summary.options };
   }, [effectiveModel, local.prefs.defaultModel, providerCatalog, sessionVariantOverrideState]);
 
-  // Load the picker list lazily the first time the modal opens. Uses the
-  // cached catalog when available, otherwise re-fetches.
+  // Load the picker list lazily the first time the modal opens OR the model
+  // dropdown opens. Uses the cached catalog when available, otherwise re-fetches.
+  const [modelsLoadId, setModelsLoadId] = useState(0);
   useEffect(() => {
-    if (!modelPickerOpen || !opencodeClient) return;
+    if ((!modelPickerOpen && modelsLoadId === 0) || !opencodeClient) return;
     let cancelled = false;
     void (async () => {
       let caps: AiWorkServerCapabilities | null = null;
@@ -1367,6 +1368,7 @@ export function SessionRoute() {
   }, [
     client,
     modelPickerOpen,
+    modelsLoadId,
     opencodeClient,
     selectedWorkspaceId,
     selectedWorkspaceRoot,
@@ -1380,6 +1382,15 @@ export function SessionRoute() {
     if (!opencodeClient) return [];
     return listCommands(opencodeClient, selectedWorkspaceRoot || undefined);
   }, [engineReloadVersion, opencodeClient, selectedWorkspaceRoot]);
+
+  const listModels = useCallback(async (): Promise<ModelOption[]> => {
+    if (modelOptions.length > 0) return modelOptions;
+    setModelsLoadId((n) => n + 1);
+    // The useEffect above will load and populate modelOptions. We return the
+    // current value immediately; the caller will re-invoke via its own effect
+    // when the model menu opens again.
+    return modelOptions;
+  }, [modelOptions]);
 
   const handleOpenSettings = useCallback((route = "/settings/general", workspaceId = sidebarActiveWorkspaceId) => {
     const sessionId = workspaceId === sidebarActiveWorkspaceId ? selectedSessionId : null;
@@ -1441,6 +1452,9 @@ export function SessionRoute() {
         setModelPickerQuery("");
         setModelPickerOpen(true);
       },
+      listModels,
+      modelOptions,
+      currentModel: effectiveModel,
       onOpenSettingsSection: (section: "commands" | "skills" | "mcps" | "plugins") => {
         handleOpenSettings(section === "skills" ? "/settings/skills" : section === "mcps" ? "/settings/extensions/mcp" : section === "plugins" ? "/settings/extensions/plugins" : "/settings/general");
       },
@@ -1638,8 +1652,10 @@ export function SessionRoute() {
     handleOpenSettings,
     local,
     listSlashCommands,
+    listModels,
     modelBehaviorOptions,
     modelLabel,
+    modelOptions,
     modelVariantLabel,
     navigate,
     opencodeBaseUrl,
