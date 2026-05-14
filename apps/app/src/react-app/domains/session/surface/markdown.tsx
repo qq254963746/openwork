@@ -45,12 +45,12 @@ function MarkdownCodeBlock(props: { className?: string; children: React.ReactNod
   const lang = /language-([\w-]+)/.exec(props.className ?? "")?.[1] ?? "";
 
   return (
-    <div className="my-4 overflow-hidden rounded-[18px] border border-dls-border/70 bg-[rgb(249,250,251)]">
+    <div className="my-4 overflow-hidden rounded-[18px] border border-dls-border/70 bg-[rgb(249,250,251)] dark:bg-[#161b22]">
       <div className="flex items-center justify-between gap-3 border-b border-dls-border/70 bg-dls-hover px-3 py-1.5">
         <span className="min-w-0 truncate font-mono text-[11px] font-semibold text-gray-12">{lang}</span>
         <button
           type="button"
-          className="shrink-0 rounded-full border border-dls-border bg-[rgb(249,250,251)] px-3 py-1 text-[11px] font-medium text-dls-text transition-colors hover:bg-dls-hover"
+          className="shrink-0 rounded-full border border-dls-border bg-[rgb(249,250,251)] dark:bg-[#161b22] px-3 py-1 text-[11px] font-medium text-dls-text transition-colors hover:bg-dls-hover"
           onClick={async () => {
             await navigator.clipboard.writeText(text);
             setCopied(true);
@@ -89,7 +89,7 @@ function MarkdownCode(props: { className?: string; children?: React.ReactNode })
 
   return (
     <pre
-      className={`my-4 overflow-x-auto rounded-[18px] border border-dls-border/70 bg-[rgb(249,250,251)] ${MARKDOWN_FENCED_CODE_INNER}`}
+      className={`my-4 overflow-x-auto rounded-[18px] border border-dls-border/70 bg-[rgb(249,250,251)] dark:bg-[#161b22] ${MARKDOWN_FENCED_CODE_INNER}`}
     >
       <code className={className} style={{ backgroundColor: "transparent" }}>
         {children}
@@ -290,9 +290,9 @@ const markdownClassName = `markdown-content max-w-none text-gray-12
   [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6
   [&_li]:my-1
   [&_.katex-display]:my-4 [&_.katex-display]:overflow-x-auto
-  [&_pre]:!bg-[rgb(249,250,251)]
+  [&_pre]:!bg-[rgb(249,250,251)] dark:[&_pre]:!bg-[#161b22]
   [&_pre_code]:!bg-transparent
-  [&_.hljs]:!bg-[rgb(249,250,251)]
+  [&_.hljs]:!bg-[rgb(249,250,251)] dark:[&_.hljs]:!bg-[#161b22]
 `.trim();
 
 function MarkdownBlockInner(props: {
