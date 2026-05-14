@@ -2006,7 +2006,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
           data-message-role="user"
           data-message-id={block.messageId}
           data-editing="true"
-          style={{ contain: "layout style paint", ...blockPerfStyle(blockIndex) }}
+          style={{ contain: "layout style", ...blockPerfStyle(blockIndex) }}
         >
           <div className="w-full max-w-[800px] mx-auto">
             {props.renderInlineEditComposer({ messageId: block.messageId })}
