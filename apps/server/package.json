@@ -1,6 +1,6 @@
 {
   "name": "aiwork-server",
-  "version": "0.13.44",
+  "version": "0.13.45",
   "description": "Filesystem-backed API for AiWork remote clients",
   "type": "module",
   "bin": {

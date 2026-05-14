@@ -150,8 +150,8 @@ const diffTheme = EditorView.theme(
 // CSS variables injected once into <head>
 const DIFF_CSS_VARS = `
 :root {
-  --diff-added-bg:   #d3e2b2;
-  --diff-removed-bg: #f9cccc;
+  --diff-added-bg:rgba(211, 226, 178, 0.3);
+  --diff-removed-bg:rgba(249, 204, 204, 0.3);
   --diff-hunk-bg:    rgba(88,166,255,0.10);
   --diff-header-bg:  transparent;
 }
