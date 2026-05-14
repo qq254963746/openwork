@@ -1106,7 +1106,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
           </button>
 
           {previewMenuOpen ? (
-            <div className="absolute right-0 top-[calc(100%+4px)] z-30 w-52 rounded-[14px] border border-dls-border bg-dls-surface p-1.5 shadow-[var(--dls-shell-shadow)]">
+            <div className="absolute right-0 top-[calc(100%+4px)] z-30 w-max min-w-[160px] rounded-[14px] border border-dls-border bg-dls-surface p-1.5 shadow-[var(--dls-shell-shadow)]">
               {/* Refresh */}
               <button
                 type="button"
