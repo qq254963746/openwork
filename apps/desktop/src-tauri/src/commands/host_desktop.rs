@@ -39,6 +39,8 @@ pub fn open_app_log_window(app: AppHandle) -> Result<(), String> {
         .title("AiWork — Logs")
         .inner_size(980.0, 760.0)
         .min_inner_size(520.0, 380.0)
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .hidden_title(true)
         .build()
         .map_err(|e| e.to_string())?;
 

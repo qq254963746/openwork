@@ -296,13 +296,18 @@ export function AppLogWindowRoute() {
 
   return (
     <div className="flex h-[100dvh] min-h-0 flex-col bg-[radial-gradient(circle_at_top,rgba(74,111,255,0.12),transparent_42%),var(--app-bg,#0b1020)] text-dls-text">
-      <header className="flex shrink-0 flex-col gap-3 border-b border-dls-border bg-dls-surface px-4 py-3 md:px-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2">
+      <header className="flex shrink-0 flex-col gap-3 border-b border-dls-border bg-dls-surface">
+        {/* Drag region — top bar (34px), spans full width; buttons excluded via data-tauri-drag-region="false" */}
+        <div
+          className="flex items-center justify-between gap-3 px-4 md:px-5"
+          style={{ paddingLeft: "80px", height: "34px" }}
+          data-tauri-drag-region
+        >
+          <div className="flex min-w-0 items-center gap-2" data-tauri-drag-region="false">
             <ScrollText className="h-5 w-5 shrink-0 text-dls-secondary" aria-hidden />
             <h1 className="truncate text-base font-semibold text-dls-text">{t("session.app_log_title")}</h1>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2" data-tauri-drag-region="false">
             <label className="flex cursor-pointer items-center gap-2 text-xs text-dls-secondary">
               <input
                 type="checkbox"
@@ -340,7 +345,7 @@ export function AppLogWindowRoute() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={t("session.app_log_sources_label")}>
+        <div className="flex flex-wrap gap-1.5 px-4 pt-1 pb-3 md:px-5" role="tablist" aria-label={t("session.app_log_sources_label")}>
           <button
             type="button"
             role="tab"

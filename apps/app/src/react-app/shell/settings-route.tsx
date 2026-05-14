@@ -2,6 +2,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { SUGGESTED_PLUGINS } from "../../app/constants";
+import {
+  type ThemeMode,
+  getInitialThemeMode,
+  persistThemeMode,
+  applyThemeMode,
+} from "../../app/theme";
 import type { ReadGlobalOpencodeConfigInput } from "../../app/lib/global-opencode-disabled-providers";
 import { createClient, unwrap } from "../../app/lib/opencode";
 import {
@@ -195,9 +201,8 @@ function folderNameFromPath(path: string) {
   return parts[parts.length - 1] ?? "workspace";
 }
 
-type PersistedThemeMode = "light" | "dark" | "system";
+type PersistedThemeMode = ThemeMode;
 
-const SETTINGS_THEME_KEY = "aiwork.react.settings.theme-mode";
 function workspaceLabel(workspace: AiWorkWorkspaceInfo) {
   return (
     workspace.displayName?.trim() ||
@@ -312,20 +317,7 @@ function settingsPathForRoute(route: ReturnType<typeof parseSettingsPath>) {
 }
 
 function readStoredThemeMode(): PersistedThemeMode {
-  if (typeof window === "undefined") return "system";
-  try {
-    const raw = window.localStorage.getItem(SETTINGS_THEME_KEY);
-    return raw === "light" || raw === "dark" || raw === "system" ? raw : "system";
-  } catch {
-    return "system";
-  }
-}
-
-function applyThemeMode(mode: PersistedThemeMode) {
-  if (typeof document === "undefined" || typeof window === "undefined") return;
-  const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
-  const resolved = mode === "system" ? (prefersDark ? "dark" : "light") : mode;
-  document.documentElement.dataset.theme = resolved;
+  return getInitialThemeMode();
 }
 
 export function SettingsRoute() {
@@ -774,9 +766,7 @@ export function SettingsRoute() {
 
   useEffect(() => {
     applyThemeMode(themeMode);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(SETTINGS_THEME_KEY, themeMode);
-    }
+    persistThemeMode(themeMode);
   }, [themeMode]);
 
   const { markRouteReady: markBootRouteReady } = useBootState();
