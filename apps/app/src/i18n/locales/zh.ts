@@ -569,6 +569,8 @@ export default {
   "session.workspace_panel_preview_error": "无法预览该文件。",
   "session.workspace_panel_preview_unsupported": "该文件类型无法预览",
   "session.workspace_panel_open_with_system": "系统应用打开",
+  "session.workspace_panel_copy_content": "复制文件内容",
+  "session.workspace_panel_copy_success": "复制成功",
   "session.workspace_panel_view_source": "查看源码",
   "session.workspace_panel_view_preview": "查看预览",
   "session.workspace_panel_truncated": "为性能已截断列表。",
@@ -1001,6 +1003,8 @@ export default {
   "workspace_list.workspace_fallback": "工作区",
   "workspace_list.workspace_options": "工作区选项",
   "workspace_list.drag_reorder": "拖动排序",
+  "workspace_list.move_up": "上移",
+  "workspace_list.move_down": "下移",
   "workspace_list.expand_workspace": "展开工作区",
   "workspace_list.collapse_workspace": "收起工作区",
 } as const;

@@ -6,6 +6,7 @@ import type { UIMessage } from "ai";
 import {
   ChevronRight,
   Code,
+  Copy,
   ExternalLink,
   Eye,
   FileQuestion,
@@ -537,6 +538,7 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
   const [previewMode, setPreviewMode] = useState<"preview" | "source">("preview");
   const [previewMenuOpen, setPreviewMenuOpen] = useState(false);
   const previewMenuRef = useRef<HTMLDivElement | null>(null);
+  const [copyContentSuccess, setCopyContentSuccess] = useState(false);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [panelWidth, setPanelWidth] = useState(readStoredWorkspacePanelWidth);
   const panelWidthRef = useRef(panelWidth);
@@ -1105,6 +1107,13 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
             <MoreHorizontal size={16} strokeWidth={1.75} aria-hidden />
           </button>
 
+          {/* Copy success tooltip — shown after menu closes */}
+          {copyContentSuccess ? (
+            <div className="pointer-events-none absolute right-0 top-full z-50 mt-1.5 whitespace-nowrap rounded-md bg-gray-12 px-2.5 py-1 text-[12px] text-gray-1 shadow-sm dark:bg-gray-1 dark:text-gray-12">
+              {t("session.workspace_panel_copy_success")}
+            </div>
+          ) : null}
+
           {previewMenuOpen ? (
             <div className="absolute right-0 top-[calc(100%+4px)] z-30 w-max min-w-[160px] rounded-[14px] border border-dls-border bg-dls-surface p-1.5 shadow-[var(--dls-shell-shadow)]">
               {/* Refresh */}
@@ -1154,6 +1163,24 @@ export const SessionWorkspacePanel = forwardRef<SessionWorkspacePanelHandle, Ses
                 >
                   <ExternalLink size={14} strokeWidth={1.75} className="shrink-0 text-dls-secondary" aria-hidden />
                   {t("session.workspace_panel_open_with_system")}
+                </button>
+              ) : null}
+
+              {/* Copy file content */}
+              {previewQuery.data?.content ? (
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-[13px] text-dls-text transition-colors hover:bg-dls-hover"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(previewQuery.data?.content ?? "").then(() => {
+                      setCopyContentSuccess(true);
+                      window.setTimeout(() => setCopyContentSuccess(false), 1500);
+                    });
+                    setPreviewMenuOpen(false);
+                  }}
+                >
+                  <Copy size={14} strokeWidth={1.75} className="shrink-0 text-dls-secondary" aria-hidden />
+                  {t("session.workspace_panel_copy_content")}
                 </button>
               ) : null}
             </div>

@@ -2,12 +2,17 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   ChevronDown,
   ChevronRight,
+  FolderOpen,
   Loader2,
   MoreHorizontal,
   PanelLeftClose,
+  Pencil,
   SquarePen,
+  Trash2,
 } from "lucide-react";
 
 import { getDisplaySessionTitle } from "../../../../app/lib/session-title";
@@ -237,9 +242,6 @@ export function WorkspaceSessionList(props: Props) {
   const [expandedSessionIds, setExpandedSessionIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [dropTargetWorkspaceIndex, setDropTargetWorkspaceIndex] = useState<number | null>(null);
-  /** After HTML5 drag ends, the browser fires a click — skip expand toggle for that row. */
-  const suppressWorkspaceExpandClickIndexRef = useRef<number | null>(null);
   const workspaceMenuRef = useRef<HTMLDivElement | null>(null);
   const sessionMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -522,12 +524,13 @@ export function WorkspaceSessionList(props: Props) {
             {props.onOpenRenameSession ? (
               <button
                 type="button"
-                className="w-full rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
                 onClick={() => {
                   setSessionMenuForSessionId(null);
                   props.onOpenRenameSession?.(workspaceId, session.id);
                 }}
               >
+                <Pencil size={14} className="shrink-0" />
                 {t("workspace_list.rename_session")}
               </button>
             ) : null}
@@ -535,12 +538,13 @@ export function WorkspaceSessionList(props: Props) {
             {props.onOpenDeleteSession ? (
               <button
                 type="button"
-                className="w-full rounded-xl px-3 py-2 text-left text-sm text-red-11 transition-colors hover:bg-red-1/40"
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-red-11 transition-colors hover:bg-red-1/40"
                 onClick={() => {
                   setSessionMenuForSessionId(null);
                   props.onOpenDeleteSession?.(workspaceId, session.id);
                 }}
               >
+                <Trash2 size={14} className="shrink-0" />
                 {t("workspace_list.delete_session")}
               </button>
             ) : null}
@@ -611,8 +615,8 @@ export function WorkspaceSessionList(props: Props) {
       <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
         <div className="space-y-1 pb-2">
           {props.workspaceSessionGroups.map((group, workspaceIndex) => {
-            const canReorder =
-              Boolean(props.onReorderWorkspaces) && props.workspaceSessionGroups.length > 1;
+            const canMoveUp = Boolean(props.onReorderWorkspaces) && workspaceIndex > 0;
+            const canMoveDown = Boolean(props.onReorderWorkspaces) && workspaceIndex < props.workspaceSessionGroups.length - 1;
             const tree = buildSessionTreeState(group.sessions);
             const forcedExpandedSessionIds = new Set(
               props.selectedSessionId
@@ -658,67 +662,17 @@ export function WorkspaceSessionList(props: Props) {
             return (
               <div
                 key={workspace.id}
-                className={`space-y-1 ${
-                  dropTargetWorkspaceIndex === workspaceIndex ? "ring-1 ring-inset ring-gray-8/45" : ""
-                }`}
-                onDragOver={(event) => {
-                  if (!props.onReorderWorkspaces || props.workspaceSessionGroups.length < 2) return;
-                  event.preventDefault();
-                  event.dataTransfer.dropEffect = "move";
-                  setDropTargetWorkspaceIndex(workspaceIndex);
-                }}
-                onDragLeave={(event) => {
-                  if (!props.onReorderWorkspaces) return;
-                  const related = event.relatedTarget as Node | null;
-                  if (related && event.currentTarget.contains(related)) return;
-                  setDropTargetWorkspaceIndex(null);
-                }}
-                onDrop={(event) => {
-                  if (!props.onReorderWorkspaces) return;
-                  event.preventDefault();
-                  const raw = event.dataTransfer.getData("application/x-aiwork-workspace-index");
-                  const fromIndex = Number.parseInt(raw, 10);
-                  setDropTargetWorkspaceIndex(null);
-                  if (!Number.isFinite(fromIndex)) return;
-                  const ids = props.workspaceSessionGroups.map((g) => g.workspace.id);
-                  if (
-                    fromIndex === workspaceIndex ||
-                    fromIndex < 0 ||
-                    fromIndex >= ids.length ||
-                    workspaceIndex < 0 ||
-                    workspaceIndex >= ids.length
-                  ) {
-                    return;
-                  }
-                  const next = reorderWorkspaceIds(ids, fromIndex, workspaceIndex);
-                  void Promise.resolve(props.onReorderWorkspaces(next));
-                }}
+                className="space-y-1"
               >
                 <div className="relative group px-0.5">
                   <div
-                    role="button"
-                    tabIndex={0}
+                    role="group"
                     aria-expanded={expandedWorkspaceIds.has(workspace.id)}
                     className={`flex w-full min-w-0 items-center justify-between pl-[3px] pr-3 py-2 text-left text-[13px] transition-colors ${
                       props.selectedWorkspaceId === workspace.id
                         ? "bg-gray-2/70 dark:bg-gray-3"
                         : ""
                     } ${isConnecting ? "opacity-75" : ""}`}
-                    onClick={(event) => {
-                      const target = event.target as HTMLElement | null;
-                      if (target?.closest("button")) return;
-                      if (suppressWorkspaceExpandClickIndexRef.current === workspaceIndex) {
-                        suppressWorkspaceExpandClickIndexRef.current = null;
-                        return;
-                      }
-                      toggleWorkspaceExpanded(workspace.id);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key !== "Enter" && event.key !== " ") return;
-                      if (event.nativeEvent.isComposing || event.keyCode === 229) return;
-                      event.preventDefault();
-                      toggleWorkspaceExpanded(workspace.id);
-                    }}
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-0.5 py-0 text-left">
                       <button
@@ -741,27 +695,7 @@ export function WorkspaceSessionList(props: Props) {
                           <ChevronRight size={12} />
                         )}
                       </button>
-                      <div
-                        draggable={canReorder}
-                        className={`min-w-0 flex-1 ${
-                          canReorder ? "cursor-grab active:cursor-grabbing" : ""
-                        }`}
-                        title={canReorder ? t("workspace_list.drag_reorder") : undefined}
-                        aria-label={canReorder ? t("workspace_list.drag_reorder") : undefined}
-                        onDragStart={(event) => {
-                          if (!canReorder) return;
-                          event.stopPropagation();
-                          event.dataTransfer.effectAllowed = "move";
-                          event.dataTransfer.setData(
-                            "application/x-aiwork-workspace-index",
-                            String(workspaceIndex),
-                          );
-                        }}
-                        onDragEnd={() => {
-                          suppressWorkspaceExpandClickIndexRef.current = workspaceIndex;
-                          setDropTargetWorkspaceIndex(null);
-                        }}
-                      >
+                      <div className="min-w-0 flex-1">
                         <div className="min-w-0 truncate text-[12px] font-normal text-[#00000059] transition-colors group-hover:text-[#000000] dark:text-gray-11 dark:group-hover:text-gray-12">
                           {workspaceLabel(workspace)}
                         </div>
@@ -821,32 +755,65 @@ export function WorkspaceSessionList(props: Props) {
                     >
                       <button
                         type="button"
-                        className="w-full rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
                         onClick={() => {
                           props.onOpenRenameWorkspace(workspace.id);
                           setWorkspaceMenuId(null);
                         }}
                       >
+                        <Pencil size={14} className="shrink-0" />
                         {t("workspace_list.edit_name")}
                       </button>
                       <button
                         type="button"
-                        className="w-full rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
                         onClick={() => {
                           props.onRevealWorkspace(workspace.id);
                           setWorkspaceMenuId(null);
                         }}
                       >
+                        <FolderOpen size={14} className="shrink-0" />
                         {revealLabel}
                       </button>
+                      {canMoveUp ? (
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
+                          onClick={() => {
+                            const ids = props.workspaceSessionGroups.map((g) => g.workspace.id);
+                            const next = reorderWorkspaceIds(ids, workspaceIndex, workspaceIndex - 1);
+                            void Promise.resolve(props.onReorderWorkspaces!(next));
+                            setWorkspaceMenuId(null);
+                          }}
+                        >
+                          <ArrowUp size={14} className="shrink-0" />
+                          {t("workspace_list.move_up")}
+                        </button>
+                      ) : null}
+                      {canMoveDown ? (
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-gray-11 transition-colors hover:bg-gray-2"
+                          onClick={() => {
+                            const ids = props.workspaceSessionGroups.map((g) => g.workspace.id);
+                            const next = reorderWorkspaceIds(ids, workspaceIndex, workspaceIndex + 1);
+                            void Promise.resolve(props.onReorderWorkspaces!(next));
+                            setWorkspaceMenuId(null);
+                          }}
+                        >
+                          <ArrowDown size={14} className="shrink-0" />
+                          {t("workspace_list.move_down")}
+                        </button>
+                      ) : null}
                       <button
                         type="button"
-                        className="w-full rounded-xl px-3 py-2 text-left text-sm text-red-11 transition-colors hover:bg-red-1/40"
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm text-red-11 transition-colors hover:bg-red-1/40"
                         onClick={() => {
                           props.onForgetWorkspace(workspace.id);
                           setWorkspaceMenuId(null);
                         }}
                       >
+                        <Trash2 size={14} className="shrink-0" />
                         {t("workspace_list.remove_workspace")}
                       </button>
                     </div>

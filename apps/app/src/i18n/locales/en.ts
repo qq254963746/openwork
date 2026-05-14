@@ -600,6 +600,8 @@ export default {
   "session.workspace_panel_preview_error": "Could not preview this file.",
   "session.workspace_panel_preview_unsupported": "This file type cannot be previewed.",
   "session.workspace_panel_open_with_system": "Open with system app",
+  "session.workspace_panel_copy_content": "Copy file content",
+  "session.workspace_panel_copy_success": "Copied!",
   "session.workspace_panel_view_source": "View source",
   "session.workspace_panel_view_preview": "View preview",
   "session.workspace_panel_truncated": "Listing truncated for performance.",
@@ -1079,6 +1081,8 @@ export default {
   "workspace_list.workspace_fallback": "Workspace",
   "workspace_list.workspace_options": "Workspace options",
   "workspace_list.drag_reorder": "Drag to reorder workspaces",
+  "workspace_list.move_up": "Move up",
+  "workspace_list.move_down": "Move down",
   "workspace_list.expand_workspace": "Expand workspace",
   "workspace_list.collapse_workspace": "Collapse workspace",
 } as const;
