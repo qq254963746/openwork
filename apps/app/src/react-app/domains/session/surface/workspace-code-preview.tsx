@@ -113,6 +113,7 @@ const workspaceCodeTheme = EditorView.theme(
     ".cm-editor": { height: "100%" },
     ".cm-scroller": {
       overflow: "auto",
+      overflowX: "auto",
       fontFamily:
         'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
       lineHeight: "1.55",
@@ -124,12 +125,12 @@ const workspaceCodeTheme = EditorView.theme(
     },
     ".cm-cursor": { display: "none" },
     ".cm-gutters": {
-      backgroundColor: "transparent",
+      backgroundColor: "var(--dls-surface, var(--card))",
       borderRight: "1px solid var(--dls-border, var(--border))",
       color: "var(--dls-text-secondary, var(--muted-foreground))",
     },
     ".cm-lineNumbers .cm-gutterElement": { padding: "0 10px 0 12px", minWidth: "3ch" },
-    ".cm-activeLineGutter": { backgroundColor: "transparent" },
+    ".cm-activeLineGutter": { backgroundColor: "var(--dls-surface, var(--card))" },
   },
   { dark: false },
 );
@@ -139,7 +140,6 @@ function buildExtensions(filePath: string): Extension[] {
     ...languageExtensionsForPath(filePath),
     syntaxHighlighting(defaultHighlightStyle),
     lineNumbers(),
-    EditorView.lineWrapping,
     EditorState.readOnly.of(true),
     EditorView.editable.of(false),
     workspaceCodeTheme,
