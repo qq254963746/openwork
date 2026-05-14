@@ -63,6 +63,8 @@ import {
   statusKey as reactStatusKey,
   transcriptKey as reactTranscriptKey,
   todoKey as reactTodoKey,
+  setSessionRevertBarrier,
+  clearSessionRevertBarrier,
 } from "../sync/session-sync";
 import { SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX } from "../../../../app/types";
 import type { TodoItem } from "../../../../app/types";
@@ -601,6 +603,13 @@ export function SessionSurface(props: SessionSurfaceProps) {
   const [editConfirmOpen, setEditConfirmOpen] = useState(false);
   const [editDiffFiles, setEditDiffFiles] = useState<CheckpointDiffFile[] | null>(null);
   const [editDiffLoading, setEditDiffLoading] = useState(false);
+  /**
+   * The explicit set of messageIDs that have been reverted and must be hidden
+   * from the UI. Using an explicit set rather than a range comparison against
+   * `session.revert.messageID` lets new messages (whose IDs are larger than
+   * the revert point) flow through without being filtered.
+   */
+  const [revertedMessageIds, setRevertedMessageIds] = useState<ReadonlySet<string>>(new Set());
   const composerShellRef = useRef<HTMLDivElement>(null);
   const workspacePanelRef = useRef<SessionWorkspacePanelHandle>(null);
   const pendingWorkspaceRelativePathRef = useRef<string | null>(null);
@@ -692,6 +701,16 @@ export function SessionSurface(props: SessionSurfaceProps) {
     });
     setMentions({});
     setNotice(null);
+    // Reset edit state and the reverted-message filter when switching sessions.
+    setEditingMessageId(null);
+    setEditDraft("");
+    setEditAttachments([]);
+    setEditMentions({});
+    setEditNotice(null);
+    setEditDiffFiles(null);
+    setEditConfirmOpen(false);
+    setEditSubmitting(false);
+    setRevertedMessageIds(new Set());
   }, [props.sessionId]);
 
   useEffect(() => {
@@ -765,10 +784,11 @@ export function SessionSurface(props: SessionSurfaceProps) {
   });
   const liveStatus = statusState ?? snapshot?.status ?? IDLE_STATUS;
   const chatStreaming = sending || liveStatus.type === "busy" || liveStatus.type === "retry";
-  const renderedMessages = useMemo(
-    () => deriveRenderedSessionMessages({ transcriptState, snapshot, includeLiveOnlyMessages: chatStreaming || Boolean(error) }),
-    [chatStreaming, error, snapshot, transcriptState],
-  );
+  const renderedMessages = useMemo(() => {
+    const all = deriveRenderedSessionMessages({ transcriptState, snapshot, includeLiveOnlyMessages: chatStreaming || Boolean(error) });
+    if (revertedMessageIds.size === 0) return all;
+    return all.filter((m) => !revertedMessageIds.has(m.id));
+  }, [chatStreaming, error, snapshot, transcriptState, revertedMessageIds]);
   const assistantReplyMetaById = useMemo(
     () => buildAssistantReplyFooterMetaMap(snapshot, renderedMessages),
     [snapshot, renderedMessages],
@@ -1138,7 +1158,45 @@ export function SessionSurface(props: SessionSurfaceProps) {
       await abortSessionSafe(opencodeClient, props.sessionId);
       await revertSession(opencodeClient, props.sessionId, msgId);
 
-      // Restore files to the state before this message was sent
+      const queryClient = getReactQueryClient();
+      const transcriptKeyForSession = reactTranscriptKey(props.workspaceId, props.sessionId);
+
+      // OpenCode `session.revert` does NOT remove messages from the server-side
+      // transcript — it only marks the revert point. `/session/:id/message`
+      // still returns the entire history. The client must filter at render time.
+      //
+      // We collect the IDs of messages being discarded into a React state set
+      // (renderedMessages will skip any message whose id is in the set). This is
+      // *better* than range-comparing against `revert.messageID`, because newly
+      // sent messages have IDs greater than the revert point and must NOT be
+      // filtered out.
+
+      // 1. Collect every discarded messageID from both transcript and snapshot.
+      const currentTranscript =
+        queryClient.getQueryData<import("ai").UIMessage[]>(transcriptKeyForSession) ?? [];
+      const currentSnapshotData = queryClient.getQueryData<AiWorkSessionSnapshot>(snapshotQueryKey);
+      const discardedIds = new Set<string>();
+      for (const m of currentTranscript) {
+        if (m.id >= msgId) discardedIds.add(m.id);
+      }
+      if (currentSnapshotData) {
+        for (const m of currentSnapshotData.messages) {
+          const id = (m as { info?: { id?: string } }).info?.id ?? "";
+          if (id && id >= msgId) discardedIds.add(id);
+        }
+      }
+
+      // 2. Install SSE barrier so late events for discarded messages are dropped.
+      setSessionRevertBarrier(props.workspaceId, props.sessionId, discardedIds);
+
+      // 3. Make the render layer hide every discarded message id.
+      setRevertedMessageIds(discardedIds);
+
+      // 4. Drop the live transcript cache so it doesn't keep streaming over the
+      //    reverted messages. New messages will re-populate it via SSE.
+      queryClient.setQueryData<import("ai").UIMessage[]>(transcriptKeyForSession, []);
+
+      // Restore files to the state before this message was sent.
       const checkpointClient =
         props.client && props.aiworkToken
           ? createCheckpointClient({ baseUrl: props.client.baseUrl, token: props.aiworkToken })
@@ -1156,7 +1214,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
         }
       }
 
-      // Build and send the edited draft
+      // Build and send the edited draft.
       const editParts: ComposerPart[] = newText
         ? [{ type: "text", text: newText }]
         : [];
@@ -1168,7 +1226,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
         resolvedText: newText,
       };
 
-      // Clean up inline editor state BEFORE calling onSendDraft
+      // Clean up inline editor state BEFORE calling onSendDraft.
       editAttachments.forEach(revokeAttachmentPreview);
       setEditingMessageId(null);
       setEditDraft("");
@@ -1178,9 +1236,19 @@ export function SessionSurface(props: SessionSurfaceProps) {
       setEditDiffFiles(null);
       setError(null);
       setSending(true);
-      setAwaitingAssistantBaseline(renderedMessages.length);
+      setAwaitingAssistantBaseline(0);
 
-      await props.onSendDraft(editDraftObj);
+      try {
+        await props.onSendDraft(editDraftObj);
+      } finally {
+        // The new prompt has been dispatched. The SSE barrier is no longer
+        // needed (the barrier only blocked the *specific* discarded IDs; new
+        // messages have different IDs and are unaffected by it). Keep the
+        // revertedMessageIds set in place — it filters only those discarded IDs
+        // forever, harmlessly, until the session is unmounted or reloaded.
+        clearSessionRevertBarrier(props.workspaceId, props.sessionId);
+      }
+
       setSending(false);
     } catch (err) {
       setEditSubmitting(false);
@@ -1191,7 +1259,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
       setEditSubmitting(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editAttachments, opencodeClient, props, renderedMessages.length]);
+  }, [editAttachments, opencodeClient, props, snapshotQueryKey]);
 
   /**
    * Called when user clicks "Run" on the inline edit composer.

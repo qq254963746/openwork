@@ -617,7 +617,7 @@ export default {
   "session.edit_no_file_changes": "No file changes will be lost.",
   "settings.audit_actor_host": "host",
   "settings.audit_actor_remote": "remote",
-  "settings.api_keys_info": "API keys are stored locally by OpenCode. Environment-backed providers must be changed in the worker environment and then reloaded.",
+  "settings.api_keys_info": "API keys are stored locally. Environment-backed providers must be changed in the worker environment and then reloaded.",
   "settings.appearance_hint": "Match the system or force light/dark mode.",
   "settings.appearance_title": "Appearance",
   "settings.audit_log_title": "Audit log",

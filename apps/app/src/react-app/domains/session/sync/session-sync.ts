@@ -126,6 +126,59 @@ export const permissionKey = (workspaceId: string, sessionId: string) =>
 export const questionKey = (workspaceId: string, sessionId: string) =>
   ["react-session-questions", workspaceId, sessionId] as const;
 
+/**
+ * Per-session "revert barrier": when a session is reverted, the SSE pipe may
+ * still flush late events for messages that are now discarded server-side.
+ * If those events sneak through `upsertMessage` / `upsertPart`, the discarded
+ * conversation re-materializes in the cache.
+ *
+ * The barrier holds an explicit set of messageIDs the caller wants ignored
+ * (typically every messageID at-or-after the revert point at the moment
+ * `revertSession` was called). The barrier auto-expires so it doesn't leak.
+ *
+ * We deliberately track an explicit ID set rather than a "drop everything
+ * with id >= X" threshold, because new user/assistant messages sent after
+ * the revert have IDs that are also > X (ULIDs are time-ordered) and must
+ * NOT be filtered.
+ */
+type RevertBarrier = {
+  blockedIds: Set<string>;
+  expiresAt: number;
+};
+const revertBarriers = new Map<string, RevertBarrier>();
+const REVERT_BARRIER_TTL_MS = 8000;
+
+export function setSessionRevertBarrier(
+  workspaceId: string,
+  sessionId: string,
+  blockedIds: Iterable<string>,
+): void {
+  const key = `${workspaceId}::${sessionId}`;
+  revertBarriers.set(key, {
+    blockedIds: new Set(blockedIds),
+    expiresAt: Date.now() + REVERT_BARRIER_TTL_MS,
+  });
+}
+
+export function clearSessionRevertBarrier(workspaceId: string, sessionId: string): void {
+  revertBarriers.delete(`${workspaceId}::${sessionId}`);
+}
+
+function shouldDropMessageDueToBarrier(
+  workspaceId: string,
+  sessionId: string,
+  messageID: string,
+): boolean {
+  const key = `${workspaceId}::${sessionId}`;
+  const entry = revertBarriers.get(key);
+  if (!entry) return false;
+  if (Date.now() > entry.expiresAt) {
+    revertBarriers.delete(key);
+    return false;
+  }
+  return entry.blockedIds.has(messageID);
+}
+
 function syncKey(input: SyncOptions) {
   return `${input.workspaceId}:${input.baseUrl}:${input.aiworkToken}`;
 }
@@ -533,6 +586,7 @@ function applyEvent(entry: SyncEntry, workspaceId: string, event: OpencodeEvent)
     if (!info?.id || !info.sessionID || (info.role !== "user" && info.role !== "assistant" && info.role !== "system")) {
       return;
     }
+    if (shouldDropMessageDueToBarrier(workspaceId, info.sessionID, info.id)) return;
     const next = { id: info.id, role: info.role, parts: [] } satisfies UIMessage;
     queryClient.setQueryData<UIMessage[]>(transcriptKey(workspaceId, info.sessionID), (current = []) =>
       upsertMessage(current, next),
@@ -544,6 +598,7 @@ function applyEvent(entry: SyncEntry, workspaceId: string, event: OpencodeEvent)
     const props = (event.properties ?? {}) as { part?: Part };
     const part = props.part;
     if (!part?.sessionID || !part.messageID) return;
+    if (shouldDropMessageDueToBarrier(workspaceId, part.sessionID, part.messageID)) return;
     entry.partKinds.set(part.id, part.type);
     const mapped = toUIPart(part);
     if (!mapped) return;
@@ -576,6 +631,7 @@ function applyEvent(entry: SyncEntry, workspaceId: string, event: OpencodeEvent)
       delta?: string;
     };
     if (!props.sessionID || !props.messageID || !props.partID || !props.delta) return;
+    if (shouldDropMessageDueToBarrier(workspaceId, props.sessionID, props.messageID)) return;
     const field = typeof props.field === "string" ? props.field : "text";
     const kind = entry.partKinds.get(props.partID);
     const isReasoningDelta = field === "reasoning" || (field === "text" && kind === "reasoning");
