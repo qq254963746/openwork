@@ -322,6 +322,14 @@ pub fn spawn_aiwork_server(
         .env("AIWORK_TOKEN", token)
         .env("AIWORK_HOST_TOKEN", host_token);
 
+    // Expose Tauri's resolved `app_local_data_dir` so the server can place
+    // local-only data (e.g. session checkpoints / shadow git repos) under it
+    // without the user's workspace ever being touched. This matches the same
+    // path that other Tauri-managed data (e.g. dev XDG layout) lives under.
+    if let Ok(app_local) = app.path().app_local_data_dir() {
+        command = command.env("AIWORK_APP_LOCAL_DATA_DIR", app_local);
+    }
+
     if manage_opencode {
         command = command.env("AIWORK_MANAGE_OPENCODE", "1");
         if let Some(path) = opencode_bin_path {

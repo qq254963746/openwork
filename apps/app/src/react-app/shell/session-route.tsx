@@ -62,6 +62,7 @@ import {
   seedPermissionState,
   questionKey as reactQuestionKey,
   seedQuestionState,
+  transcriptKey as reactTranscriptKey,
 } from "../domains/session/sync/session-sync";
 import { CreateWorkspaceModal } from "../domains/workspace/create-workspace-modal";
 import { RenameWorkspaceModal } from "../domains/workspace/rename-workspace-modal";
@@ -73,6 +74,7 @@ import {
   isGeneratedSessionTitle,
 } from "../../app/lib/session-title";
 import { useBootState } from "./boot-state";
+import { createCheckpointClient } from "../../app/lib/checkpoints";
 import {
   forgetWorkspaceMemory,
   readActiveWorkspaceId,
@@ -1465,6 +1467,35 @@ export function SessionRoute() {
           return;
         }
 
+        // ---------------------------------------------------------------
+        // Snapshot the workdir BEFORE sending so we can later "restore to
+        // this message" / discard subsequent file changes. Storage lives in
+        // the user's Application Support dir, not in their workspace.
+        // ---------------------------------------------------------------
+        const checkpointPlaceholder = `pending:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const checkpointClient =
+          client && token
+            ? createCheckpointClient({ baseUrl: client.baseUrl, token })
+            : null;
+        let userMessageIdsBefore: Set<string> | null = null;
+        if (checkpointClient) {
+          try {
+            await checkpointClient.create({
+              workspaceId: selectedWorkspaceId,
+              sessionId: selectedSessionId,
+              messageID: checkpointPlaceholder,
+              label: "before-message",
+            });
+            const before = (getReactQueryClient().getQueryData(
+              reactTranscriptKey(selectedWorkspaceId, selectedSessionId),
+            ) ?? []) as Array<{ id: string; role?: string }>;
+            userMessageIdsBefore = new Set(before.filter((m) => m.role === "user").map((m) => m.id));
+          } catch (err) {
+            // Checkpointing is best-effort; never block sending.
+            console.warn("[checkpoints] failed to create pre-send checkpoint", err);
+          }
+        }
+
         const parts = await draftToParts(draft, selectedWorkspaceRoot);
         const envRuntimeKey = buildAiWorkEnvRuntimeKey({
           baseUrl: client?.baseUrl ?? null,
@@ -1485,6 +1516,37 @@ export function SessionRoute() {
         });
         if (result.error) {
           throw new Error(serializeSDKError(result.error));
+        }
+
+        // Best-effort: rebind the placeholder messageID once the new user
+        // message shows up in the transcript stream. Poll for up to ~3s.
+        if (checkpointClient && userMessageIdsBefore) {
+          const queryKey = reactTranscriptKey(selectedWorkspaceId, selectedSessionId);
+          const beforeSet = userMessageIdsBefore;
+          void (async () => {
+            const deadline = Date.now() + 3000;
+            while (Date.now() < deadline) {
+              const current = (getReactQueryClient().getQueryData(queryKey) ?? []) as Array<{
+                id: string;
+                role?: string;
+              }>;
+              const newUser = current.find((m) => m.role === "user" && !beforeSet.has(m.id));
+              if (newUser) {
+                try {
+                  await checkpointClient.bindMessage({
+                    workspaceId: selectedWorkspaceId,
+                    sessionId: selectedSessionId,
+                    fromMessageID: checkpointPlaceholder,
+                    toMessageID: newUser.id,
+                  });
+                } catch (err) {
+                  console.warn("[checkpoints] failed to bind real messageID", err);
+                }
+                return;
+              }
+              await new Promise((r) => setTimeout(r, 80));
+            }
+          })();
         }
 
         promoteSessionToFirstInWorkspace(selectedWorkspaceId, selectedSessionId);

@@ -14,7 +14,7 @@ import type { SessionStatus } from "@opencode-ai/sdk/v2/client";
 import type { QuestionInfo } from "@opencode-ai/sdk/v2/client";
 
 import { createClient, unwrap } from "../../../../app/lib/opencode";
-import { abortSessionSafe } from "../../../../app/lib/opencode-session";
+import { abortSessionSafe, revertSession } from "../../../../app/lib/opencode-session";
 import { readWorkspaceCloudImports, type CloudImportedPlugin } from "../../../../app/cloud/import-state";
 import type {
   AiWorkServerClient,
@@ -28,6 +28,8 @@ import type {
   McpStatusMap,
   SkillCard,
 } from "../../../../app/types";
+import { createCheckpointClient, type CheckpointDiffFile } from "../../../../app/lib/checkpoints";
+import { ConfirmModal } from "../../../design-system/modals/confirm-modal";
 import {
   publishInspectorSlice,
   recordInspectorEvent,
@@ -318,6 +320,101 @@ function revokeAttachmentPreview(attachment: { previewUrl?: string | undefined }
   URL.revokeObjectURL(attachment.previewUrl);
 }
 
+/**
+ * Compact diff summary shown in the edit-confirm modal: list of file paths +
+ * line-level diff body collapsed by default.
+ */
+function EditDiffSummary(props: { files: CheckpointDiffFile[] }) {
+  const [expandedPath, setExpandedPath] = useState<string | null>(null);
+  const totalAdditions = props.files.reduce((sum, f) => sum + f.additions, 0);
+  const totalDeletions = props.files.reduce((sum, f) => sum + f.deletions, 0);
+  return (
+    <div className="rounded-lg border border-amber-6/40 bg-amber-3/10 p-3 text-xs text-gray-12">
+      <div className="mb-2 font-medium">
+        {props.files.length === 1
+          ? `1 file changed`
+          : `${props.files.length} files changed`}
+        {(totalAdditions > 0 || totalDeletions > 0) ? (
+          <>
+            {" "}
+            <span className="text-green-11">+{totalAdditions}</span>{" "}
+            <span className="text-red-11">-{totalDeletions}</span>
+          </>
+        ) : null}
+      </div>
+      <div className="max-h-[260px] overflow-y-auto rounded-md border border-amber-6/30 bg-white/40 dark:bg-gray-1/40">
+        {props.files.map((file) => {
+          const isExpanded = expandedPath === file.path;
+          return (
+            <div key={file.path} className="border-b border-amber-6/20 last:border-b-0">
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-amber-3/20"
+                onClick={() => setExpandedPath((cur) => (cur === file.path ? null : file.path))}
+              >
+                <span className={statusBadgeClass(file.status)}>{statusBadgeChar(file.status)}</span>
+                <code className="flex-1 truncate text-[11px] font-mono">{file.path}</code>
+                <span className="shrink-0 text-[10px] text-green-11">+{file.additions}</span>
+                <span className="shrink-0 text-[10px] text-red-11">-{file.deletions}</span>
+              </button>
+              {isExpanded && !file.binary && file.hunks.length > 0 ? (
+                <div className="bg-gray-2/50 px-2 py-1 font-mono text-[11px] leading-tight">
+                  {file.hunks.map((hunk, hi) => (
+                    <div key={hi} className="mb-1">
+                      <div className="text-gray-10">{hunk.header}</div>
+                      {hunk.lines.map((line, li) => (
+                        <div
+                          key={li}
+                          className={
+                            line.kind === "add"
+                              ? "bg-green-3/30 text-green-11"
+                              : line.kind === "del"
+                                ? "bg-red-3/30 text-red-11"
+                                : "text-gray-11"
+                          }
+                        >
+                          {line.kind === "add" ? "+ " : line.kind === "del" ? "- " : "  "}
+                          {line.text}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {isExpanded && file.binary ? (
+                <div className="bg-gray-2/50 px-2 py-1 text-[11px] text-gray-10">Binary file (no preview)</div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function statusBadgeChar(status: CheckpointDiffFile["status"]): string {
+  switch (status) {
+    case "added": return "A";
+    case "deleted": return "D";
+    case "renamed": return "R";
+    case "type-changed": return "T";
+    case "modified": return "M";
+    default: return "?";
+  }
+}
+
+function statusBadgeClass(status: CheckpointDiffFile["status"]): string {
+  const base = "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-bold";
+  switch (status) {
+    case "added": return `${base} bg-green-9 text-white`;
+    case "deleted": return `${base} bg-red-9 text-white`;
+    case "renamed": return `${base} bg-blue-9 text-white`;
+    case "type-changed": return `${base} bg-purple-9 text-white`;
+    case "modified": return `${base} bg-amber-9 text-white`;
+    default: return `${base} bg-gray-7 text-white`;
+  }
+}
+
 function InlineQuestionPrompt(props: {
   active: { id: string; questions: QuestionInfo[] };
   busy: boolean;
@@ -491,6 +588,19 @@ export function SessionSurface(props: SessionSurfaceProps) {
   const [toolMcpStatus, setToolMcpStatus] = useState<string | null>(null);
   const [toolMcpStatuses, setToolMcpStatuses] = useState<McpStatusMap>({});
   const [toolImportedPlugins, setToolImportedPlugins] = useState<CloudImportedPlugin[]>([]);
+
+  // ---------------------------------------------------------------------
+  // Inline edit-message state
+  // ---------------------------------------------------------------------
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [editAttachments, setEditAttachments] = useState<ComposerAttachment[]>([]);
+  const [editMentions, setEditMentions] = useState<Record<string, "agent" | "file">>({});
+  const [editNotice, setEditNotice] = useState<ReactComposerNotice | null>(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editConfirmOpen, setEditConfirmOpen] = useState(false);
+  const [editDiffFiles, setEditDiffFiles] = useState<CheckpointDiffFile[] | null>(null);
+  const [editDiffLoading, setEditDiffLoading] = useState(false);
   const composerShellRef = useRef<HTMLDivElement>(null);
   const workspacePanelRef = useRef<SessionWorkspacePanelHandle>(null);
   const pendingWorkspaceRelativePathRef = useRef<string | null>(null);
@@ -899,6 +1009,264 @@ export function SessionSurface(props: SessionSurfaceProps) {
     setDraft((current) => `${current}${current && !current.endsWith("\n") ? "\n" : ""}${links.join("\n")}`);
   };
 
+  // ---------------------------------------------------------------------
+  // Edit-message handlers
+  // ---------------------------------------------------------------------
+
+  /** Reconstruct ComposerAttachments from an already-sent message's file parts.
+   *  We fetch the blob from the AiWork server and create a File object so the
+   *  inline composer can show and re-attach them.
+   */
+  async function buildAttachmentsFromMessage(message: import("ai").UIMessage): Promise<ComposerAttachment[]> {
+    const fileParts = message.parts.filter((p) => p.type === "file") as Array<{
+      url?: string;
+      filename?: string;
+      mediaType?: string;
+      mime?: string;
+    }>;
+    const results: ComposerAttachment[] = [];
+    for (const part of fileParts) {
+      const url = part.url ?? "";
+      if (!url) continue;
+      const filename = part.filename ?? url.split("/").pop() ?? "file";
+      const mimeType = part.mediaType ?? part.mime ?? "application/octet-stream";
+      try {
+        // Resolve relative API URLs (e.g. /workspace/... → http://server/..)
+        const { resolveWorkspaceApiUrl } = await import("../../../../app/lib/aiwork-server");
+        const resolved = resolveWorkspaceApiUrl(url, props.client.baseUrl);
+        const resp = await fetch(resolved, {
+          headers: props.aiworkToken ? { Authorization: `Bearer ${props.aiworkToken}` } : {},
+        });
+        if (!resp.ok) continue;
+        const blob = await resp.blob();
+        const file = new File([blob], filename, { type: mimeType });
+        const previewUrl = mimeType.startsWith("image/") ? URL.createObjectURL(blob) : undefined;
+        results.push({
+          id: `edit-refill-${Math.random().toString(36).slice(2)}`,
+          name: filename,
+          mimeType,
+          size: file.size,
+          kind: mimeType.startsWith("image/") ? "image" : "file",
+          file,
+          previewUrl,
+        });
+      } catch {
+        // Best-effort — skip files that can't be fetched
+      }
+    }
+    return results;
+  }
+
+  const handleEditMessage = useCallback(async (input: { messageId: string; initialText: string }) => {
+    // Find the full UIMessage in the transcript for attachment re-fill.
+    const transcriptData = getReactQueryClient().getQueryData<import("ai").UIMessage[]>(
+      reactTranscriptKey(props.workspaceId, props.sessionId),
+    ) ?? [];
+    const message = transcriptData.find((m) => m.id === input.messageId);
+
+    setEditingMessageId(input.messageId);
+    setEditDraft(input.initialText);
+    setEditMentions({});
+    setEditNotice(null);
+    setEditDiffFiles(null);
+
+    // Pre-fill attachments (async, best-effort)
+    if (message) {
+      try {
+        const filledAttachments = await buildAttachmentsFromMessage(message);
+        setEditAttachments(filledAttachments);
+      } catch {
+        setEditAttachments([]);
+      }
+    } else {
+      setEditAttachments([]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.workspaceId, props.sessionId]);
+
+  const handleEditCancel = useCallback(() => {
+    editAttachments.forEach(revokeAttachmentPreview);
+    setEditingMessageId(null);
+    setEditDraft("");
+    setEditAttachments([]);
+    setEditMentions({});
+    setEditNotice(null);
+    setEditDiffFiles(null);
+    setEditConfirmOpen(false);
+  }, [editAttachments]);
+
+  const handleEditAttachFiles = useCallback((files: File[]) => {
+    const oversized = files.filter((f) => f.size > 25 * 1024 * 1024);
+    const accepted = files.filter((f) => f.size <= 25 * 1024 * 1024);
+    if (oversized.length) {
+      setEditNotice({ title: `${oversized.length} file(s) too large (>25 MB)`, tone: "warning" });
+    }
+    if (!accepted.length) return;
+    const next: ComposerAttachment[] = accepted.map((file) => ({
+      id: `edit-${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+      name: file.name,
+      mimeType: file.type || "application/octet-stream",
+      size: file.size,
+      kind: file.type.startsWith("image/") ? "image" : "file",
+      file,
+      previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
+    }));
+    setEditAttachments((current) => [...current, ...next]);
+  }, []);
+
+  const handleEditRemoveAttachment = useCallback((id: string) => {
+    setEditAttachments((current) => {
+      const target = current.find((item) => item.id === id);
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      return current.filter((item) => item.id !== id);
+    });
+  }, []);
+
+  const handleEditInsertMention = useCallback((kind: "agent" | "file", value: string) => {
+    setEditDraft((current) => current.replace(/@([^\s@]*)$/, `@${value} `));
+    setEditMentions((current) => ({ ...current, [value]: kind }));
+  }, []);
+
+  /**
+   * Submit the edited message: abort + revert + restore files + resend.
+   * Defined before handleEditSend (which references it).
+   */
+  const doEditSubmit = useCallback(async (msgId: string, newText: string) => {
+    setEditSubmitting(true);
+    setEditConfirmOpen(false);
+    try {
+      await abortSessionSafe(opencodeClient, props.sessionId);
+      await revertSession(opencodeClient, props.sessionId, msgId);
+
+      // Restore files to the state before this message was sent
+      const checkpointClient =
+        props.client && props.aiworkToken
+          ? createCheckpointClient({ baseUrl: props.client.baseUrl, token: props.aiworkToken })
+          : null;
+      if (checkpointClient) {
+        try {
+          await checkpointClient.restoreByMessage({
+            workspaceId: props.workspaceId,
+            sessionId: props.sessionId,
+            messageID: msgId,
+            safetyCheckpoint: true,
+          });
+        } catch (err) {
+          console.warn("[checkpoints] restore by message failed", err);
+        }
+      }
+
+      // Build and send the edited draft
+      const editParts: ComposerPart[] = newText
+        ? [{ type: "text", text: newText }]
+        : [];
+      const editDraftObj: ComposerDraft = {
+        mode: "prompt",
+        parts: editParts,
+        attachments: editAttachments,
+        text: newText,
+        resolvedText: newText,
+      };
+
+      // Clean up inline editor state BEFORE calling onSendDraft
+      editAttachments.forEach(revokeAttachmentPreview);
+      setEditingMessageId(null);
+      setEditDraft("");
+      setEditAttachments([]);
+      setEditMentions({});
+      setEditNotice(null);
+      setEditDiffFiles(null);
+      setError(null);
+      setSending(true);
+      setAwaitingAssistantBaseline(renderedMessages.length);
+
+      await props.onSendDraft(editDraftObj);
+      setSending(false);
+    } catch (err) {
+      setEditSubmitting(false);
+      setSending(false);
+      const parsed = parseSessionError(err);
+      setError(parsed);
+    } finally {
+      setEditSubmitting(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editAttachments, opencodeClient, props, renderedMessages.length]);
+
+  /**
+   * Called when user clicks "Run" on the inline edit composer.
+   * 1. Look up the checkpoint for this message.
+   * 2. Fetch diff files (what changed after this message was sent).
+   * 3. Show the confirm modal.
+   * 4. On confirm: abort → revert → restore files → send new prompt.
+   */
+  const handleEditSend = useCallback(async () => {
+    const msgId = editingMessageId;
+    if (!msgId) return;
+    const text = editDraft.trim();
+    if (!text && editAttachments.length === 0) return;
+
+    // Check if there are messages after this one — only then do we need diff/confirm.
+    const transcriptData = getReactQueryClient().getQueryData<import("ai").UIMessage[]>(
+      reactTranscriptKey(props.workspaceId, props.sessionId),
+    ) ?? [];
+    const msgIndex = transcriptData.findIndex((m) => m.id === msgId);
+    const hasMessagesAfter = msgIndex >= 0 && msgIndex < transcriptData.length - 1;
+
+    const checkpointClient =
+      props.client && props.aiworkToken
+        ? createCheckpointClient({ baseUrl: props.client.baseUrl, token: props.aiworkToken })
+        : null;
+
+    if (hasMessagesAfter && checkpointClient) {
+      setEditDiffLoading(true);
+      try {
+        const cpList = await checkpointClient.list({
+          workspaceId: props.workspaceId,
+          sessionId: props.sessionId,
+        });
+        const cp = cpList.items.find((entry) => entry.messageID === msgId);
+        if (cp) {
+          const diffResult = await checkpointClient.diff({
+            workspaceId: props.workspaceId,
+            sessionId: props.sessionId,
+            fromSha: cp.sha,
+          });
+          setEditDiffFiles(diffResult.files);
+        } else {
+          setEditDiffFiles(null);
+        }
+      } catch {
+        setEditDiffFiles(null);
+      } finally {
+        setEditDiffLoading(false);
+      }
+    }
+
+    if (hasMessagesAfter) {
+      setEditConfirmOpen(true);
+      return;
+    }
+
+    // No messages after — just resend without confirm
+    await doEditSubmit(msgId, text);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingMessageId, editDraft, editAttachments, props.workspaceId, props.sessionId, props.client, props.aiworkToken, doEditSubmit]);
+
+  const editBuildDraft = useCallback((text: string, nextAttachments: ComposerAttachment[]): ComposerDraft => {
+    const parts: ComposerPart[] = text.split(/(@[^\s@]+)/).flatMap((seg) => {
+      if (!seg) return [] as ComposerPart[];
+      if (seg.startsWith("@")) {
+        const value = seg.slice(1);
+        const kind = editMentions[value];
+        if (kind === "agent") return [{ type: "agent", name: value }];
+        if (kind === "file") return [{ type: "file", path: value, label: value }];
+      }
+      return [{ type: "text", text: seg }];
+    });
+    return { mode: "prompt", parts, attachments: nextAttachments, text, resolvedText: text };
+  }, [editMentions]);
+
   const typeComposerText = useCallback(async (text: string) => {
     window.dispatchEvent(new Event("aiwork:focusPrompt"));
     setDraft(text);
@@ -1215,6 +1583,61 @@ export function SessionSurface(props: SessionSurfaceProps) {
                     writtenFileSvgQueryKey={props.workspaceId}
                     assistantReplyMetaById={assistantReplyMetaById}
                     aiworkServerBaseUrl={props.client.baseUrl}
+                    editingMessageId={editingMessageId}
+                    editingDisabled={chatStreaming}
+                    editingDisabledReason={
+                      chatStreaming ? t("session.edit_disabled_streaming") : null
+                    }
+                    onEditMessage={handleEditMessage}
+                    renderInlineEditComposer={({ messageId }: { messageId: string }) => (
+                      <ReactSessionComposer
+                        inline
+                        onCancel={handleEditCancel}
+                        draft={editDraft}
+                        mentions={editMentions}
+                        onDraftChange={setEditDraft}
+                        onSend={handleEditSend}
+                        onStop={async () => {
+                          await abortSessionSafe(opencodeClient, props.sessionId);
+                        }}
+                        busy={editSubmitting || editDiffLoading}
+                        disabled={editSubmitting}
+                        statusLabel=""
+                        modelLabel={props.modelLabel}
+                        onModelClick={props.onModelClick}
+                        attachments={editAttachments}
+                        onAttachFiles={handleEditAttachFiles}
+                        onRemoveAttachment={handleEditRemoveAttachment}
+                        attachmentsEnabled={props.attachmentsEnabled}
+                        attachmentsDisabledReason={props.attachmentsDisabledReason}
+                        modelVariantLabel={props.modelVariantLabel}
+                        modelVariant={props.modelVariant}
+                        modelBehaviorOptions={props.modelBehaviorOptions}
+                        onModelVariantChange={props.onModelVariantChange}
+                        agentLabel={props.agentLabel}
+                        selectedAgent={props.selectedAgent}
+                        listAgents={props.listAgents}
+                        onSelectAgent={props.onSelectAgent}
+                        listCommands={props.listCommands}
+                        listSkills={listSkills}
+                        skills={toolSkills}
+                        listMcp={listMcp}
+                        mcpServers={toolMcpServers}
+                        mcpStatus={toolMcpStatus}
+                        mcpStatuses={toolMcpStatuses}
+                        listImportedPlugins={listImportedPlugins}
+                        importedPlugins={toolImportedPlugins}
+                        onOpenSettingsSection={props.onOpenSettingsSection}
+                        recentFiles={props.recentFiles}
+                        searchFiles={props.searchFiles}
+                        onInsertMention={handleEditInsertMention}
+                        notice={editNotice}
+                        onNotice={setEditNotice}
+                        onUnsupportedFileLinks={() => {}}
+                        onUploadInboxFiles={null}
+                        draftScopeKey={`edit:${messageId}`}
+                      />
+                    )}
                   />
                   {error ? (
                     <SessionErrorCard
@@ -1326,6 +1749,36 @@ export function SessionSurface(props: SessionSurfaceProps) {
       </div>
       {/* Error display moved inline into the session conversation area */}
       {props.developerMode ? <SessionDebugPanel model={model} snapshot={snapshot} /> : null}
+      <ConfirmModal
+        open={editConfirmOpen}
+        title={t("session.edit_confirm_title")}
+        message={
+          <div className="space-y-3">
+            <p>{t("session.edit_confirm_intro")}</p>
+            {editDiffLoading ? (
+              <p className="text-xs text-gray-10">{t("session.edit_diff_loading")}</p>
+            ) : editDiffFiles && editDiffFiles.length > 0 ? (
+              <EditDiffSummary files={editDiffFiles} />
+            ) : (
+              <p className="text-xs text-gray-10">{t("session.edit_no_file_changes")}</p>
+            )}
+          </div>
+        }
+        confirmLabel={
+          editSubmitting
+            ? t("session.edit_submitting")
+            : t("session.edit_confirm_submit")
+        }
+        cancelLabel={t("common.cancel")}
+        variant="danger"
+        onConfirm={() => {
+          if (!editingMessageId) return;
+          void doEditSubmit(editingMessageId, editDraft.trim());
+        }}
+        onCancel={() => {
+          if (!editSubmitting) setEditConfirmOpen(false);
+        }}
+      />
     </div>
     </DevProfiler>
   );

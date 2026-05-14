@@ -14,7 +14,7 @@ import { isToolUIPart, type DynamicToolUIPart, type UIMessage } from "ai";
 import type { Part } from "@opencode-ai/sdk/v2/client";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Atom, Check, ChevronDown, ChevronUp, CircleAlert, Copy, File as FileIcon } from "lucide-react";
+import { Atom, Check, ChevronDown, ChevronUp, CircleAlert, Copy, File as FileIcon, Pencil } from "lucide-react";
 
 import { resolveWorkspaceApiUrl } from "../../../../app/lib/aiwork-server";
 import { joinDesktopPath, openDesktopPath, revealDesktopItemInDir } from "../../../../app/lib/desktop";
@@ -291,6 +291,16 @@ export type SessionTranscriptProps = {
    * `/workspace/...` URLs in file parts and markdown so they target the API in Vite dev.
    */
   aiworkServerBaseUrl?: string;
+  /** ID of the user message currently being edited inline (or null). */
+  editingMessageId?: string | null;
+  /** Begin editing the given user message; receives the prefilled text. */
+  onEditMessage?: (input: { messageId: string; initialText: string }) => void;
+  /** When the editing user message is rendered, this slot replaces its bubble. */
+  renderInlineEditComposer?: (input: { messageId: string }) => ReactNode;
+  /** Disable the edit button (e.g. while a run is streaming). */
+  editingDisabled?: boolean;
+  /** Tooltip when edit is disabled. */
+  editingDisabledReason?: string | null;
 };
 
 // 500 was too high for real-world AiWork sessions: a handful of giant
@@ -452,6 +462,20 @@ function messageToText(message: UIMessage) {
         }
         return [`[tool:${toolPart.toolName}] ${JSON.stringify(toolPart.input)}`];
       }
+      return [];
+    })
+    .join("\n\n")
+    .trim();
+}
+
+/**
+ * Extracts editable text from a user message (text parts only, no tool/file parts).
+ * Used to pre-fill the inline edit composer.
+ */
+function userMessageEditableText(message: UIMessage): string {
+  return message.parts
+    .flatMap((part) => {
+      if (part.type === "text") return [part.text];
       return [];
     })
     .join("\n\n")
@@ -671,6 +695,36 @@ function CopyButton(props: { getText: () => string; variant?: "bordered" | "ghos
       }}
     >
       {copied ? <Check size={14} /> : <Copy size={14} />}
+    </button>
+  );
+}
+
+/**
+ * Edit button shown alongside CopyButton on user message hover. Clicking turns
+ * the user message into an inline composer (handled by SessionSurface).
+ */
+function EditButton(props: {
+  onClick: () => void;
+  disabled?: boolean;
+  disabledReason?: string | null;
+}) {
+  return (
+    <button
+      type="button"
+      className={
+        "inline-flex items-center justify-center rounded-lg p-1.5 text-dls-secondary transition-colors " +
+        (props.disabled
+          ? "cursor-not-allowed opacity-50"
+          : "hover:bg-dls-hover/90 hover:text-dls-text")
+      }
+      title={props.disabled ? props.disabledReason ?? t("session.edit_disabled") : t("session.edit_message")}
+      aria-label={t("session.edit_message")}
+      disabled={props.disabled}
+      onClick={() => {
+        if (!props.disabled) props.onClick();
+      }}
+    >
+      <Pencil size={14} />
     </button>
   );
 }
@@ -1941,13 +1995,33 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
       ? props.assistantReplyMetaById?.get(block.messageId)
       : undefined;
 
+    const isEditingThisMessage =
+      block.isUser && props.editingMessageId != null && props.editingMessageId === block.messageId;
+
+    if (isEditingThisMessage && props.renderInlineEditComposer) {
+      return (
+        <div
+          key={`message-${block.messageId}`}
+          className="flex justify-stretch"
+          data-message-role="user"
+          data-message-id={block.messageId}
+          data-editing="true"
+          style={{ contain: "layout style paint", ...blockPerfStyle(blockIndex) }}
+        >
+          <div className="w-full max-w-[800px] mx-auto">
+            {props.renderInlineEditComposer({ messageId: block.messageId })}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         key={`message-${block.messageId}`}
-        className={`flex group ${block.isUser ? "justify-end" : "justify-start"}`.trim()}
+        className={`flex group ${block.isUser ? "justify-end pb-9 -mb-[6px]" : "justify-start"}`.trim()}
         data-message-role={block.isUser ? "user" : "assistant"}
         data-message-id={block.messageId}
-        style={{ contain: "layout style paint", ...blockPerfStyle(blockIndex) }}
+        style={{ contain: "layout style", ...blockPerfStyle(blockIndex) }}
       >
         <div
           className={`${
@@ -2063,8 +2137,18 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
 
           {!isNestedVariant ? (
             block.isUser ? (
-              <div className="absolute bottom-2 right-2 flex justify-end opacity-0 pointer-events-none transition-opacity select-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto">
-                <CopyButton getText={() => messageToText(block.message)} />
+              <div className="absolute top-full right-0 mt-1.5 flex items-center justify-end gap-1.5 opacity-0 pointer-events-none transition-opacity select-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto">
+                {props.onEditMessage ? (
+                  <EditButton
+                    disabled={Boolean(props.editingDisabled)}
+                    disabledReason={props.editingDisabledReason ?? null}
+                    onClick={() => {
+                      const initialText = userMessageEditableText(block.message);
+                      props.onEditMessage?.({ messageId: block.messageId, initialText });
+                    }}
+                  />
+                ) : null}
+                <CopyButton getText={() => messageToText(block.message)} variant="ghost" />
               </div>
             ) : showAssistantQaFooterChrome ? (
               <div className="absolute bottom-px left-0 right-2 flex items-center gap-3 opacity-0 pointer-events-none transition-opacity select-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto">

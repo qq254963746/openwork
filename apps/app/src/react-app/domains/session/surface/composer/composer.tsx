@@ -28,6 +28,12 @@ type ComposerProps = {
   onDraftChange: (value: string) => void;
   onSend: () => void | Promise<void>;
   onStop: () => void | Promise<void>;
+  /** When true (for inline edit-message use): removes sticky positioning,
+   *  outer padding, and skips global window event listeners so a second
+   *  composer mounted on-screen doesn't conflict with the main one. */
+  inline?: boolean;
+  /** Optional cancel button handler shown in inline mode. */
+  onCancel?: () => void;
   busy: boolean;
   disabled: boolean;
   statusLabel: string;
@@ -702,6 +708,11 @@ export function ReactSessionComposer(props: ComposerProps) {
       // draft so downstream stores can checkpoint it.
       props.onDraftChange(draftRef.current);
     };
+    if (props.inline) {
+      // Inline composers (used for editing a historical user message) must NOT
+      // hijack the global focus/flush events that drive the bottom composer.
+      return;
+    }
     window.addEventListener(FOCUS_PROMPT_EVENT, handleFocus);
     window.addEventListener(FLUSH_PROMPT_EVENT, handleFlush);
     window.addEventListener("beforeunload", handleFlush);
@@ -712,7 +723,7 @@ export function ReactSessionComposer(props: ComposerProps) {
       window.removeEventListener("beforeunload", handleFlush);
       window.removeEventListener("pagehide", handleFlush);
     };
-  }, [props.onDraftChange]);
+  }, [props.onDraftChange, props.inline]);
 
   const handleKeyDownCapture: React.KeyboardEventHandler<HTMLDivElement> = (event) => {
     // IME composition guard — block Enter while IME is mid-character.
@@ -951,7 +962,11 @@ export function ReactSessionComposer(props: ComposerProps) {
   return (
     <div
       ref={rootRef}
-      className={`sticky bottom-0 ${toolMenuOpen ? "z-50" : "z-20"} bg-white px-4 md:px-8 pb-3 pt-0 dark:bg-gray-1`}
+      className={
+        props.inline
+          ? `${toolMenuOpen ? "z-50" : "z-20"} relative`
+          : `sticky bottom-0 ${toolMenuOpen ? "z-50" : "z-20"} bg-white px-4 md:px-8 pb-3 pt-0 dark:bg-gray-1`
+      }
       style={{ contain: "layout style" }}
       onKeyDownCapture={handleKeyDownCapture}
       onCompositionStart={() => {
@@ -961,11 +976,11 @@ export function ReactSessionComposer(props: ComposerProps) {
         imeComposingRef.current = false;
       }}
     >
-      <div className="max-w-[800px] mx-auto">
+      <div className={props.inline ? "" : "max-w-[800px] mx-auto"}>
         {/* Main composer panel */}
         <div
           className={`relative overflow-visible rounded-[24px] border border-solid border-[rgba(0,0,0,0.12)] bg-white transition-all dark:bg-gray-1 ${panelRoundedClass}`}
-          style={{ boxShadow: COMPOSER_PANEL_BOX_SHADOW }}
+          style={{ boxShadow: props.inline ? "none" : COMPOSER_PANEL_BOX_SHADOW }}
         >
           <ReactComposerNotice notice={props.notice} />
 
@@ -1075,9 +1090,11 @@ export function ReactSessionComposer(props: ComposerProps) {
               }}
             />
 
-            {/* Action row — attach/inbox/tools on the left, send on the right */}
-            <div className="mt-2 flex items-end justify-between gap-2">
-              <div className="flex items-center gap-1.5">
+            {/* Action row — all controls in one line */}
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+
+                {/* Attach files */}
                 <input
                   ref={(element) => {
                     fileInput = element ?? undefined;
@@ -1093,7 +1110,7 @@ export function ReactSessionComposer(props: ComposerProps) {
                 />
                 <button
                   type="button"
-                  className={`inline-flex h-9 max-h-9 w-9 items-center justify-center rounded-md text-[#000000] transition-colors hover:bg-gray-3 dark:text-gray-12 ${
+                  className={`inline-flex h-7 w-7 items-center justify-center rounded-md text-[#000000] transition-colors hover:bg-gray-3 dark:text-gray-12 ${
                     !props.attachmentsEnabled ? "cursor-not-allowed opacity-60" : ""
                   }`}
                   onClick={() => {
@@ -1103,12 +1120,14 @@ export function ReactSessionComposer(props: ComposerProps) {
                   disabled={!props.attachmentsEnabled}
                   title={props.attachmentsDisabledReason ?? t("composer.attach_files")}
                 >
-                  <Paperclip size={16} />
+                  <Paperclip size={15} />
                 </button>
+
+                {/* Tools (Plug) */}
                 <div ref={toolMenuRef} className="relative">
                   <button
                     type="button"
-                    className={`inline-flex h-9 max-h-9 w-9 items-center justify-center rounded-md transition-colors ${toolMenuOpen ? "bg-gray-3 text-[#000000] dark:text-gray-12" : "text-[#000000] hover:bg-gray-3 dark:text-gray-12"}`}
+                    className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${toolMenuOpen ? "bg-gray-3 text-[#000000] dark:text-gray-12" : "text-[#000000] hover:bg-gray-3 dark:text-gray-12"}`}
                     onClick={() => {
                       setMentionOpen(false);
                       setMentionItems([]);
@@ -1119,7 +1138,7 @@ export function ReactSessionComposer(props: ComposerProps) {
                     aria-haspopup="dialog"
                     title={t("composer.tools_label")}
                   >
-                    <Plug size={16} />
+                    <Plug size={15} />
                   </button>
                   {toolMenuOpen ? (
                     <div className="absolute bottom-full left-0 z-40 mb-3 w-[min(calc(100vw-2.5rem),34rem)] overflow-hidden rounded-[22px] border border-dls-border bg-dls-surface shadow-[var(--dls-shell-shadow)]">
@@ -1274,6 +1293,141 @@ export function ReactSessionComposer(props: ComposerProps) {
                     </div>
                   ) : null}
                 </div>
+
+                {/* Vertical separator between tool icons and selector chips */}
+                <span className="mx-1 h-4 w-px bg-gray-5/70 dark:bg-white/10" aria-hidden />
+
+                {/* Agent selector */}
+                <div ref={agentMenuRef} className="relative">
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-[#000000] transition-colors hover:bg-gray-3 hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12"
+                    onClick={() => setAgentMenuOpen((value) => !value)}
+                    disabled={props.busy}
+                    aria-expanded={agentMenuOpen}
+                    title={t("composer.agent_label")}
+                  >
+                    <span className="max-w-[140px] truncate">{props.agentLabel}</span>
+                    <ChevronDown size={13} />
+                  </button>
+                  {agentMenuOpen ? (
+                    <div className="absolute left-0 bottom-full z-40 mb-2 w-64 overflow-hidden rounded-[18px] border border-dls-border bg-dls-surface shadow-[var(--dls-shell-shadow)]">
+                      <div className="border-b border-dls-border px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-10">
+                        {t("composer.agent_label")}
+                      </div>
+                      <div
+                        className="space-y-1 p-2 max-h-64 overflow-y-auto"
+                        onMouseDown={(event) => event.preventDefault()}
+                      >
+                        <button
+                          ref={(element) => {
+                            agentItemRefs.current[0] = element;
+                          }}
+                          type="button"
+                          className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-colors ${!props.selectedAgent ? "bg-gray-2 text-gray-12" : "text-gray-11 hover:bg-gray-2/70"}`}
+                          onMouseEnter={() => setAgentMenuIndex(0)}
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            props.onSelectAgent(null);
+                            setAgentMenuOpen(false);
+                          }}
+                        >
+                          <span>{t("composer.default_agent")}</span>
+                          {!props.selectedAgent ? <Check size={14} className="text-gray-10" /> : null}
+                        </button>
+                        {agents.map((agent, index) => {
+                          const active = props.selectedAgent === agent.name;
+                          return (
+                            <button
+                              key={agent.name}
+                              ref={(element) => {
+                                agentItemRefs.current[index + 1] = element;
+                              }}
+                              type="button"
+                              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-colors ${active ? "bg-gray-2 text-gray-12" : "text-gray-11 hover:bg-gray-2/70"}`}
+                              onMouseEnter={() => setAgentMenuIndex(index + 1)}
+                              onMouseDown={(event) => {
+                                event.preventDefault();
+                                props.onSelectAgent(agent.name);
+                                setAgentMenuOpen(false);
+                              }}
+                            >
+                              <span className="truncate">{agent.name.charAt(0).toUpperCase() + agent.name.slice(1)}</span>
+                              {active ? <Check size={14} className="text-gray-10" /> : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Model selector */}
+                <button
+                  type="button"
+                  className="flex min-w-0 items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-[#000000] transition-colors hover:bg-gray-3 hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12"
+                  onClick={props.onModelClick}
+                  disabled={props.busy}
+                >
+                  <span className="truncate leading-tight">{props.modelLabel}</span>
+                  <ChevronDown size={13} className="shrink-0 ml-0.5" />
+                </button>
+
+                {/* Behavior variant */}
+                {props.modelBehaviorOptions?.length ? (
+                  <div ref={variantMenuRef} className="relative">
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-[#000000] transition-colors hover:bg-gray-3 hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setVariantMenuOpen((value) => !value);
+                      }}
+                      disabled={props.busy}
+                      aria-expanded={variantMenuOpen}
+                    >
+                      <span className="truncate leading-tight">
+                        {props.modelVariantLabel ||
+                          (props.modelBehaviorOptions.find((option) => option.value === props.modelVariant)?.label ?? "") ||
+                          t("settings.default_label")}
+                      </span>
+                      <ChevronDown size={13} className="shrink-0 ml-0.5" />
+                    </button>
+                    {variantMenuOpen ? (
+                      <div className="absolute left-0 bottom-full z-40 mb-2 w-48 overflow-hidden rounded-[18px] border border-dls-border bg-dls-surface shadow-[var(--dls-shell-shadow)]">
+                        <div className="border-b border-dls-border px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-10">
+                          {t("composer.behavior_label")}
+                        </div>
+                        <div className="space-y-1 p-2">
+                          {props.modelBehaviorOptions.map((option) => {
+                            const isActive =
+                              props.modelVariant === option.value ||
+                              (props.modelVariant == null && option.label === props.modelVariantLabel);
+                            return (
+                              <button
+                                key={option.value ?? "default"}
+                                type="button"
+                                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-colors ${
+                                  isActive ? "bg-gray-2 text-gray-12" : "text-gray-11 hover:bg-gray-2/70"
+                                }`}
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  props.onModelVariantChange(option.value);
+                                  setVariantMenuOpen(false);
+                                }}
+                              >
+                                <span>{option.label}</span>
+                                {isActive ? <Check size={14} className="text-gray-10" /> : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
 
               {/*
@@ -1282,7 +1436,17 @@ export function ReactSessionComposer(props: ComposerProps) {
                 When busy with a draft: Run task (queues a follow-up).
                 When idle: Run task.
               */}
-              <div className="ml-auto flex shrink-0 items-end gap-1.5">
+              <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                {props.inline && props.onCancel ? (
+                  <button
+                    type="button"
+                    onClick={props.onCancel}
+                    className="inline-flex h-9 max-h-9 items-center gap-2 rounded-full border border-[rgba(0,0,0,0.12)] bg-white px-4 text-[13px] font-medium text-gray-11 transition-colors hover:bg-gray-2 dark:bg-gray-1 dark:text-gray-12 dark:hover:bg-gray-3"
+                    title={t("common.cancel")}
+                  >
+                    <span>{t("common.cancel")}</span>
+                  </button>
+                ) : null}
                 {props.busy && !canSend ? (
                   <button
                     type="button"
@@ -1314,149 +1478,6 @@ export function ReactSessionComposer(props: ComposerProps) {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Below-panel control strip: agent + model + behavior variant */}
-        <div className="mt-1 flex items-center justify-between px-1">
-          <div className="flex flex-wrap items-center gap-1.5 text-[#000000] dark:text-gray-12 sm:gap-2.5">
-            <div ref={agentMenuRef} className="relative">
-              <button
-                type="button"
-                className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-[#000000] transition-colors hover:bg-gray-3 hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12"
-                onClick={() => setAgentMenuOpen((value) => !value)}
-                disabled={props.busy}
-                aria-expanded={agentMenuOpen}
-                title={t("composer.agent_label")}
-              >
-                <span className="max-w-[140px] truncate">{props.agentLabel}</span>
-                <ChevronDown size={13} />
-              </button>
-              {agentMenuOpen ? (
-                <div className="absolute left-0 bottom-full z-40 mb-2 w-64 overflow-hidden rounded-[18px] border border-dls-border bg-dls-surface shadow-[var(--dls-shell-shadow)]">
-                  <div className="border-b border-dls-border px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-10">
-                    {t("composer.agent_label")}
-                  </div>
-                  <div
-                    className="space-y-1 p-2 max-h-64 overflow-y-auto"
-                    onMouseDown={(event) => event.preventDefault()}
-                  >
-                    <button
-                      ref={(element) => {
-                        agentItemRefs.current[0] = element;
-                      }}
-                      type="button"
-                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-colors ${!props.selectedAgent ? "bg-gray-2 text-gray-12" : "text-gray-11 hover:bg-gray-2/70"}`}
-                      onMouseEnter={() => setAgentMenuIndex(0)}
-                      onMouseDown={(event) => {
-                        event.preventDefault();
-                        props.onSelectAgent(null);
-                        setAgentMenuOpen(false);
-                      }}
-                    >
-                      <span>{t("composer.default_agent")}</span>
-                      {!props.selectedAgent ? <Check size={14} className="text-gray-10" /> : null}
-                    </button>
-                    {agents.map((agent, index) => {
-                      const active = props.selectedAgent === agent.name;
-                      return (
-                        <button
-                          key={agent.name}
-                          ref={(element) => {
-                            agentItemRefs.current[index + 1] = element;
-                          }}
-                          type="button"
-                          className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-colors ${active ? "bg-gray-2 text-gray-12" : "text-gray-11 hover:bg-gray-2/70"}`}
-                          onMouseEnter={() => setAgentMenuIndex(index + 1)}
-                          onMouseDown={(event) => {
-                            event.preventDefault();
-                            props.onSelectAgent(agent.name);
-                            setAgentMenuOpen(false);
-                          }}
-                        >
-                          <span className="truncate">{agent.name.charAt(0).toUpperCase() + agent.name.slice(1)}</span>
-                          {active ? <Check size={14} className="text-gray-10" /> : null}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <button
-              type="button"
-              className="flex min-w-0 items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-[#000000] transition-colors hover:bg-gray-3 hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12"
-              onClick={props.onModelClick}
-              disabled={props.busy}
-            >
-              <span className="truncate leading-tight">{props.modelLabel}</span>
-              <ChevronDown size={13} className="shrink-0 ml-0.5" />
-            </button>
-
-            {props.modelBehaviorOptions?.length ? (
-              <div ref={variantMenuRef} className="relative">
-                <button
-                  type="button"
-                  className="flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-medium text-[#000000] transition-colors hover:bg-gray-3 hover:text-[#000000] dark:text-gray-12 dark:hover:text-gray-12"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setVariantMenuOpen((value) => !value);
-                  }}
-                  disabled={props.busy}
-                  aria-expanded={variantMenuOpen}
-                >
-                  <span className="truncate leading-tight">
-                    {/* Pill label is the summary resolved by session-route:
-                        if modelVariant is null it already carries the
-                        provider-default preset's label (e.g. "Balanced"). */}
-                    {props.modelVariantLabel ||
-                      (props.modelBehaviorOptions.find((option) => option.value === props.modelVariant)?.label ?? "") ||
-                      t("settings.default_label")}
-                  </span>
-                  <ChevronDown size={13} className="shrink-0 ml-0.5" />
-                </button>
-                {variantMenuOpen ? (
-                  <div className="absolute left-0 bottom-full z-40 mb-2 w-48 overflow-hidden rounded-[18px] border border-dls-border bg-dls-surface shadow-[var(--dls-shell-shadow)]">
-                    <div className="border-b border-dls-border px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-10">
-                      {t("composer.behavior_label")}
-                    </div>
-                    <div className="space-y-1 p-2">
-                      {props.modelBehaviorOptions.map((option) => {
-                        // Highlight the row whose label matches the pill. When
-                        // modelVariant is null but the provider-default is
-                        // e.g. "medium", the "medium" row should render as
-                        // selected — user sees the actual active mode.
-                        const isActive =
-                          props.modelVariant === option.value ||
-                          (props.modelVariant == null && option.label === props.modelVariantLabel);
-                        return (
-                          <button
-                            key={option.value ?? "default"}
-                            type="button"
-                            className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-colors ${
-                              isActive ? "bg-gray-2 text-gray-12" : "text-gray-11 hover:bg-gray-2/70"
-                            }`}
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              props.onModelVariantChange(option.value);
-                              setVariantMenuOpen(false);
-                            }}
-                          >
-                            <span>{option.label}</span>
-                            {isActive ? <Check size={14} className="text-gray-10" /> : null}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-
-          {/* Status label removed — redundant with the footer bar */}
         </div>
       </div>
     </div>

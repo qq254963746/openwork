@@ -28,6 +28,16 @@ import { inheritWorkspaceOpencodeConnection, resolveWorkspaceOpencodeConnection 
 import { listModelsByProviderType, parseModelProviderType } from "./ai-model-service/list-models.js";
 import { buildSession, buildSessionList, buildSessionMessages, buildSessionSnapshot } from "./session-read-model.js";
 import { logger as fileLogger } from "./log-util.js";
+import {
+  handleCheckpointBindMessage,
+  handleCheckpointCreate,
+  handleCheckpointDestroy,
+  handleCheckpointDiff,
+  handleCheckpointList,
+  handleCheckpointRestoreByMessage,
+  handleCheckpointRestoreBySha,
+} from "./checkpoint-routes.js";
+import { destroySessionCheckpoints, destroyWorkspaceCheckpoints } from "./checkpoint-store.js";
 import pkg from "../package.json" with { type: "json" };
 import constants from "../../../constants.json" with { type: "json" };
 
@@ -1854,6 +1864,9 @@ function createRoutes(
       method: "DELETE",
     });
 
+    // Best-effort cleanup of checkpoint data (never throw if this fails).
+    void destroySessionCheckpoints(workspace.id, sessionId).catch(() => undefined);
+
     return jsonResponse({ ok: true });
   });
 
@@ -3110,6 +3123,92 @@ function createRoutes(
       throw new ApiError(404, "approval_not_found", "Approval request not found");
     }
     return jsonResponse({ ok: true, allowed: result.allowed });
+  });
+
+  // ---------------------------------------------------------------------
+  // Session checkpoints (shadow-git based file/version time travel).
+  // All routes are mounted under /workspace/:id/sessions/:sessionId/checkpoints.
+  // Storage lives outside the user's workspace (see checkpoint-paths.ts).
+  // ---------------------------------------------------------------------
+
+  addRoute(routes, "POST", "/workspace/:id/sessions/:sessionId/checkpoints", "client", async (ctx) => {
+    ensureWritable(config);
+    requireClientScope(ctx, "collaborator");
+    const workspace = await resolveWorkspace(config, ctx.params.id);
+    return handleCheckpointCreate({
+      request: ctx.request,
+      url: ctx.url,
+      params: { ...ctx.params, id: workspace.id },
+      config,
+    });
+  });
+
+  addRoute(routes, "GET", "/workspace/:id/sessions/:sessionId/checkpoints", "client", async (ctx) => {
+    const workspace = await resolveWorkspace(config, ctx.params.id);
+    return handleCheckpointList({
+      request: ctx.request,
+      url: ctx.url,
+      params: { ...ctx.params, id: workspace.id },
+      config,
+    });
+  });
+
+  addRoute(routes, "POST", "/workspace/:id/sessions/:sessionId/checkpoints/bind-message", "client", async (ctx) => {
+    ensureWritable(config);
+    requireClientScope(ctx, "collaborator");
+    const workspace = await resolveWorkspace(config, ctx.params.id);
+    return handleCheckpointBindMessage({
+      request: ctx.request,
+      url: ctx.url,
+      params: { ...ctx.params, id: workspace.id },
+      config,
+    });
+  });
+
+  addRoute(routes, "GET", "/workspace/:id/sessions/:sessionId/checkpoints/diff", "client", async (ctx) => {
+    const workspace = await resolveWorkspace(config, ctx.params.id);
+    return handleCheckpointDiff({
+      request: ctx.request,
+      url: ctx.url,
+      params: { ...ctx.params, id: workspace.id },
+      config,
+    });
+  });
+
+  addRoute(routes, "POST", "/workspace/:id/sessions/:sessionId/checkpoints/:sha/restore", "client", async (ctx) => {
+    ensureWritable(config);
+    requireClientScope(ctx, "collaborator");
+    const workspace = await resolveWorkspace(config, ctx.params.id);
+    return handleCheckpointRestoreBySha({
+      request: ctx.request,
+      url: ctx.url,
+      params: { ...ctx.params, id: workspace.id },
+      config,
+    });
+  });
+
+  addRoute(routes, "POST", "/workspace/:id/sessions/:sessionId/checkpoints/by-message/:messageId/restore", "client", async (ctx) => {
+    ensureWritable(config);
+    requireClientScope(ctx, "collaborator");
+    const workspace = await resolveWorkspace(config, ctx.params.id);
+    return handleCheckpointRestoreByMessage({
+      request: ctx.request,
+      url: ctx.url,
+      params: { ...ctx.params, id: workspace.id },
+      config,
+    });
+  });
+
+  addRoute(routes, "DELETE", "/workspace/:id/sessions/:sessionId/checkpoints", "client", async (ctx) => {
+    ensureWritable(config);
+    requireClientScope(ctx, "collaborator");
+    const workspace = await resolveWorkspace(config, ctx.params.id);
+    return handleCheckpointDestroy({
+      request: ctx.request,
+      url: ctx.url,
+      params: { ...ctx.params, id: workspace.id },
+      config,
+    });
   });
 
   return routes;
