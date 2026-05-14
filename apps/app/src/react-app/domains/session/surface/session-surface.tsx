@@ -71,9 +71,8 @@ const DEFAULT_COMPOSER_CONTROL_TEXT = "Help me outline the next AiWork task.";
 const JUMP_TO_LATEST_BOX_SHADOW =
   "0 2px 4px 0 rgba(0,0,0,0.03), 0 4px 10px 0 rgba(0,0,0,0.05), 0 4px 16px 0 rgba(0,0,0,0.05)";
 
-/** Soft light shadow along the top edge of the composer stack (separates from transcript). */
-const COMPOSER_SHELL_TOP_SHADOW =
-  "0 -14px 52px rgba(255, 255, 255, 0.7), 0 -6px 24px rgba(255, 255, 255, 0.5), 0 -2px 12px rgba(255, 255, 255, 0.4)";
+/** Soft shadow along the top edge of the composer stack (separates from transcript). Theme-aware via CSS variable. */
+const COMPOSER_SHELL_TOP_SHADOW = "var(--composer-shell-top-shadow)";
 
 function JumpToLatestGlyph(props: { className?: string }) {
   return (

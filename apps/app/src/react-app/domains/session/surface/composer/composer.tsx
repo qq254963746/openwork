@@ -94,8 +94,7 @@ const ACCEPTED_FILE_TYPES = [...ACCEPTED_IMAGE_TYPES, "application/pdf"];
 const FILE_URL_RE = /^file:\/\//i;
 const HTTP_URL_RE = /^https?:\/\//i;
 
-const COMPOSER_PANEL_BOX_SHADOW =
-  "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.02) 0px 2px 4px 0px, rgba(0, 0, 0, 0.04) 0px 4px 16px 0px, rgba(0, 0, 0, 0.08) 0px 8px 32px 0px";
+const COMPOSER_PANEL_BOX_SHADOW = "var(--composer-panel-shadow)";
 
 /**
  * Extract external file/URL drops from a clipboard. Only used when the user
