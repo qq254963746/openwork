@@ -579,7 +579,7 @@ export default {
   "session.edit_disabled": "编辑已禁用",
   "session.edit_disabled_streaming": "请先停止当前运行再编辑",
   "session.edit_confirm_title": "重新发送编辑内容？",
-  "session.edit_confirm_intro": "这将删除此消息之后的所有消息，并回滚该消息发送后产生的所有文件变更。",
+  "session.edit_confirm_intro": "后续的对话历史将被清除（包含文件的变更）。是否继续？",
   "session.edit_confirm_submit": "重新发送",
   "session.edit_submitting": "发送中…",
   "session.edit_diff_loading": "正在计算文件变更…",

@@ -465,8 +465,17 @@ export class CheckpointStore {
     const headFile = join(this.gitDir, "HEAD");
     if (!(await fileExists(headFile))) {
       await mkdir(this.gitDir, { recursive: true });
-      await this.git(["init", "--quiet", "-b", "main"], { skipEnv: true, cwdOverride: this.gitDir, useWorktree: false });
+      // `--bare` makes git treat <gitDir> as the git metadata dir directly,
+      // instead of creating a nested `.git/` inside it. We later flip
+      // core.bare=false so the same directory can be used with GIT_WORK_TREE
+      // pointing at the user's workspace.
+      await this.git(["init", "--quiet", "--bare", "-b", "main", this.gitDir], {
+        skipEnv: true,
+        cwdOverride: this.sessionDir,
+        useWorktree: false,
+      });
       // Configure core.* so it behaves predictably no matter the user's global git config.
+      await this.git(["config", "core.bare", "false"], { useWorktree: false });
       await this.git(["config", "core.autocrlf", "false"], { useWorktree: false });
       await this.git(["config", "core.fileMode", "false"], { useWorktree: false });
       await this.git(["config", "core.precomposeunicode", "true"], { useWorktree: false });

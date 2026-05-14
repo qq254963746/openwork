@@ -610,7 +610,7 @@ export default {
   "session.edit_disabled": "Editing disabled",
   "session.edit_disabled_streaming": "Stop the current run before editing",
   "session.edit_confirm_title": "Resend with edits?",
-  "session.edit_confirm_intro": "This will discard all messages after this point and roll back any file changes that happened since this message was sent.",
+  "session.edit_confirm_intro": "Subsequent conversation history will be cleared (including file changes). Continue?",
   "session.edit_confirm_submit": "Resend",
   "session.edit_submitting": "Resending…",
   "session.edit_diff_loading": "Computing file changes…",
