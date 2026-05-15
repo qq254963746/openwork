@@ -2102,7 +2102,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
         className={`flex group ${block.isUser ? "justify-end pb-9 -mb-[6px]" : "justify-start"}`.trim()}
         data-message-role={block.isUser ? "user" : "assistant"}
         data-message-id={block.messageId}
-        style={{ contain: "layout style", ...blockPerfStyle(blockIndex) }}
+        style={{ contain: "layout style", marginBottom:0, ...blockPerfStyle(blockIndex) }}
       >
         <div
           className={`${
