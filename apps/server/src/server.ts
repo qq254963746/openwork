@@ -33,6 +33,7 @@ import {
   handleCheckpointCreate,
   handleCheckpointDestroy,
   handleCheckpointDiff,
+  handleCheckpointFileContent,
   handleCheckpointList,
   handleCheckpointRestoreByMessage,
   handleCheckpointRestoreBySha,
@@ -3204,6 +3205,17 @@ function createRoutes(
     requireClientScope(ctx, "collaborator");
     const workspace = await resolveWorkspace(config, ctx.params.id);
     return handleCheckpointDestroy({
+      request: ctx.request,
+      url: ctx.url,
+      params: { ...ctx.params, id: workspace.id },
+      config,
+    });
+  });
+
+  // Read a file's content from a specific checkpoint commit (for SVG preview cards).
+  addRoute(routes, "GET", "/workspace/:id/sessions/:sessionId/checkpoints/files/content", "client", async (ctx) => {
+    const workspace = await resolveWorkspace(config, ctx.params.id);
+    return handleCheckpointFileContent({
       request: ctx.request,
       url: ctx.url,
       params: { ...ctx.params, id: workspace.id },

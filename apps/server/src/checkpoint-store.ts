@@ -466,6 +466,35 @@ export class CheckpointStore {
     });
   }
 
+  /**
+   * Read a single file's content from a specific checkpoint commit.
+   * Uses `git show <sha>:<path>` to retrieve the file blob.
+   *
+   * Returns null when the file did not exist in that commit (e.g. new file
+   * created by a later checkpoint). Callers should fall back to the live
+   * workspace file when null is returned.
+   */
+  async readFileAtCommit(input: {
+    sha: string;
+    filePath: string;
+  }): Promise<{ content: string; bytes: number } | null> {
+    return this.withLock(async () => {
+      await this.ensureInitializedUnlocked();
+
+      // `git show <sha>:<path>` outputs the blob content to stdout.
+      const result = await this.git(
+        ["show", `${input.sha}:${input.filePath}`],
+        { allowFailure: true, maxBufferBytes: 5 * 1024 * 1024 },
+      );
+
+      if (result.code !== 0) return null;
+
+      const content = result.stdout;
+      const bytes = Buffer.byteLength(content, "utf8");
+      return { content, bytes };
+    });
+  }
+
   async destroy(): Promise<void> {
     return this.withLock(async () => {
       await rm(this.sessionDir, { recursive: true, force: true });

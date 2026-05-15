@@ -155,6 +155,35 @@ export async function handleCheckpointDestroy(
   return jsonResponse({ ok: true });
 }
 
+/**
+ * Read a single file's content from a specific checkpoint commit.
+ *
+ * GET /workspace/:id/sessions/:sessionId/checkpoints/files/content?sha=<sha>&path=<path>
+ */
+export async function handleCheckpointFileContent(
+  ctx: CheckpointRequestContext,
+): Promise<JsonResponse> {
+  const { workspaceId, sessionId } = resolveParams(ctx);
+  const sha = (ctx.url.searchParams.get("sha") ?? "").trim();
+  const filePath = (ctx.url.searchParams.get("path") ?? "").trim();
+
+  if (!sha) {
+    throw new ApiError(400, "sha_required", "sha query parameter is required");
+  }
+  if (!filePath) {
+    throw new ApiError(400, "invalid_payload", "path query parameter is required");
+  }
+
+  const store = makeStore(ctx.config, workspaceId, sessionId);
+  const result = await store.readFileAtCommit({ sha, filePath });
+
+  if (!result) {
+    throw new ApiError(404, "file_not_found_at_checkpoint", "File not found at this checkpoint");
+  }
+
+  return jsonResponse({ path: filePath, content: result.content, bytes: result.bytes, sha });
+}
+
 // -----------------------------------------------------------------------
 // Helpers
 // -----------------------------------------------------------------------

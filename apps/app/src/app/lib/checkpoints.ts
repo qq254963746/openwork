@@ -42,6 +42,13 @@ export type RestoreResult = {
   sha?: string;
 };
 
+export type CheckpointFileContent = {
+  path: string;
+  content: string;
+  bytes: number;
+  sha: string;
+};
+
 type ClientOptions = {
   baseUrl: string;
   token: string;
@@ -145,6 +152,21 @@ export function createCheckpointClient({ baseUrl, token }: ClientOptions) {
         `${root}${pathPrefix(input.workspaceId, input.sessionId)}/diff?${params.toString()}`,
         { method: "GET", headers: authHeaders(token) },
       );
+      return asJson(response);
+    },
+
+    async readFile(input: {
+      workspaceId: string;
+      sessionId: string;
+      sha: string;
+      path: string;
+    }): Promise<CheckpointFileContent | null> {
+      const params = new URLSearchParams({ sha: input.sha, path: input.path });
+      const response = await fetch(
+        `${root}${pathPrefix(input.workspaceId, input.sessionId)}/files/content?${params.toString()}`,
+        { method: "GET", headers: authHeaders(token) },
+      );
+      if (response.status === 404) return null;
       return asJson(response);
     },
 

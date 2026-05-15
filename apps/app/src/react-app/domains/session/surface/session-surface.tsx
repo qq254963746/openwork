@@ -629,6 +629,14 @@ export function SessionSurface(props: SessionSurfaceProps) {
     [props.opencodeBaseUrl, props.aiworkToken],
   );
 
+  const checkpointClient = useMemo(
+    () =>
+      props.client && props.aiworkToken
+        ? createCheckpointClient({ baseUrl: props.client.baseUrl, token: props.aiworkToken })
+        : null,
+    [props.client, props.aiworkToken],
+  );
+
   const AiWorkspaceRelativePath = useCallback(
     (relativePath: string) => {
       const normalized = relativePath.trim().replace(/\\/g, "/");
@@ -653,6 +661,54 @@ export function SessionSurface(props: SessionSurfaceProps) {
       }
     },
     [props.client, props.workspaceId],
+  );
+
+  /**
+   * Read a file's content from the checkpoint that captured the workspace state
+   * AFTER a user message was processed (i.e. after the AI responded to it).
+   *
+   * Checkpoints are created BEFORE each user send and tagged with the USER's messageID.
+   * So checkpoint["user-msg-N"] = state before user-msg-N = state after user-msg-(N-1).
+   * To get the state after user-msg-N (= what the AI wrote in response to it),
+   * we find checkpoint["user-msg-N"] and take the NEXT checkpoint["user-msg-(N+1)"].
+   *
+   * IMPORTANT: `messageId` here must be the PRECEDING USER message ID, not the
+   * assistant message ID. The assistant's ID never appears in checkpoint entries.
+   */
+  const fetchCheckpointFileText = useCallback(
+    async (messageId: string, relativePath: string): Promise<string | undefined> => {
+      if (!checkpointClient) return undefined;
+      try {
+        const cpList = await checkpointClient.list({
+          workspaceId: props.workspaceId,
+          sessionId: props.sessionId,
+        });
+
+        // Sort by creation time to ensure chronological order.
+        const sorted = [...cpList.items].sort((a, b) => a.createdAt - b.createdAt);
+
+        // Find the checkpoint BEFORE this message (the one labeled with this messageId).
+        const currentIdx = sorted.findIndex((e) => e.messageID === messageId);
+        if (currentIdx < 0) return undefined;
+
+        // The state AFTER this message is in the NEXT checkpoint (if it exists).
+        // If this is the last message, fall back to the live workspace file.
+        const nextCp = sorted[currentIdx + 1];
+        if (!nextCp) return undefined;
+
+        const result = await checkpointClient.readFile({
+          workspaceId: props.workspaceId,
+          sessionId: props.sessionId,
+          sha: nextCp.sha,
+          path: relativePath,
+        });
+        if (result?.content != null) return result.content;
+        return undefined;
+      } catch {
+        return undefined;
+      }
+    },
+    [checkpointClient, props.workspaceId, props.sessionId],
   );
 
   useLayoutEffect(() => {
@@ -1654,6 +1710,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
                     workspaceRoot={props.workspaceRoot}
                     onAiWorkspaceRelativePath={AiWorkspaceRelativePath}
                     fetchWorkspaceFileText={fetchWorkspaceFileText}
+                    fetchCheckpointFileText={fetchCheckpointFileText}
                     writtenFileSvgQueryKey={props.workspaceId}
                     assistantReplyMetaById={assistantReplyMetaById}
                     aiworkServerBaseUrl={props.client.baseUrl}

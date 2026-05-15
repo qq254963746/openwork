@@ -282,6 +282,13 @@ export type SessionTranscriptProps = {
   onAiWorkspaceRelativePath?: (relativePath: string) => void;
   /** Loads workspace-relative file text for SVG inline previews on written-file cards */
   fetchWorkspaceFileText?: (relativePath: string) => Promise<string | undefined>;
+  /**
+   * Loads file text from the checkpoint associated with a specific message.
+   * Uses shadow git to read the file version at message time, falling back
+   * to the live workspace file when checkpoint data is unavailable.
+   * Signature: (messageId, relativePath) => Promise<string | undefined>
+   */
+  fetchCheckpointFileText?: (messageId: string, relativePath: string) => Promise<string | undefined>;
   /** Prefix for SVG preview cache keys (typically `workspaceId`) */
   writtenFileSvgQueryKey?: string;
   /** Per-message timing/usage/model for assistant replies (from session snapshot). */
@@ -950,7 +957,12 @@ function WrittenFileRow(props: {
   desktop: boolean;
   onAiWorkspaceRelativePath?: (relativePath: string) => void;
   fetchWorkspaceFileText?: (relativePath: string) => Promise<string | undefined>;
+  /** Pre-bound SVG fetcher that reads from checkpoint (already has messageId bound) */
+  fetchCheckpointSvgText?: (relativePath: string) => Promise<string | undefined>;
+  /** Unique key for SVG preview cache (typically workspaceId) */
   writtenFileSvgQueryKey?: string;
+  /** Message-specific key to distinguish checkpoint SVG cache per message (typically messageId) */
+  writtenFileSvgCheckpointKey?: string;
 }) {
   const [diffExpanded, setDiffExpanded] = useState(false);
 
@@ -990,9 +1002,21 @@ function WrittenFileRow(props: {
 
   const previewKind = writtenFileRichPreviewKind(props.touch.filename);
   const previewFetchPath = useMemo(() => {
-    if (!previewKind || !props.fetchWorkspaceFileText) return null;
-    return workspaceRelativePathForServerRead(props.touch.displayPath, props.workspaceRoot);
-  }, [previewKind, props.fetchWorkspaceFileText, props.touch.displayPath, props.workspaceRoot]);
+    if (!previewKind) return null;
+    // Always normalize to workspace-relative path: `git show <sha>:<path>` and
+    // `readWorkspaceFile()` both expect workspace-relative, not absolute paths.
+    const rel = workspaceRelativePathForServerRead(props.touch.displayPath, props.workspaceRoot);
+    if (!rel) return null;
+    if (!props.fetchWorkspaceFileText && !(props.fetchCheckpointSvgText && previewKind === "svg")) return null;
+    return rel;
+  }, [previewKind, props.fetchWorkspaceFileText, props.fetchCheckpointSvgText, props.touch.displayPath, props.workspaceRoot]);
+
+  /** When checkpoint SVG fetcher is available, prefer it for SVG files */
+  const useCheckpointSvg = Boolean(
+    previewKind === "svg" &&
+    props.fetchCheckpointSvgText &&
+    previewFetchPath,
+  );
 
   const filePreviewQuery = useQuery({
     queryKey: [
@@ -1000,13 +1024,35 @@ function WrittenFileRow(props: {
       props.writtenFileSvgQueryKey ?? "",
       props.touch.displayPath,
       previewKind ?? "",
+      useCheckpointSvg ? "checkpoint" : "live",
+      props.writtenFileSvgCheckpointKey ?? "",
     ],
     queryFn: async () => {
+      if (useCheckpointSvg) {
+        // Try checkpoint first for the SVG version at message time
+        const checkpointText = await props.fetchCheckpointSvgText!(previewFetchPath!);
+        if (typeof checkpointText === "string" && checkpointText.trim()) {
+          return checkpointText;
+        }
+        // Fall back to live file if checkpoint is unavailable
+        if (props.fetchWorkspaceFileText) {
+          const livePath = workspaceRelativePathForServerRead(props.touch.displayPath, props.workspaceRoot);
+          if (livePath) {
+            const liveText = await props.fetchWorkspaceFileText(livePath);
+            if (typeof liveText === "string" && liveText.trim()) return liveText;
+          }
+        }
+        throw new Error("empty file");
+      }
       const text = await props.fetchWorkspaceFileText!(previewFetchPath!);
       if (typeof text !== "string" || !text.trim()) throw new Error("empty file");
       return text;
     },
-    enabled: Boolean(previewKind && previewFetchPath && props.fetchWorkspaceFileText),
+    enabled: Boolean(
+      previewKind &&
+      previewFetchPath &&
+      (useCheckpointSvg || props.fetchWorkspaceFileText),
+    ),
     staleTime: 20_000,
     /** Virtualized transcript rows unmount off-screen observers; keep payload long enough to survive scroll-away/back. */
     gcTime: 1000 * 60 * 60,
@@ -1027,7 +1073,7 @@ function WrittenFileRow(props: {
   }, [previewKind, hasPreviewContent, previewRaw]);
 
   const showRichPreview =
-    Boolean(previewKind && previewFetchPath && props.fetchWorkspaceFileText) &&
+    Boolean(previewKind && previewFetchPath && (useCheckpointSvg || props.fetchWorkspaceFileText)) &&
     hasPreviewContent &&
     (previewKind === "html" || Boolean(svgMarkup));
 
@@ -1159,7 +1205,7 @@ function WrittenFileRow(props: {
   }
 
   const previewWaiting =
-    Boolean(previewKind && previewFetchPath && props.fetchWorkspaceFileText) &&
+    Boolean(previewKind && previewFetchPath && (useCheckpointSvg || props.fetchWorkspaceFileText)) &&
     !hasPreviewContent &&
     (filePreviewQuery.isPending || filePreviewQuery.isFetching);
 
@@ -1207,7 +1253,14 @@ const AssistantWrittenFiles = memo(function AssistantWrittenFiles(props: {
   workspaceRoot: string;
   onAiWorkspaceRelativePath?: (relativePath: string) => void;
   fetchWorkspaceFileText?: (relativePath: string) => Promise<string | undefined>;
+  fetchCheckpointFileText?: (messageId: string, relativePath: string) => Promise<string | undefined>;
   writtenFileSvgQueryKey?: string;
+  /**
+   * The ID of the user message that preceded this assistant message.
+   * Checkpoints are tagged with user message IDs (created before each user send),
+   * so we need the user ID — not the assistant ID — to look up the right checkpoint.
+   */
+  precedingUserMessageId?: string;
   /** Reserve space when a floating copy control sits at the bottom-right of the bubble */
   clearFloatingCopySlot?: boolean;
 }) {
@@ -1216,6 +1269,20 @@ const AssistantWrittenFiles = memo(function AssistantWrittenFiles(props: {
     [props.message],
   );
   const desktop = true;
+
+  /**
+   * Use the PRECEDING USER message ID for checkpoint lookup.
+   * Checkpoints are created before each user send and tagged with the user's messageID.
+   * The assistant's own message.id will never match any checkpoint entry.
+   */
+  const checkpointLookupId = props.precedingUserMessageId;
+
+  /** Pre-bind checkpointLookupId so WrittenFileRow only needs (relativePath) -> string | undefined */
+  const checkpointSvgFetcher = useMemo(() => {
+    if (!props.fetchCheckpointFileText || !checkpointLookupId) return undefined;
+    return (relativePath: string) =>
+      props.fetchCheckpointFileText!(checkpointLookupId, relativePath);
+  }, [props.fetchCheckpointFileText, checkpointLookupId]);
 
   if (touches.length === 0) return null;
 
@@ -1233,7 +1300,9 @@ const AssistantWrittenFiles = memo(function AssistantWrittenFiles(props: {
           desktop={desktop}
           onAiWorkspaceRelativePath={props.onAiWorkspaceRelativePath}
           fetchWorkspaceFileText={props.fetchWorkspaceFileText}
+          fetchCheckpointSvgText={checkpointSvgFetcher}
           writtenFileSvgQueryKey={props.writtenFileSvgQueryKey}
+          writtenFileSvgCheckpointKey={checkpointSvgFetcher ? checkpointLookupId : undefined}
         />
       ))}
     </div>
@@ -1917,7 +1986,15 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                 workspaceRoot={props.workspaceRoot ?? ""}
                 onAiWorkspaceRelativePath={props.onAiWorkspaceRelativePath}
                 fetchWorkspaceFileText={props.fetchWorkspaceFileText}
+                fetchCheckpointFileText={props.fetchCheckpointFileText}
                 writtenFileSvgQueryKey={props.writtenFileSvgQueryKey}
+                precedingUserMessageId={(() => {
+                  const clusterMsgIdx = props.messages.findIndex((m) => m.id === block.messageIds[0]);
+                  for (let i = clusterMsgIdx - 1; i >= 0; i--) {
+                    if (props.messages[i]?.role === "user") return props.messages[i].id;
+                  }
+                  return undefined;
+                })()}
                 clearFloatingCopySlot={showClusterQaFooterChrome}
               />
             ) : null}
@@ -2131,7 +2208,15 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
               workspaceRoot={props.workspaceRoot ?? ""}
               onAiWorkspaceRelativePath={props.onAiWorkspaceRelativePath}
               fetchWorkspaceFileText={props.fetchWorkspaceFileText}
+              fetchCheckpointFileText={props.fetchCheckpointFileText}
               writtenFileSvgQueryKey={props.writtenFileSvgQueryKey}
+              precedingUserMessageId={(() => {
+                const msgIdx = props.messages.findIndex((m) => m.id === block.messageId);
+                for (let i = msgIdx - 1; i >= 0; i--) {
+                  if (props.messages[i]?.role === "user") return props.messages[i].id;
+                }
+                return undefined;
+              })()}
               clearFloatingCopySlot={!isNestedVariant && showAssistantQaFooterChrome}
             />
           ) : null}
