@@ -1435,7 +1435,7 @@ function StepRow(props: {
             <ToolStepTitleGlyph className="size-[14px] shrink-0 text-gray-10" />
             <span className="flex min-w-0 flex-1 items-center gap-1.5">
               <span
-                className={`min-w-0 break-words ${toolExecuting ? "font-medium thinking-title-shimmer" : ""}`}
+                className={`min-w-0 break-words font-medium ${toolExecuting ? "thinking-title-shimmer" : ""}`}
               >
                 {headline}
               </span>
@@ -1563,7 +1563,7 @@ function StepRow(props: {
           ) : null}
           <span className="flex min-w-0 flex-1 items-center gap-1.5">
             <span
-              className={`min-w-0 break-words ${toolExecuting ? "font-medium thinking-title-shimmer" : ""}`}
+              className={`min-w-0 break-words font-medium ${toolExecuting ? "thinking-title-shimmer" : ""}`}
             >
               {headline}
             </span>
@@ -1953,7 +1953,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
           className={`flex group ${block.isUser ? "justify-end" : "justify-start"}`.trim()}
           data-message-role={block.isUser ? "user" : "assistant"}
           data-message-id={block.messageIds[0] ?? ""}
-          style={{ contain: "layout style paint", marginBottom: 0, ...blockPerfStyle(blockIndex) }}
+          style={{ contain: "layout style paint", marginBottom: 0, marginTop: 10, ...blockPerfStyle(blockIndex) }}
         >
           <div
             className={`${
