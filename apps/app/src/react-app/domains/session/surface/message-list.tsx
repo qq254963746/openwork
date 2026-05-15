@@ -572,7 +572,7 @@ function ThinkingCollapsible(props: { text: string; thinkingActive: boolean }) {
           setManualOpen((value) => !value);
         }}
       >
-        <Atom className="h-4 w-4 shrink-0" strokeWidth={2} aria-hidden />
+        <Atom className="size-[14px] shrink-0" strokeWidth={2} aria-hidden />
         <span className="flex min-w-0 max-w-[800px] flex-1 items-center gap-1.5 [line-height:inherit]">
           <span
             className={`min-w-0 break-words font-medium ${
@@ -590,7 +590,7 @@ function ThinkingCollapsible(props: { text: string; thinkingActive: boolean }) {
       </button>
       {expanded && paragraphs.length > 0 ? (
         <div className="mt-2 flex items-stretch gap-2 text-[#61666b] [font-size:inherit] [line-height:inherit]">
-          <div className="relative flex w-4 shrink-0 flex-col items-center" aria-hidden>
+            <div className="relative flex w-[14px] shrink-0 flex-col items-center" aria-hidden>
             <div className="flex min-h-[1lh] w-full shrink-0 items-center justify-center">
               <span className="h-1 w-1 rounded-full bg-gray-8" />
             </div>
@@ -1427,7 +1427,7 @@ function StepRow(props: {
       <div className="text-[14px] text-gray-9">
         <button
           type="button"
-          className="w-full text-left transition-colors hover:text-dls-text"
+          className="w-full py-0.5 text-left transition-colors hover:text-dls-text"
           aria-expanded={props.expanded}
           onClick={props.onToggle}
         >
@@ -1549,7 +1549,7 @@ function StepRow(props: {
     <div className="text-[14px] text-gray-9">
       <button
         type="button"
-        className="w-full text-left transition-colors hover:text-dls-text disabled:cursor-default"
+        className="w-full py-0.5 text-left transition-colors hover:text-dls-text disabled:cursor-default"
         aria-expanded={expandable ? props.expanded : undefined}
         disabled={!expandable}
         onClick={() => {
@@ -1580,7 +1580,7 @@ function StepRow(props: {
       </button>
       {props.expanded ? (
         <div
-          className="mt-3 ml-[38px] max-h-[420px] space-y-3 overflow-y-auto pr-3"
+          className="mt-3 ml-[22px] max-h-[420px] space-y-3 overflow-y-auto pr-3"
           data-scrollable="true"
         >
           {hasStructuredValue(toolInput) ? (
@@ -1953,7 +1953,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
           className={`flex group ${block.isUser ? "justify-end" : "justify-start"}`.trim()}
           data-message-role={block.isUser ? "user" : "assistant"}
           data-message-id={block.messageIds[0] ?? ""}
-          style={{ contain: "layout style paint", ...blockPerfStyle(blockIndex) }}
+          style={{ contain: "layout style paint", marginBottom: 0, ...blockPerfStyle(blockIndex) }}
         >
           <div
             className={`${
