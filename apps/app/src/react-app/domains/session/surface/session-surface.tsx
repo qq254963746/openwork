@@ -40,9 +40,6 @@ import { useControlAction, type AiWorkControlAction } from "../../../shell/contr
 import { getReactQueryClient } from "../../../infra/query-client";
 import { ReactSessionComposer } from "./composer/composer";
 import { DevProfiler } from "../../../shell/dev-profiler";
-import { Loader2 } from "lucide-react";
-import { dlsPrimarySolidClass } from "../../workspace/modal-styles";
-
 import { t } from "../../../../i18n";
 import { useReactRenderWatchdog } from "../../../shell/react-render-watchdog";
 import type { ReactComposerNotice } from "./composer/notice";
@@ -57,6 +54,17 @@ import {
   resolveRenderedSessionSnapshot,
 } from "./session-render-state";
 import { SessionTranscript } from "./message-list";
+import { JumpToLatestGlyph } from "./session/jump-to-latest-glyph";
+import { AssistantWaitingCard } from "./session/assistant-waiting-card";
+import {
+  SessionErrorCard,
+  type SessionError,
+  parseSessionError,
+  formatSessionErrorMessage,
+  buildLocalAssistantErrorMessage,
+} from "./session/session-error-card";
+import { EditDiffSummary } from "./session/edit-diff-summary";
+import { InlineQuestionPrompt } from "./session/inline-question-prompt";
 import { deriveSessionRenderModel } from "../sync/transition-controller";
 import { useSessionScrollController } from "./scroll-controller";
 import {
@@ -68,7 +76,6 @@ import {
   setSessionRevertBarrier,
   clearSessionRevertBarrier,
 } from "../sync/session-sync";
-import { SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX } from "../../../../app/types";
 import type { TodoItem } from "../../../../app/types";
 
 const EMPTY_TRANSCRIPT: UIMessage[] = [];
@@ -79,37 +86,6 @@ const JUMP_TO_LATEST_BOX_SHADOW =
 
 /** Soft shadow along the top edge of the composer stack (separates from transcript). Theme-aware via CSS variable. */
 const COMPOSER_SHELL_TOP_SHADOW = "var(--composer-shell-top-shadow)";
-
-function JumpToLatestGlyph(props: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="currentColor"
-      stroke="currentColor"
-      className={`box-border inline-block size-6 p-[3px] text-[18px] leading-none ${props.className ?? ""}`.trim()}
-      style={{ fontSize: "18px" }}
-      aria-hidden
-    >
-      <path
-        d="M18.5651 13.9344C18.8775 14.2468 18.8775 14.7528 18.5651 15.0652L13.274 20.3562C12.5731 21.0571 11.4321 21.063 10.7272 20.3582L5.4342 15.0652C5.1219 14.7528 5.1219 14.2468 5.4342 13.9344C5.74659 13.622 6.25264 13.622 6.56506 13.9344L11.1998 18.5691L11.1998 2.9998C11.1998 2.55803 11.5579 2.2001 11.9996 2.2C12.4415 2.2 12.7994 2.55797 12.7994 2.9998L12.7994 18.5691L17.4342 13.9344C17.7466 13.622 18.2526 13.622 18.5651 13.9344Z"
-        fill="currentColor"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        vectorEffect="nonScalingStroke"
-      />
-    </svg>
-  );
-}
-
-type SessionError = {
-  message: string;
-  kind?: "model-not-found" | "generic";
-  /** For model-not-found: the model that failed. */
-  failedModel?: { providerID: string; modelID: string };
-  /** For model-not-found: suggested replacements from the backend. */
-  suggestions?: Array<{ providerID: string; modelID: string }>;
-};
 
 export type SessionSurfaceProps = {
   client: AiWorkServerClient;
@@ -217,367 +193,9 @@ function messageHasVisibleAssistantOutput(message: UIMessage) {
   });
 }
 
-function AssistantWaitingCard() {
-  return (
-    <div className="-mt-10 flex justify-center py-2" role="status" aria-live="polite" aria-busy="true">
-      <span className="relative inline-flex items-center justify-center">
-        <Loader2 className="h-5 w-5 shrink-0 animate-spin text-gray-9" strokeWidth={2} aria-hidden />
-        <span className="sr-only">{t("session.assistant_reply_loading")}</span>
-      </span>
-    </div>
-  );
-}
-
-function parseSessionError(thrown: unknown): SessionError {
-  const raw = thrown instanceof Error ? thrown.message : String(thrown);
-  // Try to detect ProviderModelNotFoundError from the SDK error shape.
-  // The error message may be a JSON string from our serializer in session-route.
-  try {
-    const parsed = JSON.parse(raw);
-    if (parsed?.name === "ProviderModelNotFoundError" && parsed?.data) {
-      const { providerID, modelID, suggestions } = parsed.data;
-      return {
-        message: `Model ${providerID}/${modelID} is not available.`,
-        kind: "model-not-found",
-        failedModel: { providerID, modelID },
-        suggestions: Array.isArray(suggestions) ? suggestions : [],
-      };
-    }
-  } catch {
-    // Not JSON — fall through to plain message
-  }
-  // Check if the raw string mentions model-not-found patterns
-  if (/ProviderModelNotFoundError/i.test(raw) || /model.*not found/i.test(raw)) {
-    return { message: raw, kind: "model-not-found" };
-  }
-  return { message: raw || "Failed to send prompt." };
-}
-
-function formatSessionErrorMessage(error: SessionError) {
-  const detail = (error.message ?? "").trim();
-  if (!detail) return "Request failed.";
-  return `Request failed.\n\n${detail}`;
-}
-
-function buildLocalAssistantErrorMessage(text: string): UIMessage {
-  return {
-    id: `${SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    role: "assistant",
-    parts: [{ type: "text", text, state: "done" }],
-  };
-}
-
-function SessionErrorCard({ error, onDismiss, onChangeModel, onOpenModelPicker }: {
-  error: SessionError;
-  onDismiss: () => void;
-  onChangeModel?: (model: { providerID: string; modelID: string }) => void;
-  onOpenModelPicker?: () => void;
-}) {
-  return (
-    <div className="mx-auto max-w-[800px] px-3 py-3 sm:px-5">
-      <div className="rounded-2xl border border-red-6/30 bg-red-3/15 px-5 py-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium text-red-11">{error.message}</div>
-            {error.kind === "model-not-found" ? (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {error.suggestions && error.suggestions.length > 0 ? (
-                  error.suggestions.map((s) => (
-                    <button
-                      key={`${s.providerID}/${s.modelID}`}
-                      type="button"
-                      className="rounded-full border border-dls-border bg-dls-surface px-3 py-1.5 text-xs font-medium text-dls-text transition-colors hover:bg-dls-hover"
-                      onClick={() => {
-                        onChangeModel?.(s);
-                        onDismiss();
-                      }}
-                    >
-                      Use {s.providerID}/{s.modelID}
-                    </button>
-                  ))
-                ) : null}
-                <button
-                  type="button"
-                  className="rounded-full border border-dls-border bg-dls-surface px-3 py-1.5 text-xs font-medium text-dls-text transition-colors hover:bg-dls-hover"
-                  onClick={() => {
-                    onOpenModelPicker?.();
-                    onDismiss();
-                  }}
-                >
-                  Change model
-                </button>
-              </div>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            className="shrink-0 rounded-full p-1 text-red-10 transition-colors hover:bg-red-3 hover:text-red-11"
-            onClick={onDismiss}
-            aria-label="Dismiss error"
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function revokeAttachmentPreview(attachment: { previewUrl?: string | undefined }) {
   if (!attachment.previewUrl) return;
   URL.revokeObjectURL(attachment.previewUrl);
-}
-
-/**
- * Compact diff summary shown in the edit-confirm modal: list of file paths +
- * line-level diff body collapsed by default.
- */
-function EditDiffSummary(props: { files: CheckpointDiffFile[] }) {
-  const [expandedPath, setExpandedPath] = useState<string | null>(null);
-  const totalAdditions = props.files.reduce((sum, f) => sum + f.additions, 0);
-  const totalDeletions = props.files.reduce((sum, f) => sum + f.deletions, 0);
-  return (
-    <div className="rounded-lg border border-amber-6/40 bg-amber-3/10 p-3 text-xs text-gray-12">
-      <div className="mb-2 font-medium">
-        {props.files.length === 1
-          ? `1 file changed`
-          : `${props.files.length} files changed`}
-        {(totalAdditions > 0 || totalDeletions > 0) ? (
-          <>
-            {" "}
-            <span className="text-green-11">+{totalAdditions}</span>{" "}
-            <span className="text-red-11">-{totalDeletions}</span>
-          </>
-        ) : null}
-      </div>
-      <div className="max-h-[260px] overflow-y-auto rounded-md border border-amber-6/30 bg-white/40 dark:bg-gray-1/40">
-        {props.files.map((file) => {
-          const isExpanded = expandedPath === file.path;
-          return (
-            <div key={file.path} className="border-b border-amber-6/20 last:border-b-0">
-              <button
-                type="button"
-                className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-amber-3/20"
-                onClick={() => setExpandedPath((cur) => (cur === file.path ? null : file.path))}
-              >
-                <span className={statusBadgeClass(file.status)}>{statusBadgeChar(file.status)}</span>
-                <code className="flex-1 truncate text-[11px] font-mono">{file.path}</code>
-                <span className="shrink-0 text-[10px] text-green-11">+{file.additions}</span>
-                <span className="shrink-0 text-[10px] text-red-11">-{file.deletions}</span>
-              </button>
-              {isExpanded && !file.binary && file.hunks.length > 0 ? (
-                <div className="bg-gray-2/50 px-2 py-1 font-mono text-[11px] leading-tight">
-                  {file.hunks.map((hunk, hi) => (
-                    <div key={hi} className="mb-1">
-                      <div className="text-gray-10">{hunk.header}</div>
-                      {hunk.lines.map((line, li) => (
-                        <div
-                          key={li}
-                          className={
-                            line.kind === "add"
-                              ? "bg-green-3/30 text-green-11"
-                              : line.kind === "del"
-                                ? "bg-red-3/30 text-red-11"
-                                : "text-gray-11"
-                          }
-                        >
-                          {line.kind === "add" ? "+ " : line.kind === "del" ? "- " : "  "}
-                          {line.text}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              {isExpanded && file.binary ? (
-                <div className="bg-gray-2/50 px-2 py-1 text-[11px] text-gray-10">Binary file (no preview)</div>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function statusBadgeChar(status: CheckpointDiffFile["status"]): string {
-  switch (status) {
-    case "added": return "A";
-    case "deleted": return "D";
-    case "renamed": return "R";
-    case "type-changed": return "T";
-    case "modified": return "M";
-    default: return "?";
-  }
-}
-
-function statusBadgeClass(status: CheckpointDiffFile["status"]): string {
-  const base = "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-bold";
-  switch (status) {
-    case "added": return `${base} bg-green-9 text-white`;
-    case "deleted": return `${base} bg-red-9 text-white`;
-    case "renamed": return `${base} bg-blue-9 text-white`;
-    case "type-changed": return `${base} bg-purple-9 text-white`;
-    case "modified": return `${base} bg-amber-9 text-white`;
-    default: return `${base} bg-gray-7 text-white`;
-  }
-}
-
-function InlineQuestionPrompt(props: {
-  active: { id: string; questions: QuestionInfo[] };
-  busy: boolean;
-  onReply: (answers: string[][]) => void;
-  onDismiss?: () => void;
-}) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<string[][]>([]);
-  const [currentSelection, setCurrentSelection] = useState<string[]>([]);
-  const [customInput, setCustomInput] = useState("");
-
-  useEffect(() => {
-    setCurrentIndex(0);
-    setAnswers(new Array(props.active.questions.length).fill([]));
-    setCurrentSelection([]);
-    setCustomInput("");
-  }, [props.active.id, props.active.questions.length]);
-
-  const currentQuestion = props.active.questions[currentIndex];
-  if (!currentQuestion) return null;
-
-  const isLastQuestion = currentIndex === props.active.questions.length - 1;
-  const canProceed = (() => {
-    if (currentQuestion.custom && customInput.trim().length > 0) return true;
-    return currentSelection.length > 0;
-  })();
-
-  const toggleOption = (value: string) => {
-    if (props.busy) return;
-    if (currentQuestion.multiple) {
-      setCurrentSelection((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
-      return;
-    }
-    setCurrentSelection([value]);
-    if (!currentQuestion.custom) {
-      const nextAnswers = answers.slice();
-      nextAnswers[currentIndex] = [value];
-      if (isLastQuestion) {
-        props.onReply(nextAnswers);
-      } else {
-        setAnswers(nextAnswers);
-        setCurrentIndex((i) => i + 1);
-        setCurrentSelection([]);
-        setCustomInput("");
-      }
-    }
-  };
-
-  const handleNext = () => {
-    if (!canProceed || props.busy) return;
-    const nextAnswer = [...currentSelection];
-    if (currentQuestion.custom && customInput.trim()) {
-      nextAnswer.push(customInput.trim());
-    }
-    const nextAnswers = answers.slice();
-    nextAnswers[currentIndex] = nextAnswer;
-    if (isLastQuestion) {
-      props.onReply(nextAnswers);
-    } else {
-      setAnswers(nextAnswers);
-      setCurrentIndex((i) => i + 1);
-      setCurrentSelection([]);
-      setCustomInput("");
-    }
-  };
-
-  return (
-    <div className="mx-auto w-full max-w-[800px] px-3 sm:px-5">
-      <div className="mb-3 rounded-2xl border border-dls-border bg-dls-surface shadow-[var(--dls-card-shadow)]">
-        <div className="flex items-start justify-between gap-3 px-4 py-3 sm:px-5">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <div className="text-[13px] font-semibold text-dls-text">
-                {currentQuestion.header || "Question"}
-              </div>
-              <div className="text-[11px] font-medium text-dls-secondary">
-                {currentIndex + 1} / {props.active.questions.length}
-              </div>
-            </div>
-            <div className="mt-1 text-[13px] leading-5 text-dls-secondary">
-              {currentQuestion.question}
-            </div>
-          </div>
-          <button
-            type="button"
-            className="shrink-0 rounded-full px-2 py-1 text-[12px] font-medium text-dls-secondary transition-colors hover:bg-dls-hover hover:text-dls-text disabled:opacity-60"
-            onClick={props.onDismiss}
-            disabled={props.busy}
-            aria-label="Dismiss question"
-            title="Dismiss"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="px-4 pb-4 sm:px-5">
-          <div className="flex flex-col gap-2">
-            {currentQuestion.options.map((opt: { description: string; label?: string }) => {
-              const value = opt.description;
-              const selected = currentSelection.includes(value);
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  className={`flex w-full items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left text-[13px] transition-colors ${
-                    selected
-                      ? "border-[rgba(var(--dls-accent-rgb),0.35)] bg-[rgba(var(--dls-accent-rgb),0.10)] text-dls-text"
-                      : "border-dls-border bg-dls-surface text-dls-secondary hover:bg-dls-hover hover:text-dls-text"
-                  }`}
-                  onClick={() => toggleOption(value)}
-                  disabled={props.busy}
-                >
-                  <span className="min-w-0 break-words font-medium text-current">{opt.label || value}</span>
-                  <span
-                    className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                      selected
-                        ? "border-[rgba(var(--dls-accent-rgb),0.45)] bg-[rgba(var(--dls-accent-rgb),0.25)]"
-                        : "border-dls-border bg-transparent"
-                    }`}
-                    aria-hidden
-                  />
-                </button>
-              );
-            })}
-          </div>
-
-          {currentQuestion.custom ? (
-            <div className="mt-3">
-              <input
-                type="text"
-                value={customInput}
-                onChange={(event) => setCustomInput(event.currentTarget.value)}
-                className="w-full rounded-xl border border-dls-border bg-dls-surface px-3.5 py-2.5 text-[13px] text-dls-text placeholder:text-dls-secondary focus:border-[rgba(var(--dls-accent-rgb),0.45)] focus:outline-none"
-                placeholder="Type your answer…"
-                disabled={props.busy}
-              />
-            </div>
-          ) : null}
-
-          {currentQuestion.multiple || currentQuestion.custom ? (
-            <div className="mt-3 flex justify-end">
-              <button
-                type="button"
-                className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-[12px] font-semibold transition-colors disabled:opacity-60 ${dlsPrimarySolidClass}`}
-                onClick={handleNext}
-                disabled={!canProceed || props.busy}
-              >
-                {isLastQuestion ? "Submit" : "Next"}
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export function SessionSurface(props: SessionSurfaceProps) {
@@ -960,14 +578,6 @@ export function SessionSurface(props: SessionSurfaceProps) {
       command: slashMatch ? { name: slashMatch[1] ?? "", arguments: slashMatch[2] ?? "" } : undefined,
     };
   }, [mentions]);
-
-  const handleCopyTranscript = async () => {
-    try {
-      await navigator.clipboard.writeText(transcriptToText(renderedMessages));
-    } catch (nextError) {
-      setError({ message: nextError instanceof Error ? nextError.message : "Failed to copy transcript." });
-    }
-  };
 
   const handleSend = useCallback(async () => {
     const text = draft.trim();
@@ -1382,20 +992,6 @@ export function SessionSurface(props: SessionSurfaceProps) {
     await doEditSubmit(msgId, text);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingMessageId, editDraft, editAttachments, props.workspaceId, props.sessionId, props.client, props.aiworkToken, doEditSubmit]);
-
-  const editBuildDraft = useCallback((text: string, nextAttachments: ComposerAttachment[]): ComposerDraft => {
-    const parts: ComposerPart[] = text.split(/(@[^\s@]+)/).flatMap((seg) => {
-      if (!seg) return [] as ComposerPart[];
-      if (seg.startsWith("@")) {
-        const value = seg.slice(1);
-        const kind = editMentions[value];
-        if (kind === "agent") return [{ type: "agent", name: value }];
-        if (kind === "file") return [{ type: "file", path: value, label: value }];
-      }
-      return [{ type: "text", text: seg }];
-    });
-    return { mode: "prompt", parts, attachments: nextAttachments, text, resolvedText: text };
-  }, [editMentions]);
 
   const typeComposerText = useCallback(async (text: string) => {
     window.dispatchEvent(new Event("aiwork:focusPrompt"));
