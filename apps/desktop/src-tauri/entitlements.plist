@@ -2,11 +2,25 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+  <!-- Required for JIT compilation (e.g. JavaScript engines) -->
   <key>com.apple.security.cs.allow-jit</key>
   <true/>
+  <!-- Required for Bun/Node sidecar processes that write to executable memory -->
   <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
   <true/>
+  <!-- Required when sidecars disable W^X page protection -->
   <key>com.apple.security.cs.disable-executable-page-protection</key>
+  <true/>
+  <!-- Allow loading dylibs/plugins not signed by Apple or the app's team -->
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+  <!-- Network access for AI API calls and local server communication -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+  <key>com.apple.security.network.server</key>
+  <true/>
+  <!-- File access for workspace directories -->
+  <key>com.apple.security.files.user-selected.read-write</key>
   <true/>
 </dict>
 </plist>
