@@ -454,7 +454,7 @@ export function WorkspaceSessionList(props: Props) {
                 {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
               </button>
             ) : row.depth > 0 ? (
-              <span className="w-5 shrink-0" aria-hidden />
+              <span className="-ml-1 w-5 shrink-0" aria-hidden />
             ) : null}
 
             <div
