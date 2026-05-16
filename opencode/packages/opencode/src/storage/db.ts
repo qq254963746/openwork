@@ -13,6 +13,7 @@ import { InstallationChannel } from "@opencode-ai/core/installation/version"
 import { InstanceState } from "@/effect/instance-state"
 import { iife } from "@/util/iife"
 import { init } from "#db"
+import { SCHEMA_DDL } from "./schema.ddl"
 
 export const NotFoundError = NamedError.create(
   "NotFoundError",
@@ -51,8 +52,25 @@ export const Client = lazy(() => {
   db.run("PRAGMA synchronous = NORMAL")
   db.run("PRAGMA busy_timeout = 5000")
   db.run("PRAGMA cache_size = -64000")
-  db.run("PRAGMA foreign_keys = ON")
+  db.run("PRAGMA foreign_keys = OFF")
   db.run("PRAGMA wal_checkpoint(PASSIVE)")
+
+  // Apply full DDL schema (CREATE TABLE IF NOT EXISTS) instead of incremental migrations.
+  // SCHEMA_DDL is an array of SQL statements — no string splitting needed.
+  log.info("applying DDL schema", { statements: SCHEMA_DDL.length })
+  for (const stmt of SCHEMA_DDL) {
+    try {
+      db.run(stmt)
+    } catch (err: any) {
+      // Ignore "already exists" errors — DDL is fully idempotent
+      if (!err?.message?.includes("already exists")) {
+        log.error("DDL statement failed", { sql: stmt.slice(0, 120), err: String(err) })
+        throw err
+      }
+    }
+  }
+
+  db.run("PRAGMA foreign_keys = ON")
 
   return db
 })
