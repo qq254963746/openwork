@@ -17,7 +17,10 @@ import {
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 
+// ─── Environment / CLI helpers ────────────────────────────────────────────────
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const readArg = (name) => {
   const raw = process.argv.slice(2);
   const direct = raw.find((arg) => arg.startsWith(`${name}=`));
@@ -31,32 +34,14 @@ const hasFlag = (name) => process.argv.slice(2).includes(name);
 const forceBuild = hasFlag("--force") || process.env.AIWORK_SIDECAR_FORCE_BUILD === "1";
 const sidecarOverride = process.env.AIWORK_SIDECAR_DIR?.trim() || readArg("--outdir");
 const sidecarDir = sidecarOverride ? resolve(sidecarOverride) : join(__dirname, "..", "src-tauri", "sidecars");
-const constantsPath = resolve(__dirname, "..", "..", "..", "constants.json");
-
-// opencodeVersion is kept as a fallback in case local source is unavailable
-const opencodeVersion = (() => {
-  try {
-    const raw = readFileSync(constantsPath, "utf8");
-    const parsed = JSON.parse(raw);
-    return typeof parsed.opencodeVersion === "string" ? parsed.opencodeVersion.trim() || null : null;
-  } catch {
-    return null;
-  }
-})();
-
-const normalizeVersion = (value) => {
-  const raw = String(value ?? "").trim();
-  if (!raw) return null;
-  if (raw.toLowerCase() === "latest") return null;
-  return raw.startsWith("v") ? raw.slice(1) : raw;
-};
 
 const chromeDevtoolsMcpVersion =
   process.env.CHROME_DEVTOOLS_MCP_VERSION?.trim() ||
   process.env.AIWORK_CHROME_DEVTOOLS_MCP_VERSION?.trim() ||
   "0.17.0";
 
-// Target triple for native platform binaries
+// ─── Target triple resolution ─────────────────────────────────────────────────
+
 const resolvedTargetTriple = (() => {
   const envTarget =
     process.env.TAURI_ENV_TARGET_TRIPLE ??
@@ -74,8 +59,10 @@ const resolvedTargetTriple = (() => {
   }
   return null;
 })();
+
 const isWindowsTarget = process.platform === "win32" || resolvedTargetTriple?.includes("windows") === true;
 
+/** Bun compile target string derived from the resolved Rust target triple. */
 const bunTarget = (() => {
   switch (resolvedTargetTriple) {
     case "aarch64-apple-darwin":
@@ -97,52 +84,7 @@ const bunTarget = (() => {
   }
 })();
 
-const opencodeBaseName = isWindowsTarget ? "opencode.exe" : "opencode";
-const opencodePath = join(sidecarDir, opencodeBaseName);
-const opencodeTargetName = resolvedTargetTriple
-  ? `opencode-${resolvedTargetTriple}${isWindowsTarget ? ".exe" : ""}`
-  : null;
-const opencodeTargetPath = opencodeTargetName ? join(sidecarDir, opencodeTargetName) : null;
-
-const opencodeCandidatePath = opencodeTargetPath ?? opencodePath;
-let existingOpencodeVersion = null;
-
-// aiwork-server paths
-const aiworkServerBaseName = "aiwork-server";
-const aiworkServerName = isWindowsTarget ? `${aiworkServerBaseName}.exe` : aiworkServerBaseName;
-const aiworkServerPath = join(sidecarDir, aiworkServerName);
-const aiworkServerBuildName = bunTarget
-  ? `${aiworkServerBaseName}-${bunTarget}${bunTarget.includes("windows") ? ".exe" : ""}`
-  : aiworkServerName;
-const aiworkServerBuildPath = join(sidecarDir, aiworkServerBuildName);
-const aiworkServerTargetTriple = resolvedTargetTriple;
-const aiworkServerTargetName = aiworkServerTargetTriple
-  ? `${aiworkServerBaseName}-${aiworkServerTargetTriple}${aiworkServerTargetTriple.includes("windows") ? ".exe" : ""}`
-  : null;
-const aiworkServerTargetPath = aiworkServerTargetName ? join(sidecarDir, aiworkServerTargetName) : null;
-
-const aiworkServerDir = resolve(__dirname, "..", "..", "server");
-
-// opencode local source directory (inside aiwork/opencode)
-const opencodeSourceDir = resolve(__dirname, "..", "..", "..", "opencode");
-const opencodePackageDir = resolve(opencodeSourceDir, "packages", "opencode");
-
-const resolveBuildScript = (dir) => {
-  const scriptPath = resolve(dir, "script", "build.ts");
-  if (existsSync(scriptPath)) return scriptPath;
-  const scriptsPath = resolve(dir, "scripts", "build.ts");
-  if (existsSync(scriptsPath)) return scriptsPath;
-  return scriptPath;
-};
-
-// chrome-devtools-mcp: now bundled as a node_modules dependency of
-// @aiwork/desktop . The Bun-compiled shim
-// sidecar is no longer built.  These variables are kept only so the
-// versions.json metadata block below can record the pinned version without
-// breaking the build.
-const chromeDevtoolsBaseName = "chrome-devtools-mcp";
-const chromeDevtoolsName = isWindowsTarget ? `${chromeDevtoolsBaseName}.exe` : chromeDevtoolsBaseName;
-const chromeDevtoolsPath = join(sidecarDir, chromeDevtoolsName);
+// ─── Low-level file utilities ─────────────────────────────────────────────────
 
 const readHeader = (filePath, length = 256) => {
   const fd = openSync(filePath, "r");
@@ -176,27 +118,12 @@ const readDirectory = (dir) => {
   } catch {
     return [];
   }
-
   return entries.flatMap((entry) => {
     const next = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return readDirectory(next);
-    }
-    if (entry.isFile()) {
-      return [next];
-    }
+    if (entry.isDirectory()) return readDirectory(next);
+    if (entry.isFile()) return [next];
     return [];
   });
-};
-
-const findOpencodeBinary = (dir) => {
-  const candidates = readDirectory(dir);
-  return (
-    candidates.find((file) => file.endsWith(`/${opencodeBaseName}`) || file.endsWith(`\\${opencodeBaseName}`)) ??
-    candidates.find((file) => file.endsWith("/opencode.exe") || file.endsWith("\\opencode.exe")) ??
-    candidates.find((file) => file.endsWith("/opencode") || file.endsWith("\\opencode")) ??
-    null
-  );
 };
 
 const readBinaryVersion = (filePath) => {
@@ -215,18 +142,32 @@ const sha256File = (filePath) => {
   return hash.digest("hex");
 };
 
+const readPackageVersion = (packageDir) => {
+  try {
+    const raw = readFileSync(resolve(packageDir, "package.json"), "utf8");
+    return String(JSON.parse(raw).version ?? "").trim() || null;
+  } catch {
+    return null;
+  }
+};
+
+const resolveBuildScript = (dir) => {
+  const scriptPath = resolve(dir, "script", "build.ts");
+  if (existsSync(scriptPath)) return scriptPath;
+  const scriptsPath = resolve(dir, "scripts", "build.ts");
+  if (existsSync(scriptsPath)) return scriptsPath;
+  return scriptPath; // return first candidate even if missing (caller will handle)
+};
+
+// ─── macOS ad-hoc signing ─────────────────────────────────────────────────────
+
 const adHocSignDarwin = (filePath) => {
   if (process.platform !== "darwin" || !filePath || !existsSync(filePath)) return;
-  const remove = spawnSync("codesign", ["--remove-signature", filePath], {
-    encoding: "utf8",
-  });
+  const remove = spawnSync("codesign", ["--remove-signature", filePath], { encoding: "utf8" });
   if (remove.error && remove.error.code === "ENOENT") {
     throw new Error("codesign is required to prepare runnable macOS sidecars");
   }
-
-  const sign = spawnSync("codesign", ["--force", "--sign", "-", filePath], {
-    encoding: "utf8",
-  });
+  const sign = spawnSync("codesign", ["--force", "--sign", "-", filePath], { encoding: "utf8" });
   if (sign.error) {
     if (sign.error.code === "ENOENT") {
       throw new Error("codesign is required to prepare runnable macOS sidecars");
@@ -246,246 +187,322 @@ const adHocSignDarwinSidecars = (paths) => {
   }
 };
 
-const parseChecksum = (content, assetName) => {
-  const lines = content.split(/\r?\n/);
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const [hash, name] = trimmed.split(/\s+/);
-    if (name === assetName) return hash.toLowerCase();
-    if (trimmed.endsWith(` ${assetName}`)) {
-      return trimmed.split(/\s+/)[0]?.toLowerCase() ?? null;
-    }
-  }
-  return null;
+// ─── Sidecar path helpers ─────────────────────────────────────────────────────
+
+/**
+ * Compute all relevant paths for a sidecar binary that is compiled with Bun.
+ *
+ * @param {string} baseName - Binary base name without extension (e.g. "aiwork-server").
+ * @returns {{ canonicalPath, buildPath, targetPath, targetName }}
+ */
+const bunSidecarPaths = (baseName) => {
+  const ext = isWindowsTarget ? ".exe" : "";
+  const canonicalPath = join(sidecarDir, `${baseName}${ext}`);
+
+  const buildName = bunTarget
+    ? `${baseName}-${bunTarget}${bunTarget.includes("windows") ? ".exe" : ""}`
+    : `${baseName}${ext}`;
+  const buildPath = join(sidecarDir, buildName);
+
+  const targetName = resolvedTargetTriple
+    ? `${baseName}-${resolvedTargetTriple}${resolvedTargetTriple.includes("windows") ? ".exe" : ""}`
+    : null;
+  const targetPath = targetName ? join(sidecarDir, targetName) : null;
+
+  return { canonicalPath, buildPath, targetName, targetPath };
 };
 
-let didBuildAiWorkServer = false;
-let existingAiWorkServerVersion = null;
-if (existsSync(aiworkServerPath) && !isStubBinary(aiworkServerPath)) {
-  existingAiWorkServerVersion = readBinaryVersion(aiworkServerPath);
-}
+/**
+ * Compute all relevant paths for a sidecar binary distributed as a native
+ * Rust/Go binary (identified by target triple, not Bun target).
+ *
+ * @param {string} baseName - Binary base name without extension.
+ * @returns {{ canonicalPath, candidatePath, targetName, targetPath }}
+ */
+const nativeSidecarPaths = (baseName) => {
+  const ext = isWindowsTarget ? ".exe" : "";
+  const canonicalPath = join(sidecarDir, `${baseName}${ext}`);
 
-const desiredAiWorkServerVersion = (() => {
-  try {
-    const raw = readFileSync(resolve(aiworkServerDir, "package.json"), "utf8");
-    return String(JSON.parse(raw).version ?? "").trim() || null;
-  } catch {
-    return null;
+  const targetName = resolvedTargetTriple
+    ? `${baseName}-${resolvedTargetTriple}${isWindowsTarget ? ".exe" : ""}`
+    : null;
+  const targetPath = targetName ? join(sidecarDir, targetName) : null;
+
+  // Prefer the target-triple-suffixed path when available
+  const candidatePath = targetPath ?? canonicalPath;
+
+  return { canonicalPath, candidatePath, targetName, targetPath };
+};
+
+// ─── Generic Bun-compiled sidecar builder ─────────────────────────────────────
+
+/**
+ * Build (if needed) and install a Bun-compiled sidecar into `sidecarDir`.
+ *
+ * @param {object} opts
+ * @param {string}   opts.label          - Human-readable name for log messages.
+ * @param {string}   opts.baseName       - Binary base name (e.g. "aiwork-server").
+ * @param {string}   opts.sourceDir      - Root of the source package (where package.json lives).
+ * @param {string[]} [opts.extraBuildArgs] - Additional args passed to the build script.
+ * @param {(distDir: string) => string|null} [opts.findBuiltBinary]
+ *   - Optional callback to locate the compiled binary inside the dist dir.
+ *     Defaults to looking for `<baseName>` or `<baseName>.exe`.
+ *   - When `null` the caller expects the build script to write directly into
+ *     `sidecarDir` (aiwork-server style) and no copy step is performed.
+ * @returns {{ version: string|null, paths: ReturnType<typeof bunSidecarPaths>, didBuild: boolean }}
+ */
+const buildBunSidecar = (opts) => {
+  const { label, baseName, sourceDir, extraBuildArgs = [], findBuiltBinary = undefined } = opts;
+  const paths = bunSidecarPaths(baseName);
+  const { canonicalPath, buildPath, targetPath } = paths;
+
+  // Detect currently installed version
+  let existingVersion =
+    existsSync(canonicalPath) && !isStubBinary(canonicalPath) ? readBinaryVersion(canonicalPath) : null;
+
+  const desiredVersion = readPackageVersion(sourceDir);
+
+  const shouldRebuildForVersion = Boolean(
+    desiredVersion && existingVersion && existingVersion !== desiredVersion,
+  );
+  const shouldBuild =
+    forceBuild ||
+    shouldRebuildForVersion ||
+    !existsSync(buildPath) ||
+    isStubBinary(buildPath);
+
+  if (!shouldBuild) {
+    console.log(`${label} sidecar already present (${existingVersion}).`);
+    return { version: desiredVersion ?? existingVersion, paths, didBuild: false };
   }
-})();
 
-const shouldRebuildAiWorkServerForVersion = Boolean(
-  desiredAiWorkServerVersion &&
-    existingAiWorkServerVersion &&
-    existingAiWorkServerVersion !== desiredAiWorkServerVersion,
-);
-const shouldBuildAiWorkServer =
-  forceBuild ||
-  shouldRebuildAiWorkServerForVersion ||
-  !existsSync(aiworkServerBuildPath) ||
-  isStubBinary(aiworkServerBuildPath);
-
-if (shouldBuildAiWorkServer) {
   mkdirSync(sidecarDir, { recursive: true });
-  if (existsSync(aiworkServerBuildPath)) {
-    try {
-      unlinkSync(aiworkServerBuildPath);
-    } catch {
-      // ignore
-    }
+
+  // Remove stale build artefact
+  if (existsSync(buildPath)) {
+    try { unlinkSync(buildPath); } catch { /* ignore */ }
   }
-  const aiworkServerScript = resolveBuildScript(aiworkServerDir);
-  if (!existsSync(aiworkServerScript)) {
-    console.error(`AiWork server build script not found at ${aiworkServerScript}`);
+
+  const buildScript = resolveBuildScript(sourceDir);
+  if (!existsSync(buildScript)) {
+    console.error(`${label} build script not found at ${buildScript}`);
     process.exit(1);
   }
-  const aiworkServerArgs = [aiworkServerScript, "--outdir", sidecarDir, "--filename", "aiwork-server"];
-  if (bunTarget) {
-    aiworkServerArgs.push("--target", bunTarget);
-  }
-  const buildResult = spawnSync("bun", aiworkServerArgs, {
-    cwd: aiworkServerDir,
-    stdio: "inherit",
-    shell: true,
-  });
 
-  if (buildResult.status !== 0) {
-    process.exit(buildResult.status ?? 1);
-  }
+  const buildArgs = [buildScript, "--outdir", sidecarDir, "--filename", baseName];
+  if (bunTarget) buildArgs.push("--target", bunTarget);
+  buildArgs.push(...extraBuildArgs);
 
-  didBuildAiWorkServer = true;
-}
+  console.log(`Building ${label} from ${sourceDir}...`);
+  const result = spawnSync("bun", buildArgs, { cwd: sourceDir, stdio: "inherit", shell: true });
+  if (result.status !== 0) process.exit(result.status ?? 1);
 
-if (existsSync(aiworkServerBuildPath)) {
-  const shouldCopyCanonical = didBuildAiWorkServer || !existsSync(aiworkServerPath) || isStubBinary(aiworkServerPath);
-  if (shouldCopyCanonical && aiworkServerBuildPath !== aiworkServerPath) {
-    try {
-      if (existsSync(aiworkServerPath)) {
-        unlinkSync(aiworkServerPath);
-      }
-    } catch {
-      // ignore
+  // Optional: copy from a dist sub-directory into sidecarDir
+  if (typeof findBuiltBinary === "function") {
+    const distDir = resolve(sourceDir, "dist");
+    const builtBinary = findBuiltBinary(distDir);
+    if (!builtBinary) {
+      console.error(`${label} binary not found in ${distDir} after build.`);
+      process.exit(1);
     }
-    copyFileSync(aiworkServerBuildPath, aiworkServerPath);
-  }
-
-  if (aiworkServerTargetPath) {
-    const shouldCopyTarget =
-      didBuildAiWorkServer || !existsSync(aiworkServerTargetPath) || isStubBinary(aiworkServerTargetPath);
-    if (shouldCopyTarget && aiworkServerBuildPath !== aiworkServerTargetPath) {
-      try {
-        if (existsSync(aiworkServerTargetPath)) {
-          unlinkSync(aiworkServerTargetPath);
-        }
-      } catch {
-        // ignore
+    for (const dest of [targetPath, canonicalPath].filter(Boolean)) {
+      try { if (existsSync(dest)) unlinkSync(dest); } catch { /* ignore */ }
+      copyFileSync(builtBinary, dest);
+      try { chmodSync(dest, 0o755); } catch { /* ignore */ }
+    }
+  } else {
+    // Build script writes directly to sidecarDir; just ensure canonical copy exists
+    if (existsSync(buildPath)) {
+      if (buildPath !== canonicalPath) {
+        try { if (existsSync(canonicalPath)) unlinkSync(canonicalPath); } catch { /* ignore */ }
+        copyFileSync(buildPath, canonicalPath);
       }
-      copyFileSync(aiworkServerBuildPath, aiworkServerTargetPath);
+      if (targetPath && buildPath !== targetPath) {
+        try { if (existsSync(targetPath)) unlinkSync(targetPath); } catch { /* ignore */ }
+        copyFileSync(buildPath, targetPath);
+      }
     }
   }
-}
 
-if (!existingOpencodeVersion && opencodeCandidatePath) {
-  existingOpencodeVersion =
-    existsSync(opencodeCandidatePath) && !isStubBinary(opencodeCandidatePath)
-      ? readBinaryVersion(opencodeCandidatePath)
+  console.log(`${label} sidecar built and installed (${desiredVersion}).`);
+  return { version: desiredVersion, paths, didBuild: true };
+};
+
+// ─── Generic native sidecar builder (non-Bun) ────────────────────────────────
+
+/**
+ * Build (if needed) a native sidecar (compiled via its own build script, not
+ * Bun's bundler). Used for opencode which ships its own build.ts.
+ *
+ * @param {object} opts
+ * @param {string}   opts.label
+ * @param {string}   opts.baseName
+ * @param {string}   opts.packageDir     - Directory containing package.json and the build script.
+ * @param {string}   [opts.workspaceDir] - Workspace root for `bun install` (defaults to packageDir).
+ * @param {string[]} [opts.buildArgs]    - Args passed to the build script.
+ * @param {(distDir: string) => string|null} opts.findBuiltBinary
+ * @returns {{ version: string|null, paths: ReturnType<typeof nativeSidecarPaths>, didBuild: boolean }}
+ */
+const buildNativeSidecar = (opts) => {
+  const {
+    label,
+    baseName,
+    packageDir,
+    workspaceDir = packageDir,
+    buildArgs: customBuildArgs = [],
+    findBuiltBinary,
+  } = opts;
+
+  const paths = nativeSidecarPaths(baseName);
+  const { candidatePath, canonicalPath, targetPath } = paths;
+
+  if (!existsSync(packageDir)) {
+    console.error(
+      `${label} source directory not found at ${packageDir}. ` +
+        `Please ensure the source is present before building.`,
+    );
+    process.exit(1);
+  }
+
+  let existingVersion =
+    existsSync(candidatePath) && !isStubBinary(candidatePath)
+      ? readBinaryVersion(candidatePath)
       : null;
-}
 
-// Read desired opencode version from local source package.json
-const desiredOpencodeVersion = (() => {
-  try {
-    const raw = readFileSync(resolve(opencodePackageDir, "package.json"), "utf8");
-    return String(JSON.parse(raw).version ?? "").trim() || null;
-  } catch {
-    return null;
+  const desiredVersion = readPackageVersion(packageDir);
+
+  const shouldRebuildForVersion = Boolean(
+    desiredVersion && existingVersion && existingVersion !== desiredVersion,
+  );
+  const shouldBuild =
+    forceBuild ||
+    shouldRebuildForVersion ||
+    !candidatePath ||
+    !existsSync(candidatePath) ||
+    isStubBinary(candidatePath) ||
+    !existingVersion;
+
+  if (!shouldBuild) {
+    console.log(`${label} sidecar already present (${existingVersion}).`);
+    return { version: desiredVersion ?? existingVersion, paths, didBuild: false };
   }
-})();
 
-const normalizedOpencodeVersion = desiredOpencodeVersion ?? normalizeVersion(opencodeVersion);
-
-if (!normalizedOpencodeVersion) {
-  console.error(
-    `OpenCode version could not be resolved from local source or ${constantsPath}.`
-  );
-  process.exit(1);
-}
-
-if (!existsSync(opencodePackageDir)) {
-  console.error(
-    `OpenCode source directory not found at ${opencodePackageDir}. ` +
-    `Expected aiwork/opencode/packages/opencode to exist.`
-  );
-  process.exit(1);
-}
-
-const shouldRebuildOpencodeForVersion = Boolean(
-  desiredOpencodeVersion &&
-    existingOpencodeVersion &&
-    existingOpencodeVersion !== desiredOpencodeVersion,
-);
-const shouldBuildOpencode =
-  forceBuild ||
-  shouldRebuildOpencodeForVersion ||
-  !opencodeCandidatePath ||
-  !existsSync(opencodeCandidatePath) ||
-  isStubBinary(opencodeCandidatePath) ||
-  !existingOpencodeVersion;
-
-if (!shouldBuildOpencode) {
-  console.log(`OpenCode sidecar already present (${existingOpencodeVersion}).`);
-}
-
-if (shouldBuildOpencode) {
   mkdirSync(sidecarDir, { recursive: true });
 
-  const opencodeBuildScript = resolve(opencodePackageDir, "script", "build.ts");
-  if (!existsSync(opencodeBuildScript)) {
-    console.error(`OpenCode build script not found at ${opencodeBuildScript}`);
-    process.exit(1);
-  }
-
-  // Ensure opencode workspace dependencies are installed (node_modules may not exist
-  // if the source was copied without node_modules).
-  const opencodeNodeModules = resolve(opencodeSourceDir, "node_modules");
-  if (!existsSync(opencodeNodeModules)) {
-    console.log(`Installing OpenCode dependencies at ${opencodeSourceDir}...`);
+  // Ensure workspace dependencies are installed
+  const nodeModules = resolve(workspaceDir, "node_modules");
+  if (!existsSync(nodeModules)) {
+    console.log(`Installing ${label} dependencies at ${workspaceDir}...`);
     const installResult = spawnSync("bun", ["install"], {
-      cwd: opencodeSourceDir,
+      cwd: workspaceDir,
       stdio: "inherit",
       shell: true,
     });
-    if (installResult.status !== 0) {
-      process.exit(installResult.status ?? 1);
-    }
+    if (installResult.status !== 0) process.exit(installResult.status ?? 1);
   }
 
-  // opencode build.ts uses --single to build only for the current platform.
-  // It outputs to packages/opencode/dist/{name}/bin/opencode
-  // --skip-install skips the extra "bun install --os=* --cpu=* @parcel/watcher" step
-  // inside build.ts (not the workspace install above).
-  const opencodeBuildArgs = [opencodeBuildScript, "--single", "--skip-install"];
-  console.log(`Building OpenCode from local source at ${opencodePackageDir}...`);
-  const opencodeBuildResult = spawnSync("bun", opencodeBuildArgs, {
-    cwd: opencodePackageDir,
-    stdio: "inherit",
-    shell: true,
-  });
-
-  if (opencodeBuildResult.status !== 0) {
-    process.exit(opencodeBuildResult.status ?? 1);
-  }
-
-  // Find the built binary in packages/opencode/dist/
-  const opencodeDistDir = resolve(opencodePackageDir, "dist");
-  const builtBinary = findOpencodeBinary(opencodeDistDir);
-  if (!builtBinary) {
-    console.error(`OpenCode binary not found in ${opencodeDistDir} after build.`);
+  const buildScript = resolveBuildScript(packageDir);
+  if (!existsSync(buildScript)) {
+    console.error(`${label} build script not found at ${buildScript}`);
     process.exit(1);
   }
 
-  const opencodeTargets = [opencodeTargetPath, opencodePath].filter(Boolean);
-  for (const target of opencodeTargets) {
-    try {
-      if (existsSync(target)) {
-        unlinkSync(target);
-      }
-    } catch {
-      // ignore
-    }
-    copyFileSync(builtBinary, target);
-    try {
-      chmodSync(target, 0o755);
-    } catch {
-      // ignore
-    }
+  console.log(`Building ${label} from local source at ${packageDir}...`);
+  const result = spawnSync("bun", [buildScript, ...customBuildArgs], {
+    cwd: packageDir,
+    stdio: "inherit",
+    shell: true,
+  });
+  if (result.status !== 0) process.exit(result.status ?? 1);
+
+  // Locate the compiled binary and copy to sidecarDir
+  const distDir = resolve(packageDir, "dist");
+  const builtBinary = findBuiltBinary(distDir);
+  if (!builtBinary) {
+    console.error(`${label} binary not found in ${distDir} after build.`);
+    process.exit(1);
   }
 
-  console.log(`OpenCode sidecar built and installed (${normalizedOpencodeVersion}).`);
-}
+  for (const dest of [targetPath, canonicalPath].filter(Boolean)) {
+    try { if (existsSync(dest)) unlinkSync(dest); } catch { /* ignore */ }
+    copyFileSync(builtBinary, dest);
+    try { chmodSync(dest, 0o755); } catch { /* ignore */ }
+  }
 
+  console.log(`${label} sidecar built and installed (${desiredVersion}).`);
+  return { version: desiredVersion, paths, didBuild: true };
+};
 
-// chrome-devtools-mcp is now a node_modules dependency — no sidecar build needed.
+// ─── Find binary helpers ──────────────────────────────────────────────────────
+
+const makeFindBinary = (baseName) => (dir) => {
+  const candidates = readDirectory(dir);
+  const ext = isWindowsTarget ? ".exe" : "";
+  return (
+    candidates.find((f) => f.endsWith(`/${baseName}${ext}`) || f.endsWith(`\\${baseName}${ext}`)) ??
+    candidates.find((f) => f.endsWith(`/${baseName}`) || f.endsWith(`\\${baseName}`)) ??
+    null
+  );
+};
+
+// ─── Source directories ───────────────────────────────────────────────────────
+
+const aiworkServerDir = resolve(__dirname, "..", "..", "server");
+const opencodeSourceDir = resolve(__dirname, "..", "..", "..", "opencode");
+const opencodePackageDir = resolve(opencodeSourceDir, "packages", "opencode");
+
+// chrome-devtools-mcp: bundled as a node_modules dependency — no sidecar build.
+const chromeDevtoolsBaseName = "chrome-devtools-mcp";
+const chromeDevtoolsName = isWindowsTarget ? `${chromeDevtoolsBaseName}.exe` : chromeDevtoolsBaseName;
+const chromeDevtoolsPath = join(sidecarDir, chromeDevtoolsName);
+
+// ─── Build sidecars ───────────────────────────────────────────────────────────
+
+const aiworkServerResult = buildBunSidecar({
+  label: "AiWork Server",
+  baseName: "aiwork-server",
+  sourceDir: aiworkServerDir,
+});
+
+const opencodeResult = buildNativeSidecar({
+  label: "OpenCode",
+  baseName: "opencode",
+  packageDir: opencodePackageDir,
+  workspaceDir: opencodeSourceDir,
+  // --single: build only for the current platform
+  // --skip-install: skip the extra parcel/watcher install inside build.ts
+  buildArgs: ["--single", "--skip-install"],
+  findBuiltBinary: makeFindBinary("opencode"),
+});
+
+// ─── macOS ad-hoc signing ─────────────────────────────────────────────────────
+
+const { canonicalPath: aiworkServerCanonicalPath, buildPath: aiworkServerBuildPath, targetPath: aiworkServerTargetPath } =
+  aiworkServerResult.paths;
+const { canonicalPath: opencodeCanonicalPath, targetPath: opencodeTargetPath, candidatePath: opencodeCandidatePath } =
+  opencodeResult.paths;
 
 adHocSignDarwinSidecars([
-  opencodePath,
+  opencodeCanonicalPath,
   opencodeTargetPath,
   aiworkServerBuildPath,
-  aiworkServerPath,
-  aiworkServerTargetPath
+  aiworkServerCanonicalPath,
+  aiworkServerTargetPath,
 ]);
 
-const aiworkServerVersion = desiredAiWorkServerVersion;
+// ─── Write versions.json ──────────────────────────────────────────────────────
 
 const versions = {
   opencode: {
-    version: normalizedOpencodeVersion,
-    sha256: opencodeCandidatePath && existsSync(opencodeCandidatePath) ? sha256File(opencodeCandidatePath) : null,
+    version: opencodeResult.version,
+    sha256:
+      opencodeCandidatePath && existsSync(opencodeCandidatePath)
+        ? sha256File(opencodeCandidatePath)
+        : null,
   },
   "aiwork-server": {
-    version: aiworkServerVersion,
-    sha256: existsSync(aiworkServerPath) ? sha256File(aiworkServerPath) : null,
+    version: aiworkServerResult.version,
+    sha256: existsSync(aiworkServerCanonicalPath) ? sha256File(aiworkServerCanonicalPath) : null,
   },
   "chrome-devtools-mcp": {
     version: chromeDevtoolsMcpVersion,
@@ -509,8 +526,10 @@ try {
   const content = JSON.stringify(versions, null, 2) + "\n";
   writeFileSync(versionsPath, content, "utf8");
   if (resolvedTargetTriple) {
-    const targetSuffix = isWindowsTarget ? ".exe" : "";
-    const targetVersionsPath = join(sidecarDir, `versions.json-${resolvedTargetTriple}${targetSuffix}`);
+    const targetVersionsPath = join(
+      sidecarDir,
+      `versions.json-${resolvedTargetTriple}${isWindowsTarget ? ".exe" : ""}`,
+    );
     writeFileSync(targetVersionsPath, content, "utf8");
   }
 } catch (error) {
