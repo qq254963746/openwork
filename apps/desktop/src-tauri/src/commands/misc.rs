@@ -49,17 +49,17 @@ fn env_truthy(key: &str) -> bool {
     )
 }
 
-#[cfg(target_os = "macos")]
-fn macos_dev_application_support_opencode_log_dir() -> Option<PathBuf> {
-    let home = home_dir()?;
-    Some(
-        home.join("Library/Application Support/com.aiworkgroup.aiwork.dev/aiwork-dev-data/xdg/data/opencode/log"),
-    )
-}
+// #[cfg(target_os = "macos")]
+// fn macos_dev_application_support_opencode_log_dir() -> Option<PathBuf> {
+//     let home = home_dir()?;
+//     Some(
+//         home.join("Library/Application Support/com.aiworkgroup3.aiwork.dev/aiwork-engine/xdg/data/opencode/log"),
+//     )
+// }
 
-fn isolated_dev_opencode_log_dir(app: &AppHandle) -> Option<PathBuf> {
+fn isolated_opencode_log_dir(app: &AppHandle) -> Option<PathBuf> {
     let root = app.path().app_local_data_dir().ok()?;
-    Some(root.join("aiwork-dev-data/xdg/data/opencode/log"))
+    Some(root.join("aiwork-engine/xdg/data/opencode/log"))
 }
 
 fn standard_opencode_log_dir() -> PathBuf {
@@ -86,17 +86,13 @@ fn standard_opencode_log_dir() -> PathBuf {
 fn collect_opencode_disk_log_dir_candidates(app: &AppHandle) -> Vec<(String, PathBuf)> {
     let mut ordered = Vec::new();
 
-    #[cfg(target_os = "macos")]
-    if env_truthy("AIWORK_DEV_MODE") {
-        if let Some(path) = macos_dev_application_support_opencode_log_dir() {
-            ordered.push(("macos_dev".into(), path));
-        }
-    }
+    // #[cfg(target_os = "macos")]
+    // if let Some(path) = macos_dev_application_support_opencode_log_dir() {
+    //     ordered.push(("macos_dev".into(), path));
+    // }
 
-    if env_truthy("AIWORK_DEV_MODE") {
-        if let Some(path) = isolated_dev_opencode_log_dir(app) {
-            ordered.push(("aiwork_dev_isolated".into(), path));
-        }
+    if let Some(path) = isolated_opencode_log_dir(app) {
+        ordered.push(("aiwork_isolated".into(), path));
     }
 
     ordered.push(("standard_data_home".into(), standard_opencode_log_dir()));

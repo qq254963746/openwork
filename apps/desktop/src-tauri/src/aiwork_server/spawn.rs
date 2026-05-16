@@ -29,18 +29,15 @@ fn env_truthy_aiwork_dev() -> bool {
 
 /// GUI-launched Tauri often inherits no `XDG_*` / `OPENCODE_CONFIG_DIR`; without this,
 /// `aiwork-server` resolves global config + managed OpenCode state to `~/.config` while
-/// the UI writes credentials under `Application Support/.../aiwork-dev-data/...`.
-fn aiwork_dev_isolated_env(app: &AppHandle) -> Result<Option<Vec<(String, String)>>, String> {
-    if !env_truthy_aiwork_dev() {
-        return Ok(None);
-    }
+/// the UI writes credentials under `Application Support/.../aiwork-engine/...`.
+fn aiwork_engine_isolated_env(app: &AppHandle) -> Result<Option<Vec<(String, String)>>, String> {
 
     let app_local = app
         .path()
         .app_local_data_dir()
         .map_err(|e| format!("Failed to resolve app local data dir: {e}"))?;
 
-    let layout_root = app_local.join("aiwork-dev-data");
+    let layout_root = app_local.join("aiwork-engine");
     let home_dir = layout_root.join("home");
     let xdg_config_home = layout_root.join("xdg").join("config");
     let xdg_data_home = layout_root.join("xdg").join("data");
@@ -63,7 +60,7 @@ fn aiwork_dev_isolated_env(app: &AppHandle) -> Result<Option<Vec<(String, String
 
     let home = home_dir.to_string_lossy().into_owned();
     Ok(Some(vec![
-        ("AIWORK_DEV_MODE".into(), "1".into()),
+        ("AIWORK_DEV_MODE".into(), if env_truthy_aiwork_dev() { "1".into() } else { "0".into() }),
         ("HOME".into(), home.clone()),
         ("USERPROFILE".into(), home.clone()),
         (
@@ -290,7 +287,7 @@ pub fn spawn_aiwork_server(
         command = command.env(key, value);
     }
 
-    if let Some(pairs) = aiwork_dev_isolated_env(app)? {
+    if let Some(pairs) = aiwork_engine_isolated_env(app)? {
         for (key, value) in pairs {
             command = command.env(key, value);
         }

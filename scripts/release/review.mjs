@@ -18,13 +18,8 @@ const readCargoVersion = (path) => {
 
 const appPkg = readJson(resolve(root, "apps", "app", "package.json"));
 const desktopPkg = readJson(resolve(root, "apps", "desktop", "package.json"));
-const pinnedOpencodeVersion = String(
-  readJson(resolve(root, "constants.json")).opencodeVersion ?? "",
-)
-  .trim()
-  .replace(/^v/, "");
 const serverPkg = readJson(resolve(root, "apps", "server", "package.json"));
-
+const opencodePkg = readJson(resolve(root, "opencode", "packages", "opencode", "package.json"));
 const tauriConfig = readJson(
   resolve(root, "apps", "desktop", "src-tauri", "tauri.conf.json"),
 );
@@ -38,7 +33,7 @@ const versions = {
   tauri: tauriConfig.version ?? null,
   cargo: cargoVersion ?? null,
   server: serverPkg.version ?? null,
-  opencode: pinnedOpencodeVersion || null
+  opencode: opencodePkg.version || null
 };
 
 const checks = [];
@@ -72,17 +67,11 @@ addCheck(
   versions.desktop && versions.cargo && versions.desktop === versions.cargo,
   `${versions.desktop ?? "?"} vs ${versions.cargo ?? "?"}`,
 );
-if (versions.opencode) {
-  addCheck(
-    "OpenCode version pin exists",
-    Boolean(versions.opencode),
-    String(versions.opencode),
-  );
-} else {
-  addWarning(
-    "OpenCode version is not pinned in constants.json.",
-  );
-}
+addCheck(
+  "OpenCode version pin exists",
+  Boolean(versions.opencode),
+  String(versions.opencode),
+);
 
 if (!process.env.SOURCE_DATE_EPOCH) {
   addWarning(

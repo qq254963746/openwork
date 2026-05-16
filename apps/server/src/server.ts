@@ -40,10 +40,10 @@ import {
 } from "./checkpoint-routes.js";
 import { destroySessionCheckpoints, destroyWorkspaceCheckpoints } from "./checkpoint-store.js";
 import pkg from "../package.json" with { type: "json" };
-import constants from "../../../constants.json" with { type: "json" };
+import opencodePkg from "../../../opencode/packages/opencode/package.json" with { type: "json" };
 
 const SERVER_VERSION = pkg.version;
-const OPENCODE_VERSION = constants.opencodeVersion.trim().replace(/^v/, "");
+const OPENCODE_VERSION = opencodePkg.version;
 
 const FILE_SESSION_DEFAULT_TTL_MS = 15 * 60 * 1000;
 const FILE_SESSION_MIN_TTL_MS = 30 * 1000;
@@ -2719,7 +2719,7 @@ function createRoutes(
     const repo = ctx.url.searchParams.get("repo")?.trim();
     const ref = ctx.url.searchParams.get("ref")?.trim();
     const items = await listHubSkills({
-      owner: owner || "aiworkgroup",
+      owner: owner || "aiworkgroup3",
       repo: repo || "aiwork-hub",
       ref: ref || "main",
     });

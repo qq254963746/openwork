@@ -119,6 +119,24 @@ const updateTauriConfig = async (nextVersion) => {
   }
 };
 
+const OPENCODE_PACKAGE_PATHS = [
+  "opencode/packages/core/package.json",
+  "opencode/packages/opencode/package.json",
+  "opencode/packages/script/package.json",
+  "opencode/packages/sdk/js/package.json",
+];
+
+const updateOpenCodePackageJsons = async (nextVersion) => {
+  for (const relPath of OPENCODE_PACKAGE_PATHS) {
+    const filePath = path.join(REPO_ROOT, relPath);
+    const data = await readJson(filePath);
+    data.version = nextVersion;
+    if (!isDryRun) {
+      await writeFile(filePath, JSON.stringify(data, null, 2) + "\n");
+    }
+  }
+};
+
 const main = async () => {
   if (explicit && !semverPattern.test(explicit)) {
     throw new Error(`Invalid explicit version: ${explicit}`);
@@ -131,6 +149,7 @@ const main = async () => {
   await updatePackageJson(nextVersion);
   await updateCargoToml(nextVersion);
   await updateTauriConfig(nextVersion);
+  await updateOpenCodePackageJsons(nextVersion);
 
   console.log(
     JSON.stringify(
@@ -144,6 +163,7 @@ const main = async () => {
           "apps/server/package.json",
           "apps/desktop/src-tauri/Cargo.toml",
           "apps/desktop/src-tauri/tauri.conf.json",
+          ...OPENCODE_PACKAGE_PATHS,
         ],
       },
       null,

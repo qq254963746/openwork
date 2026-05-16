@@ -1,10 +1,10 @@
-import { $ } from "bun"
 import semver from "semver"
 import path from "path"
 
 const rootPkgPath = path.resolve(import.meta.dir, "../../../package.json")
 const rootPkg = await Bun.file(rootPkgPath).json()
 const expectedBunVersion = rootPkg.packageManager?.split("@")[1]
+import pkg from "../package.json"
 
 if (!expectedBunVersion) {
   throw new Error("packageManager field not found in root package.json")
@@ -23,26 +23,16 @@ const env = {
   OPENCODE_VERSION: process.env["OPENCODE_VERSION"],
   OPENCODE_RELEASE: process.env["OPENCODE_RELEASE"],
 }
-// const CHANNEL = await (async () => {
-//   if (env.OPENCODE_CHANNEL) return env.OPENCODE_CHANNEL
-//   if (env.OPENCODE_BUMP) return "latest"
-//   if (env.OPENCODE_VERSION && !env.OPENCODE_VERSION.startsWith("0.0.0-")) return "latest"
-//   return await $`git branch --show-current`.text().then((x) => x.trim())
-// })()
+
 const CHANNEL = "latest"
 const IS_PREVIEW = CHANNEL !== "latest"
-
-const VERSION = await (async () => {
-  if (env.OPENCODE_VERSION) return env.OPENCODE_VERSION
-  return `1.14.41`
-})()
 
 export const Script = {
   get channel() {
     return CHANNEL
   },
   get version() {
-    return VERSION
+    return pkg.version
   },
   get preview() {
     return IS_PREVIEW
