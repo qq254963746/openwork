@@ -1,5 +1,4 @@
 import { type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
-import { migrate } from "drizzle-orm/bun-sqlite/migrator"
 import { type SQLiteTransaction } from "drizzle-orm/sqlite-core"
 export * from "drizzle-orm"
 import { LocalContext } from "@/util/local-context"
@@ -9,14 +8,11 @@ import * as Log from "@opencode-ai/core/util/log"
 import { NamedError } from "@opencode-ai/core/util/error"
 import z from "zod"
 import path from "path"
-import { readFileSync, readdirSync, existsSync } from "fs"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { InstallationChannel } from "@opencode-ai/core/installation/version"
 import { InstanceState } from "@/effect/instance-state"
 import { iife } from "@/util/iife"
 import { init } from "#db"
-
-declare const OPENCODE_MIGRATIONS: { sql: string; timestamp: number; name: string }[] | undefined
 
 export const NotFoundError = NamedError.create(
   "NotFoundError",
@@ -46,48 +42,6 @@ export type Transaction = SQLiteTransaction<"sync", void>
 
 type Client = SQLiteBunDatabase
 
-type Journal = { sql: string; timestamp: number; name: string }[]
-
-// Drizzle's migrate overloads trigger expensive variance checks here; narrow to the journal overload we actually use.
-const migrateFromJournal = migrate as unknown as (db: SQLiteBunDatabase, entries: Journal) => void
-
-function applyMigrations(db: SQLiteBunDatabase, entries: Journal) {
-  migrateFromJournal(db, entries)
-}
-
-function time(tag: string) {
-  const match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(tag)
-  if (!match) return 0
-  return Date.UTC(
-    Number(match[1]),
-    Number(match[2]) - 1,
-    Number(match[3]),
-    Number(match[4]),
-    Number(match[5]),
-    Number(match[6]),
-  )
-}
-
-function migrations(dir: string): Journal {
-  const dirs = readdirSync(dir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-
-  const sql = dirs
-    .map((name) => {
-      const file = path.join(dir, name, "migration.sql")
-      if (!existsSync(file)) return
-      return {
-        sql: readFileSync(file, "utf-8"),
-        timestamp: time(name),
-        name,
-      }
-    })
-    .filter(Boolean) as Journal
-
-  return sql.sort((a, b) => a.timestamp - b.timestamp)
-}
-
 export const Client = lazy(() => {
   log.info("opening database", { path: Path })
 
@@ -99,24 +53,6 @@ export const Client = lazy(() => {
   db.run("PRAGMA cache_size = -64000")
   db.run("PRAGMA foreign_keys = ON")
   db.run("PRAGMA wal_checkpoint(PASSIVE)")
-
-  // Apply schema migrations
-  const entries =
-    typeof OPENCODE_MIGRATIONS !== "undefined"
-      ? OPENCODE_MIGRATIONS
-      : migrations(path.join(import.meta.dirname, "../../migration"))
-  if (entries.length > 0) {
-    log.info("applying migrations", {
-      count: entries.length,
-      mode: typeof OPENCODE_MIGRATIONS !== "undefined" ? "bundled" : "dev",
-    })
-    if (Flag.OPENCODE_SKIP_MIGRATIONS) {
-      for (const item of entries) {
-        item.sql = "select 1;"
-      }
-    }
-    applyMigrations(db, entries)
-  }
 
   return db
 })
