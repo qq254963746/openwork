@@ -4,8 +4,6 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "AIWORK_DEV_MODE=1 pnpm --filter @aiwork/desktop dev",
-    "dev:windows": ".\\scripts\\dev-windows.cmd",
-    "dev:windows:x64": ".\\scripts\\dev-windows.cmd x64",
     "dev:ui": "AIWORK_DEV_MODE=1 pnpm --filter @aiwork/app dev",
     "build": "node scripts/build.mjs",
     "build:ui": "pnpm --filter @aiwork/app build",

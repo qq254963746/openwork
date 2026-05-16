@@ -1,2 +1,11 @@
 packages:
   - "apps/*"
+  - "opencode/packages/sdk/js"
+
+catalog:
+  "@tsconfig/node22": "22.0.2"
+  "@types/cross-spawn": "6.0.6"
+  "@types/node": "24.12.2"
+  "@typescript/native-preview": "7.0.0-dev.20251207.1"
+  "typescript": "5.8.2"
+  "cross-spawn": "7.0.6"

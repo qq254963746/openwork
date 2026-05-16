@@ -37,7 +37,7 @@
     "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.42.1",
     "@lexical/react": "^0.35.0",
-    "@opencode-ai/sdk": "^1.14.41",
+    "@opencode-ai/sdk": "workspace:*",
     "@radix-ui/colors": "^3.0.0",
     "@tanstack/react-query": "^5.100.9",
     "@tanstack/react-virtual": "^3.13.24",

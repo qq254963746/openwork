@@ -15,7 +15,6 @@ import {
   writeFileSync,
 } from "fs";
 import { dirname, join, resolve } from "path";
-import { tmpdir } from "os";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -34,20 +33,7 @@ const sidecarOverride = process.env.AIWORK_SIDECAR_DIR?.trim() || readArg("--out
 const sidecarDir = sidecarOverride ? resolve(sidecarOverride) : join(__dirname, "..", "src-tauri", "sidecars");
 const constantsPath = resolve(__dirname, "..", "..", "..", "constants.json");
 
-const opencodeGithubRepo = (() => {
-  const raw =
-    process.env.OPENCODE_GITHUB_REPO?.trim() ||
-    process.env.AIWORK_OPENCODE_GITHUB_REPO?.trim() ||
-    "anomalyco/opencode";
-  const normalized = raw
-    .replace(/^https:\/\/github\.com\//i, "")
-    .replace(/\.git$/i, "")
-    .trim();
-  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(normalized)) {
-    return "anomalyco/opencode";
-  }
-  return normalized;
-})();
+// opencodeVersion is kept as a fallback in case local source is unavailable
 const opencodeVersion = (() => {
   try {
     const raw = readFileSync(constantsPath, "utf8");
@@ -65,7 +51,6 @@ const normalizeVersion = (value) => {
   return raw.startsWith("v") ? raw.slice(1) : raw;
 };
 
-const opencodeAssetOverride = process.env.OPENCODE_ASSET?.trim() || null;
 const chromeDevtoolsMcpVersion =
   process.env.CHROME_DEVTOOLS_MCP_VERSION?.trim() ||
   process.env.AIWORK_CHROME_DEVTOOLS_MCP_VERSION?.trim() ||
@@ -137,6 +122,10 @@ const aiworkServerTargetName = aiworkServerTargetTriple
 const aiworkServerTargetPath = aiworkServerTargetName ? join(sidecarDir, aiworkServerTargetName) : null;
 
 const aiworkServerDir = resolve(__dirname, "..", "..", "server");
+
+// opencode local source directory (inside aiwork/opencode)
+const opencodeSourceDir = resolve(__dirname, "..", "..", "..", "opencode");
+const opencodePackageDir = resolve(opencodeSourceDir, "packages", "opencode");
 
 const resolveBuildScript = (dir) => {
   const scriptPath = resolve(dir, "script", "build.ts");
@@ -364,106 +353,95 @@ if (!existingOpencodeVersion && opencodeCandidatePath) {
       : null;
 }
 
-const normalizedOpencodeVersion = normalizeVersion(opencodeVersion);
+// Read desired opencode version from local source package.json
+const desiredOpencodeVersion = (() => {
+  try {
+    const raw = readFileSync(resolve(opencodePackageDir, "package.json"), "utf8");
+    return String(JSON.parse(raw).version ?? "").trim() || null;
+  } catch {
+    return null;
+  }
+})();
+
+const normalizedOpencodeVersion = desiredOpencodeVersion ?? normalizeVersion(opencodeVersion);
 
 if (!normalizedOpencodeVersion) {
   console.error(
-    `OpenCode version could not be resolved from ${constantsPath}.`
+    `OpenCode version could not be resolved from local source or ${constantsPath}.`
   );
   process.exit(1);
 }
 
-const opencodeAssetByTarget = {
-  "aarch64-apple-darwin": "opencode-darwin-arm64.zip",
-  "x86_64-apple-darwin": "opencode-darwin-x64-baseline.zip",
-  "x86_64-unknown-linux-gnu": "opencode-linux-x64-baseline.tar.gz",
-  "aarch64-unknown-linux-gnu": "opencode-linux-arm64.tar.gz",
-  "x86_64-pc-windows-msvc": "opencode-windows-x64-baseline.zip",
-  "aarch64-pc-windows-msvc": "opencode-windows-arm64.zip",
-};
+if (!existsSync(opencodePackageDir)) {
+  console.error(
+    `OpenCode source directory not found at ${opencodePackageDir}. ` +
+    `Expected aiwork/opencode/packages/opencode to exist.`
+  );
+  process.exit(1);
+}
 
-const opencodeAsset =
-  opencodeAssetOverride ?? (resolvedTargetTriple ? opencodeAssetByTarget[resolvedTargetTriple] : null);
-
-const opencodeUrl = opencodeAsset
-  ? `https://github.com/${opencodeGithubRepo}/releases/download/v${normalizedOpencodeVersion}/${opencodeAsset}`
-  : null;
-
-const shouldDownloadOpencode =
+const shouldRebuildOpencodeForVersion = Boolean(
+  desiredOpencodeVersion &&
+    existingOpencodeVersion &&
+    existingOpencodeVersion !== desiredOpencodeVersion,
+);
+const shouldBuildOpencode =
+  forceBuild ||
+  shouldRebuildOpencodeForVersion ||
   !opencodeCandidatePath ||
   !existsSync(opencodeCandidatePath) ||
   isStubBinary(opencodeCandidatePath) ||
-  !existingOpencodeVersion ||
-  existingOpencodeVersion !== normalizedOpencodeVersion;
+  !existingOpencodeVersion;
 
-if (!shouldDownloadOpencode) {
+if (!shouldBuildOpencode) {
   console.log(`OpenCode sidecar already present (${existingOpencodeVersion}).`);
 }
 
-if (shouldDownloadOpencode) {
-  if (!opencodeAsset || !opencodeUrl) {
-    console.error(
-      `No OpenCode asset configured for target ${resolvedTargetTriple ?? "unknown"}. Set OPENCODE_ASSET to override.`
-    );
+if (shouldBuildOpencode) {
+  mkdirSync(sidecarDir, { recursive: true });
+
+  const opencodeBuildScript = resolve(opencodePackageDir, "script", "build.ts");
+  if (!existsSync(opencodeBuildScript)) {
+    console.error(`OpenCode build script not found at ${opencodeBuildScript}`);
     process.exit(1);
   }
 
-  mkdirSync(sidecarDir, { recursive: true });
-
-  const stamp = Date.now();
-  const archivePath = join(tmpdir(), `opencode-${stamp}-${opencodeAsset}`);
-  const extractDir = join(tmpdir(), `opencode-${stamp}`);
-
-  mkdirSync(extractDir, { recursive: true });
-
-  if (process.platform === "win32") {
-    const psQuote = (value) => `'${value.replace(/'/g, "''")}'`;
-    const psScript = [
-      "$ErrorActionPreference = 'Stop'",
-      `Invoke-WebRequest -Uri ${psQuote(opencodeUrl)} -OutFile ${psQuote(archivePath)}`,
-      `Expand-Archive -Path ${psQuote(archivePath)} -DestinationPath ${psQuote(extractDir)} -Force`,
-    ].join("; ");
-
-    const result = spawnSync("powershell", ["-NoProfile", "-Command", psScript], {
+  // Ensure opencode workspace dependencies are installed (node_modules may not exist
+  // if the source was copied without node_modules).
+  const opencodeNodeModules = resolve(opencodeSourceDir, "node_modules");
+  if (!existsSync(opencodeNodeModules)) {
+    console.log(`Installing OpenCode dependencies at ${opencodeSourceDir}...`);
+    const installResult = spawnSync("bun", ["install"], {
+      cwd: opencodeSourceDir,
       stdio: "inherit",
+      shell: true,
     });
-
-    if (result.status !== 0) {
-      process.exit(result.status ?? 1);
-    }
-  } else {
-    const downloadResult = spawnSync("curl", ["-fsSL", "-o", archivePath, opencodeUrl], {
-      stdio: "inherit",
-    });
-    if (downloadResult.status !== 0) {
-      process.exit(downloadResult.status ?? 1);
-    }
-
-    mkdirSync(extractDir, { recursive: true });
-
-    if (opencodeAsset.endsWith(".zip")) {
-      const unzipResult = spawnSync("unzip", ["-q", archivePath, "-d", extractDir], {
-        stdio: "inherit",
-      });
-      if (unzipResult.status !== 0) {
-        process.exit(unzipResult.status ?? 1);
-      }
-    } else if (opencodeAsset.endsWith(".tar.gz")) {
-      const tarResult = spawnSync("tar", ["-xzf", archivePath, "-C", extractDir], {
-        stdio: "inherit",
-      });
-      if (tarResult.status !== 0) {
-        process.exit(tarResult.status ?? 1);
-      }
-    } else {
-      console.error(`Unknown OpenCode archive type: ${opencodeAsset}`);
-      process.exit(1);
+    if (installResult.status !== 0) {
+      process.exit(installResult.status ?? 1);
     }
   }
 
-  const extractedBinary = findOpencodeBinary(extractDir);
-  if (!extractedBinary) {
-    console.error("OpenCode binary not found after extraction.");
+  // opencode build.ts uses --single to build only for the current platform.
+  // It outputs to packages/opencode/dist/{name}/bin/opencode
+  // --skip-install skips the extra "bun install --os=* --cpu=* @parcel/watcher" step
+  // inside build.ts (not the workspace install above).
+  const opencodeBuildArgs = [opencodeBuildScript, "--single", "--skip-install"];
+  console.log(`Building OpenCode from local source at ${opencodePackageDir}...`);
+  const opencodeBuildResult = spawnSync("bun", opencodeBuildArgs, {
+    cwd: opencodePackageDir,
+    stdio: "inherit",
+    shell: true,
+  });
+
+  if (opencodeBuildResult.status !== 0) {
+    process.exit(opencodeBuildResult.status ?? 1);
+  }
+
+  // Find the built binary in packages/opencode/dist/
+  const opencodeDistDir = resolve(opencodePackageDir, "dist");
+  const builtBinary = findOpencodeBinary(opencodeDistDir);
+  if (!builtBinary) {
+    console.error(`OpenCode binary not found in ${opencodeDistDir} after build.`);
     process.exit(1);
   }
 
@@ -476,7 +454,7 @@ if (shouldDownloadOpencode) {
     } catch {
       // ignore
     }
-    copyFileSync(extractedBinary, target);
+    copyFileSync(builtBinary, target);
     try {
       chmodSync(target, 0o755);
     } catch {
@@ -484,7 +462,7 @@ if (shouldDownloadOpencode) {
     }
   }
 
-  console.log(`OpenCode sidecar updated to ${normalizedOpencodeVersion}.`);
+  console.log(`OpenCode sidecar built and installed (${normalizedOpencodeVersion}).`);
 }
 
 
