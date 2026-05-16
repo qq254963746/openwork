@@ -403,10 +403,6 @@ export type ExecResult = {
   stderr: string;
 };
 
-export async function engineInstall(): Promise<ExecResult> {
-  return invoke<ExecResult>("engine_install");
-}
-
 export async function importSkill(
   projectDir: string,
   sourceDir: string,

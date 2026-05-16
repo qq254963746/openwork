@@ -19,7 +19,7 @@ use commands::command_files::{
 };
 use commands::config::{read_opencode_auth_json, read_opencode_config, write_opencode_config};
 use commands::engine::{
-    engine_doctor, engine_info, engine_install, engine_restart, engine_start, engine_stop,
+    engine_doctor, engine_info, engine_restart, engine_start, engine_stop,
 };
 use commands::misc::{
     app_build_info, desktop_app_paths, nuke_aiwork_and_opencode_config_and_exit, opencode_mcp_auth,
@@ -146,7 +146,6 @@ pub fn run() {
             engine_stop,
             engine_info,
             engine_doctor,
-            engine_install,
             engine_restart,
             aiwork_server_info,
             aiwork_server_restart,

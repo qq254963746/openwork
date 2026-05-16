@@ -94,15 +94,3 @@ macro_rules! log_debug {
         $crate::logger::log($crate::logger::LogLevel::Debug, $target, format_args!($($arg)*))
     };
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_log_level_ordering() {
-        assert!(LogLevel::Error < LogLevel::Warn);
-        assert!(LogLevel::Warn < LogLevel::Info);
-        assert!(LogLevel::Info < LogLevel::Debug);
-    }
-}

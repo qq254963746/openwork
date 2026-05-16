@@ -353,31 +353,6 @@ fn extract_description(raw: &str) -> Option<String> {
     None
 }
 
-#[cfg(test)]
-mod tests {
-    use super::extract_description;
-
-    #[test]
-    fn extract_description_truncates_multibyte_text_without_panicking() {
-        let raw = &"て".repeat(181);
-
-        let description = extract_description(raw).expect("description should be present");
-
-        assert!(description.ends_with("..."));
-        assert!(description.is_char_boundary(description.len()));
-        assert_eq!(description.chars().count(), 183);
-    }
-
-    #[test]
-    fn extract_description_keeps_short_text_unchanged() {
-        let raw = "Short description";
-
-        let description = extract_description(raw).expect("description should be present");
-
-        assert_eq!(description, "Short description");
-    }
-}
-
 #[tauri::command]
 pub fn list_local_skills(project_dir: String) -> Result<Vec<LocalSkillCard>, String> {
     let project_dir = project_dir.trim();

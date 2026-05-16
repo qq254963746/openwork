@@ -4,7 +4,7 @@ use crate::config::{read_opencode_config, write_opencode_config};
 use crate::engine::doctor::{opencode_serve_help, opencode_version, resolve_engine_path};
 use crate::engine::manager::EngineManager;
 use crate::aiwork_server::{manager::AiWorkServerManager, start_aiwork_server};
-use crate::types::{EngineDoctorResult, EngineInfo, EngineRuntime, ExecResult};
+use crate::types::{EngineDoctorResult, EngineInfo, EngineRuntime};
 use crate::utils::truncate_output;
 use serde::Deserialize;
 use serde_json::json;
@@ -36,28 +36,6 @@ impl Drop for EnvVarGuard {
             None => std::env::remove_var(self.key),
         }
     }
-}
-
-fn pinned_opencode_version() -> String {
-    let constants = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../../constants.json"
-    ));
-    let parsed: serde_json::Value =
-        serde_json::from_str(constants).expect("constants.json must be valid JSON");
-    parsed["opencodeVersion"]
-        .as_str()
-        .expect("constants.json must include opencodeVersion")
-        .trim()
-        .trim_start_matches('v')
-        .to_string()
-}
-
-fn pinned_opencode_install_command() -> String {
-    format!(
-        "curl -fsSL https://opencode.ai/install | bash -s -- --version {} --no-modify-path",
-        pinned_opencode_version()
-    )
 }
 
 #[derive(Debug, Deserialize)]
@@ -253,42 +231,6 @@ pub fn engine_doctor(
 }
 
 #[tauri::command]
-pub fn engine_install() -> Result<ExecResult, String> {
-    #[cfg(windows)]
-    {
-        return Ok(ExecResult {
-      ok: false,
-      status: -1,
-      stdout: String::new(),
-      stderr: "Guided install is not supported on Windows yet. Install the AiWork-pinned OpenCode version manually, then restart AiWork.".to_string(),
-    });
-    }
-
-    #[cfg(not(windows))]
-    {
-        let install_dir = crate::paths::home_dir()
-            .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join(".opencode")
-            .join("bin");
-
-        let output = std::process::Command::new("bash")
-            .arg("-lc")
-            .arg(pinned_opencode_install_command())
-            .env("OPENCODE_INSTALL_DIR", install_dir)
-            .output()
-            .map_err(|e| format!("Failed to run installer: {e}"))?;
-
-        let status = output.status.code().unwrap_or(-1);
-        Ok(ExecResult {
-            ok: output.status.success(),
-            status,
-            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-            stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-        })
-    }
-}
-
-#[tauri::command]
 pub fn engine_start(
     app: AppHandle,
     manager: State<EngineManager>,
@@ -346,9 +288,8 @@ pub fn engine_start(
     let opencode_bin_source = opencode_bin_source(&notes, in_path);
     let Some(program) = program else {
         let notes_text = notes.join("\n");
-        let install_command = pinned_opencode_install_command();
         return Err(format!(
-            "OpenCode CLI not found.\n\nInstall with:\n- {install_command}\n\nNotes:\n{notes_text}"
+            "OpenCode CLI not found.\nNotes:\n{notes_text}"
         ));
     };
 
