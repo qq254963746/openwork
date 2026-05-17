@@ -9,7 +9,7 @@ import { NamedError } from "@/core/util/name-error"
 import z from "zod"
 import path from "path"
 import { Flag } from "@/core/flag/flag"
-import { OpenCodeChannel } from "@/core/env/env"
+import { AiWorkEngineChannel } from "@/core/env/env"
 import { InstanceState } from "@/effect/instance-state"
 import { iife } from "@/util/iife"
 import { init } from "#db"
@@ -25,9 +25,9 @@ export const NotFoundError = NamedError.create(
 const log = Log.create({ service: "db" })
 
 export function getChannelPath() {
-  if (["latest", "beta", "prod"].includes(OpenCodeChannel) || Flag.OPENCODE_DISABLE_CHANNEL_DB)
+  if (["latest", "beta", "prod"].includes(AiWorkEngineChannel) || Flag.OPENCODE_DISABLE_CHANNEL_DB)
     return path.join(Global.Path.data, "opencode.db")
-  const safe = OpenCodeChannel.replace(/[^a-zA-Z0-9._-]/g, "-")
+  const safe = AiWorkEngineChannel.replace(/[^a-zA-Z0-9._-]/g, "-")
   return path.join(Global.Path.data, `opencode-${safe}.db`)
 }
 

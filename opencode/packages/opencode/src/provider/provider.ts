@@ -11,7 +11,7 @@ import { type LanguageModelV3 } from "@ai-sdk/provider"
 import * as ModelsDev from "./models"
 import { Auth } from "../auth"
 import { Env } from "../env"
-import { OpenCodeVersion } from "@/core/env/env"
+import { AiWorkEngineVersion } from "@/core/env/env"
 import { Flag } from "@/core/flag/flag"
 import { zod } from "@/util/effect-zod"
 import { namedSchemaError } from "@/util/named-schema-error"
@@ -341,9 +341,9 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
-            "X-Source": "opencode",
+            "HTTP-Referer": "https://aiwork.love/",
+            "X-Title": "aiwork",
+            "X-Source": "aiwork",
           },
         },
       }),
@@ -352,8 +352,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
+            "HTTP-Referer": "https://aiwork.love/",
+            "X-Title": "aiwork",
           },
         },
       }),
@@ -362,8 +362,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
+            "HTTP-Referer": "https://aiwork.love/",
+            "X-Title": "aiwork",
           },
         },
       }),
@@ -372,7 +372,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "http-referer": "https://opencode.ai/",
+            "http-referer": "https://aiwork.love/",
             "x-title": "opencode",
           },
         },
@@ -470,8 +470,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
+            "HTTP-Referer": "https://aiwork.love/",
+            "X-Title": "aiwork",
           },
         },
       }),
@@ -496,7 +496,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const directory = yield* InstanceState.directory
 
       const aiGatewayHeaders = {
-        "User-Agent": `opencode/${OpenCodeVersion} gitlab-ai-provider/${GITLAB_PROVIDER_VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`,
+        "User-Agent": `opencode/${AiWorkEngineVersion} gitlab-ai-provider/${GITLAB_PROVIDER_VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`,
         "anthropic-beta": "context-1m-2025-08-07",
         ...providerConfig?.options?.aiGatewayHeaders,
       }
@@ -633,8 +633,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
+            "HTTP-Referer": "https://aiwork.love/",
+            "X-Title": "aiwork",
           },
         },
       }),

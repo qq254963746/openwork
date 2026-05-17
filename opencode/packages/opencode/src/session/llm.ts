@@ -19,7 +19,7 @@ import { Bus } from "@/bus"
 import { Wildcard } from "@/util/wildcard"
 import { SessionID } from "@/session/schema"
 import { Auth } from "@/auth"
-import { OpenCodeVersion } from "@/core/env/env"
+import { AiWorkEngineVersion } from "@/core/env/env"
 import { EffectBridge } from "@/effect/bridge"
 import * as Option from "effect/Option"
 import * as OtelTracer from "@effect/opentelemetry/Tracer"
@@ -378,12 +378,12 @@ const live: Layer.Layer<
                 "x-opencode-session": input.sessionID,
                 "x-opencode-request": input.user.id,
                 "x-opencode-client": Flag.OPENCODE_CLIENT,
-                "User-Agent": `opencode/${OpenCodeVersion}`,
+                "User-Agent": `opencode/${AiWorkEngineVersion}`,
               }
             : {
                 "x-session-affinity": input.sessionID,
                 ...(input.parentSessionID ? { "x-parent-session-id": input.parentSessionID } : {}),
-                "User-Agent": `opencode/${OpenCodeVersion}`,
+                "User-Agent": `opencode/${AiWorkEngineVersion}`,
               }),
           ...input.model.headers,
           ...headers,

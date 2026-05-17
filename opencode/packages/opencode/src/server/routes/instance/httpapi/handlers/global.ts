@@ -3,7 +3,7 @@ import { GlobalBus, type GlobalEvent as GlobalBusEvent } from "@/bus/global"
 import { EffectBridge } from "@/effect/bridge"
 import { Bus } from "@/bus"
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
-import { OpenCodeVersion } from "@/core/env/env"
+import { AiWorkEngineVersion } from "@/core/env/env"
 import * as Log from "@/core/util/log"
 import { Effect, Queue, Schema } from "effect"
 import * as Stream from "effect/Stream"
@@ -62,7 +62,7 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
     const bridge = yield* EffectBridge.make()
 
     const health = Effect.fn("GlobalHttpApi.health")(function* () {
-      return { healthy: true as const, version: OpenCodeVersion }
+      return { healthy: true as const, version: AiWorkEngineVersion }
     })
 
     const event = Effect.fn("GlobalHttpApi.event")(function* () {

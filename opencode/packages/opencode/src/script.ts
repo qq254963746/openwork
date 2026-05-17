@@ -18,9 +18,9 @@ if (!semver.satisfies(process.versions.bun, expectedBunVersionRange)) {
 }
 
 const env = {
-  OPENCODE_CHANNEL: process.env["OPENCODE_CHANNEL"],
+  AIWORK_ENGINE_CHANNEL: process.env["AIWORK_ENGINE_CHANNEL"],
   OPENCODE_BUMP: process.env["OPENCODE_BUMP"],
-  OPENCODE_VERSION: process.env["OPENCODE_VERSION"],
+  AIWORK_ENGINE_VERSION: process.env["AIWORK_ENGINE_VERSION"],
   OPENCODE_RELEASE: process.env["OPENCODE_RELEASE"],
 }
 

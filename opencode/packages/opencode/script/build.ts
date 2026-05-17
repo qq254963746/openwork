@@ -144,8 +144,8 @@ for (const item of targets) {
     },
     entrypoints: ["./src/index.ts"],
     define: {
-      OPENCODE_VERSION: `'${Script.version}'`,
-      OPENCODE_CHANNEL: `'${Script.channel}'`,
+      AIWORK_ENGINE_VERSION: `'${Script.version}'`,
+      AIWORK_ENGINE_CHANNEL: `'${Script.channel}'`,
       OPENCODE_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
     },
   })

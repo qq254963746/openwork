@@ -5,7 +5,7 @@ import { Bus } from "@/bus"
 import { Decimal } from "decimal.js"
 import { type ProviderMetadata, type LanguageModelUsage } from "ai"
 import { Flag } from "@/core/flag/flag"
-import { OpenCodeVersion } from "@/core/env/env"
+import { AiWorkEngineVersion } from "@/core/env/env"
 
 import { Database } from "@/storage/db"
 import { NotFoundError } from "@/storage/storage"
@@ -502,7 +502,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service | 
       const result: Info = {
         id: SessionID.descending(input.id),
         slug: Slug.create(),
-        version: OpenCodeVersion,
+        version: AiWorkEngineVersion,
         projectID: ctx.project.id,
         directory: input.directory,
         path: input.path,

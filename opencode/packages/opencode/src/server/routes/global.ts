@@ -8,7 +8,7 @@ import { GlobalBus } from "@/bus/global"
 import { Bus } from "@/bus"
 import { AppRuntime } from "@/effect/app-runtime"
 import { AsyncQueue } from "@/util/queue"
-import { OpenCodeVersion } from "@/core/env/env"
+import { AiWorkEngineVersion } from "@/core/env/env"
 import * as Log from "@/core/util/log"
 import { lazy } from "../../util/lazy"
 import { Config } from "@/config/config"
@@ -89,7 +89,7 @@ export const GlobalRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        return c.json({ healthy: true, version: OpenCodeVersion })
+        return c.json({ healthy: true, version: AiWorkEngineVersion })
       },
     )
     .get(

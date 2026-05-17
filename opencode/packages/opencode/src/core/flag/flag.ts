@@ -1,5 +1,5 @@
 import { Config } from "effect"
-import { OpenCodeChannel } from "../env/env"
+import { AiWorkEngineChannel } from "../env/env"
 
 function truthy(key: string) {
   const value = process.env[key]?.toLowerCase()
@@ -93,7 +93,7 @@ export const Flag = {
   // stable users and an escape hatch for dev/beta users.
   OPENCODE_EXPERIMENTAL_HTTPAPI:
     truthy("OPENCODE_EXPERIMENTAL_HTTPAPI") ||
-    (!falsy("OPENCODE_EXPERIMENTAL_HTTPAPI") && HTTPAPI_DEFAULT_ON_CHANNELS.has(OpenCodeChannel)),
+    (!falsy("OPENCODE_EXPERIMENTAL_HTTPAPI") && HTTPAPI_DEFAULT_ON_CHANNELS.has(AiWorkEngineChannel)),
   OPENCODE_EXPERIMENTAL_WORKSPACES: OPENCODE_EXPERIMENTAL || truthy("OPENCODE_EXPERIMENTAL_WORKSPACES"),
   OPENCODE_EXPERIMENTAL_EVENT_SYSTEM: OPENCODE_EXPERIMENTAL || truthy("OPENCODE_EXPERIMENTAL_EVENT_SYSTEM"),
 

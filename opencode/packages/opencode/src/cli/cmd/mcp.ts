@@ -12,7 +12,7 @@ import { McpOAuthProvider } from "../../mcp/oauth-provider"
 import { Config } from "@/config/config"
 import { ConfigMCP } from "../../config/mcp"
 import { InstanceRef } from "@/effect/instance-ref"
-import { OpenCodeVersion } from "@/core/env/env"
+import { AiWorkEngineVersion } from "@/core/env/env"
 import path from "path"
 import { Global } from "@/core/global"
 import { modify, applyEdits } from "jsonc-parser"
@@ -681,7 +681,7 @@ export const McpDebugCommand = effectCmd({
             params: {
               protocolVersion: "2024-11-05",
               capabilities: {},
-              clientInfo: { name: "opencode-debug", version: OpenCodeVersion },
+              clientInfo: { name: "opencode-debug", version: AiWorkEngineVersion },
             },
             id: 1,
           }),
@@ -725,7 +725,7 @@ export const McpDebugCommand = effectCmd({
           try {
             const client = new Client({
               name: "opencode-debug",
-              version: OpenCodeVersion,
+              version: AiWorkEngineVersion,
             })
             await client.connect(transport)
             prompts.log.success("Connection successful (already authenticated)")

@@ -7,7 +7,7 @@ import { Flock } from "@/core/util/flock"
 import { Hash } from "@/core/util/hash"
 import { AppFileSystem } from "@/core/filesystem"
 import { withTransientReadRetry } from "@/util/effect-http-client"
-import { OpenCodeVersion } from "@/core/env/env.js"
+import { AiWorkEngineVersion } from "@/core/env/env.js"
 
 const Cost = Schema.Struct({
   input: Schema.Finite,
@@ -96,7 +96,7 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@aiwork-engine/ModelsDev") {}
 
-const USER_AGENT = `opencode/${OpenCodeVersion}/${Flag.OPENCODE_CLIENT}`
+const USER_AGENT = `opencode/${AiWorkEngineVersion}/${Flag.OPENCODE_CLIENT}`
 
 export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClient.HttpClient> = Layer.effect(
   Service,

@@ -9,7 +9,7 @@ import {
   type PluginSource,
 } from "./shared"
 import { ConfigPlugin } from "@/config/plugin"
-import { OpenCodeVersion } from "@/core/env/env"
+import { AiWorkEngineVersion } from "@/core/env/env"
 
 export namespace PluginLoader {
   // A normalized plugin declaration derived from config before any filesystem or npm work happens.
@@ -107,7 +107,7 @@ export namespace PluginLoader {
     // as local development code and skip this compatibility gate.
     if (base.source === "npm") {
       try {
-        await checkPluginCompatibility(base.target, OpenCodeVersion, base.pkg)
+        await checkPluginCompatibility(base.target, AiWorkEngineVersion, base.pkg)
       } catch (error) {
         return { ok: false, stage: "compatibility", error }
       }

@@ -51,7 +51,7 @@ import { Result, Schema } from "effect"
 import { LoadAPIKeyError } from "ai"
 import type { AssistantMessage, Event, OpencodeClient, SessionMessageResponse, ToolPart } from "@aiwork-engine/sdk/v2"
 import { applyPatch } from "diff"
-import { OpenCodeVersion } from "@/core/env/env"
+import { AiWorkEngineVersion } from "@/core/env/env"
 import { ShellID } from "@/tool/shell/id"
 
 type ModeOption = { id: string; name: string; description?: string }
@@ -575,7 +575,7 @@ export class Agent implements ACPAgent {
       authMethods: [authMethod],
       agentInfo: {
         name: "OpenCode",
-        version: OpenCodeVersion,
+        version: AiWorkEngineVersion,
       },
     }
   }

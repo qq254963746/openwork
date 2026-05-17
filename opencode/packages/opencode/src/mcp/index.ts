@@ -14,7 +14,7 @@ import { ConfigMCP } from "../config/mcp"
 import * as Log from "@/core/util/log"
 import { NamedError } from "@/core/util/name-error"
 import z from "zod/v4"
-import { OpenCodeVersion } from "@/core/env/env"
+import { AiWorkEngineVersion } from "@/core/env/env"
 import { withTimeout } from "@/util/timeout"
 import { AppFileSystem } from "@/core/filesystem"
 import { McpOAuthProvider } from "./oauth-provider"
@@ -255,7 +255,7 @@ export const layer = Layer.effect(
         (t) =>
           Effect.tryPromise({
             try: () => {
-              const client = new Client({ name: "opencode", version: OpenCodeVersion })
+              const client = new Client({ name: "opencode", version: AiWorkEngineVersion })
               return withTimeout(client.connect(t), timeout).then(() => client)
             },
             catch: (e) => (e instanceof Error ? e : new Error(String(e))),
@@ -768,7 +768,7 @@ export const layer = Layer.effect(
 
       return yield* Effect.tryPromise({
         try: () => {
-          const client = new Client({ name: "opencode", version: OpenCodeVersion })
+          const client = new Client({ name: "opencode", version: AiWorkEngineVersion })
           return client
             .connect(transport)
             .then(() => ({ authorizationUrl: "", oauthState, client }) satisfies AuthResult)

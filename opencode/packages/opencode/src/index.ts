@@ -8,7 +8,7 @@ import { ProvidersCommand } from "./cli/cmd/providers"
 import { AgentCommand } from "./cli/cmd/agent"
 import { ModelsCommand } from "./cli/cmd/models"
 import { UI } from "./cli/ui"
-import { IS_DEV_MODE, OpenCodeVersion } from "@/core/env/env"
+import { IS_DEV_MODE, AiWorkEngineVersion } from "@/core/env/env"
 import { NamedError } from "@/core/util/name-error"
 import { FormatError } from "./cli/error"
 import { ServeCommand } from "./cli/cmd/serve"
@@ -66,7 +66,7 @@ const cli = yargs(args)
   .wrap(100)
   .help("help", "show help")
   .alias("help", "h")
-  .version("version", "show version number", OpenCodeVersion)
+  .version("version", "show version number", AiWorkEngineVersion)
   .alias("version", "v")
   .option("print-logs", {
     describe: "print logs to stderr",
@@ -103,7 +103,7 @@ const cli = yargs(args)
     process.env.OPENCODE_PID = String(process.pid)
 
     Log.Default.info("opencode", {
-      version: OpenCodeVersion,
+      version: AiWorkEngineVersion,
       args: process.argv.slice(2),
       process_role: processMetadata.processRole,
       run_id: processMetadata.runID,

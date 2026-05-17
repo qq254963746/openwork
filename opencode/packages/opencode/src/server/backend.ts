@@ -1,5 +1,5 @@
 import { Flag } from "@/core/flag/flag"
-import { OpenCodeChannel, OpenCodeVersion } from "@/core/env/env"
+import { AiWorkEngineChannel, AiWorkEngineVersion } from "@/core/env/env"
 
 export type Backend = "effect-httpapi" | "hono"
 
@@ -19,8 +19,8 @@ export function attributes(selection: Selection): Record<string, string> {
   return {
     "opencode.server.backend": selection.backend,
     "opencode.server.backend.reason": selection.reason,
-    "opencode.server.channel": OpenCodeChannel,
-    "opencode.server.version": OpenCodeVersion,
+    "opencode.server.channel": AiWorkEngineChannel,
+    "opencode.server.version": AiWorkEngineVersion,
   }
 }
 
