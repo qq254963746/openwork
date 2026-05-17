@@ -6,7 +6,7 @@ import { t } from "../../i18n";
 import { Button } from "../design-system/button";
 import {
   fetchEngineInfoForLogViewer,
-  fetchOpencodeEngineDiskLogsForLogViewer,
+  fetchAiWorkEngineEngineDiskLogsForLogViewer,
   fetchAiWorkServerInfoForLogViewer,
 } from "./desktop-log-viewer-host-bridge";
 import {
@@ -60,7 +60,7 @@ function formatServiceLogs(stdout: string | null | undefined, stderr: string | n
   return sections.join("\n\n");
 }
 
-function formatOpencodeDiskLogsSection(
+function formatAiWorkEngineDiskLogsSection(
   snapshot: {
     dir: string;
     resolvedVariant: string;
@@ -128,8 +128,8 @@ export function AppLogWindowRoute() {
   const [shellLines, setShellLines] = useState<string[]>([]);
   const [aiworkText, setAiWorkText] = useState("");
   const [aiworkError, setAiWorkError] = useState<string | null>(null);
-  const [opencodeText, setOpencodeText] = useState("");
-  const [opencodeError, setOpencodeError] = useState<string | null>(null);
+  const [opencodeText, setAiWorkEngineText] = useState("");
+  const [opencodeError, setAiWorkEngineError] = useState<string | null>(null);
 
   const preRef = useRef<HTMLPreElement>(null);
   const stickBottomRef = useRef(true);
@@ -203,32 +203,32 @@ export function AppLogWindowRoute() {
     }
   }, []);
 
-  const refreshOpencode = useCallback(async () => {
-    setOpencodeError(null);
+  const refreshAiWorkEngine = useCallback(async () => {
+    setAiWorkEngineError(null);
     try {
       const [disk, info] = await Promise.all([
-        fetchOpencodeEngineDiskLogsForLogViewer(),
+        fetchAiWorkEngineEngineDiskLogsForLogViewer(),
         fetchEngineInfoForLogViewer(),
       ]);
       const sections: string[] = [
-        formatOpencodeDiskLogsSection(disk, t("settings.no_logs_captured")),
+        formatAiWorkEngineDiskLogsSection(disk, t("settings.no_logs_captured")),
       ];
       const capture = formatServiceLogs(info.lastStdout, info.lastStderr);
       if (capture.trim()) {
         sections.push(`# process capture\n${capture}`);
       }
-      setOpencodeText(truncateLogLines(sections.join("\n\n"), LOG_VIEWER_MAX_LINES));
+      setAiWorkEngineText(truncateLogLines(sections.join("\n\n"), LOG_VIEWER_MAX_LINES));
     } catch (error) {
-      setOpencodeError(error instanceof Error ? error.message : String(error));
-      setOpencodeText("");
+      setAiWorkEngineError(error instanceof Error ? error.message : String(error));
+      setAiWorkEngineText("");
     }
   }, []);
 
   const refreshActive = useCallback(async () => {
     if (tab === "shell") await refreshShell();
     else if (tab === "aiwork_server") await refreshAiWork();
-    else await refreshOpencode();
-  }, [refreshOpencode, refreshAiWork, refreshShell, tab]);
+    else await refreshAiWorkEngine();
+  }, [refreshAiWorkEngine, refreshAiWork, refreshShell, tab]);
 
   useEffect(() => {
     stickBottomRef.current = true;

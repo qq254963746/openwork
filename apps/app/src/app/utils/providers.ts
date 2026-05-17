@@ -11,7 +11,7 @@ export const providerPriorityRank = (id: string) => {
 };
 
 /**
- * When OpenCode does not surface `options.baseURL`, we still prefill the Connect
+ * When AiWorkEngine does not surface `options.baseURL`, we still prefill the Connect
  * Providers field with the usual public endpoint for well-known providers.
  * Keep in sync with provider packages / docs where possible.
  */

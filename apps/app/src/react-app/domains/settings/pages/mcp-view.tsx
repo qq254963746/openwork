@@ -24,9 +24,9 @@ import {
 import { type McpDirectoryInfo } from "../../../../app/constants";
 import {
   openDesktopPath,
-  readOpencodeConfig,
+  readAiWorkEngineConfig,
   revealDesktopItemInDir,
-  type OpencodeConfigFile,
+  type AiWorkEngineConfigFile,
 } from "../../../../app/lib/desktop";
 import {
   buildChromeDevtoolsCommand,
@@ -54,7 +54,7 @@ export type ReactMcpStatus =
 export type McpViewProps = {
   busy: boolean;
   selectedWorkspaceRoot: string;
-  readConfigFile?: (scope: "project" | "global") => Promise<OpencodeConfigFile | null>;
+  readConfigFile?: (scope: "project" | "global") => Promise<AiWorkEngineConfigFile | null>;
   showHeader?: boolean;
   mcpServers: McpServerEntry[];
   mcpStatus: string | null;
@@ -166,8 +166,8 @@ export function McpView(props: McpViewProps) {
   const [removeOpen, setRemoveOpen] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<string | null>(null);
   const [configScope, setConfigScope] = useState<"project" | "global">("project");
-  const [projectConfig, setProjectConfig] = useState<OpencodeConfigFile | null>(null);
-  const [globalConfig, setGlobalConfig] = useState<OpencodeConfigFile | null>(null);
+  const [projectConfig, setProjectConfig] = useState<AiWorkEngineConfigFile | null>(null);
+  const [globalConfig, setGlobalConfig] = useState<AiWorkEngineConfigFile | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
   const [revealBusy, setRevealBusy] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -193,9 +193,9 @@ export function McpView(props: McpViewProps) {
           root
             ? readConfig
               ? readConfig("project")
-              : readOpencodeConfig("project", root)
+              : readAiWorkEngineConfig("project", root)
             : Promise.resolve(null),
-          readConfig ? readConfig("global") : readOpencodeConfig("global", root),
+          readConfig ? readConfig("global") : readAiWorkEngineConfig("global", root),
         ]);
         if (nextId !== configRequestId.current) return;
         setProjectConfig(project);
@@ -312,7 +312,7 @@ export function McpView(props: McpViewProps) {
     try {
       const resolved = props.readConfigFile
         ? await props.readConfigFile(configScope)
-        : await readOpencodeConfig(configScope, root);
+        : await readAiWorkEngineConfig(configScope, root);
       if (!resolved) {
         throw new Error(t("mcp.config_load_failed"));
       }

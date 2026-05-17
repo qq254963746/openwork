@@ -5,7 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { ensureDir, exists } from "./utils.js";
 
 // User-level environment variables, persisted so the desktop shell can inject
-// them into every spawned child (OpenCode, AiWork server).
+// them into every spawned child (AiWorkEngine, AiWork server).
 // Motivation: Linux GUI launches don't inherit shell env, so users set
 // ANTHROPIC_API_KEY / GCLOUD_* / GCP_* in .bashrc and hit silent auth failures.
 // Scope: user/machine, not workspace. Not synced to the cloud.
@@ -13,12 +13,12 @@ import { ensureDir, exists } from "./utils.js";
 const ENV_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 // Keys reserved for internal wiring by the shell/server. This UI
-// is for service credentials, not AiWork/OpenCode runtime knobs; users who
-// need OPENCODE_* process settings should set them from the launching shell.
+// is for service credentials, not AiWork/AiWorkEngine runtime knobs; users who
+// need AIWORK_ENGINE_* process settings should set them from the launching shell.
 // We refuse writes to these and strip them when reading for injection, so a
 // tampered file cannot shadow auth credentials, token paths, or process
 // identity.
-const RESERVED_PREFIXES = ["AIWORK_", "OPENCODE_"] as const;
+const RESERVED_PREFIXES = ["AIWORK_", "AIWORK_ENGINE_"] as const;
 
 export type EnvRecord = {
   key: string;

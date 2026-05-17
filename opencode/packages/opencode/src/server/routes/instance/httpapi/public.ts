@@ -1,5 +1,5 @@
 import { OpenApi } from "effect/unstable/httpapi"
-import { OpenCodeHttpApi } from "./api"
+import { AiWorkHttpApi } from "./api"
 
 type OpenApiParameter = {
   name: string
@@ -438,7 +438,7 @@ function fixSelfReferencingComponents(spec: OpenApiSpec) {
     }
   }
   // Simplest fix: generate the raw spec (without transform) to get correct schemas
-  const raw = OpenApi.fromApi(OpenCodeHttpApi) as unknown as OpenApiSpec
+  const raw = OpenApi.fromApi(AiWorkHttpApi) as unknown as OpenApiSpec
   const rawSchemas = raw.components?.schemas
   if (!rawSchemas) return
   for (const name of selfRefs) {
@@ -535,7 +535,7 @@ function pathParameterSchema(route: string, name: string) {
   return undefined
 }
 
-export const PublicApi = OpenCodeHttpApi.annotateMerge(
+export const PublicApi = AiWorkHttpApi.annotateMerge(
   OpenApi.annotations({
     title: "opencode",
     version: "1.0.0",

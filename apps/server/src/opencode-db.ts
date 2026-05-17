@@ -35,13 +35,13 @@ function opencodeDataDirs(): string[] {
 
 function preferredDbNames(): string[] {
   const channel = process.env.AIWORK_ENGINE_CHANNEL?.trim() || "local";
-  return channel === "latest" || channel === "beta" || truthy(process.env.OPENCODE_DISABLE_CHANNEL_DB)
+  return channel === "latest" || channel === "beta" || truthy(process.env.AIWORK_ENGINE_DISABLE_CHANNEL_DB)
     ? ["opencode.db"]
     : [`opencode-${channel.replace(/[^a-zA-Z0-9._-]/g, "-")}.db`, "opencode.db"];
 }
 
-function candidateOpencodeDbPaths(): string[] {
-  const override = process.env.OPENCODE_DB?.trim();
+function candidateAiWorkEngineDbPaths(): string[] {
+  const override = process.env.AIWORK_ENGINE_DB?.trim();
   if (override) {
     if (isAbsolute(override)) return [override];
     const candidates: string[] = [];
@@ -62,15 +62,15 @@ function candidateOpencodeDbPaths(): string[] {
   return Array.from(new Set(candidates));
 }
 
-export function resolveOpencodeDbPath(): string {
-  const candidates = candidateOpencodeDbPaths();
+export function resolveAiWorkEngineDbPath(): string {
+  const candidates = candidateAiWorkEngineDbPaths();
   const existing = candidates.find((candidate) => existsSync(candidate));
   if (existing) return existing;
   return candidates[0] ?? join(homedir(), ".local", "share", "opencode", preferredDbNames()[0] ?? "opencode.db");
 }
 
-function findOpencodeSessionDbPath(sessionId: string, inputPath?: string): string | null {
-  const candidates = (inputPath ? [inputPath] : candidateOpencodeDbPaths()).filter((candidate) => existsSync(candidate));
+function findAiWorkEngineSessionDbPath(sessionId: string, inputPath?: string): string | null {
+  const candidates = (inputPath ? [inputPath] : candidateAiWorkEngineDbPaths()).filter((candidate) => existsSync(candidate));
   for (const dbPath of candidates) {
     const db = new Database(dbPath, { readonly: true });
     try {
@@ -104,7 +104,7 @@ function ascendingId(prefix: "msg" | "prt", timestamp: number, counter: number):
   return `${prefix}_${bytes.toString("hex")}${randomBase62(14)}`;
 }
 
-export function seedOpencodeSessionMessages(input: {
+export function seedAiWorkEngineSessionMessages(input: {
   sessionId: string;
   workspaceRoot: string;
   messages: SeedMessage[];
@@ -122,9 +122,9 @@ export function seedOpencodeSessionMessages(input: {
   }
 
   const explicitDbPath = input.dbPath?.trim() || undefined;
-  const dbPath = findOpencodeSessionDbPath(sessionId, explicitDbPath) || explicitDbPath || resolveOpencodeDbPath();
+  const dbPath = findAiWorkEngineSessionDbPath(sessionId, explicitDbPath) || explicitDbPath || resolveAiWorkEngineDbPath();
   if (!existsSync(dbPath)) {
-    throw new Error(`OpenCode database not found at ${dbPath}`);
+    throw new Error(`AiWorkEngine database not found at ${dbPath}`);
   }
 
   const db = new Database(dbPath);
@@ -134,7 +134,7 @@ export function seedOpencodeSessionMessages(input: {
     const run = db.transaction(() => {
       const session = db.query("select id from session where id = ?1").get(sessionId);
       if (!session) {
-        throw new Error(`OpenCode session not found: ${sessionId}`);
+        throw new Error(`AiWorkEngine session not found: ${sessionId}`);
       }
 
       const existing = db.query("select count(1) as count from message where session_id = ?1").get(sessionId) as { count?: number } | null;

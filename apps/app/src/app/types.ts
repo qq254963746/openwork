@@ -7,7 +7,7 @@ import type {
   Session,
 } from "@aiwork-engine/sdk/v2/client";
 import type { createClient } from "./lib/opencode";
-import type { OpencodeConfigFile, WorkspaceInfo } from "./lib/desktop";
+import type { AiWorkEngineConfigFile, WorkspaceInfo } from "./lib/desktop";
 
 export type Client = ReturnType<typeof createClient>;
 
@@ -154,7 +154,7 @@ export type WorkspaceWriteTouch = {
   diffText?: string;
 };
 
-export type OpencodeEvent = {
+export type AiWorkEngineEvent = {
   type: string;
   properties?: unknown;
 };
@@ -271,7 +271,7 @@ export type McpStatusMap = Record<string, McpStatus>;
 
 export type ReloadReason = "plugins" | "skills" | "mcp" | "config" | "agents" | "commands";
 
-export type OpencodeConnectStatus = {
+export type AiWorkEngineConnectStatus = {
   at: number;
   baseUrl: string;
   directory?: string | null;
@@ -351,7 +351,7 @@ export type WorkspaceState = {
 
 export type PluginState = {
   scope: PluginScope;
-  config: OpencodeConfigFile | null;
+  config: AiWorkEngineConfigFile | null;
   list: string[];
 };
 

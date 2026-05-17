@@ -7,7 +7,7 @@ import { readJsoncFile, updateJsoncPath, updateJsoncTopLevel } from "./jsonc.js"
 import { opencodeConfigPath } from "./workspace-files.js";
 import { validateMcpConfig, validateMcpName } from "./validators.js";
 
-function globalOpenCodeConfigPath(): string {
+function globalAiWorkEngineConfigPath(): string {
   const base = join(homedir(), ".config", "opencode");
   const jsonc = join(base, "opencode.jsonc");
   const json = join(base, "opencode.json");
@@ -39,7 +39,7 @@ function isMcpDisabledByTools(config: Record<string, unknown>, name: string): bo
 
 export async function listMcp(workspaceRoot: string): Promise<McpItem[]> {
   const { data: config } = await readJsoncFile(opencodeConfigPath(workspaceRoot), {} as Record<string, unknown>);
-  const { data: globalConfig } = await readJsoncFile(globalOpenCodeConfigPath(), {} as Record<string, unknown>);
+  const { data: globalConfig } = await readJsoncFile(globalAiWorkEngineConfigPath(), {} as Record<string, unknown>);
 
   const projectMcpMap = getMcpConfig(config);
   const globalMcpMap = getMcpConfig(globalConfig);
@@ -96,7 +96,7 @@ export async function removeMcp(workspaceRoot: string, name: string): Promise<bo
 }
 
 // Flips `enabled` on a workspace MCP entry. Returns false for "toggle does
-// not apply": missing, non-object, or malformed enough that OpenCode would
+// not apply": missing, non-object, or malformed enough that AiWorkEngine would
 // fail to load it. The HTTP layer maps false to 404. Globals are out of
 // scope by design — only workspace-level entries.
 //

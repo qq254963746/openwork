@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import net from "node:net";
 import { randomUUID } from "node:crypto";
 
-export type ManagedOpencodeServer = {
+export type ManagedAiWorkEngineServer = {
   url: string;
   username: string;
   password: string;
@@ -28,14 +28,14 @@ async function findFreePort(hostname: string): Promise<number> {
   });
 }
 
-export async function createManagedOpencodeServer(options: {
+export async function createManagedAiWorkEngineServer(options: {
   bin?: string;
   cwd: string;
   hostname?: string;
   port?: number;
   timeoutMs?: number;
   env?: Record<string, string | undefined>;
-}): Promise<ManagedOpencodeServer> {
+}): Promise<ManagedAiWorkEngineServer> {
   const hostname = options.hostname ?? "127.0.0.1";
   const port = options.port ?? await findFreePort(hostname);
   const username = randomSecret();
@@ -46,14 +46,14 @@ export async function createManagedOpencodeServer(options: {
     env: {
       ...process.env,
       ...options.env,
-      OPENCODE_SERVER_USERNAME: username,
-      OPENCODE_SERVER_PASSWORD: password,
+      AIWORK_ENGINE_SERVER_USERNAME: username,
+      AIWORK_ENGINE_SERVER_PASSWORD: password,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
 
   const url = await new Promise<string>((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error(`Timeout waiting for OpenCode server after ${options.timeoutMs ?? 15000}ms`)), options.timeoutMs ?? 15000);
+    const timeout = setTimeout(() => reject(new Error(`Timeout waiting for AiWorkEngine server after ${options.timeoutMs ?? 15000}ms`)), options.timeoutMs ?? 15000);
     let output = "";
     const done = (value: string) => {
       clearTimeout(timeout);
@@ -68,7 +68,7 @@ export async function createManagedOpencodeServer(options: {
       for (const line of output.split("\n")) {
         if (!line.startsWith("opencode server listening")) continue;
         const match = line.match(/on\s+(https?:\/\/[^\s]+)/);
-        if (!match?.[1]) return fail(new Error(`Failed to parse OpenCode server URL from: ${line}`));
+        if (!match?.[1]) return fail(new Error(`Failed to parse AiWorkEngine server URL from: ${line}`));
         done(match[1]);
       }
     });
@@ -76,7 +76,7 @@ export async function createManagedOpencodeServer(options: {
       output += chunk.toString();
     });
     child.once("error", fail);
-    child.once("exit", (code) => fail(new Error(`OpenCode server exited with code ${code}${output.trim() ? `\n${output}` : ""}`)));
+    child.once("exit", (code) => fail(new Error(`AiWorkEngine server exited with code ${code}${output.trim() ? `\n${output}` : ""}`)));
   });
 
   return {

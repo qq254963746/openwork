@@ -68,7 +68,7 @@ addCheck(
   `${versions.desktop ?? "?"} vs ${versions.cargo ?? "?"}`,
 );
 addCheck(
-  "OpenCode version pin exists",
+  "AiWork version pin exists",
   Boolean(versions.opencode),
   String(versions.opencode),
 );

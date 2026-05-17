@@ -12,9 +12,9 @@ import { createClient, unwrap } from "../../../app/lib/opencode";
 import { finishPerf, perfNow, recordPerfLog } from "../../../app/lib/perf-log";
 import {
   getDesktopHomeDir,
-  readOpencodeConfig,
-  writeOpencodeConfig,
-  type OpencodeConfigFile,
+  readAiWorkEngineConfig,
+  writeAiWorkEngineConfig,
+  type AiWorkEngineConfigFile,
 } from "../../../app/lib/desktop";
 import { toSessionTransportDirectory } from "../../../app/lib/session-scope";
 import {
@@ -134,7 +134,7 @@ export function createConnectionsStore(options: {
     ) as McpStatusMap;
   };
 
-  const readMcpConfigFile = async (scope: "project" | "global"): Promise<OpencodeConfigFile | null> => {
+  const readMcpConfigFile = async (scope: "project" | "global"): Promise<AiWorkEngineConfigFile | null> => {
     const projectDir = options.projectDir().trim();
     const aiworkSnapshot = getAiWorkSnapshot();
     const aiworkClient = aiworkSnapshot.aiworkServerClient;
@@ -146,10 +146,10 @@ export function createConnectionsStore(options: {
       aiworkSnapshot.aiworkServerCapabilities?.config?.read;
 
     if (canUseAiWorkServer && aiworkClient && aiworkWorkspaceId) {
-      return aiworkClient.readOpencodeConfigFile(aiworkWorkspaceId, scope);
+      return aiworkClient.readAiWorkEngineConfigFile(aiworkWorkspaceId, scope);
     }
 
-    return readOpencodeConfig(scope, projectDir);
+    return readAiWorkEngineConfig(scope, projectDir);
   };
 
   const ensureActiveClient = async () => {
@@ -307,8 +307,8 @@ export function createConnectionsStore(options: {
         projectDir,
       });
       const [globalConfig, projectConfig] = await Promise.all([
-        readOpencodeConfig("global", projectDir),
-        readOpencodeConfig("project", projectDir),
+        readAiWorkEngineConfig("global", projectDir),
+        readAiWorkEngineConfig("project", projectDir),
       ]);
       const globalServers = globalConfig.exists && globalConfig.content
         ? parseMcpServersFromContent(globalConfig.content).map((entry) => ({
@@ -464,7 +464,7 @@ export function createConnectionsStore(options: {
           config: mcpEntryConfig,
         });
       } else {
-        const configFile = await readOpencodeConfig("project", resolvedProjectDir);
+        const configFile = await readAiWorkEngineConfig("project", resolvedProjectDir);
 
         const raw = configFile.exists && configFile.content?.trim()
           ? configFile.content
@@ -490,7 +490,7 @@ export function createConnectionsStore(options: {
           modify(updated, ["mcp", slug], mcpEntryConfig, { formattingOptions }),
         );
 
-        const writeResult = await writeOpencodeConfig(
+        const writeResult = await writeAiWorkEngineConfig(
           "project",
           resolvedProjectDir,
           updated.endsWith("\n") ? updated : `${updated}\n`,
@@ -502,7 +502,7 @@ export function createConnectionsStore(options: {
 
       if (canUseAiWorkServer && aiworkClient && aiworkWorkspaceId) {
         // The AiWork server is the source of truth for workspace-scoped MCP
-        // config in the React port. Avoid also calling the OpenCode SDK's MCP
+        // config in the React port. Avoid also calling the AiWork SDK's MCP
         // hot-add endpoint here: when the SDK client is rooted at the aggregate
         // `/opencode` route it can resolve to an internal `local_*` workspace
         // id that the AiWork server does not expose, producing a confusing
@@ -687,7 +687,7 @@ export function createConnectionsStore(options: {
     setStateField("mcpStatus", t("mcp.reloading_status"));
   }
 
-  // OpenCode reconnects MCP servers asynchronously after /instance/dispose,
+  // AiWork reconnects MCP servers asynchronously after /instance/dispose,
   // so an immediate mcp.status query returns stale "disconnected". Poll on
   // a backoff until every enabled MCP reaches a terminal status, with the
   // banner up the whole time so users see continuous feedback.

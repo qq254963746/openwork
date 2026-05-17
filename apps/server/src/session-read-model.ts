@@ -93,7 +93,7 @@ const IDLE_STATUS: SessionStatusReadModel = { type: "idle" };
 function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, label: string): T {
   const result = schema.safeParse(value);
   if (result.success) return result.data;
-  throw new ApiError(502, "opencode_invalid_response", `OpenCode returned invalid ${label}`, {
+  throw new ApiError(502, "opencode_invalid_response", `AiWorkEngine returned invalid ${label}`, {
     issues: result.error.issues,
   });
 }

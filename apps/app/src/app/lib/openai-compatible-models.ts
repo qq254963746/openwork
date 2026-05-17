@@ -20,7 +20,7 @@ export function resolveOpenAiCompatibleModelsUrl(baseURL: string): string {
   return `${t}/v1/models`;
 }
 
-export function modelsIdsToOpenCodeModelsMap(ids: string[]): Record<string, { name: string }> {
+export function modelsIdsToAiWorkEngineModelsMap(ids: string[]): Record<string, { name: string }> {
   const slice = ids.slice(0, MAX_MODEL_IDS);
   const out: Record<string, { name: string }> = {};
   for (const id of slice) {

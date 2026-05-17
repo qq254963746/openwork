@@ -5,7 +5,7 @@ import {
   appBuildInfo as appBuildInfoCmd,
   engineInfo as engineInfoCmd,
   engineStart as engineStartCmd,
-  nukeAiWorkAndOpencodeConfigAndExit,
+  nukeAiWorkAndAiWorkEngineConfigAndExit,
   openDesktopUrl,
   aiworkServerInfo as aiworkServerInfoCmd,
   aiworkServerRestart as aiworkServerRestartCmd,
@@ -137,7 +137,7 @@ function describeEngine(info: EngineInfo | null) {
     lines: [
       t("settings.debug_base_url", { url: info?.baseUrl ?? "—" }),
       t("settings.debug_runtime", { runtime: info?.runtime ?? "—" }),
-      t("settings.diag_opencode_binary", { binary: formatOpencodeBinary(info) }),
+      t("settings.diag_opencode_binary", { binary: formatAiWorkEngineBinary(info) }),
       t("settings.debug_pid", { pid: info?.pid ? String(info.pid) : "—" }),
       t("settings.debug_hostname", { hostname: info?.hostname ?? "—" }),
       t("settings.debug_port", { port: info?.port ? String(info.port) : "—" }),
@@ -148,14 +148,14 @@ function describeEngine(info: EngineInfo | null) {
   };
 }
 
-function formatOpencodeBinary(info: EngineInfo | null) {
+function formatAiWorkEngineBinary(info: EngineInfo | null) {
   return formatBinaryWithSource(info?.opencodeBinPath, info?.opencodeBinSource);
 }
 
-function formatManagedOpencodeBinary(info: AiWorkServerInfo | null) {
+function formatManagedAiWorkEngineBinary(info: AiWorkServerInfo | null) {
   return formatBinaryWithSource(
-    info?.managedOpencodeBinPath,
-    info?.managedOpencodeBinSource,
+    info?.managedAiWorkEngineBinPath,
+    info?.managedAiWorkEngineBinSource,
   );
 }
 
@@ -172,7 +172,7 @@ function describeAiWorkServer(info: AiWorkServerInfo | null) {
     ...statusPill(running),
     lines: [
       t("settings.debug_base_url", { url: info?.baseUrl ?? "—" }),
-      t("settings.diag_opencode_binary", { binary: formatManagedOpencodeBinary(info) }),
+      t("settings.diag_opencode_binary", { binary: formatManagedAiWorkEngineBinary(info) }),
       t("settings.debug_connect_url", { url: info?.connectUrl ?? "—" }),
       t("settings.debug_lan_url", { url: info?.lanUrl ?? "—" }),
       t("settings.debug_mdns_url", { url: info?.mdnsUrl ?? "—" }),
@@ -184,7 +184,7 @@ function describeAiWorkServer(info: AiWorkServerInfo | null) {
   };
 }
 
-function describeOpencodeConnect(engine: EngineInfo | null) {
+function describeAiWorkEngineConnect(engine: EngineInfo | null) {
   const running = Boolean(engine?.baseUrl);
   return {
     ...statusPill(running),
@@ -214,9 +214,9 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   const [engineInfoState, setEngineInfoState] = useState<EngineInfo | null>(null);
   const [appBuild, setAppBuild] = useState<AppBuildInfo | null>(null);
   const [runtimeDebugStatus, setRuntimeDebugStatus] = useState<string | null>(null);
-  const [opencodeRestarting, setOpencodeRestarting] = useState(false);
+  const [opencodeRestarting, setAiWorkEngineRestarting] = useState(false);
   const [aiworkServerRestarting, setAiWorkServerRestarting] = useState(false);
-  const [opencodeServiceStatus, setOpencodeServiceStatus] = useState<{
+  const [opencodeServiceStatus, setAiWorkEngineServiceStatus] = useState<{
     tone: "success" | "error";
     message: string;
   } | null>(null);
@@ -224,7 +224,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     tone: "success" | "error";
     message: string;
   } | null>(null);
-  const [opencodeLogStatus, setOpencodeLogStatus] = useState<string | null>(null);
+  const [opencodeLogStatus, setAiWorkEngineLogStatus] = useState<string | null>(null);
   const [aiworkLogStatus, setAiWorkLogStatus] = useState<string | null>(null);
   const [serviceRestartError, setServiceRestartError] = useState<string | null>(null);
   const [resetModalBusy, setResetModalBusy] = useState(false);
@@ -329,7 +329,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     [aiworkServerSnapshot.aiworkServerHostInfo],
   );
   const opencodeConnectCard = useMemo(
-    () => describeOpencodeConnect(engineInfoState),
+    () => describeAiWorkEngineConnect(engineInfoState),
     [engineInfoState],
   );
 
@@ -446,7 +446,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     });
 
     // engine_start restarts aiwork-server on a NEW port and lets that server
-    // manage OpenCode. Re-read host info and persist the fresh URL/token.
+    // manage AiWork. Re-read host info and persist the fresh URL/token.
     try {
       const hostInfo = await aiworkServerInfoCmd();
       if (hostInfo?.baseUrl) {
@@ -469,26 +469,26 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     return info;
   }, [aiworkServerStore, refreshEngineInfo]);
 
-  const onRestartOpencode = useCallback(async () => {
-    setOpencodeRestarting(true);
-    setOpencodeServiceStatus(null);
+  const onRestartAiWorkEngine = useCallback(async () => {
+    setAiWorkEngineRestarting(true);
+    setAiWorkEngineServiceStatus(null);
     setServiceRestartError(null);
     try {
       await bootFullEngineStack();
-      setOpencodeServiceStatus({
+      setAiWorkEngineServiceStatus({
         tone: "success",
-        message: t("settings.restart_succeeded_template", { service: "OpenCode" }),
+        message: t("settings.restart_succeeded_template", { service: "AiWork" }),
       });
-      pushDeveloperLog("Restarted OpenCode via engine_start");
+      pushDeveloperLog("Restarted AiWork via engine_start");
     } catch (error) {
       const message = error instanceof Error ? error.message : safeStringify(error);
-      setOpencodeServiceStatus({
+      setAiWorkEngineServiceStatus({
         tone: "error",
-        message: `${t("settings.restart_failed_template", { service: "OpenCode" })} ${message}`,
+        message: `${t("settings.restart_failed_template", { service: "AiWork" })} ${message}`,
       });
       setServiceRestartError(message);
     } finally {
-      setOpencodeRestarting(false);
+      setAiWorkEngineRestarting(false);
     }
   }, [bootFullEngineStack, pushDeveloperLog]);
 
@@ -528,24 +528,24 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     [],
   );
 
-  const onCopyOpencodeLogs = useCallback(async () => {
+  const onCopyAiWorkEngineLogs = useCallback(async () => {
     const text = formatServiceLogs(engineInfoState?.lastStdout, engineInfoState?.lastStderr);
     if (!text) {
-      setOpencodeLogStatus(t("settings.no_logs_captured"));
+      setAiWorkEngineLogStatus(t("settings.no_logs_captured"));
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      setOpencodeLogStatus(t("settings.copied_service_logs", { service: "OpenCode" }));
+      setAiWorkEngineLogStatus(t("settings.copied_service_logs", { service: "AiWork" }));
     } catch (error) {
-      setOpencodeLogStatus(error instanceof Error ? error.message : safeStringify(error));
+      setAiWorkEngineLogStatus(error instanceof Error ? error.message : safeStringify(error));
     }
   }, [engineInfoState?.lastStderr, engineInfoState?.lastStdout, formatServiceLogs]);
 
-  const onExportOpencodeLogs = useCallback(async () => {
+  const onExportAiWorkEngineLogs = useCallback(async () => {
     const text = formatServiceLogs(engineInfoState?.lastStdout, engineInfoState?.lastStderr);
     if (!text) {
-      setOpencodeLogStatus(t("settings.no_logs_captured"));
+      setAiWorkEngineLogStatus(t("settings.no_logs_captured"));
       return;
     }
     try {
@@ -554,9 +554,9 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
         text,
         "text/plain",
       );
-      setOpencodeLogStatus(t("settings.exported_developer_log"));
+      setAiWorkEngineLogStatus(t("settings.exported_developer_log"));
     } catch (error) {
-      setOpencodeLogStatus(error instanceof Error ? error.message : safeStringify(error));
+      setAiWorkEngineLogStatus(error instanceof Error ? error.message : safeStringify(error));
     }
   }, [engineInfoState?.lastStderr, engineInfoState?.lastStdout, formatServiceLogs]);
 
@@ -626,18 +626,18 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     [pushDeveloperLog, setRouteError],
   );
 
-  const onNukeAiWorkAndOpencodeConfig = useCallback(async () => {
+  const onNukeAiWorkAndAiWorkEngineConfig = useCallback(async () => {
     const confirmed =
       typeof window === "undefined"
         ? true
         : window.confirm(
-            "Delete ALL local AiWork + OpenCode config and quit? This cannot be undone.",
+            "Delete ALL local AiWork + AiWork config and quit? This cannot be undone.",
           );
     if (!confirmed) return;
     setNukeConfigBusy(true);
     setNukeConfigStatus(null);
     try {
-      await nukeAiWorkAndOpencodeConfigAndExit();
+      await nukeAiWorkAndAiWorkEngineConfigAndExit();
     } catch (error) {
       setNukeConfigStatus(error instanceof Error ? error.message : safeStringify(error));
     } finally {
@@ -690,12 +690,12 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       aiworkServiceStatus,
       opencodeLogStatus,
       aiworkLogStatus,
-      onCopyOpencodeLogs,
-      onExportOpencodeLogs,
+      onCopyAiWorkEngineLogs,
+      onExportAiWorkEngineLogs,
       onCopyAiWorkLogs,
       onExportAiWorkLogs,
       serviceRestartError,
-      onRestartOpencode,
+      onRestartAiWorkEngine,
       onRestartAiWorkServer,
       engineCard,
       opencodeConnectCard,
@@ -715,7 +715,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       opencodeDevModeEnabled: appBuild?.aiworkDevMode === true,
       nukeConfigBusy,
       nukeConfigStatus,
-      onNukeAiWorkAndOpencodeConfig,
+      onNukeAiWorkAndAiWorkEngineConfig,
     }),
     [
       appBuild?.aiworkDevMode,
@@ -734,17 +734,17 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       onCopyRuntimeDebugReport,
       onExportDeveloperLog,
       onExportRuntimeDebugReport,
-      onNukeAiWorkAndOpencodeConfig,
+      onNukeAiWorkAndAiWorkEngineConfig,
       onOpenResetModal,
       onPickEngineBinary,
       onResetStartupPreference,
-      onRestartOpencode,
+      onRestartAiWorkEngine,
       onRestartAiWorkServer,
       onSetEngineSource,
       onStopHost,
-      onCopyOpencodeLogs,
+      onCopyAiWorkEngineLogs,
       onCopyAiWorkLogs,
-      onExportOpencodeLogs,
+      onExportAiWorkEngineLogs,
       onExportAiWorkLogs,
       opencodeConnectCard,
       opencodeLogStatus,

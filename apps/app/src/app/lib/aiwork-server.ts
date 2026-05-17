@@ -1,6 +1,6 @@
 import type { Message, Part, Session, Todo } from "@aiwork-engine/sdk/v2/client";
 import { desktopFetch } from "./desktop";
-import type { ExecResult, OpencodeConfigFile, WorkspaceInfo, WorkspaceList } from "./desktop";
+import type { ExecResult, AiWorkEngineConfigFile, WorkspaceInfo, WorkspaceList } from "./desktop";
 import type { ModelProviderType } from "../utils/model-providers-catalog";
 import { ConsoleLog } from "./console-log";
 
@@ -306,7 +306,7 @@ export function normalizeAiWorkServerUrl(input: string) {
   if (!trimmed) return null;
   const withProtocol = /^https?:\/\//.test(trimmed) ? trimmed : `http://${trimmed}`;
   const normalized = withProtocol.replace(/\/+$/, "");
-  // Desktop runtime may hand us a workspace-scoped OpenCode mount URL
+  // Desktop runtime may hand us a workspace-scoped AiWork mount URL
   // (`.../w/<id>/opencode`). AiWork server APIs live at `.../w/<id>`.
   try {
     const url = new URL(normalized);
@@ -946,19 +946,19 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
           method: "PATCH",
           body: payload,
         })),
-    readOpencodeConfigFile: (workspaceId: string, scope: "project" | "global" = "project") => {
+    readAiWorkEngineConfigFile: (workspaceId: string, scope: "project" | "global" = "project") => {
       const params = new URLSearchParams({ scope });
       // Avoid stale reads after rapid global config writes (disabled_providers, etc.).
       params.set("_", String(Date.now()));
       const query = `?${params.toString()}`;
-      return logCall("readOpencodeConfigFile", { workspaceId, scope },
-        requestJson<OpencodeConfigFile>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/opencode-config${query}`, {
+      return logCall("readAiWorkEngineConfigFile", { workspaceId, scope },
+        requestJson<AiWorkEngineConfigFile>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/opencode-config${query}`, {
           token,
           hostToken,
         }));
     },
-    writeOpencodeConfigFile: (workspaceId: string, scope: "project" | "global", content: string) =>
-      logCall("writeOpencodeConfigFile", { workspaceId, scope },
+    writeAiWorkEngineConfigFile: (workspaceId: string, scope: "project" | "global", content: string) =>
+      logCall("writeAiWorkEngineConfigFile", { workspaceId, scope },
         requestJson<ExecResult>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/opencode-config`, {
           token,
           hostToken,

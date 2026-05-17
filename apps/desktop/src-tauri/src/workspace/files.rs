@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::types::{OpencodeCommand, WorkspaceAiWorkConfig};
+use crate::types::{AiWorkEngineCommand, WorkspaceAiWorkConfig};
 use crate::utils::now_ms;
 use crate::workspace::commands::{sanitize_command_name, serialize_command_frontmatter};
 
@@ -48,10 +48,10 @@ Try:
 Skills add new capabilities. Plugins add advanced features like scheduling or browser automation. We can add them later when you're ready.
 
 ## If the person is technical
-AiWork is a GUI for OpenCode. Everything that works in OpenCode works here.
+AiWork is a GUI for AiWorkEngine. Everything that works in AiWorkEngine works here.
 
 Most reliable setup today:
-1) Install the AiWork-pinned OpenCode version
+1) Install the AiWork-pinned AiWorkEngine version
 2) Configure providers there (models and API keys)
 3) Come back to AiWork and start a session
 
@@ -185,7 +185,7 @@ fn seed_commands(commands_dir: &PathBuf, preset: &str) -> Result<(), String> {
     }
 
     let defaults = vec![
-    OpencodeCommand {
+    AiWorkEngineCommand {
       name: "learn-files".to_string(),
       description: Some("Safe, practical file workflows".to_string()),
       template: "Show me how to interact with files in this workspace. Include safe examples for reading, summarizing, and editing.".to_string(),
@@ -193,7 +193,7 @@ fn seed_commands(commands_dir: &PathBuf, preset: &str) -> Result<(), String> {
       model: None,
       subtask: None,
     },
-    OpencodeCommand {
+    AiWorkEngineCommand {
       name: "learn-skills".to_string(),
       description: Some("How skills work and how to create your own".to_string()),
       template: "Explain what skills are, how to use them, and how to create a new skill for this workspace.".to_string(),
@@ -201,7 +201,7 @@ fn seed_commands(commands_dir: &PathBuf, preset: &str) -> Result<(), String> {
       model: None,
       subtask: None,
     },
-    OpencodeCommand {
+    AiWorkEngineCommand {
       name: "learn-plugins".to_string(),
       description: Some("What plugins are and how to install them".to_string()),
       template: "Explain what plugins are and how to install them in this workspace.".to_string(),
@@ -213,7 +213,7 @@ fn seed_commands(commands_dir: &PathBuf, preset: &str) -> Result<(), String> {
 
     let mut defaults = defaults;
     if preset == "starter" {
-        defaults.push(OpencodeCommand {
+        defaults.push(AiWorkEngineCommand {
             name: "Get Started".to_string(),
             description: Some("Get started".to_string()),
             template: "get started".to_string(),

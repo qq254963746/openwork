@@ -31,9 +31,9 @@ export const GenerateCommand = {
           {
             lang: "js",
             source: [
-              `import { createOpencodeClient } from "@aiwork-engine/sdk`,
+              `import { createAiWorkEngineClient } from "@aiwork-engine/sdk`,
               ``,
-              `const client = createOpencodeClient()`,
+              `const client = createAiWorkEngineClient()`,
               `await client.${operation.operationId}({`,
               `  ...`,
               `})`,

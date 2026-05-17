@@ -8,7 +8,7 @@ import { Flag } from "@/core/flag/flag"
 import { ServerAuth } from "@/server/auth"
 import { EOL } from "os"
 import { Filesystem } from "@/util/filesystem"
-import { createOpencodeClient, type OpencodeClient, type ToolPart } from "@aiwork-engine/sdk/v2"
+import { createAiWorkEngineClient, type AiWorkEngineClient, type ToolPart } from "@aiwork-engine/sdk/v2"
 import { Server } from "../../server/server"
 import { Provider } from "@/provider/provider"
 import { Agent } from "../../agent/agent"
@@ -274,12 +274,12 @@ export const RunCommand = effectCmd({
       .option("password", {
         alias: ["p"],
         type: "string",
-        describe: "basic auth password (defaults to OPENCODE_SERVER_PASSWORD)",
+        describe: "basic auth password (defaults to AIWORK_ENGINE_SERVER_PASSWORD)",
       })
       .option("username", {
         alias: ["u"],
         type: "string",
-        describe: "basic auth username (defaults to OPENCODE_SERVER_USERNAME or 'opencode')",
+        describe: "basic auth username (defaults to AIWORK_ENGINE_SERVER_USERNAME or 'opencode')",
       })
       .option("dir", {
         type: "string",
@@ -380,7 +380,7 @@ export const RunCommand = effectCmd({
         return message.slice(0, 50) + (message.length > 50 ? "..." : "")
       }
 
-      async function session(sdk: OpencodeClient) {
+      async function session(sdk: AiWorkEngineClient) {
         const baseID = args.continue ? (await sdk.session.list()).data?.find((s) => !s.parentID)?.id : args.session
 
         if (baseID && args.fork) {
@@ -395,10 +395,10 @@ export const RunCommand = effectCmd({
         return result.data?.id
       }
 
-      async function share(sdk: OpencodeClient, sessionID: string) {
+      async function share(sdk: AiWorkEngineClient, sessionID: string) {
         const cfg = await sdk.config.get()
         if (!cfg.data) return
-        if (cfg.data.share !== "auto" && !Flag.OPENCODE_AUTO_SHARE && !args.share) return
+        if (cfg.data.share !== "auto" && !Flag.AIWORK_ENGINE_AUTO_SHARE && !args.share) return
         const res = await sdk.session.share({ sessionID }).catch((error) => {
           if (error instanceof Error && error.message.includes("disabled")) {
             UI.println(UI.Style.TEXT_DANGER_BOLD + "!  " + error.message)
@@ -410,7 +410,7 @@ export const RunCommand = effectCmd({
         }
       }
 
-      async function execute(sdk: OpencodeClient) {
+      async function execute(sdk: AiWorkEngineClient) {
         function tool(part: ToolPart) {
           try {
             if (part.tool === ShellID.ToolID) return shell(props<typeof ShellTool>(part))
@@ -652,7 +652,7 @@ export const RunCommand = effectCmd({
 
       if (args.attach) {
         const headers = ServerAuth.headers({ password: args.password, username: args.username })
-        const sdk = createOpencodeClient({ baseUrl: args.attach, directory, headers })
+        const sdk = createAiWorkEngineClient({ baseUrl: args.attach, directory, headers })
         return await execute(sdk)
       }
 
@@ -660,7 +660,7 @@ export const RunCommand = effectCmd({
         const request = new Request(input, init)
         return Server.Default().app.fetch(request)
       }) as typeof globalThis.fetch
-      const sdk = createOpencodeClient({ baseUrl: "http://opencode.internal", fetch: fetchFn })
+      const sdk = createAiWorkEngineClient({ baseUrl: "http://opencode.internal", fetch: fetchFn })
       await execute(sdk)
     })
   }),

@@ -465,7 +465,7 @@ const aiworkServerResult = buildBunSidecar({
 });
 
 const opencodeResult = buildNativeSidecar({
-  label: "OpenCode",
+  label: "AiWorkEngine",
   baseName: "opencode",
   packageDir: opencodePackageDir,
   workspaceDir: opencodeSourceDir,

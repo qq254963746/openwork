@@ -1,6 +1,6 @@
 import { applyEdits, modify, parse, printParseErrorCode } from "jsonc-parser";
 import type { McpServerConfig, McpServerEntry } from "./types";
-import { readOpencodeConfig, writeOpencodeConfig } from "./lib/desktop";
+import { readAiWorkEngineConfig, writeAiWorkEngineConfig } from "./lib/desktop";
 import { CHROME_DEVTOOLS_MCP_COMMAND, CHROME_DEVTOOLS_MCP_ID } from "./constants";
 
 type McpConfigValue = Record<string, unknown> | null | undefined;
@@ -68,7 +68,7 @@ export async function removeMcpFromConfig(
   projectDir: string,
   name: string,
 ): Promise<void> {
-  const configFile = await readOpencodeConfig("project", projectDir);
+  const configFile = await readAiWorkEngineConfig("project", projectDir);
   const raw = configFile.exists && configFile.content?.trim()
     ? configFile.content
     : "{}\n";
@@ -87,7 +87,7 @@ export async function removeMcpFromConfig(
 
   const formattingOptions = { insertSpaces: true, tabSize: 2, eol: "\n" };
   const updated = applyEdits(raw, modify(raw, ["mcp", name], undefined, { formattingOptions }));
-  const writeResult = await writeOpencodeConfig(
+  const writeResult = await writeAiWorkEngineConfig(
     "project",
     projectDir,
     updated.endsWith("\n") ? updated : `${updated}\n`,

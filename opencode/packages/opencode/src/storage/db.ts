@@ -25,16 +25,16 @@ export const NotFoundError = NamedError.create(
 const log = Log.create({ service: "db" })
 
 export function getChannelPath() {
-  if (["latest", "beta", "prod"].includes(AiWorkEngineChannel) || Flag.OPENCODE_DISABLE_CHANNEL_DB)
+  if (["latest", "beta", "prod"].includes(AiWorkEngineChannel) || Flag.AIWORK_ENGINE_DISABLE_CHANNEL_DB)
     return path.join(Global.Path.data, "opencode.db")
   const safe = AiWorkEngineChannel.replace(/[^a-zA-Z0-9._-]/g, "-")
   return path.join(Global.Path.data, `opencode-${safe}.db`)
 }
 
 export const Path = iife(() => {
-  if (Flag.OPENCODE_DB) {
-    if (Flag.OPENCODE_DB === ":memory:" || path.isAbsolute(Flag.OPENCODE_DB)) return Flag.OPENCODE_DB
-    return path.join(Global.Path.data, Flag.OPENCODE_DB)
+  if (Flag.AIWORK_ENGINE_DB) {
+    if (Flag.AIWORK_ENGINE_DB === ":memory:" || path.isAbsolute(Flag.AIWORK_ENGINE_DB)) return Flag.AIWORK_ENGINE_DB
+    return path.join(Global.Path.data, Flag.AIWORK_ENGINE_DB)
   }
   return getChannelPath()
 })

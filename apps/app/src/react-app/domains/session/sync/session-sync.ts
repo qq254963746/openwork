@@ -4,7 +4,7 @@ import type { Part, PermissionRequest, QuestionRequest, SessionStatus, Todo } fr
 import { getReactQueryClient } from "../../../infra/query-client";
 import { createClient } from "../../../../app/lib/opencode";
 import { normalizeEvent, safeStringify } from "../../../../app/utils";
-import type { OpencodeEvent, PendingPermission, PendingQuestion } from "../../../../app/types";
+import type { AiWorkEngineEvent, PendingPermission, PendingQuestion } from "../../../../app/types";
 import { SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX } from "../../../../app/types";
 import { snapshotToUIMessages } from "./usechat-adapter";
 import type { AiWorkSessionSnapshot } from "../../../../app/lib/aiwork-server";
@@ -28,7 +28,7 @@ type SyncEntry = {
   refs: number;
   dispose: () => void;
   pendingDeltas: Map<string, { messageId: string; reasoning: boolean; text: string }>;
-  /** Mirrors OpenCode part kinds so `message.part.delta` with `field: "text"` can target reasoning parts (same as usechat-adapter). */
+  /** Mirrors AiWorkEngine part kinds so `message.part.delta` with `field: "text"` can target reasoning parts (same as usechat-adapter). */
   partKinds: Map<string, Part["type"]>;
   // Coalesce rapid-fire delta events from the SSE stream into one cache
   // commit per animation frame. Without this, a long response produces a
@@ -490,7 +490,7 @@ function appendDelta(messages: UIMessage[], messageId: string, partId: string, d
   return nextMessages;
 }
 
-function applyEvent(entry: SyncEntry, workspaceId: string, event: OpencodeEvent) {
+function applyEvent(entry: SyncEntry, workspaceId: string, event: AiWorkEngineEvent) {
   const queryClient = getReactQueryClient();
 
   if (event.type === "session.error") {
@@ -801,7 +801,7 @@ function releaseWorkspaceSessionSync(input: SyncOptions) {
   if (!existing) return;
   existing.refs -= 1;
   if (existing.refs > 0) return;
-  // Immediate disposal is important here: a single OpenCode runtime is shared
+  // Immediate disposal is important here: a single AiWork runtime is shared
   // across local workspaces, and keeping old workspace subscriptions alive for
   // 10s means rapid workspace switches accumulate multiple parallel event
   // streams. Under larger transcripts that duplicates cache writes and can make

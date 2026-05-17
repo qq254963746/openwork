@@ -14,7 +14,7 @@ import type {
   AiWorkServerCapabilities,
   AiWorkServerDiagnostics,
 } from "../../../../app/lib/aiwork-server";
-import type { OpencodeConnectStatus, StartupPreference } from "../../../../app/types";
+import type { AiWorkEngineConnectStatus, StartupPreference } from "../../../../app/types";
 import { formatRelativeTime } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import { Button } from "../../../design-system/button";
@@ -51,7 +51,7 @@ type RuntimeServiceCard = StatusPill & {
   error?: string | null;
 };
 
-type OpenCodeConnectDebugCard = StatusPill & {
+type AiWorkEngineConnectDebugCard = StatusPill & {
   lines: string[];
   metricsLines: string[];
   error?: string | null;
@@ -94,15 +94,15 @@ export type DebugViewProps = {
   aiworkServiceStatus: ServiceStatus;
   opencodeLogStatus: string | null;
   aiworkLogStatus: string | null;
-  onCopyOpencodeLogs: () => void | Promise<void>;
-  onExportOpencodeLogs: () => void | Promise<void>;
+  onCopyAiWorkEngineLogs: () => void | Promise<void>;
+  onExportAiWorkEngineLogs: () => void | Promise<void>;
   onCopyAiWorkLogs: () => void | Promise<void>;
   onExportAiWorkLogs: () => void | Promise<void>;
   serviceRestartError: string | null;
-  onRestartOpencode: () => void | Promise<void>;
+  onRestartAiWorkEngine: () => void | Promise<void>;
   onRestartAiWorkServer: () => void | Promise<void>;
   engineCard: RuntimeServiceCard;
-  opencodeConnectCard: OpenCodeConnectDebugCard;
+  opencodeConnectCard: AiWorkEngineConnectDebugCard;
   aiworkCard: RuntimeServiceCard;
   aiworkServerDiagnostics: AiWorkServerDiagnostics | null;
   runtimeWorkspaceId: string | null;
@@ -116,11 +116,11 @@ export type DebugViewProps = {
   aiworkAuditEntries: AiWorkAuditEntry[];
   aiworkAuditStatus: StatusPill;
   aiworkAuditError: string | null;
-  opencodeConnectStatus: OpencodeConnectStatus | null;
+  opencodeConnectStatus: AiWorkEngineConnectStatus | null;
   opencodeDevModeEnabled: boolean;
   nukeConfigBusy: boolean;
   nukeConfigStatus: string | null;
-  onNukeAiWorkAndOpencodeConfig: () => void | Promise<void>;
+  onNukeAiWorkAndAiWorkEngineConfig: () => void | Promise<void>;
 };
 
 function formatActor(entry: AiWorkAuditEntry) {
@@ -358,11 +358,11 @@ export function DebugView(props: DebugViewProps) {
             error={props.engineCard.error ?? null}
             restarting={props.opencodeRestarting}
             restartLabel={t("settings.restart_opencode")}
-            onRestart={props.onRestartOpencode}
+            onRestart={props.onRestartAiWorkEngine}
             serviceStatus={props.opencodeServiceStatus}
             logStatus={props.opencodeLogStatus}
-            onCopyLogs={props.onCopyOpencodeLogs}
-            onExportLogs={props.onExportOpencodeLogs}
+            onCopyLogs={props.onCopyAiWorkEngineLogs}
+            onExportLogs={props.onExportAiWorkEngineLogs}
             isDesktop={isDesktop}
           />
         </div>
@@ -815,7 +815,7 @@ export function DebugView(props: DebugViewProps) {
             <button
               type="button"
               className={compactDangerActionClass}
-              onClick={() => void props.onNukeAiWorkAndOpencodeConfig()}
+              onClick={() => void props.onNukeAiWorkAndAiWorkEngineConfig()}
               disabled={props.busy || props.nukeConfigBusy}
             >
               <CircleAlert size={14} />

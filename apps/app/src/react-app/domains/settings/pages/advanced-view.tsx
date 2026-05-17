@@ -2,7 +2,7 @@
 import { useState, type ReactNode } from "react";
 import { CircleAlert, Cpu, RefreshCcw, Server, Zap } from "lucide-react";
 
-import type { OpencodeConnectStatus } from "../../../../app/types";
+import type { AiWorkEngineConnectStatus } from "../../../../app/types";
 import type { AiWorkServerStatus } from "../../../../app/lib/aiwork-server";
 import type { EngineInfo } from "../../../../app/lib/desktop";
 import { t } from "../../../../i18n";
@@ -28,7 +28,7 @@ export type AdvancedViewProps = {
   baseUrl: string;
   headerStatus: string;
   clientConnected: boolean;
-  opencodeConnectStatus: OpencodeConnectStatus | null;
+  opencodeConnectStatus: AiWorkEngineConnectStatus | null;
   aiworkServerStatus: AiWorkServerStatus;
   aiworkServerUrl: string;
   aiworkReconnectBusy: boolean;
@@ -74,7 +74,7 @@ function RuntimeStatusCard(props: RuntimeStatusCardProps) {
   );
 }
 
-function formatOpencodeBinary(info: EngineInfo | null) {
+function formatAiWorkEngineBinary(info: EngineInfo | null) {
   const binary = info?.opencodeBinPath?.trim();
   if (!binary) return "—";
   const source = info?.opencodeBinSource?.trim();
@@ -201,7 +201,7 @@ export function AdvancedView(props: AdvancedViewProps) {
             statusDot={clientStatusDot}
             detailLines={[
               t("settings.diag_opencode_binary", undefined, {
-                binary: formatOpencodeBinary(props.engineInfo),
+                binary: formatAiWorkEngineBinary(props.engineInfo),
               }),
             ]}
           />

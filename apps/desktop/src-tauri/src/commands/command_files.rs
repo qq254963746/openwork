@@ -2,7 +2,7 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::types::{ExecResult, OpencodeCommand};
+use crate::types::{ExecResult, AiWorkEngineCommand};
 use crate::workspace::commands::{sanitize_command_name, serialize_command_frontmatter};
 
 fn resolve_commands_dir(scope: &str, project_dir: &str) -> Result<PathBuf, String> {
@@ -59,7 +59,7 @@ pub fn opencode_command_list(scope: String, project_dir: String) -> Result<Vec<S
 pub fn opencode_command_write(
     scope: String,
     project_dir: String,
-    command: OpencodeCommand,
+    command: AiWorkEngineCommand,
 ) -> Result<ExecResult, String> {
     let scope = scope.trim();
     let safe_name = sanitize_command_name(&command.name)
@@ -72,7 +72,7 @@ pub fn opencode_command_write(
     }
     fs::create_dir_all(&dir).map_err(|e| format!("Failed to create {}: {e}", dir.display()))?;
 
-    let payload = OpencodeCommand {
+    let payload = AiWorkEngineCommand {
         name: safe_name.clone(),
         ..command
     };

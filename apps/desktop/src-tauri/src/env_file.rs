@@ -8,7 +8,7 @@ use serde::Deserialize;
 // If any of those change their path resolution or reserved-prefix policy,
 // update this file in the same PR.
 
-const RESERVED_PREFIXES: &[&str] = &["AIWORK_", "OPENCODE_"];
+const RESERVED_PREFIXES: &[&str] = &["AIWORK_", "AIWORK_ENGINE_"];
 
 #[derive(Debug, Deserialize)]
 struct EnvFile {
@@ -61,7 +61,7 @@ fn is_reserved_env_key(key: &str) -> bool {
 
 /// Best-effort load of the user-level env file. Absent, unreadable, or
 /// malformed files return an empty vector; reserved-prefix keys are always
-/// stripped so a tampered file cannot shadow AiWork / OpenCode internals.
+/// stripped so a tampered file cannot shadow AiWork / AiWorkEngine internals.
 pub fn load_user_env_file() -> Vec<(String, String)> {
     let Some(path) = resolve_user_env_file_path() else {
         return Vec::new();

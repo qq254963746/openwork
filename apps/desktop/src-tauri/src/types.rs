@@ -137,7 +137,7 @@ pub struct ExecResult {
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct OpencodeConfigFile {
+pub struct AiWorkEngineConfigFile {
     pub path: String,
     pub exists: bool,
     pub content: Option<String>,
@@ -145,7 +145,7 @@ pub struct OpencodeConfigFile {
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct OpencodeAuthJsonFile {
+pub struct AiWorkEngineAuthJsonFile {
     pub path: Option<String>,
     pub content: Option<String>,
 }
@@ -181,7 +181,7 @@ pub struct WorkspaceList {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct OpencodeCommand {
+pub struct AiWorkEngineCommand {
     pub name: String,
     #[serde(default)]
     pub description: Option<String>,

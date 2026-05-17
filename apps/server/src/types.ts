@@ -38,7 +38,7 @@ export interface WorkspaceInfo {
   };
 }
 
-export interface OpencodeConfigFile {
+export interface AiWorkEngineConfigFile {
   path: string;
   exists: boolean;
   content: string | null;

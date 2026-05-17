@@ -2,7 +2,7 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::types::{ExecResult, OpencodeConfigFile};
+use crate::types::{ExecResult, AiWorkEngineConfigFile};
 
 fn opencode_config_candidates(
     scope: &str,
@@ -22,8 +22,8 @@ fn opencode_config_candidates(
             ])
         }
         "global" => {
-            // Match OpenCode: OPENCODE_CONFIG_DIR is the global config root (AiWork dev isolation).
-            if let Ok(dir) = env::var("OPENCODE_CONFIG_DIR") {
+            // Match AiWorkEngine: AIWORK_ENGINE_CONFIG_DIR is the global config root (AiWork dev isolation).
+            if let Ok(dir) = env::var("AIWORK_ENGINE_CONFIG_DIR") {
                 let trimmed = dir.trim();
                 if !trimmed.is_empty() {
                     let root = PathBuf::from(trimmed);
@@ -61,7 +61,7 @@ pub fn resolve_opencode_config_path(scope: &str, project_dir: &str) -> Result<Pa
         .ok_or_else(|| "No config path candidates available".to_string())
 }
 
-pub fn read_opencode_config(scope: &str, project_dir: &str) -> Result<OpencodeConfigFile, String> {
+pub fn read_opencode_config(scope: &str, project_dir: &str) -> Result<AiWorkEngineConfigFile, String> {
     let path = resolve_opencode_config_path(scope.trim(), project_dir)?;
     let exists = path.exists();
 
@@ -74,7 +74,7 @@ pub fn read_opencode_config(scope: &str, project_dir: &str) -> Result<OpencodeCo
         None
     };
 
-    Ok(OpencodeConfigFile {
+    Ok(AiWorkEngineConfigFile {
         path: path.to_string_lossy().to_string(),
         exists,
         content,

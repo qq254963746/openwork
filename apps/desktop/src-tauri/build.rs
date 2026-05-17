@@ -189,7 +189,7 @@ fn ensure_opencode_sidecar() {
         }
     }
 
-    let source_path = env::var("OPENCODE_BIN_PATH")
+    let source_path = env::var("AIWORK_ENGINE_BIN_PATH")
         .ok()
         .map(PathBuf::from)
         .filter(|path| path.is_file())
@@ -203,7 +203,7 @@ fn ensure_opencode_sidecar() {
 
     let Some(source_path) = source_path else {
         println!(
-      "cargo:warning=OpenCode sidecar missing at {} (set OPENCODE_BIN_PATH or install OpenCode)",
+      "cargo:warning=AiWorkEngine sidecar missing at {} (set AIWORK_ENGINE_BIN_PATH or install AiWorkEngine)",
       dest_path.display()
     );
 
@@ -225,7 +225,7 @@ fn ensure_opencode_sidecar() {
         let _ = copy_sidecar(&dest_path, &target_dest_path, &target);
     } else {
         println!(
-            "cargo:warning=Failed to copy OpenCode sidecar from {} to {}",
+            "cargo:warning=Failed to copy AiWorkEngine sidecar from {} to {}",
             source_path.display(),
             dest_path.display()
         );

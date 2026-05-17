@@ -1,6 +1,6 @@
 import type { ServerConfig, WorkspaceInfo } from "./types.js";
 
-type OpencodeConnection = {
+type AiWorkEngineConnection = {
   baseUrl?: string;
   authHeader?: string;
 };
@@ -9,10 +9,10 @@ function trim(value: string | undefined): string {
   return value?.trim() ?? "";
 }
 
-export function resolveWorkspaceOpencodeConnection(
+export function resolveWorkspaceAiWorkEngineConnection(
   config: Pick<ServerConfig, "opencodeBaseUrl" | "opencodeUsername" | "opencodePassword">,
   workspace: WorkspaceInfo,
-): OpencodeConnection {
+): AiWorkEngineConnection {
   const baseUrl = trim(workspace.opencode?.baseUrl) || trim(config.opencodeBaseUrl) || undefined;
   const username =
     trim(workspace.opencode?.username) || trim(workspace.opencodeUsername) || trim(config.opencodeUsername);
@@ -29,7 +29,7 @@ export function resolveWorkspaceOpencodeConnection(
   };
 }
 
-export function inheritWorkspaceOpencodeConnection(
+export function inheritWorkspaceAiWorkEngineConnection(
   config: Pick<ServerConfig, "opencodeBaseUrl" | "opencodeUsername" | "opencodePassword">,
 ): Partial<WorkspaceInfo> {
   const baseUrl = trim(config.opencodeBaseUrl);

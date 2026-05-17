@@ -2,7 +2,7 @@ import type { ConfigProvidersResponse, ProviderListResponse } from "@aiwork-engi
 
 import {
   readGlobalDisabledProviderIds,
-  type ReadGlobalOpencodeConfigInput,
+  type ReadGlobalAiWorkEngineConfigInput,
 } from "../../../../app/lib/global-opencode-disabled-providers";
 import { unwrap } from "../../../../app/lib/opencode";
 import { mergeAuthMetadataBaseUrlIntoProviderList } from "../../../../app/lib/provider-list-merge";
@@ -14,7 +14,7 @@ const LOG_SCOPE = "provider-auth";
 
 export type FetchFinallyProviderListParams = {
   listClient: Client;
-  globalInput: ReadGlobalOpencodeConfigInput;
+  globalInput: ReadGlobalAiWorkEngineConfigInput;
   /**
    * When omitted, loads via `readGlobalDisabledProviderIds(globalInput)` (same as
    * `refreshProviders` in the provider-auth store).

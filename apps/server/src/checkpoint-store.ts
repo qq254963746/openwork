@@ -11,7 +11,7 @@
  *    and "redo" remains possible.
  *
  * messageID <-> sha mapping is stored in checkpoints.json. This is intentional:
- *  - OpenCode generates messageIDs server-side, so we commit first with a temporary
+ *  - AiWorkEngine generates messageIDs server-side, so we commit first with a temporary
  *    label, then the frontend reports the real messageID once it appears in events.
  *
  * Concurrency: one shadow repo per session, so there is no contention with other
@@ -39,7 +39,7 @@ export type CheckpointEntry = {
   id: string;
   /** Full commit SHA inside the shadow git repo. */
   sha: string;
-  /** Real OpenCode messageID this checkpoint was created BEFORE. May be a pending placeholder. */
+  /** Real AiWorkEngine messageID this checkpoint was created BEFORE. May be a pending placeholder. */
   messageID: string | null;
   /** Stable label set when the checkpoint was created (e.g. "before-message", "baseline"). */
   label: string;
@@ -255,7 +255,7 @@ export class CheckpointStore {
 
   /**
    * Rebind a temporary placeholder messageID (e.g. "pending:<tsId>") to the
-   * real OpenCode messageID once it becomes known. Idempotent.
+   * real AiWorkEngine messageID once it becomes known. Idempotent.
    */
   async bindMessageId(input: { fromMessageID: string; toMessageID: string }): Promise<boolean> {
     return this.withLock(async () => {

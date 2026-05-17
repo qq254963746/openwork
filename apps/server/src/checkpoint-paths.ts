@@ -86,7 +86,7 @@ export function checkpointsManifestFile(workspaceId: string, sessionId: string):
 
 /**
  * Defensive: workspace and session IDs come from trusted sources (workspace.id is a hash,
- * sessionId from OpenCode), but we still strip path separators / parent-traversal sequences.
+ * sessionId from AiWorkEngine), but we still strip path separators / parent-traversal sequences.
  */
 function sanitizeId(id: string): string {
   const cleaned = id.replace(/[\\/\u0000]/g, "_").replace(/^\.+/, "_");

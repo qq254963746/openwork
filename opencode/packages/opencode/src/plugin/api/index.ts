@@ -1,6 +1,6 @@
 import type {
   Event,
-  createOpencodeClient,
+  createAiWorkEngineClient,
   Project,
   Model,
   Provider,
@@ -55,7 +55,7 @@ export type WorkspaceAdapter = {
 }
 
 export type PluginInput = {
-  client: ReturnType<typeof createOpencodeClient>
+  client: ReturnType<typeof createAiWorkEngineClient>
   project: Project
   directory: string
   worktree: string

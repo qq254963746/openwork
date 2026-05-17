@@ -185,10 +185,10 @@ export function printHelp(): void {
     "  --host-token <token>     Host approval token",
     "  --approval <mode>        manual | auto",
     "  --approval-timeout <ms>  Approval timeout",
-    "  --opencode-base-url <url> OpenCode base URL to share",
-    "  --opencode-directory <path> OpenCode workspace directory to share",
-    "  --opencode-username <user> OpenCode server username",
-    "  --opencode-password <pass> OpenCode server password",
+    "  --opencode-base-url <url> AiWorkEngine base URL to share",
+    "  --opencode-directory <path> AiWorkEngine workspace directory to share",
+    "  --opencode-username <user> AiWorkEngine server username",
+    "  --opencode-password <pass> AiWorkEngine server password",
     "  --workspace <path>       Workspace root (repeatable)",
     "  --cors <origins>          Comma-separated origins or *",
     "  --read-only              Disable writes",
@@ -220,14 +220,14 @@ export async function resolveServerConfig(cli: CliArgs): Promise<ServerConfig> {
         ? envWorkspaces.map((path) => ({ path }))
         : fileConfig.workspaces ?? [];
 
-  const envOpencodeBaseUrl = process.env.AIWORK_OPENCODE_BASE_URL;
-  const envOpencodeDirectory = process.env.AIWORK_OPENCODE_DIRECTORY;
-  const envOpencodeUsername = process.env.AIWORK_OPENCODE_USERNAME;
-  const envOpencodePassword = process.env.AIWORK_OPENCODE_PASSWORD;
-  const opencodeBaseUrl = cli.opencodeBaseUrl ?? envOpencodeBaseUrl ?? fileConfig.opencodeBaseUrl;
-  const opencodeDirectory = cli.opencodeDirectory ?? envOpencodeDirectory ?? fileConfig.opencodeDirectory;
-  const opencodeUsername = cli.opencodeUsername ?? envOpencodeUsername ?? fileConfig.opencodeUsername;
-  const opencodePassword = cli.opencodePassword ?? envOpencodePassword ?? fileConfig.opencodePassword;
+  const envAiWorkEngineBaseUrl = process.env.AIWORK_AIWORK_ENGINE_BASE_URL;
+  const envAiWorkEngineDirectory = process.env.AIWORK_AIWORK_ENGINE_DIRECTORY;
+  const envAiWorkEngineUsername = process.env.AIWORK_AIWORK_ENGINE_USERNAME;
+  const envAiWorkEnginePassword = process.env.AIWORK_AIWORK_ENGINE_PASSWORD;
+  const opencodeBaseUrl = cli.opencodeBaseUrl ?? envAiWorkEngineBaseUrl ?? fileConfig.opencodeBaseUrl;
+  const opencodeDirectory = cli.opencodeDirectory ?? envAiWorkEngineDirectory ?? fileConfig.opencodeDirectory;
+  const opencodeUsername = cli.opencodeUsername ?? envAiWorkEngineUsername ?? fileConfig.opencodeUsername;
+  const opencodePassword = cli.opencodePassword ?? envAiWorkEnginePassword ?? fileConfig.opencodePassword;
 
   if (workspaceConfigs.length > 0 && (opencodeBaseUrl || opencodeDirectory || opencodeUsername || opencodePassword)) {
     const allowDirectoryOverride = workspaceConfigs.length === 1 && opencodeDirectory;

@@ -5,7 +5,7 @@ import type { Part } from "@aiwork-engine/sdk/v2/client";
 import { abortSessionSafe } from "../../../../app/lib/opencode-session";
 import type { AiWorkSessionSnapshot } from "../../../../app/lib/aiwork-server";
 import { normalizeEvent, safeStringify } from "../../../../app/utils";
-import type { OpencodeEvent } from "../../../../app/types";
+import type { AiWorkEngineEvent } from "../../../../app/types";
 import { createClient } from "../../../../app/lib/opencode";
 
 type TransportOptions = {
@@ -234,7 +234,7 @@ function handleToolPart(
 function handleEventChunk(
   controller: ReadableStreamDefaultController<UIMessageChunk>,
   state: InternalPartState,
-  event: OpencodeEvent,
+  event: AiWorkEngineEvent,
   sessionId: string,
 ) {
   if (state.streamFinished) return;

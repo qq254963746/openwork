@@ -46,12 +46,12 @@ struct AiWorkWorkspaceListResponse {
 
 #[derive(Debug, Deserialize)]
 struct AiWorkWorkspaceEntry {
-    opencode: Option<AiWorkWorkspaceOpencode>,
+    opencode: Option<AiWorkWorkspaceAiWorkEngine>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct AiWorkWorkspaceOpencode {
+struct AiWorkWorkspaceAiWorkEngine {
     base_url: String,
     directory: Option<String>,
     username: Option<String>,
@@ -89,7 +89,7 @@ fn parse_base_url_port(base_url: &str) -> Option<u16> {
 fn opencode_bin_source(notes: &[String], in_path: bool) -> Option<String> {
     if notes
         .iter()
-        .any(|note| note.contains("Using OPENCODE_BIN_PATH"))
+        .any(|note| note.contains("Using AIWORK_ENGINE_BIN_PATH"))
     {
         return Some("custom".to_string());
     }
@@ -112,7 +112,7 @@ fn opencode_bin_source(notes: &[String], in_path: bool) -> Option<String> {
 fn probe_aiwork_managed_opencode(
     server_base_url: &str,
     owner_token: &str,
-) -> Result<Option<AiWorkWorkspaceOpencode>, String> {
+) -> Result<Option<AiWorkWorkspaceAiWorkEngine>, String> {
     let response = ureq::get(&format!(
         "{}/workspaces",
         server_base_url.trim_end_matches('/')
@@ -162,7 +162,7 @@ pub fn engine_restart(
         state
             .project_dir
             .clone()
-            .ok_or_else(|| "OpenCode is not configured for a local workspace".to_string())?
+            .ok_or_else(|| "AiWorkEngine is not configured for a local workspace".to_string())?
     };
 
     let workspace_paths = vec![project_dir.clone()];
@@ -192,7 +192,7 @@ pub fn engine_doctor(
         .ok()
         .and_then(|path| path.parent().map(|parent| parent.to_path_buf()));
 
-    let _guard = EnvVarGuard::apply("OPENCODE_BIN_PATH", opencode_bin_path.as_deref());
+    let _guard = EnvVarGuard::apply("AIWORK_ENGINE_BIN_PATH", opencode_bin_path.as_deref());
 
     let (resolved, in_path, notes) = resolve_engine_path(
         prefer_sidecar,
@@ -247,7 +247,7 @@ pub fn engine_start(
         return Err("projectDir is required".to_string());
     }
 
-    // OpenCode is spawned with `current_dir(project_dir)`. If the user selected a
+    // AiWorkEngine is spawned with `current_dir(project_dir)`. If the user selected a
     // workspace path that doesn't exist yet (common during onboarding), spawning
     // fails with `os error 2`.
     std::fs::create_dir_all(&project_dir)
@@ -279,7 +279,7 @@ pub fn engine_start(
         .ok()
         .and_then(|path| path.parent().map(|parent| parent.to_path_buf()));
     let prefer_sidecar = prefer_sidecar.unwrap_or(true);
-    let _guard = EnvVarGuard::apply("OPENCODE_BIN_PATH", opencode_bin_path.as_deref());
+    let _guard = EnvVarGuard::apply("AIWORK_ENGINE_BIN_PATH", opencode_bin_path.as_deref());
     let (program, in_path, notes) = resolve_engine_path(
         prefer_sidecar,
         resource_dir.as_deref(),
@@ -289,7 +289,7 @@ pub fn engine_start(
     let Some(program) = program else {
         let notes_text = notes.join("\n");
         return Err(format!(
-            "OpenCode CLI not found.\nNotes:\n{notes_text}"
+            "AiWorkEngine CLI not found.\nNotes:\n{notes_text}"
         ));
     };
 
@@ -348,7 +348,7 @@ pub fn engine_start(
                 state.opencode_bin_path = opencode_bin_path.clone();
                 state.opencode_bin_source = opencode_bin_source.clone();
                 state.last_stderr = Some(truncate_output(
-                    "AiWork server did not report a managed OpenCode workspace",
+                    "AiWork server did not report a managed AiWorkEngine workspace",
                     8000,
                 ));
             }

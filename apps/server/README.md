@@ -54,10 +54,10 @@ Defaults to `~/.config/aiwork/server.json` (override with `AIWORK_SERVER_CONFIG`
 - `AIWORK_APPROVAL_TIMEOUT_MS`
 - `AIWORK_WORKSPACES` (JSON array or comma-separated list of paths)
 - `AIWORK_CORS_ORIGINS` (comma-separated list or `*`)
-- `AIWORK_OPENCODE_BASE_URL`
-- `AIWORK_OPENCODE_DIRECTORY`
-- `AIWORK_OPENCODE_USERNAME`
-- `AIWORK_OPENCODE_PASSWORD`
+- `AIWORK_AIWORK_ENGINE_BASE_URL`
+- `AIWORK_AIWORK_ENGINE_DIRECTORY`
+- `AIWORK_AIWORK_ENGINE_USERNAME`
+- `AIWORK_AIWORK_ENGINE_PASSWORD`
 
 Token management (scoped tokens):
 
@@ -119,7 +119,7 @@ Toy UI (static assets served by the server):
 - `GET /w/:id/ui`
 - `GET /ui/assets/*`
 
-OpenCode proxy:
+AiWorkEngine proxy:
 
 - `GET|POST|... /opencode/*`
 - `GET|POST|... /w/:id/opencode/*`

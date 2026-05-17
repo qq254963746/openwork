@@ -6,7 +6,7 @@ import type {
   MessageInfo,
   MessageWithParts,
   ModelRef,
-  OpencodeEvent,
+  AiWorkEngineEvent,
   ProviderListItem,
 } from "../types";
 import type { WorkspaceInfo } from "../lib/desktop";
@@ -29,7 +29,7 @@ export function modelEquals(a: ModelRef, b: ModelRef) {
 }
 
 const FRIENDLY_PROVIDER_LABELS: Record<string, string> = {
-  opencode: "OpenCode",
+  opencode: "AiWork",
   openai: "OpenAI",
   anthropic: "Anthropic",
   google: "Google",
@@ -195,7 +195,7 @@ export function formatBytes(bytes: number) {
  * comparison only (e.g. case-insensitive matching via {@link normalizeDirectoryPath}).
  *
  * **Do NOT use this when building a directory value that will be sent to the
- * OpenCode server** (session.list, session.create, mcp.status, etc.).  The
+ * AiWorkEngine server** (session.list, session.create, mcp.status, etc.).  The
  * server compares directories with strict equality and on Windows it stores
  * native backslash paths.  Use
  * {@link import("../lib/session-scope").toSessionTransportDirectory toSessionTransportDirectory}
@@ -221,7 +221,7 @@ export function normalizeDirectoryPath(input?: string | null) {
   return isWindowsPlatform() || isMacPlatform() ? normalized.toLowerCase() : normalized;
 }
 
-export function normalizeEvent(raw: unknown): OpencodeEvent | null {
+export function normalizeEvent(raw: unknown): AiWorkEngineEvent | null {
   if (!raw || typeof raw !== "object") {
     return null;
   }
@@ -270,7 +270,7 @@ export function formatRelativeTime(timestampMs: number) {
   return new Date(timestampMs).toLocaleDateString();
 }
 
-export function addOpencodeCacheHint(message: string) {
+export function addAiWorkEngineCacheHint(message: string) {
   const lower = message.toLowerCase();
   const cacheSignals = [
     ".cache/opencode",
@@ -281,7 +281,7 @@ export function addOpencodeCacheHint(message: string) {
   ];
 
   if (cacheSignals.some((signal) => lower.includes(signal)) && lower.includes("enoent")) {
-    return `${message}\n\nOpenCode cache looks corrupted. Use Repair cache in Settings to rebuild it.`;
+    return `${message}\n\nAiWorkEngine cache looks corrupted. Use Repair cache in Settings to rebuild it.`;
   }
 
   return message;

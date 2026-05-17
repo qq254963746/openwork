@@ -74,7 +74,7 @@ async function ensureWorkspaceAiWorkConfig(workspaceRoot: string, preset: string
   await writeFile(path, JSON.stringify(config, null, 2) + "\n", "utf8");
 }
 
-async function ensureOpencodeConfig(workspaceRoot: string): Promise<void> {
+async function ensureAiWorkEngineConfig(workspaceRoot: string): Promise<void> {
   const path = opencodeConfigPath(workspaceRoot);
   const { data } = await readJsoncFile<Record<string, unknown>>(path, {
     $schema: "https://www.aiwork.love/config.json",
@@ -112,7 +112,7 @@ export async function ensureWorkspaceFiles(workspaceRoot: string, presetInput: s
     throw new ApiError(400, "invalid_workspace_path", "workspace path is required");
   }
   await ensureDir(workspaceRoot);
-  await ensureOpencodeConfig(workspaceRoot);
+  await ensureAiWorkEngineConfig(workspaceRoot);
 
   await ensureAiWorkAgent(workspaceRoot);
 
@@ -120,7 +120,7 @@ export async function ensureWorkspaceFiles(workspaceRoot: string, presetInput: s
   await ensureWorkspaceAiWorkConfig(workspaceRoot, preset);
 }
 
-export async function readRawOpencodeConfig(path: string): Promise<{ exists: boolean; content: string | null }> {
+export async function readRawAiWorkEngineConfig(path: string): Promise<{ exists: boolean; content: string | null }> {
   const hasFile = await exists(path);
   if (!hasFile) {
     return { exists: false, content: null };

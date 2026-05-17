@@ -105,7 +105,7 @@ async function retryWithBackoff<T>(
  * On desktop (Tauri) startup:
  *   1) bootstrap the workspace list
  *   2) if a local workspace is selected, restart the embedded AiWork server
- *   3) start the OpenCode engine pointed at the workspace
+ *   3) start the AiWork engine pointed at the workspace
  *   4) activate the workspace on the running AiWork server
  *   5) notify React routes that fresh desktop runtime info is available.
  *
@@ -199,7 +199,7 @@ export function useDesktopRuntimeBoot() {
 
         // SLOW PATH ─────────────────────────────────────────────────────
         // No running engine. engine_start boots aiwork-server and lets that
-        // server manage OpenCode.
+        // server manage AiWork.
         const localPaths = list.workspaces
           .map((entry) => entry.path?.trim() ?? "")
           .filter((path): path is string => path.length > 0);

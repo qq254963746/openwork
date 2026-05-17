@@ -6,7 +6,7 @@ import type {
   ResetAiWorkMode,
 } from "../../app/types";
 import { relaunchDesktopApp, resetAiWorkState } from "../../app/lib/desktop";
-import { addOpencodeCacheHint, safeStringify } from "../../app/utils";
+import { addAiWorkEngineCacheHint, safeStringify } from "../../app/utils";
 import { t } from "../../i18n";
 
 export type ReloadState = {
@@ -204,7 +204,7 @@ export function useSystemState(
     } catch (error) {
       const message =
         error instanceof Error ? error.message : safeStringify(error);
-      options.setError(addOpencodeCacheHint(message));
+      options.setError(addAiWorkEngineCacheHint(message));
       setResetModalBusy(false);
     }
   }, [options, resetModalBusy, resetModalMode, resetModalText]);

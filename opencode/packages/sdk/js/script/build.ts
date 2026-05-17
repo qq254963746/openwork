@@ -9,7 +9,7 @@ import path from "path"
 
 import { createClient } from "@hey-api/openapi-ts"
 
-const openapiSource = process.env.OPENCODE_SDK_OPENAPI === "hono" ? "hono" : "httpapi"
+const openapiSource = process.env.AIWORK_ENGINE_SDK_OPENAPI === "hono" ? "hono" : "httpapi"
 const opencode = path.resolve(dir, "../../opencode")
 
 // `bun dev generate` now derives the spec from the Effect HttpApi contract by
@@ -34,7 +34,7 @@ await createClient({
     },
     {
       name: "@hey-api/sdk",
-      instance: "OpencodeClient",
+      instance: "AiWorkEngineClient",
       exportFromIndex: false,
       auth: false,
       paramsStructure: "flat",

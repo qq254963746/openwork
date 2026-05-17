@@ -115,10 +115,10 @@ function createHono(opts: CorsOptions, selection: ServerBackend.Selection = Serv
 
   const runtime = adapter.create(app)
 
-  if (Flag.OPENCODE_WORKSPACE_ID) {
+  if (Flag.AIWORK_ENGINE_WORKSPACE_ID) {
     return {
       app: app
-        .use(InstanceMiddleware(Flag.OPENCODE_WORKSPACE_ID ? WorkspaceID.make(Flag.OPENCODE_WORKSPACE_ID) : undefined))
+        .use(InstanceMiddleware(Flag.AIWORK_ENGINE_WORKSPACE_ID ? WorkspaceID.make(Flag.AIWORK_ENGINE_WORKSPACE_ID) : undefined))
         .use(FenceMiddleware)
         .route("/", InstanceRoutes(runtime.upgradeWebSocket, opts)),
       runtime,
@@ -148,7 +148,7 @@ function createHono(opts: CorsOptions, selection: ServerBackend.Selection = Serv
  * Since the Effect HttpApi backend now covers every Hono route (plus the new
  * `/api/session/*` v2 routes — see `httpapi-bridge.test.ts` for the parity
  * audit), `Server.openapi()` derives the spec from `OpenApi.fromApi(PublicApi)`.
- * `PublicApi` is `OpenCodeHttpApi` annotated with the `matchLegacyOpenApi`
+ * `PublicApi` is `AiWorkHttpApi` annotated with the `matchLegacyOpenApi`
  * transform that injects instance query parameters, strips Effect's optional
  * null arms, normalizes component names, and patches SSE response schemas so
  * the generated SDK keeps the legacy Hono shape.

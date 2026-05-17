@@ -4,7 +4,7 @@
 
 - Local-first, cloud-ready: AiWork runs on your machine in one click. Send a message instantly.
 - Composable: desktop app or server. Use what fits, no lock-in.
-- Ejectable: AiWork is powered by OpenCode, so everything OpenCode can do works in AiWork, even without a UI yet.
+- Ejectable: AiWork is powered by AiWork, so everything AiWork can do works in AiWork, even without a UI yet.
 
 AiWork is designed around the idea that you can easily ship your agentic workflows for your team as a repeatable, productized process.
 
@@ -22,10 +22,10 @@ AiWork is designed to be:
 ## What’s Included
 
 - **Host mode**: runs opencode locally on your computer
-- **Client mode**: connect to an existing OpenCode server by URL.
+- **Client mode**: connect to an existing AiWork server by URL.
 - **Sessions**: create/select sessions and send prompts.
 - **Live streaming**: SSE `/event` subscription for realtime updates.
-- **Execution plan**: render OpenCode todos as a timeline.
+- **Execution plan**: render AiWork todos as a timeline.
 - **Permissions**: surface permission requests and reply (allow once / always / deny).
 - **Templates**: save and re-run common workflows (stored locally).
 - **Debug exports**: copy or export the runtime debug report and developer log stream from Settings -> Debug when you need to file a bug.
@@ -40,7 +40,7 @@ AiWork is designed to be:
 - Node.js + `pnpm`
 - Rust toolchain (for Tauri): install via `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 - Tauri CLI: `cargo install tauri-cli`
-- OpenCode CLI installed and available on PATH: `opencode`
+- AiWork CLI installed and available on PATH: `opencode`
 
 ### Local Dev Prerequisites (Desktop)
 
@@ -80,7 +80,7 @@ AiWork now lives in `apps/app` (UI) and `apps/desktop` (desktop shell).
 ./script/pnpm-dev.sh
 ```
 
-`pnpm dev` now enables `AIWORK_DEV_MODE=1` automatically, so desktop dev uses an isolated OpenCode state instead of your personal global config/auth/data.
+`pnpm dev` now enables `AIWORK_DEV_MODE=1` automatically, so desktop dev uses an isolated AiWork state instead of your personal global config/auth/data.
 
 ### Folder Picker
 
@@ -89,15 +89,15 @@ Capability permissions are defined in:
 
 - `apps/desktop/src-tauri/capabilities/default.json`
 
-## OpenCode Plugins
+## AiWork Plugins
 
-Plugins are the **native** way to extend OpenCode. AiWork now manages them from the Skills tab by
+Plugins are the **native** way to extend AiWork. AiWork now manages them from the Skills tab by
 reading and writing `opencode.json`.
 
 - **Project scope**: `<workspace>/opencode.json`
 - **Global scope**: `~/.config/opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode/opencode.json`)
 
-You can still edit `opencode.json` manually; AiWork uses the same format as the OpenCode CLI:
+You can still edit `opencode.json` manually; AiWork uses the same format as the AiWork CLI:
 
 ```json
 {

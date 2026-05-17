@@ -27,8 +27,8 @@ fn env_truthy_aiwork_dev() -> bool {
     )
 }
 
-/// GUI-launched Tauri often inherits no `XDG_*` / `OPENCODE_CONFIG_DIR`; without this,
-/// `aiwork-server` resolves global config + managed OpenCode state to `~/.config` while
+/// GUI-launched Tauri often inherits no `XDG_*` / `AIWORK_ENGINE_CONFIG_DIR`; without this,
+/// `aiwork-server` resolves global config + managed AiWorkEngine state to `~/.config` while
 /// the UI writes credentials under `Application Support/.../aiwork-engine/...`.
 fn aiwork_engine_isolated_env(app: &AppHandle) -> Result<Option<Vec<(String, String)>>, String> {
 
@@ -80,10 +80,10 @@ fn aiwork_engine_isolated_env(app: &AppHandle) -> Result<Option<Vec<(String, Str
             xdg_state_home.to_string_lossy().into_owned(),
         ),
         (
-            "OPENCODE_CONFIG_DIR".into(),
+            "AIWORK_ENGINE_CONFIG_DIR".into(),
             opencode_config_dir.to_string_lossy().into_owned(),
         ),
-        ("OPENCODE_TEST_HOME".into(), home),
+        ("AIWORK_ENGINE_TEST_HOME".into(), home),
     ]))
 }
 
@@ -263,23 +263,23 @@ pub fn spawn_aiwork_server(
     }
 
     if manage_opencode {
-        command = command.env("AIWORK_MANAGE_OPENCODE", "1");
+        command = command.env("AIWORK_MANAGE_AIWORK_ENGINE", "1");
         if let Some(path) = opencode_bin_path {
             if !path.trim().is_empty() {
-                command = command.env("AIWORK_OPENCODE_BIN", path);
+                command = command.env("AIWORK_AIWORK_ENGINE_BIN", path);
             }
         }
     }
 
     if let Some(username) = opencode_username {
         if !username.trim().is_empty() {
-            command = command.env("AIWORK_OPENCODE_USERNAME", username);
+            command = command.env("AIWORK_AIWORK_ENGINE_USERNAME", username);
         }
     }
 
     if let Some(password) = opencode_password {
         if !password.trim().is_empty() {
-            command = command.env("AIWORK_OPENCODE_PASSWORD", password);
+            command = command.env("AIWORK_AIWORK_ENGINE_PASSWORD", password);
         }
     }
 

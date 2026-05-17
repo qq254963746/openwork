@@ -284,7 +284,7 @@ function process<Def extends Definition>(
   Database.transaction((tx) => {
     projector(tx, event.data, event)
 
-    if (Flag.OPENCODE_EXPERIMENTAL_WORKSPACES) {
+    if (Flag.AIWORK_ENGINE_EXPERIMENTAL_WORKSPACES) {
       tx.insert(EventSequenceTable)
         .values({
           aggregate_id: event.aggregateID,

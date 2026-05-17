@@ -10,7 +10,7 @@ import {
   readGlobalDisabledProviderIds,
   removeGlobalDisabledProviderIds,
   writeGlobalDisabledProviderIds,
-  type ReadGlobalOpencodeConfigInput,
+  type ReadGlobalAiWorkEngineConfigInput,
 } from "../../../../app/lib/global-opencode-disabled-providers";
 import { unwrap, waitForHealthy } from "../../../../app/lib/opencode";
 import { fetchProviderAuthForEdit } from "../../../../app/lib/provider-list-merge";
@@ -23,10 +23,10 @@ import { safeStringify } from "../../../../app/utils";
 import { compareProviders, filterProviderList, resolveProviderInitialApiBaseUrl } from "../../../../app/utils/providers";
 import { fetchFinallyProviderList } from "./fetch-finally-provider-list";
 import type { AiWorkServerStore } from "../aiwork-server-store";
-import { upsertGlobalProviderOpencodeEntry } from "../../../../app/lib/global-opencode-provider-upsert";
+import { upsertGlobalProviderAiWorkEngineEntry } from "../../../../app/lib/global-opencode-provider-upsert";
 import {
   fetchOpenAiCompatibleModelIds,
-  modelsIdsToOpenCodeModelsMap,
+  modelsIdsToAiWorkEngineModelsMap,
 } from "../../../../app/lib/openai-compatible-models";
 import { ConsoleLog } from "../../../../app/lib/console-log";
 import {
@@ -61,12 +61,12 @@ export type ProviderAuthProvider = {
   id: string;
   name: string;
   env: string[];
-  /** Mirror of OpenCode provider options (e.g. `baseURL` overrides). */
+  /** Mirror of AiWork provider options (e.g. `baseURL` overrides). */
   options?: Record<string, unknown>;
   /** Prefill for the API base URL field (configured URL or known default). */
   initialApiBaseUrl: string;
   /**
-   * Optional masked/hidden hint returned by OpenCode when credentials exist (`Provider.key`).
+   * Optional masked/hidden hint returned by AiWork when credentials exist (`Provider.key`).
    * Used to prefill Connect providers → API key so users can rotate without retyping blindly.
    */
   existingApiKeyHint?: string;
@@ -103,7 +103,7 @@ type CreateProviderAuthStoreOptions = {
   setProviderDefaults: (value: Record<string, string>) => void;
   setProviderConnectedIds: (value: string[]) => void;
   setDisabledProviders: (value: string[]) => void;
-  markOpencodeConfigReloadRequired: () => void;
+  markAiWorkEngineConfigReloadRequired: () => void;
   /** After a successful API key save, apply workspace engine reload (same as “Reload now” on config changes). */
   reloadWorkspaceEngine?: () => Promise<void>;
   focusPromptSoon?: () => void;
@@ -147,7 +147,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
   const workspaceConfigDirectory = () =>
     options.selectedWorkspaceRoot().trim() || undefined;
 
-  const globalDisabledConfigInput = (): ReadGlobalOpencodeConfigInput => {
+  const globalDisabledConfigInput = (): ReadGlobalAiWorkEngineConfigInput => {
     const snap = options.aiworkServer.getSnapshot();
     return {
       workspaceRoot: options.selectedWorkspaceRoot().trim(),
@@ -701,7 +701,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
       });
       let modelsMap: Record<string, { name: string }> = {};
       if (modelsFetch.ok && modelsFetch.ids.length > 0) {
-        modelsMap = modelsIdsToOpenCodeModelsMap(modelsFetch.ids);
+        modelsMap = modelsIdsToAiWorkEngineModelsMap(modelsFetch.ids);
         ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "submitProviderApiKey:models", {
           baseForModels,
           modelCount: modelsFetch.ids.length,
@@ -727,7 +727,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
         presetCode: presetCode || "(preset)",
       });
 
-      const upsert = await upsertGlobalProviderOpencodeEntry({
+      const upsert = await upsertGlobalProviderAiWorkEngineEntry({
         workspaceRoot: options.selectedWorkspaceRoot().trim(),
         selectedWorkspaceId: options.selectedWorkspaceId().trim(),
         runtimeWorkspaceId: options.runtimeWorkspaceId(),
@@ -778,7 +778,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
 
       await removeGlobalDisabledProviderIds(globalDisabledConfigInput(), [providerId]);
 
-      options.markOpencodeConfigReloadRequired();
+      options.markAiWorkEngineConfigReloadRequired();
 
       await refreshProviders({ dispose: true });
       closeProviderAuthModal();
@@ -836,7 +836,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
         ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "disconnectProvider: disabled_providers written to global opencode.json", {
           disabled_providers: next,
         });
-        options.markOpencodeConfigReloadRequired();
+        options.markAiWorkEngineConfigReloadRequired();
         try {
           await options.reloadWorkspaceEngine?.();
         } catch {

@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createOpencodeClient } from "@aiwork-engine/sdk/v2/client";
+import { createAiWorkEngineClient } from "@aiwork-engine/sdk/v2/client";
 
 import { desktopFetch } from "../../app/lib/desktop";
 
@@ -72,7 +72,7 @@ async function checkHealth(url: string): Promise<boolean> {
   const token = readAiWorkToken();
   const headers =
     token && url.includes("/opencode") ? { Authorization: `Bearer ${token}` } : undefined;
-  const client = createOpencodeClient({
+  const client = createAiWorkEngineClient({
     baseUrl: url,
     headers,
     signal: AbortSignal.timeout(3000),
@@ -127,7 +127,7 @@ export function ServerProvider({ children, defaultUrl }: ServerProviderProps) {
     if (!active) return;
     if (!active.includes("/opencode")) {
       // Desktop React routes now talk to AiWork server workspace-mounted
-      // `/opencode` URLs directly. Ignore old persisted raw OpenCode daemon
+      // `/opencode` URLs directly. Ignore old persisted raw AiWork daemon
       // URLs here; their ephemeral ports go stale across restarts and otherwise
       // produce noisy `/global/health` connection-refused polling forever.
       setHealthy(undefined);

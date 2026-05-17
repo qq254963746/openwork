@@ -30,8 +30,8 @@ export type ServiceClass<Self, Id extends string, Service> = Context.ServiceClas
  * class ServerAuthConfig extends ConfigService.Service<ServerAuthConfig>()(
  *   "@aiwork-engine/ServerAuthConfig",
  *   {
- *     password: Config.string("OPENCODE_SERVER_PASSWORD").pipe(Config.option),
- *     username: Config.string("OPENCODE_SERVER_USERNAME").pipe(Config.withDefault("opencode")),
+ *     password: Config.string("AIWORK_ENGINE_SERVER_PASSWORD").pipe(Config.option),
+ *     username: Config.string("AIWORK_ENGINE_SERVER_USERNAME").pipe(Config.withDefault("opencode")),
  *   },
  * ) {}
  *

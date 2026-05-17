@@ -21,7 +21,7 @@ pub struct CacheResetResult {
 
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OpencodeEngineDiskLogsSnapshot {
+pub struct AiWorkEngineEngineDiskLogsSnapshot {
     pub dir: String,
     pub resolved_variant: String,
     pub file_label: Option<String>,
@@ -119,7 +119,7 @@ fn read_utf8_file_tail(path: &Path, max_bytes: u64) -> std::io::Result<String> {
 }
 
 #[tauri::command]
-pub fn read_opencode_engine_disk_logs(app: AppHandle) -> OpencodeEngineDiskLogsSnapshot {
+pub fn read_opencode_engine_disk_logs(app: AppHandle) -> AiWorkEngineEngineDiskLogsSnapshot {
     const MAX_BYTES: u64 = 256 * 1024;
 
     let candidates = collect_opencode_disk_log_dir_candidates(&app);
@@ -174,7 +174,7 @@ pub fn read_opencode_engine_disk_logs(app: AppHandle) -> OpencodeEngineDiskLogsS
 
         match read_utf8_file_tail(&path, MAX_BYTES) {
             Ok(content) => {
-                return OpencodeEngineDiskLogsSnapshot {
+                return AiWorkEngineEngineDiskLogsSnapshot {
                     dir: dir_display,
                     resolved_variant: variant.clone(),
                     file_label,
@@ -183,7 +183,7 @@ pub fn read_opencode_engine_disk_logs(app: AppHandle) -> OpencodeEngineDiskLogsS
                 };
             }
             Err(err) => {
-                return OpencodeEngineDiskLogsSnapshot {
+                return AiWorkEngineEngineDiskLogsSnapshot {
                     dir: dir_display,
                     resolved_variant: variant.clone(),
                     file_label,
@@ -199,7 +199,7 @@ pub fn read_opencode_engine_disk_logs(app: AppHandle) -> OpencodeEngineDiskLogsS
         .map(|(_, path)| path.to_string_lossy().into_owned())
         .unwrap_or_default();
 
-    OpencodeEngineDiskLogsSnapshot {
+    AiWorkEngineEngineDiskLogsSnapshot {
         dir: fallback_dir,
         resolved_variant: "none".into(),
         file_label: None,
@@ -480,7 +480,7 @@ fn resolve_opencode_program(
     program.ok_or_else(|| {
         let notes_text = notes.join("\n");
         format!(
-            "OpenCode CLI not found.\nNotes:\n{notes_text}"
+            "AiWorkEngine CLI not found.\nNotes:\n{notes_text}"
         )
     })
 }
@@ -602,7 +602,7 @@ pub fn nuke_aiwork_and_opencode_config_and_exit(
         // by the dev app identity and AIWORK_DATA_DIR, so only clear those dev paths.
     } else {
         // In production, clear the normal app paths plus the standard
-        // user OpenCode config/data/cache/state locations.
+        // user AiWorkEngine config/data/cache/state locations.
         paths.extend(opencode_standard_state_paths());
     }
 

@@ -8,7 +8,7 @@ import type {
 import { Config } from "@/config/config"
 import { Bus } from "../bus"
 import * as Log from "@/core/util/log"
-import { createOpencodeClient } from "@aiwork-engine/sdk"
+import { createAiWorkEngineClient } from "@aiwork-engine/sdk"
 import { Flag } from "@/core/flag/flag"
 import { ServerAuth } from "@/server/auth"
 import { CodexAuthPlugin } from "./codex"
@@ -113,7 +113,7 @@ export const layer = Layer.effect(
 
         const { Server } = yield* Effect.promise(() => import("../server/server"))
 
-        const client = createOpencodeClient({
+        const client = createAiWorkEngineClient({
           baseUrl: "http://localhost:4096",
           directory: ctx.directory,
           headers: ServerAuth.headers(),
@@ -148,8 +148,8 @@ export const layer = Layer.effect(
           if (init._tag === "Some") hooks.push(init.value)
         }
 
-        const plugins = Flag.OPENCODE_PURE ? [] : (cfg.plugin_origins ?? [])
-        if (Flag.OPENCODE_PURE && cfg.plugin_origins?.length) {
+        const plugins = Flag.AIWORK_ENGINE_PURE ? [] : (cfg.plugin_origins ?? [])
+        if (Flag.AIWORK_ENGINE_PURE && cfg.plugin_origins?.length) {
           log.info("skipping external plugins in pure mode", { count: cfg.plugin_origins.length })
         }
         if (plugins.length) yield* config.waitForDependencies()

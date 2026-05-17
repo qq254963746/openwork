@@ -11,7 +11,7 @@ export type ServerOptions = {
 }
 
 
-export async function createOpencodeServer(options?: ServerOptions) {
+export async function createAiWorkEngineServer(options?: ServerOptions) {
   options = Object.assign(
     {
       hostname: "127.0.0.1",
@@ -27,7 +27,7 @@ export async function createOpencodeServer(options?: ServerOptions) {
   const proc = launch(`opencode`, args, {
     env: {
       ...process.env,
-      OPENCODE_CONFIG_CONTENT: JSON.stringify(options.config ?? {}),
+      AIWORK_ENGINE_CONFIG_CONTENT: JSON.stringify(options.config ?? {}),
     },
   })
   let clear = () => {}

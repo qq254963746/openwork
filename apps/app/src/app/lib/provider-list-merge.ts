@@ -7,13 +7,13 @@ import { isModelProviderType } from "../utils/model-providers-catalog";
 import { resolveProviderInitialApiBaseUrl } from "../utils/providers";
 import { ConsoleLog } from "./console-log";
 import {
-  readGlobalOpencodeConfigFile,
-  type ReadGlobalOpencodeConfigInput,
+  readGlobalAiWorkEngineConfigFile,
+  type ReadGlobalAiWorkEngineConfigInput,
 } from "./global-opencode-disabled-providers";
 
 const PROVIDER_LIST_MERGE_LOG_SCOPE = "provider-list-merge";
 
-type OpencodeSdkFieldsResult<T> =
+type AiWorkEngineSdkFieldsResult<T> =
   | { data: T; error?: undefined; request: Request; response: Response }
   | { data?: undefined; error: unknown; request: Request; response: Response };
 
@@ -52,9 +52,9 @@ function collectGlobalModelAllowlistsFromJsonRoot(root: Record<string, unknown>)
 }
 
 async function loadGlobalModelAllowlists(
-  input: ReadGlobalOpencodeConfigInput,
+  input: ReadGlobalAiWorkEngineConfigInput,
 ): Promise<Map<string, Set<string>> | null> {
-  const file = await readGlobalOpencodeConfigFile(input);
+  const file = await readGlobalAiWorkEngineConfigFile(input);
   const raw = file?.content?.trim();
   if (!raw) return null;
   const tree = parse(raw, undefined, { allowTrailingComma: true }) as Record<string, unknown>;
@@ -67,7 +67,7 @@ async function fetchAuthMetadataBaseUrl(client: Client, providerId: string): Pro
   if (!id) return "";
   const inner = client as unknown as {
     client: {
-      get: (opts: Record<string, unknown>) => Promise<OpencodeSdkFieldsResult<unknown>>;
+      get: (opts: Record<string, unknown>) => Promise<AiWorkEngineSdkFieldsResult<unknown>>;
     };
   };
   try {
@@ -88,13 +88,13 @@ async function fetchAuthMetadataBaseUrl(client: Client, providerId: string): Pro
  * `Provider.options.baseURL` so the UI and routing use the same URL the user stored in auth metadata.
  *
  * When `globalInput` is set, reads global opencode config (same resolution as
- * `readGlobalOpencodeConfigFile`) and, for **connected** providers whose global entry defines
+ * `readGlobalAiWorkEngineConfigFile`) and, for **connected** providers whose global entry defines
  * `provider.<id>.models`, drops list models whose ids are not keys of that object.
  */
 export async function mergeAuthMetadataBaseUrlIntoProviderList(
   client: Client,
   list: ProviderListResponse,
-  globalInput?: ReadGlobalOpencodeConfigInput | null,
+  globalInput?: ReadGlobalAiWorkEngineConfigInput | null,
 ): Promise<ProviderListResponse> {
   const connected = new Set(
     (list.connected ?? []).map((id: string) => id.trim().toLowerCase()).filter(Boolean),
@@ -269,7 +269,7 @@ function parseAuthPayloadForEdit(
 
 /**
  * Build edit-form defaults from `provider.list()` when `GET /auth/{id}` is unavailable
- * (older OpenCode servers return HTML/404 for that route).
+ * (older AiWorkEngine servers return HTML/404 for that route).
  */
 export function providerAuthDetailsFromListItem(
   provider: ProviderListItem,
@@ -318,11 +318,11 @@ export async function fetchProviderAuthForEdit(
   }
   const inner = client as unknown as {
     client: {
-      get: (opts: Record<string, unknown>) => Promise<OpencodeSdkFieldsResult<unknown>>;
+      get: (opts: Record<string, unknown>) => Promise<AiWorkEngineSdkFieldsResult<unknown>>;
     };
   };
 
-  let result: OpencodeSdkFieldsResult<unknown>;
+  let result: AiWorkEngineSdkFieldsResult<unknown>;
   try {
     result = await inner.client.get({
       url: "/auth/{providerID}",

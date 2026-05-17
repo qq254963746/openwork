@@ -146,7 +146,7 @@ for (const item of targets) {
     define: {
       AIWORK_ENGINE_VERSION: `'${Script.version}'`,
       AIWORK_ENGINE_CHANNEL: `'${Script.channel}'`,
-      OPENCODE_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
+      AIWORK_ENGINE_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
     },
   })
 

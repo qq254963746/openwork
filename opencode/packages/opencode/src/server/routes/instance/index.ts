@@ -46,7 +46,7 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket, opts?: CorsOptions): H
 
   app.all("/api/*", (c) => handler(c.req.raw, context))
 
-  if (Flag.OPENCODE_EXPERIMENTAL_HTTPAPI) {
+  if (Flag.AIWORK_ENGINE_EXPERIMENTAL_HTTPAPI) {
     app.get(EventPaths.event, (c) => handler(c.req.raw, context))
     app.get("/question", (c) => handler(c.req.raw, context))
     app.post("/question/:requestID/reply", (c) => handler(c.req.raw, context))
@@ -163,7 +163,7 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket, opts?: CorsOptions): H
       "/instance/dispose",
       describeRoute({
         summary: "Dispose instance",
-        description: "Clean up and dispose the current OpenCode instance, releasing all resources.",
+        description: "Clean up and dispose the current AiWork instance, releasing all resources.",
         operationId: "instance.dispose",
         responses: {
           200: {
@@ -185,7 +185,7 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket, opts?: CorsOptions): H
       "/path",
       describeRoute({
         summary: "Get paths",
-        description: "Retrieve the current working directory and related path information for the OpenCode instance.",
+        description: "Retrieve the current working directory and related path information for the AiWork instance.",
         operationId: "path.get",
         responses: {
           200: {
@@ -371,7 +371,7 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket, opts?: CorsOptions): H
       "/command",
       describeRoute({
         summary: "List commands",
-        description: "Get a list of all available commands in the OpenCode system.",
+        description: "Get a list of all available commands in the AiWork system.",
         operationId: "command.list",
         responses: {
           200: {
@@ -394,7 +394,7 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket, opts?: CorsOptions): H
       "/agent",
       describeRoute({
         summary: "List agents",
-        description: "Get a list of all available AI agents in the OpenCode system.",
+        description: "Get a list of all available AI agents in the AiWork system.",
         operationId: "app.agents",
         responses: {
           200: {
@@ -417,7 +417,7 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket, opts?: CorsOptions): H
       "/skill",
       describeRoute({
         summary: "List skills",
-        description: "Get a list of all available skills in the OpenCode system.",
+        description: "Get a list of all available skills in the AiWork system.",
         operationId: "app.skills",
         responses: {
           200: {

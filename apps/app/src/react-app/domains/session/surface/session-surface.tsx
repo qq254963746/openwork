@@ -242,7 +242,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
   const scrollToLatestAfterSendRef = useRef<(() => void) | null>(null);
   const attachmentsRef = useRef<ComposerAttachment[]>([]);
   attachmentsRef.current = attachments;
-  const opencodeClient = useMemo(
+  const aiWorkEngineClient = useMemo(
     () => createClient(props.opencodeBaseUrl, undefined, { token: props.aiworkToken, mode: "aiwork" }),
     [props.opencodeBaseUrl, props.aiworkToken],
   );
@@ -585,7 +585,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     // User explicitly sent a new turn — resume follow-latest so streaming deltas scroll into view.
     scrollToLatestAfterSendRef.current?.();
     // Intentionally allow sending while the assistant is still streaming.
-    // OpenCode accepts follow-up user turns mid-run and queues them; if the
+    // AiWork accepts follow-up user turns mid-run and queues them; if the
     // backend can't accept the follow-up it'll surface an error via the
     // catch below. This restores the "append a prompt while it's still
     // talking" behavior that the Solid composer had.
@@ -628,7 +628,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     if (!chatStreaming) return;
     setError(null);
     try {
-      await abortSessionSafe(opencodeClient, props.sessionId);
+      await abortSessionSafe(aiWorkEngineClient, props.sessionId);
       await snapshotQuery.refetch();
       // If we were waiting on an AskQuestion prompt, aborting won't always
       // emit question.replied; clear UI state immediately so the prompt
@@ -640,7 +640,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     } catch (nextError) {
       setError({ message: nextError instanceof Error ? nextError.message : "Failed to stop run." });
     }
-  }, [chatStreaming, opencodeClient, props.sessionId, snapshotQuery.refetch]);
+  }, [chatStreaming, aiWorkEngineClient, props.sessionId, snapshotQuery.refetch]);
 
   useEffect(() => {
     if (liveStatus.type === "idle") {
@@ -829,13 +829,13 @@ export function SessionSurface(props: SessionSurfaceProps) {
     setEditSubmitting(true);
     setEditConfirmOpen(false);
     try {
-      await abortSessionSafe(opencodeClient, props.sessionId);
-      await revertSession(opencodeClient, props.sessionId, msgId);
+      await abortSessionSafe(aiWorkEngineClient, props.sessionId);
+      await revertSession(aiWorkEngineClient, props.sessionId, msgId);
 
       const queryClient = getReactQueryClient();
       const transcriptKeyForSession = reactTranscriptKey(props.workspaceId, props.sessionId);
 
-      // OpenCode `session.revert` does NOT remove messages from the server-side
+      // AiWork `session.revert` does NOT remove messages from the server-side
       // transcript — it only marks the revert point. `/session/:id/message`
       // still returns the entire history. The client must filter at render time.
       //
@@ -933,7 +933,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
       setEditSubmitting(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editAttachments, opencodeClient, props, snapshotQueryKey]);
+  }, [editAttachments, aiWorkEngineClient, props, snapshotQueryKey]);
 
   /**
    * Called when user clicks "Run" on the inline edit composer.
@@ -1070,7 +1070,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     let statuses: McpStatusMap = {};
     try {
       if (props.workspaceRoot.trim()) {
-        statuses = unwrap(await opencodeClient.mcp.status({ directory: props.workspaceRoot.trim() })) as McpStatusMap;
+        statuses = unwrap(await aiWorkEngineClient.mcp.status({ directory: props.workspaceRoot.trim() })) as McpStatusMap;
       }
     } catch {
       statuses = {};
@@ -1327,7 +1327,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
                         onDraftChange={setEditDraft}
                         onSend={handleEditSend}
                         onStop={async () => {
-                          await abortSessionSafe(opencodeClient, props.sessionId);
+                          await abortSessionSafe(aiWorkEngineClient, props.sessionId);
                         }}
                         busy={editSubmitting || editDiffLoading}
                         disabled={editSubmitting}

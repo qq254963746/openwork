@@ -19,9 +19,9 @@ if (!semver.satisfies(process.versions.bun, expectedBunVersionRange)) {
 
 const env = {
   AIWORK_ENGINE_CHANNEL: process.env["AIWORK_ENGINE_CHANNEL"],
-  OPENCODE_BUMP: process.env["OPENCODE_BUMP"],
+  AIWORK_ENGINE_BUMP: process.env["AIWORK_ENGINE_BUMP"],
   AIWORK_ENGINE_VERSION: process.env["AIWORK_ENGINE_VERSION"],
-  OPENCODE_RELEASE: process.env["OPENCODE_RELEASE"],
+  AIWORK_ENGINE_RELEASE: process.env["AIWORK_ENGINE_RELEASE"],
 }
 
 const CHANNEL = "latest"
@@ -38,7 +38,7 @@ export const Script = {
     return IS_PREVIEW
   },
   get release(): boolean {
-    return !!env.OPENCODE_RELEASE
+    return !!env.AIWORK_ENGINE_RELEASE
   },
 }
 console.log(`opencode script`, JSON.stringify(Script, null, 2))

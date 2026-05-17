@@ -1,16 +1,16 @@
 import type {
   EngineInfo,
-  OpencodeEngineDiskLogsSnapshot,
+  AiWorkEngineEngineDiskLogsSnapshot,
   AiWorkServerInfo,
 } from "../../app/lib/desktop-tauri";
-import { engineInfo, aiworkServerInfo, readOpencodeEngineDiskLogs } from "../../app/lib/desktop";
+import { engineInfo, aiworkServerInfo, readAiWorkEngineEngineDiskLogs } from "../../app/lib/desktop";
 
 export async function fetchEngineInfoForLogViewer(): Promise<EngineInfo> {
   return engineInfo();
 }
 
-export async function fetchOpencodeEngineDiskLogsForLogViewer(): Promise<OpencodeEngineDiskLogsSnapshot> {
-  return readOpencodeEngineDiskLogs();
+export async function fetchAiWorkEngineEngineDiskLogsForLogViewer(): Promise<AiWorkEngineEngineDiskLogsSnapshot> {
+  return readAiWorkEngineEngineDiskLogs();
 }
 
 export async function fetchAiWorkServerInfoForLogViewer(): Promise<AiWorkServerInfo> {

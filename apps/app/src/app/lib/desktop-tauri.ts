@@ -78,7 +78,7 @@ export type EngineInfo = {
   lastStderr: string | null;
 };
 
-export type OpencodeEngineDiskLogsSnapshot = {
+export type AiWorkEngineEngineDiskLogsSnapshot = {
   dir: string;
   resolvedVariant: string;
   fileLabel?: string | null;
@@ -97,8 +97,8 @@ export type AiWorkServerInfo = {
   clientToken: string | null;
   ownerToken: string | null;
   hostToken: string | null;
-  managedOpencodeBinPath: string | null;
-  managedOpencodeBinSource: string | null;
+  managedAiWorkEngineBinPath: string | null;
+  managedAiWorkEngineBinSource: string | null;
   pid: number | null;
   lastStdout: string | null;
   lastStderr: string | null;
@@ -217,7 +217,7 @@ export async function workspaceAddAuthorizedRoot(input: {
   });
 }
 
-export type OpencodeCommandDraft = {
+export type AiWorkEngineCommandDraft = {
   name: string;
   description?: string;
   template: string;
@@ -271,7 +271,7 @@ export async function opencodeCommandList(input: {
 export async function opencodeCommandWrite(input: {
   scope: "workspace" | "global";
   projectDir: string;
-  command: OpencodeCommandDraft;
+  command: AiWorkEngineCommandDraft;
 }): Promise<ExecResult> {
   return invoke<ExecResult>("opencode_command_write", {
     scope: input.scope,
@@ -314,7 +314,7 @@ export async function appBuildInfo(): Promise<AppBuildInfo> {
   return invoke<AppBuildInfo>("app_build_info");
 }
 
-export async function nukeAiWorkAndOpencodeConfigAndExit(): Promise<void> {
+export async function nukeAiWorkAndAiWorkEngineConfigAndExit(): Promise<void> {
   return invoke<void>("nuke_aiwork_and_opencode_config_and_exit");
 }
 
@@ -330,8 +330,8 @@ export async function engineInfo(): Promise<EngineInfo> {
   return invoke<EngineInfo>("engine_info");
 }
 
-export async function readOpencodeEngineDiskLogs(): Promise<OpencodeEngineDiskLogsSnapshot> {
-  return invoke<OpencodeEngineDiskLogsSnapshot>("read_opencode_engine_disk_logs");
+export async function readAiWorkEngineEngineDiskLogs(): Promise<AiWorkEngineEngineDiskLogsSnapshot> {
+  return invoke<AiWorkEngineEngineDiskLogsSnapshot>("read_opencode_engine_disk_logs");
 }
 
 export async function runtimeBootstrap(): Promise<unknown> {
@@ -457,13 +457,13 @@ export async function uninstallSkill(projectDir: string, name: string): Promise<
   return invoke<ExecResult>("uninstall_skill", { projectDir, name });
 }
 
-export type OpencodeConfigFile = {
+export type AiWorkEngineConfigFile = {
   path: string;
   exists: boolean;
   content: string | null;
 };
 
-export type OpencodeAuthJsonFile = {
+export type AiWorkEngineAuthJsonFile = {
   path: string | null;
   content: string | null;
 };
@@ -477,14 +477,14 @@ export async function desktopAppPaths(): Promise<DesktopAppPaths> {
   return invoke<DesktopAppPaths>("desktop_app_paths");
 }
 
-export async function readOpencodeConfig(
+export async function readAiWorkEngineConfig(
   scope: "project" | "global",
   projectDir: string,
-): Promise<OpencodeConfigFile> {
-  return invoke<OpencodeConfigFile>("read_opencode_config", { scope, projectDir });
+): Promise<AiWorkEngineConfigFile> {
+  return invoke<AiWorkEngineConfigFile>("read_opencode_config", { scope, projectDir });
 }
 
-export async function writeOpencodeConfig(
+export async function writeAiWorkEngineConfig(
   scope: "project" | "global",
   projectDir: string,
   content: string,
@@ -492,8 +492,8 @@ export async function writeOpencodeConfig(
   return invoke<ExecResult>("write_opencode_config", { scope, projectDir, content });
 }
 
-export async function readOpencodeAuthJson(): Promise<OpencodeAuthJsonFile> {
-  return invoke<OpencodeAuthJsonFile>("read_opencode_auth_json");
+export async function readAiWorkEngineAuthJson(): Promise<AiWorkEngineAuthJsonFile> {
+  return invoke<AiWorkEngineAuthJsonFile>("read_opencode_auth_json");
 }
 
 export async function resetAiWorkState(mode: "onboarding" | "all"): Promise<void> {
@@ -506,7 +506,7 @@ export type CacheResetResult = {
   errors: string[];
 };
 
-export async function resetOpencodeCache(): Promise<CacheResetResult> {
+export async function resetAiWorkEngineCache(): Promise<CacheResetResult> {
   return invoke<CacheResetResult>("reset_opencode_cache");
 }
 

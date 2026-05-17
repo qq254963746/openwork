@@ -25,7 +25,7 @@ fn reason_for_path(path: &Path) -> Option<&'static str> {
     let normalized = normalize_path(path);
     let lower = normalized.to_lowercase();
 
-    // Ignore AiWork metadata files — they don't affect the OpenCode engine.
+    // Ignore AiWork metadata files — they don't affect the AiWorkEngine engine.
     if lower.ends_with("/opencode.json") {
         return None;
     }

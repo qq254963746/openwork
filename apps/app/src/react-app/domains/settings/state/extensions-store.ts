@@ -12,7 +12,7 @@ import type {
   ReloadTrigger,
   SkillCard,
 } from "../../../../app/types";
-import { addOpencodeCacheHint, normalizeDirectoryPath } from "../../../../app/utils";
+import { addAiWorkEngineCacheHint, normalizeDirectoryPath } from "../../../../app/utils";
 import skillCreatorTemplate from "../../../../app/data/skill-creator.md?raw";
 import {
   isPluginInstalled,
@@ -29,13 +29,13 @@ import {
   openDesktopPath,
   pickDirectory,
   readLocalSkill,
-  readOpencodeConfig,
+  readAiWorkEngineConfig,
   revealDesktopItemInDir,
   uninstallSkill as uninstallSkillCommand,
   workspaceAiWorkRead,
   writeLocalSkill,
-  writeOpencodeConfig,
-  type OpencodeConfigFile,
+  writeAiWorkEngineConfig,
+  type AiWorkEngineConfigFile,
 } from "../../../../app/lib/desktop";
 import {
   AiWorkServerError,
@@ -79,7 +79,7 @@ export type ExtensionsStoreSnapshot = {
   hubRepo: HubSkillRepo | null;
   hubRepos: HubSkillRepo[];
   pluginScope: PluginScope;
-  pluginConfig: OpencodeConfigFile | null;
+  pluginConfig: AiWorkEngineConfigFile | null;
   pluginConfigPath: string | null;
   pluginList: PluginListEntry[];
   pluginInput: string;
@@ -106,7 +106,7 @@ type MutableState = {
   hubRepo: HubSkillRepo | null;
   hubRepos: HubSkillRepo[];
   pluginScope: PluginScope;
-  pluginConfig: OpencodeConfigFile | null;
+  pluginConfig: AiWorkEngineConfigFile | null;
   pluginConfigPath: string | null;
   pluginList: PluginListEntry[];
   pluginInput: string;
@@ -449,8 +449,8 @@ export function createExtensionsStore(options: {
       !!ow.aiworkServerClient &&
       !!runtimeId &&
       !!ow.aiworkServerCapabilities?.skills?.read;
-    const hasOpencodeClient = !!options.client();
-    return `root:${root}|ow:${canUseAiWorkSkills ? 1 : 0}|dl:1|oc:${hasOpencodeClient ? 1 : 0}`;
+    const hasAiWorkEngineClient = !!options.client();
+    return `root:${root}|ow:${canUseAiWorkSkills ? 1 : 0}|dl:1|oc:${hasAiWorkEngineClient ? 1 : 0}`;
   };
 
   const touch = () => {
@@ -597,7 +597,7 @@ export function createExtensionsStore(options: {
       return { ok: true, message: `Installed ${trimmed}.` };
     } catch (error) {
       const message = error instanceof Error ? error.message : t("skills.unknown_error");
-      options.setError(addOpencodeCacheHint(message));
+      options.setError(addAiWorkEngineCacheHint(message));
       return { ok: false, message };
     } finally {
       options.setBusy(false);
@@ -791,7 +791,7 @@ export function createExtensionsStore(options: {
     try {
       mutateState((current) => ({ ...current, pluginStatus: null, sidebarPluginStatus: null }));
       if (refreshPluginsAborted) return;
-      const config = await readOpencodeConfig(scope, targetDir);
+      const config = await readAiWorkEngineConfig(scope, targetDir);
       if (refreshPluginsAborted) return;
       mutateState((current) => ({ ...current, pluginConfig: config, pluginConfigPath: config.path ?? null }));
 
@@ -893,12 +893,12 @@ export function createExtensionsStore(options: {
 
     try {
       setStateField("pluginStatus", null);
-      const config = await readOpencodeConfig(scope, targetDir);
+      const config = await readAiWorkEngineConfig(scope, targetDir);
       const raw = config.content ?? "";
 
       if (!raw.trim()) {
         const payload = { $schema: "https://www.aiwork.love/config.json", plugin: [pluginName] };
-        await writeOpencodeConfig(scope, targetDir, `${JSON.stringify(payload, null, 2)}\n`);
+        await writeAiWorkEngineConfig(scope, targetDir, `${JSON.stringify(payload, null, 2)}\n`);
         options.markReloadRequired?.("plugins", { type: "plugin", name: triggerName, action: "added" });
         if (isManualInput) setStateField("pluginInput", "");
         await refreshPlugins(scope);
@@ -915,7 +915,7 @@ export function createExtensionsStore(options: {
       const next = [...plugins, pluginName];
       const edits = modify(raw, ["plugin"], next, { formattingOptions: { insertSpaces: true, tabSize: 2 } });
       const updated = applyEdits(raw, edits);
-      await writeOpencodeConfig(scope, targetDir, updated);
+      await writeAiWorkEngineConfig(scope, targetDir, updated);
       options.markReloadRequired?.("plugins", { type: "plugin", name: triggerName, action: "added" });
       if (isManualInput) setStateField("pluginInput", "");
       await refreshPlugins(scope);
@@ -964,7 +964,7 @@ export function createExtensionsStore(options: {
 
     try {
       setStateField("pluginStatus", null);
-      const config = await readOpencodeConfig(scope, targetDir);
+      const config = await readAiWorkEngineConfig(scope, targetDir);
       const raw = config.content ?? "";
       if (!raw.trim()) {
         setStateField("pluginStatus", "No plugins configured yet.");
@@ -981,7 +981,7 @@ export function createExtensionsStore(options: {
 
       const edits = modify(raw, ["plugin"], next, { formattingOptions: { insertSpaces: true, tabSize: 2 } });
       const updated = applyEdits(raw, edits);
-      await writeOpencodeConfig(scope, targetDir, updated);
+      await writeAiWorkEngineConfig(scope, targetDir, updated);
       options.markReloadRequired?.("plugins", { type: "plugin", name: triggerName, action: "removed" });
       await refreshPlugins(scope);
     } catch (error) {
@@ -1014,7 +1014,7 @@ export function createExtensionsStore(options: {
       await refreshSkills({ force: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : t("skills.unknown_error");
-      options.setError(addOpencodeCacheHint(message));
+      options.setError(addAiWorkEngineCacheHint(message));
     } finally {
       options.setBusy(false);
     }
@@ -1043,7 +1043,7 @@ export function createExtensionsStore(options: {
         return { ok: true, message };
       } catch (error) {
         const raw = error instanceof Error ? error.message : t("skills.unknown_error");
-        const message = addOpencodeCacheHint(raw);
+        const message = addAiWorkEngineCacheHint(raw);
         setStateField("skillsStatus", message);
         options.setError(message);
         return { ok: false, message };
@@ -1083,7 +1083,7 @@ export function createExtensionsStore(options: {
       return { ok: true, message };
     } catch (error) {
       const raw = error instanceof Error ? error.message : t("skills.unknown_error");
-      const message = addOpencodeCacheHint(raw);
+      const message = addAiWorkEngineCacheHint(raw);
       setStateField("skillsStatus", message);
       options.setError(message);
       return { ok: false, message };
@@ -1145,7 +1145,7 @@ export function createExtensionsStore(options: {
     } catch (error) {
       const message = error instanceof Error ? error.message : t("skills.unknown_error");
       setStateField("skillsStatus", message);
-      options.setError(addOpencodeCacheHint(message));
+      options.setError(addAiWorkEngineCacheHint(message));
     } finally {
       options.setBusy(false);
     }
@@ -1223,7 +1223,7 @@ export function createExtensionsStore(options: {
         setStateField("skillsStatus", "Saved.");
       } catch (error) {
         const message = error instanceof Error ? error.message : t("skills.unknown_error");
-        options.setError(addOpencodeCacheHint(message));
+        options.setError(addAiWorkEngineCacheHint(message));
       } finally {
         options.setBusy(false);
       }
@@ -1244,7 +1244,7 @@ export function createExtensionsStore(options: {
       await refreshSkills({ force: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : t("skills.unknown_error");
-      options.setError(addOpencodeCacheHint(message));
+      options.setError(addAiWorkEngineCacheHint(message));
     } finally {
       options.setBusy(false);
     }

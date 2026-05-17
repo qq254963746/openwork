@@ -1,9 +1,9 @@
 import { parse } from "jsonc-parser";
 
 import {
-  readGlobalOpencodeConfigFile,
-  writeGlobalOpencodeConfigContent,
-  type ReadGlobalOpencodeConfigInput,
+  readGlobalAiWorkEngineConfigFile,
+  writeGlobalAiWorkEngineConfigContent,
+  type ReadGlobalAiWorkEngineConfigInput,
 } from "./global-opencode-disabled-providers";
 import {
   AIWORK_CUSTOM_PROVIDER_ENTRY_KEY,
@@ -22,8 +22,8 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * Merge `provider.<id>` into global `~/.config/opencode/opencode.json` (or AiWork server global scope).
  * Includes `options.baseURL`, `options.apiKey`, and `models` from the `/v1/models` step when available.
  */
-export async function upsertGlobalProviderOpencodeEntry(
-  input: ReadGlobalOpencodeConfigInput & {
+export async function upsertGlobalProviderAiWorkEngineEntry(
+  input: ReadGlobalAiWorkEngineConfigInput & {
     providerId: string;
     displayName: string;
     baseURL: string;
@@ -43,7 +43,7 @@ export async function upsertGlobalProviderOpencodeEntry(
     return { ok: false, reason: "write_failed" };
   }
 
-  const existing = await readGlobalOpencodeConfigFile(input);
+  const existing = await readGlobalAiWorkEngineConfigFile(input);
   const raw = existing?.content?.trim() ? existing.content : `{\n  "$schema": "${SCHEMA_URL}"\n}\n`;
 
   const parseErrors: Array<{ error: number; offset: number; length: number }> = [];
@@ -88,10 +88,10 @@ export async function upsertGlobalProviderOpencodeEntry(
   }
 
   const nextContent = `${JSON.stringify(tree, null, 2)}\n`;
-  ConsoleLog.log("global-opencode-provider-upsert", "upsertGlobalProviderOpencodeEntry:done", {
+  ConsoleLog.log("global-opencode-provider-upsert", "upsertGlobalProviderAiWorkEngineEntry:done", {
     ok: true,
     content: nextContent,
   });
-  const wrote = await writeGlobalOpencodeConfigContent(input, nextContent);
+  const wrote = await writeGlobalAiWorkEngineConfigContent(input, nextContent);
   return wrote ? { ok: true } : { ok: false, reason: "write_failed" };
 }

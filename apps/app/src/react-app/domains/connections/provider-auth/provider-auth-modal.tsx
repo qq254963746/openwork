@@ -41,7 +41,7 @@ type ProviderOAuthSession = ProviderOAuthStartResult & {
   methodLabel: string;
 };
 
-/** OpenCode `provider.<id>` key: letters/digits start, then letters, digits, `_`, `-`. */
+/** AiWork `provider.<id>` key: letters/digits start, then letters, digits, `_`, `-`. */
 const CUSTOM_PROVIDER_ID_MAX_LEN = 64;
 const CUSTOM_PROVIDER_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
 
@@ -52,7 +52,7 @@ function isValidCustomProviderId(value: string): boolean {
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
-  opencode: "OpenCode",
+  opencode: "AiWork",
   openai: "OpenAI",
   anthropic: "Anthropic",
   google: "Google",

@@ -1,4 +1,4 @@
-use crate::types::OpencodeCommand;
+use crate::types::AiWorkEngineCommand;
 
 pub fn sanitize_command_name(raw: &str) -> Option<String> {
     let trimmed = raw.trim().trim_start_matches('/');
@@ -20,7 +20,7 @@ pub fn sanitize_command_name(raw: &str) -> Option<String> {
     Some(out)
 }
 
-pub fn serialize_command_frontmatter(command: &OpencodeCommand) -> Result<String, String> {
+pub fn serialize_command_frontmatter(command: &AiWorkEngineCommand) -> Result<String, String> {
     fn escape_yaml_scalar(value: &str) -> String {
         let mut out = String::with_capacity(value.len() + 2);
         out.push('"');
