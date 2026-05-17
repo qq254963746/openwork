@@ -452,7 +452,7 @@ export default {
   "session.default_title": "新建会话",
   "session.empty_transcript_prompt": "有什么我能帮你的吗？",
   "session.empty_transcript_hint":
-    "AiWork 帮你连接本地或远程智能体：在工作区里对话与执行任务、使用技能与工具读写代码与文件，管理工作区与会话。",
+    "AiWork 通过AI的方式助您高效完成工作、爱上工作，您可以在工作区里对话与执行任务、使用技能与工具读写代码与文件，管理工作区与会话。",
   "session.jump_to_latest": "跳到最新",
   "session.written_files_list_aria": "此回复中新建或修改的文件",
   "session.assistant_reply_duration_pending": "生成中",

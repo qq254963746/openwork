@@ -17,7 +17,6 @@ import { Format } from "@/format"
 import { LSP } from "@/lsp/lsp"
 import { MCP } from "@/mcp"
 import { Permission } from "@/permission"
-import { Installation } from "@/installation"
 import { InstanceLayer } from "@/project/instance-layer"
 import { Plugin } from "@/plugin"
 import { Project } from "@/project/project"
@@ -157,7 +156,6 @@ export function createRoutes(corsOptions?: CorsOptions) {
       FileWatcher.defaultLayer,
       Format.defaultLayer,
       LSP.defaultLayer,
-      Installation.defaultLayer,
       MCP.defaultLayer,
       ModelsDev.defaultLayer,
       Permission.defaultLayer,

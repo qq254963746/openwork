@@ -21,7 +21,7 @@ contracts.
   mix of `NamedError.create(...)`, `namedSchemaError(...)`, `class extends Error`,
   `throw`, and `Effect.die(...)`.
 - Some services already use `Schema.TaggedErrorClass`, for example `Account`,
-  `Auth`, `Permission`, `Question`, `Installation`, and parts of
+  `Auth`, `Permission`, `Question`, and parts of
   `Workspace`.
 - Legacy Hono error handling recognizes `NamedError`, `Session.BusyError`, and a
   few name-based cases, then emits the legacy `{ name, data }` JSON body.

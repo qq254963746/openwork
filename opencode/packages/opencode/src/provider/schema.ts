@@ -18,7 +18,6 @@ export const ProviderID = providerIdSchema.pipe(
     googleVertex: schema.make("google-vertex"),
     githubCopilot: schema.make("github-copilot"),
     amazonBedrock: schema.make("amazon-bedrock"),
-    azure: schema.make("azure"),
     openrouter: schema.make("openrouter"),
     mistral: schema.make("mistral"),
     gitlab: schema.make("gitlab"),

@@ -1,5 +1,5 @@
 import { Global } from "@/core/global"
-import { InstallationVersion } from "@/core/installation/version"
+import { OpenCodeVersion } from "@/core/env/env"
 import { Flag } from "@/core/flag/flag"
 import os from "os"
 import { Duration, Effect } from "effect"
@@ -56,7 +56,7 @@ const InfoCommand = effectCmd({
       : undefined
     const terminal = [termProgram, process.env.TERM].filter((item): item is string => Boolean(item)).join(" / ")
 
-    console.log(`opencode version: ${InstallationVersion}`)
+    console.log(`opencode version: ${OpenCodeVersion}`)
     console.log(`os: ${os.type()} ${os.release()} ${os.arch()}`)
     console.log(`terminal: ${terminal || "unknown"}`)
     console.log("plugins:")

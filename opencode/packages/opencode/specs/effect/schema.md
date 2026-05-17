@@ -158,30 +158,30 @@ A file is considered "done" when:
 Files that meet this bar but still carry a compat bridge are checked off
 with an inline note describing the bridge and what unblocks its removal.
 
-- [x] skills, formatter, console-state, mcp, lsp, permission (leaves), model-id, command, plugin, provider
-- [x] server, layout
-- [x] keybinds
-- [x] permission#Info
-- [x] agent
-- [x] config.ts root
+- [X] skills, formatter, console-state, mcp, lsp, permission (leaves), model-id, command, plugin, provider
+- [X] server, layout
+- [X] keybinds
+- [X] permission#Info
+- [X] agent
+- [X] config.ts root
 
 ### `src/*/schema.ts` leaf modules
 
 These are the highest-priority next targets. Each is a small, self-contained
 schema module with a clear domain.
 
-- [x] `src/account/schema.ts`
-- [x] `src/control-plane/schema.ts`
-- [x] `src/permission/schema.ts`
-- [x] `src/project/schema.ts`
-- [x] `src/provider/schema.ts`
-- [x] `src/pty/schema.ts`
-- [x] `src/question/schema.ts`
-- [x] `src/session/schema.ts`
-- [x] `src/storage/schema.ts`
-- [x] `src/sync/schema.ts`
-- [x] `src/tool/schema.ts`
-- [x] `src/util/schema.ts`
+- [X] `src/account/schema.ts`
+- [X] `src/control-plane/schema.ts`
+- [X] `src/permission/schema.ts`
+- [X] `src/project/schema.ts`
+- [X] `src/provider/schema.ts`
+- [X] `src/pty/schema.ts`
+- [X] `src/question/schema.ts`
+- [X] `src/session/schema.ts`
+- [X] `src/storage/schema.ts`
+- [X] `src/sync/schema.ts`
+- [X] `src/tool/schema.ts`
+- [X] `src/util/schema.ts`
 
 ### Session domain
 
@@ -262,21 +262,21 @@ Possible later tightening after the Schema-first migration is stable:
 - promote repeated opaque strings and timestamp numbers into branded/newtype
   leaf schemas where that adds domain value without changing the wire format
 
-- [x] `src/session/compaction.ts`
-- [x] `src/session/message-v2.ts`
-- [x] `src/session/message.ts`
-- [x] `src/session/prompt.ts`
-- [x] `src/session/revert.ts`
-- [x] `src/session/session.ts`
-- [x] `src/session/status.ts`
-- [x] `src/session/summary.ts`
-- [x] `src/session/todo.ts`
+- [X] `src/session/compaction.ts`
+- [X] `src/session/message-v2.ts`
+- [X] `src/session/message.ts`
+- [X] `src/session/prompt.ts`
+- [X] `src/session/revert.ts`
+- [X] `src/session/session.ts`
+- [X] `src/session/status.ts`
+- [X] `src/session/summary.ts`
+- [X] `src/session/todo.ts`
 
 ### Provider domain
 
-- [x] `src/provider/auth.ts`
-- [x] `src/provider/models.ts`
-- [x] `src/provider/provider.ts`
+- [X] `src/provider/auth.ts`
+- [X] `src/provider/models.ts`
+- [X] `src/provider/provider.ts`
 
 ### Tool schemas
 
@@ -284,24 +284,24 @@ Each tool declares its parameters via a zod schema. Tools are consumed by
 both the in-process runtime and the AI SDK's tool-calling layer, so the
 emitted JSON Schema must stay byte-identical.
 
-- [x] `src/tool/apply_patch.ts`
-- [x] `src/tool/bash.ts`
-- [x] `src/tool/edit.ts`
-- [x] `src/tool/glob.ts`
-- [x] `src/tool/grep.ts`
-- [x] `src/tool/invalid.ts`
-- [x] `src/tool/lsp.ts`
-- [x] `src/tool/plan.ts`
-- [x] `src/tool/question.ts`
-- [x] `src/tool/read.ts`
-- [x] `src/tool/registry.ts`
-- [x] `src/tool/skill.ts`
-- [x] `src/tool/task.ts`
-- [x] `src/tool/todo.ts`
-- [x] `src/tool/tool.ts`
-- [x] `src/tool/webfetch.ts`
-- [x] `src/tool/websearch.ts`
-- [x] `src/tool/write.ts`
+- [X] `src/tool/apply_patch.ts`
+- [X] `src/tool/bash.ts`
+- [X] `src/tool/edit.ts`
+- [X] `src/tool/glob.ts`
+- [X] `src/tool/grep.ts`
+- [X] `src/tool/invalid.ts`
+- [X] `src/tool/lsp.ts`
+- [X] `src/tool/plan.ts`
+- [X] `src/tool/question.ts`
+- [X] `src/tool/read.ts`
+- [X] `src/tool/registry.ts`
+- [X] `src/tool/skill.ts`
+- [X] `src/tool/task.ts`
+- [X] `src/tool/todo.ts`
+- [X] `src/tool/tool.ts`
+- [X] `src/tool/webfetch.ts`
+- [X] `src/tool/websearch.ts`
+- [X] `src/tool/write.ts`
 
 ### HTTP route boundaries
 
@@ -312,8 +312,8 @@ which means touching them is largely mechanical once the domain side is
 done.
 
 - [ ] `src/server/error.ts`
-- [x] `src/server/event.ts`
-- [x] `src/server/projectors.ts`
+- [X] `src/server/event.ts`
+- [X] `src/server/projectors.ts`
 - [ ] `src/server/routes/control/index.ts`
 - [ ] `src/server/routes/control/workspace.ts`
 - [ ] `src/server/routes/global.ts`
@@ -345,7 +345,7 @@ piecewise.
 
 - [ ] `src/acp/agent.ts`
 - [ ] `src/agent/agent.ts`
-- [x] `src/bus/bus-event.ts`
+- [X] `src/bus/bus-event.ts`
 - [ ] `src/bus/index.ts`
 - [ ] `src/cli/cmd/tui/config/tui-migrate.ts`
 - [ ] `src/cli/cmd/tui/config/tui-schema.ts`
@@ -353,16 +353,15 @@ piecewise.
 - [ ] `src/cli/cmd/tui/event.ts`
 - [ ] `src/cli/ui.ts`
 - [ ] `src/command/index.ts`
-- [x] `src/control-plane/adapters/worktree.ts`
-- [x] `src/control-plane/types.ts`
-- [x] `src/control-plane/workspace.ts`
+- [X] `src/control-plane/adapters/worktree.ts`
+- [X] `src/control-plane/types.ts`
+- [X] `src/control-plane/workspace.ts`
 - [ ] `src/file/index.ts`
 - [ ] `src/file/ripgrep.ts`
 - [ ] `src/file/watcher.ts`
 - [ ] `src/format/index.ts`
 - [ ] `src/id/id.ts`
 - [ ] `src/ide/index.ts`
-- [ ] `src/installation/index.ts`
 - [ ] `src/lsp/client.ts`
 - [ ] `src/lsp/lsp.ts`
 - [ ] `src/mcp/auth.ts`
@@ -375,7 +374,7 @@ piecewise.
 - [ ] `src/snapshot/index.ts`
 - [ ] `src/storage/db.ts`
 - [ ] `src/storage/storage.ts`
-- [x] `src/sync/index.ts` — public API (`SyncEvent.define`) is Schema-first; `payloads()` still derives zod for the remaining HTTP/OpenAPI boundary
+- [X] `src/sync/index.ts` — public API (`SyncEvent.define`) is Schema-first; `payloads()` still derives zod for the remaining HTTP/OpenAPI boundary
 - [ ] `src/util/fn.ts`
 - [ ] `src/util/log.ts`
 - [ ] `src/util/update-schema.ts`
@@ -394,6 +393,5 @@ piecewise.
   Effect definitions for the same domain type.
 - Keep the migration incremental. Converting the domain model first is more
   valuable than converting every boundary in the same change.
-- Every migrated file should leave the generated SDK output (`packages/sdk/
-openapi.json` and `packages/sdk/js/src/v2/gen/types.gen.ts`) byte-identical
+- Every migrated file should leave the generated SDK output (`packages/sdk/ openapi.json` and `packages/sdk/js/src/v2/gen/types.gen.ts`) byte-identical
   unless the change is deliberately user-visible.

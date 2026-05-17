@@ -12,7 +12,6 @@ export type OpenAIConfig = {
    *
    * Examples:
    * - OpenAI: ['file-'] for IDs like 'file-abc123'
-   * - Azure OpenAI: ['assistant-'] for IDs like 'assistant-abc123'
    */
   fileIdPrefixes?: readonly string[]
 }

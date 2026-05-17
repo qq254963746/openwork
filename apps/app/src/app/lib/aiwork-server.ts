@@ -70,21 +70,12 @@ export type AiWorkRuntimeServiceSnapshot = {
   running: boolean;
   targetVersion: string | null;
   actualVersion: string | null;
-  upgradeAvailable: boolean;
 };
 
 export type AiWorkRuntimeSnapshot = {
   ok: boolean;
   worker?: {
     workspace: string;
-  };
-  upgrade?: {
-    status: "idle" | "running" | "failed";
-    startedAt: number | null;
-    finishedAt: number | null;
-    error: string | null;
-    operationId: string | null;
-    services: AiWorkRuntimeServiceName[];
   };
   services: AiWorkRuntimeServiceSnapshot[];
 };

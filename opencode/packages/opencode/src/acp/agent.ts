@@ -43,7 +43,6 @@ import { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
 import { Agent as AgentModule } from "../agent/agent"
 import { AppRuntime } from "@/effect/app-runtime"
-import { Installation } from "@/installation"
 import { MessageV2 } from "@/session/message-v2"
 import { Config } from "@/config/config"
 import { ConfigMCP } from "@/config/mcp"
@@ -52,7 +51,7 @@ import { Result, Schema } from "effect"
 import { LoadAPIKeyError } from "ai"
 import type { AssistantMessage, Event, OpencodeClient, SessionMessageResponse, ToolPart } from "@aiwork-engine/sdk/v2"
 import { applyPatch } from "diff"
-import { InstallationVersion } from "@/core/installation/version"
+import { OpenCodeVersion } from "@/core/env/env"
 import { ShellID } from "@/tool/shell/id"
 
 type ModeOption = { id: string; name: string; description?: string }
@@ -576,7 +575,7 @@ export class Agent implements ACPAgent {
       authMethods: [authMethod],
       agentInfo: {
         name: "OpenCode",
-        version: InstallationVersion,
+        version: OpenCodeVersion,
       },
     }
   }

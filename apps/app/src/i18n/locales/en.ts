@@ -479,7 +479,7 @@ export default {
   "session.default_title": "New session",
   "session.empty_transcript_prompt": "What can I help you with?",
   "session.empty_transcript_hint":
-    "AiWork connects you to agents on your device or remotely—chat and run tasks in your workspace, use skills and tools to work with code and files, manage workspaces and sessions.",
+    "AiWork to assist you in efficiently completing your work, use skills and tools to work with code and files, manage workspaces and sessions.",
   "session.jump_to_latest": "Jump to latest",
   "session.written_files_list_aria": "Files created or updated in this reply",
   "session.assistant_reply_duration_pending": "…",

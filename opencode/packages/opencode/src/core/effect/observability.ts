@@ -3,7 +3,7 @@ import { FetchHttpClient } from "effect/unstable/http"
 import { OtlpLogger, OtlpSerialization } from "effect/unstable/observability"
 import * as EffectLogger from "./logger"
 import { Flag } from "../flag/flag"
-import { InstallationChannel, InstallationVersion } from "../installation/version"
+import { OpenCodeChannel, OpenCodeVersion } from "../env/env"
 import { ensureProcessMetadata } from "../util/opencode-process"
 
 const base = Flag.OTEL_EXPORTER_OTLP_ENDPOINT
@@ -41,10 +41,10 @@ export function resource(): { serviceName: string; serviceVersion: string; attri
 
   return {
     serviceName: "opencode",
-    serviceVersion: InstallationVersion,
+    serviceVersion: OpenCodeVersion,
     attributes: {
       ...attributes,
-      "deployment.environment.name": InstallationChannel,
+      "deployment.environment.name": OpenCodeChannel,
       "opencode.client": Flag.OPENCODE_CLIENT,
       "opencode.process_role": processMetadata.processRole,
       "opencode.run_id": processMetadata.runID,

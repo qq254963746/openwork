@@ -23,7 +23,6 @@ const WELL_KNOWN_PROVIDER_API_BASE: Readonly<Record<string, string>> = {
   deepseek: "https://api.deepseek.com/v1",
   mistral: "https://api.mistral.ai/v1",
   together: "https://api.together.xyz/v1",
-  xai: "https://api.x.ai/v1",
   cerebras: "https://api.cerebras.ai/v1",
   cohere: "https://api.cohere.com/v1",
   fireworks: "https://api.fireworks.ai/inference/v1",

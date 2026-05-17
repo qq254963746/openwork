@@ -28,8 +28,6 @@ function sdkKey(npm: string): string | undefined {
   switch (npm) {
     case "@ai-sdk/github-copilot":
       return "copilot"
-    case "@ai-sdk/azure":
-      return "azure"
     case "@ai-sdk/openai":
       return "openai"
     case "@ai-sdk/amazon-bedrock":
@@ -684,8 +682,6 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
     // https://v5.ai-sdk.dev/providers/ai-sdk-providers/cerebras
     case "@ai-sdk/togetherai":
     // https://v5.ai-sdk.dev/providers/ai-sdk-providers/togetherai
-    case "@ai-sdk/xai":
-    // https://v5.ai-sdk.dev/providers/ai-sdk-providers/xai
     case "@ai-sdk/deepinfra":
     // https://v5.ai-sdk.dev/providers/ai-sdk-providers/deepinfra
     case "venice-ai-sdk-provider":
@@ -697,23 +693,6 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       }
       return Object.fromEntries(efforts.map((effort) => [effort, { reasoningEffort: effort }]))
 
-    case "@ai-sdk/azure":
-      // https://v5.ai-sdk.dev/providers/ai-sdk-providers/azure
-      if (id === "o1-mini") return {}
-      const azureEfforts = ["low", "medium", "high"]
-      if (id.includes("gpt-5-") || id === "gpt-5") {
-        azureEfforts.unshift("minimal")
-      }
-      return Object.fromEntries(
-        azureEfforts.map((effort) => [
-          effort,
-          {
-            reasoningEffort: effort,
-            reasoningSummary: "auto",
-            include: ["reasoning.encrypted_content"],
-          },
-        ]),
-      )
     case "@ai-sdk/openai": {
       // https://v5.ai-sdk.dev/providers/ai-sdk-providers/openai
       const efforts = openaiReasoningEfforts(model.api.id, model.release_date)
@@ -974,11 +953,6 @@ export function options(input: {
     result["store"] = false
   }
 
-  if (input.model.api.npm === "@ai-sdk/azure") {
-    result["store"] = false
-    result["promptCacheKey"] = input.sessionID
-  }
-
   if (input.model.api.npm === "@openrouter/ai-sdk-provider" || input.model.api.npm === "@llmgateway/ai-sdk-provider") {
     result["usage"] = {
       include: true,
@@ -1054,7 +1028,6 @@ export function options(input: {
       // parameter and return "Unknown parameter: 'reasoningSummary'".
       if (
         input.model.api.npm === "@ai-sdk/openai" ||
-        input.model.api.npm === "@ai-sdk/azure" ||
         input.model.api.npm === "@ai-sdk/github-copilot"
       ) {
         result["reasoningSummary"] = "auto"
@@ -1066,8 +1039,7 @@ export function options(input: {
     if (
       input.model.api.id.includes("gpt-5.") &&
       !input.model.api.id.includes("codex") &&
-      !input.model.api.id.includes("-chat") &&
-      input.model.providerID !== "azure"
+      !input.model.api.id.includes("-chat")
     ) {
       result["textVerbosity"] = "low"
     }
@@ -1170,19 +1142,13 @@ export function providerOptions(model: Provider.Model, options: { [x: string]: a
   // AI SDK packages that resolve providerOptionsName by splitting the
   // provider name on "." (e.g. "wafer.ai" -> "wafer") need the same
   // logic here so the key we write matches the key they read.
-  // Other SDKs (xai, mistral, groq, cohere, etc.) use hardcoded keys
-  // like "xai" or "cohere" - applying .split(".")[0] would break those.
+  // Other SDKs (mistral, groq, cohere, etc.) use hardcoded keys
+  // like "cohere" - applying .split(".")[0] would break those.
   const usesDotSplitOptions =
     model.api.npm === "@ai-sdk/openai-compatible" ||
     model.api.npm === "@ai-sdk/openai" ||
     model.api.npm === "@ai-sdk/anthropic"
   const key = sdkKey(model.api.npm) ?? (usesDotSplitOptions ? model.providerID.split(".")[0] : model.providerID)
-  // @ai-sdk/azure delegates to OpenAIChatLanguageModel which reads from
-  // providerOptions["openai"], but OpenAIResponsesLanguageModel checks
-  // "azure" first. Pass both so model options work on either code path.
-  if (model.api.npm === "@ai-sdk/azure") {
-    return { openai: options, azure: options }
-  }
   return { [key]: options }
 }
 
@@ -1190,24 +1156,7 @@ export function maxOutputTokens(model: Provider.Model): number {
   return Math.min(model.limit.output, OUTPUT_TOKEN_MAX) || OUTPUT_TOKEN_MAX
 }
 
-export function schema(model: Provider.Model, schema: JSONSchema.BaseSchema | JSONSchema7): JSONSchema7 {
-  /*
-  if (["openai", "azure"].includes(providerID)) {
-    if (schema.type === "object" && schema.properties) {
-      for (const [key, value] of Object.entries(schema.properties)) {
-        if (schema.required?.includes(key)) continue
-        schema.properties[key] = {
-          anyOf: [
-            value as JSONSchema.JSONSchema,
-            {
-              type: "null",
-            },
-          ],
-        }
-      }
-    }
-  }
-  */
+export function schema(model: Provider.Model, schema: JSONSchema.BaseSchema | JSONSchema7): JSONSchema7 {s
 
   if (model.providerID === "moonshotai" || model.api.id.toLowerCase().includes("kimi")) {
     const sanitizeMoonshot = (obj: unknown): unknown => {

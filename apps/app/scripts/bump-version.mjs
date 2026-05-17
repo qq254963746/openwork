@@ -120,9 +120,7 @@ const updateTauriConfig = async (nextVersion) => {
 };
 
 const OPENCODE_PACKAGE_PATHS = [
-  "opencode/packages/core/package.json",
   "opencode/packages/opencode/package.json",
-  "opencode/packages/script/package.json",
   "opencode/packages/sdk/js/package.json",
 ];
 

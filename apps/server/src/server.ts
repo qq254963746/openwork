@@ -1376,21 +1376,10 @@ function createRoutes(
     return jsonResponse(snapshot);
   });
 
-  addRoute(routes, "POST", "/runtime/upgrade", "host", async (ctx) => {
-    const body = await readJsonBody(ctx.request);
-    const result = await fetchRuntimeControl("/runtime/upgrade", { method: "POST", body });
-    return jsonResponse(result, 202);
-  });
 
   addRoute(routes, "GET", "/w/:id/runtime/versions", "client", async () => {
     const snapshot = await fetchRuntimeControl("/runtime/versions");
     return jsonResponse(snapshot);
-  });
-
-  addRoute(routes, "POST", "/w/:id/runtime/upgrade", "host", async (ctx) => {
-    const body = await readJsonBody(ctx.request);
-    const result = await fetchRuntimeControl("/runtime/upgrade", { method: "POST", body });
-    return jsonResponse(result, 202);
   });
 
   addRoute(routes, "GET", "/whoami", "client", async (ctx) => {

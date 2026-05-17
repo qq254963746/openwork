@@ -2,12 +2,12 @@ import { Global } from "@/core/global"
 import path from "path"
 import { Context, Duration, Effect, Layer, Option, Schedule, Schema } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
-import { Installation } from "../installation"
 import { Flag } from "@/core/flag/flag"
 import { Flock } from "@/core/util/flock"
 import { Hash } from "@/core/util/hash"
 import { AppFileSystem } from "@/core/filesystem"
 import { withTransientReadRetry } from "@/util/effect-http-client"
+import { OpenCodeVersion } from "@/core/env/env.js"
 
 const Cost = Schema.Struct({
   input: Schema.Finite,
@@ -96,6 +96,8 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ModelsDev") {}
 
+const USER_AGENT = `opencode/${OpenCodeVersion}/${Flag.OPENCODE_CLIENT}`
+
 export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClient.HttpClient> = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -119,7 +121,7 @@ export const layer: Layer.Layer<Service, never, AppFileSystem.Service | HttpClie
 
     const fetchApi = Effect.fn("ModelsDev.fetchApi")(function* () {
       return yield* HttpClientRequest.get(`${source}/api.json`).pipe(
-        HttpClientRequest.setHeader("User-Agent", Installation.USER_AGENT),
+        HttpClientRequest.setHeader("User-Agent", USER_AGENT),
         http.execute,
         Effect.flatMap((res) => res.text),
         Effect.timeout("10 seconds"),

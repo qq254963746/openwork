@@ -176,47 +176,45 @@ Service-shape migrated (single namespace, traced methods, `InstanceState` where 
 
 This checklist is only about the service shape migration. Many of these services still keep `makeRuntime(...)` plus async facade exports; that facade-removal phase is tracked separately in `facades.md`.
 
-- [x] `Account` — `account/index.ts`
-- [x] `Agent` — `agent/agent.ts`
-- [x] `AppFileSystem` — `filesystem/index.ts`
-- [x] `Auth` — `auth/index.ts` (uses `zod()` helper for Schema→Zod interop)
-- [x] `Bus` — `bus/index.ts`
-- [x] `Command` — `command/index.ts`
-- [x] `Config` — `config/config.ts`
-- [x] `Discovery` — `skill/discovery.ts` (dependency-only layer, no standalone runtime)
-- [x] `File` — `file/index.ts`
-- [x] `FileWatcher` — `file/watcher.ts`
-- [x] `Format` — `format/index.ts`
-- [x] `Installation` — `installation/index.ts`
-- [x] `LSP` — `lsp/index.ts`
-- [x] `MCP` — `mcp/index.ts`
-- [x] `McpAuth` — `mcp/auth.ts`
-- [x] `Permission` — `permission/index.ts`
-- [x] `Plugin` — `plugin/index.ts`
-- [x] `Project` — `project/project.ts`
-- [x] `ProviderAuth` — `provider/auth.ts`
-- [x] `Pty` — `pty/index.ts`
-- [x] `Question` — `question/index.ts`
-- [x] `SessionStatus` — `session/status.ts`
-- [x] `Skill` — `skill/index.ts`
-- [x] `Snapshot` — `snapshot/index.ts`
-- [x] `ToolRegistry` — `tool/registry.ts`
-- [x] `Truncate` — `tool/truncate.ts`
-- [x] `Vcs` — `project/vcs.ts`
-- [x] `Worktree` — `worktree/index.ts`
-
-- [x] `Session` — `session/index.ts`
-- [x] `SessionProcessor` — `session/processor.ts`
-- [x] `SessionPrompt` — `session/prompt.ts`
-- [x] `SessionCompaction` — `session/compaction.ts`
-- [x] `SessionSummary` — `session/summary.ts`
-- [x] `SessionRevert` — `session/revert.ts`
-- [x] `Instruction` — `session/instruction.ts`
-- [x] `SystemPrompt` — `session/system.ts`
-- [x] `Provider` — `provider/provider.ts`
-- [x] `Storage` — `storage/storage.ts`
-- [x] `ShareNext` — `share/share-next.ts`
-- [x] `SessionTodo` — `session/todo.ts`
+- [X] `Account` — `account/index.ts`
+- [X] `Agent` — `agent/agent.ts`
+- [X] `AppFileSystem` — `filesystem/index.ts`
+- [X] `Auth` — `auth/index.ts` (uses `zod()` helper for Schema→Zod interop)
+- [X] `Bus` — `bus/index.ts`
+- [X] `Command` — `command/index.ts`
+- [X] `Config` — `config/config.ts`
+- [X] `Discovery` — `skill/discovery.ts` (dependency-only layer, no standalone runtime)
+- [X] `File` — `file/index.ts`
+- [X] `FileWatcher` — `file/watcher.ts`
+- [X] `Format` — `format/index.ts`
+- [X] `LSP` — `lsp/index.ts`
+- [X] `MCP` — `mcp/index.ts`
+- [X] `McpAuth` — `mcp/auth.ts`
+- [X] `Permission` — `permission/index.ts`
+- [X] `Plugin` — `plugin/index.ts`
+- [X] `Project` — `project/project.ts`
+- [X] `ProviderAuth` — `provider/auth.ts`
+- [X] `Pty` — `pty/index.ts`
+- [X] `Question` — `question/index.ts`
+- [X] `SessionStatus` — `session/status.ts`
+- [X] `Skill` — `skill/index.ts`
+- [X] `Snapshot` — `snapshot/index.ts`
+- [X] `ToolRegistry` — `tool/registry.ts`
+- [X] `Truncate` — `tool/truncate.ts`
+- [X] `Vcs` — `project/vcs.ts`
+- [X] `Worktree` — `worktree/index.ts`
+- [X] `Session` — `session/index.ts`
+- [X] `SessionProcessor` — `session/processor.ts`
+- [X] `SessionPrompt` — `session/prompt.ts`
+- [X] `SessionCompaction` — `session/compaction.ts`
+- [X] `SessionSummary` — `session/summary.ts`
+- [X] `SessionRevert` — `session/revert.ts`
+- [X] `Instruction` — `session/instruction.ts`
+- [X] `SystemPrompt` — `session/system.ts`
+- [X] `Provider` — `provider/provider.ts`
+- [X] `Storage` — `storage/storage.ts`
+- [X] `ShareNext` — `share/share-next.ts`
+- [X] `SessionTodo` — `session/todo.ts`
 
 Still open at the service-shape level:
 
@@ -233,12 +231,12 @@ Some already-effectified areas still use raw `Filesystem.*` or `Process.spawn` i
 
 ### `Filesystem.*` → `AppFileSystem.Service` (yield in layer)
 
-- [x] `config/config.ts` — `installDependencies()` now uses `AppFileSystem`
-- [x] `provider/provider.ts` — recent model state now reads via `AppFileSystem.Service`
+- [X] `config/config.ts` — `installDependencies()` now uses `AppFileSystem`
+- [X] `provider/provider.ts` — recent model state now reads via `AppFileSystem.Service`
 
 ### `Process.spawn` → `ChildProcessSpawner` (yield in layer)
 
-- [x] `format/formatter.ts` — direct `Process.spawn()` checks removed (`air`, `uv`)
+- [X] `format/formatter.ts` — direct `Process.spawn()` checks removed (`air`, `uv`)
 - [ ] `lsp/server.ts` — multiple `Process.spawn()` installs/download helpers
 
 ## Filesystem consolidation
