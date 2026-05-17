@@ -2298,7 +2298,7 @@ function SessionTranscriptInner(props: SessionTranscriptProps) {
                     virtualizer.measureElement(element);
                   }
                 }}
-                className="absolute left-0 top-0 w-full pb-1.5"
+                className="absolute left-0 top-0 w-full"
                 style={{
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
