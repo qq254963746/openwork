@@ -25,6 +25,83 @@ import { useBootState } from "./boot-state";
 let BOOT_STARTED = false;
 
 /**
+ * Returns true when Tauri's IPC layer appears ready to accept invoke calls.
+ *
+ * The Tauri 2 webview initializes its IPC bridge asynchronously after the page
+ * load event.  During that brief window the first invoke() call can fail with
+ * "IPC custom protocol failed" followed by "TypeError: Load failed".
+ *
+ * We probe window.__TAURI_INTERNALS__ (populated synchronously once the bridge
+ * is wired) as a lightweight readiness signal.
+ */
+function isTauriIpcReady(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    // Tauri 2 populates __TAURI_INTERNALS__ on the window object once the
+    // IPC bridge has been wired.  The exact shape varies across versions
+    // but its mere presence is a reliable signal that invoke() is usable.
+    const w = window as Window & { __TAURI_INTERNALS__?: unknown; __TAURI__?: unknown };
+    return !!(w.__TAURI_INTERNALS__ || w.__TAURI__);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Wait for Tauri's IPC bridge to become ready, polling every 50ms.
+ * Returns once readiness is confirmed or the timeout is reached.
+ *
+ * @param timeoutMs  Maximum time to wait (default 3000ms)
+ * @returns true if IPC is ready, false if timeout was reached
+ */
+function waitForTauriReady(timeoutMs = 3000): Promise<boolean> {
+  if (isTauriIpcReady()) return Promise.resolve(true);
+
+  const start = Date.now();
+  return new Promise((resolve) => {
+    const check = () => {
+      if (isTauriIpcReady()) {
+        resolve(true);
+        return;
+      }
+      if (Date.now() - start >= timeoutMs) {
+        resolve(false);
+        return;
+      }
+      setTimeout(check, 50);
+    };
+    check();
+  });
+}
+
+/**
+ * Execute a function with retry on failure.  Uses exponential backoff starting
+ * at 100ms, capped at 1s between attempts.
+ *
+ * Designed for Tauri invoke calls that may fail transiently during IPC
+ * bridge initialization.
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  startDelayMs = 100,
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        const delay = Math.min(startDelayMs * Math.pow(2, attempt), 1000);
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastError;
+}
+
+/**
  * On desktop (Tauri) startup:
  *   1) bootstrap the workspace list
  *   2) if a local workspace is selected, restart the embedded AiWork server
@@ -46,8 +123,25 @@ export function useDesktopRuntimeBoot() {
       try {
         hydrateAiWorkServerSettingsFromEnv();
 
+        // Wait for Tauri's IPC bridge to be ready before making the first
+        // invoke() call.  During the first ~100-300ms after page load the
+        // Tauri webview wires its IPC handlers asynchronously; calling
+        // invoke() before that window yields "IPC custom protocol failed"
+        // and "TypeError: Load failed".
+        const tauriReady = await waitForTauriReady(3000);
+        if (!tauriReady) {
+          console.warn(
+            "[desktop-boot] Tauri IPC bridge not ready after 3s; " +
+            "proceeding with best-effort retries.",
+          );
+        }
+
         setPhase("bootstrapping-workspaces");
-        const list = await workspaceBootstrap().catch(() => null);
+        const list = await retryWithBackoff(
+          () => workspaceBootstrap(),
+          3,
+          150,
+        ).catch(() => null);
         if (!list) {
           markReady();
           return;
@@ -74,7 +168,7 @@ export function useDesktopRuntimeBoot() {
         // This mirrors Solid's bootstrap at context/workspace.ts:3883-3907
         // ("localAttachExisting"), which never restarts a running stack.
         try {
-          const engine = await engineInfo();
+          const engine = await retryWithBackoff(() => engineInfo(), 2, 100);
           if (engine?.running && engine.baseUrl) {
             setActive(engine.baseUrl);
             const fresh = await aiworkServerInfo().catch(() => null);
