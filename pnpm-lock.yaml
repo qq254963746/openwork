@@ -91,7 +91,7 @@ importers:
       '@lexical/react':
         specifier: ^0.35.0
         version: 0.35.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(yjs@13.6.30)
-      '@opencode-ai/sdk':
+      '@aiwork-engine/sdk':
         specifier: workspace:*
         version: link:../../opencode/packages/sdk/js
       '@radix-ui/colors':

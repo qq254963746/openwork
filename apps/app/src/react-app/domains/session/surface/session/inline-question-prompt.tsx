@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useState } from "react";
-import type { QuestionInfo } from "@opencode-ai/sdk/v2/client";
+import type { QuestionInfo } from "@aiwork-engine/sdk/v2/client";
 import { dlsPrimarySolidClass } from "../../../workspace/modal-styles";
 
 export function InlineQuestionPrompt(props: {

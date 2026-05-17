@@ -1,67 +1,9 @@
-use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::types::{OpencodeCommand, WorkspaceAiWorkConfig};
 use crate::utils::now_ms;
 use crate::workspace::commands::{sanitize_command_name, serialize_command_frontmatter};
-use crate::log_error;
-
-const READ_FILE_AS_TEXT_TOOL: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/opencode-tools/read_file_as_text.ts"
-));
-
-/// Seed the built-in `read_file_as_text` custom tool into the global opencode tools directory.
-/// Uses OPENCODE_CONFIG_DIR if set (dev isolation), otherwise ~/.config/opencode/tools/.
-/// The file is only written if it doesn't already exist, so user edits are preserved.
-pub fn seed_global_tools() {
-    let base = if let Ok(dir) = env::var("OPENCODE_CONFIG_DIR") {
-        let trimmed = dir.trim().to_string();
-        if trimmed.is_empty() {
-            resolve_default_config_base()
-        } else {
-            Some(PathBuf::from(trimmed))
-        }
-    } else {
-        resolve_default_config_base()
-    };
-
-    let Some(base) = base else {
-        return;
-    };
-
-    let tools_dir = base.join("opencode").join("tools");
-    if let Err(e) = fs::create_dir_all(&tools_dir) {
-        log_error!("aiwork", "Failed to create global tools dir {}: {e}", tools_dir.display());
-        return;
-    }
-
-    let tool_path = tools_dir.join("read_file_as_text.ts");
-    if tool_path.exists() {
-        return;
-    }
-
-    if let Err(e) = fs::write(&tool_path, READ_FILE_AS_TEXT_TOOL) {
-        log_error!("aiwork", "Failed to write {}: {e}", tool_path.display());
-    }
-}
-
-fn resolve_default_config_base() -> Option<PathBuf> {
-    if let Ok(dir) = env::var("XDG_CONFIG_HOME") {
-        let trimmed = dir.trim().to_string();
-        if !trimmed.is_empty() {
-            return Some(PathBuf::from(trimmed));
-        }
-    }
-    if let Ok(home) = env::var("HOME") {
-        let trimmed = home.trim().to_string();
-        if !trimmed.is_empty() {
-            return Some(PathBuf::from(trimmed).join(".config"));
-        }
-    }
-    None
-}
 
 pub fn merge_plugins(existing: Vec<String>, required: &[&str]) -> Vec<String> {
     let mut out = existing;

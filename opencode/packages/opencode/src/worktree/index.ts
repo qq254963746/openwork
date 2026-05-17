@@ -1,5 +1,5 @@
 import z from "zod"
-import { NamedError } from "@opencode-ai/core/util/error"
+import { NamedError } from "@opencode-ai/core/util/name-error"
 import { Global } from "@opencode-ai/core/global"
 import { InstanceLayer } from "@/project/instance-layer"
 import { InstanceStore } from "@/project/instance-store"

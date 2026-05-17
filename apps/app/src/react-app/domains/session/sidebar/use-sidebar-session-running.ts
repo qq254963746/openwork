@@ -1,5 +1,5 @@
 import type { UIMessage } from "ai";
-import type { SessionStatus } from "@opencode-ai/sdk/v2/client";
+import type { SessionStatus } from "@aiwork-engine/sdk/v2/client";
 import { useEffect, useMemo, useState } from "react";
 
 import type { WorkspaceSessionGroup } from "../../../../app/types";

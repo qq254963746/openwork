@@ -6,7 +6,7 @@ import type {
   FilePartInput,
   ProviderListResponse,
   TextPartInput,
-} from "@opencode-ai/sdk/v2/client";
+} from "@aiwork-engine/sdk/v2/client";
 
 import type { ReadGlobalOpencodeConfigInput } from "../../app/lib/global-opencode-disabled-providers";
 import { createClient, unwrap } from "../../app/lib/opencode";
@@ -1610,8 +1610,8 @@ export function SessionRoute() {
         : t("composer.agent_label"),
       selectedAgent: sessionAgentOverrideState,
       listAgents: async () => {
-        const list = unwrap(await opencodeClient.app.agents()) as import("@opencode-ai/sdk/v2/client").Agent[];
-        return list.filter((agent: import("@opencode-ai/sdk/v2/client").Agent) => !agent.hidden && agent.mode !== "subagent" && agent.name !== "aiwork");
+        const list = unwrap(await opencodeClient.app.agents()) as import("@aiwork-engine/sdk/v2/client").Agent[];
+        return list.filter((agent: import("@aiwork-engine/sdk/v2/client").Agent) => !agent.hidden && agent.mode !== "subagent" && agent.name !== "aiwork");
       },
       onSelectAgent: (agent: string | null) => {
         if (selectedWorkspaceId && selectedSessionId) {

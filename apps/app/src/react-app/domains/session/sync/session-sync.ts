@@ -1,5 +1,5 @@
 import type { UIMessage } from "ai";
-import type { Part, PermissionRequest, QuestionRequest, SessionStatus, Todo } from "@opencode-ai/sdk/v2/client";
+import type { Part, PermissionRequest, QuestionRequest, SessionStatus, Todo } from "@aiwork-engine/sdk/v2/client";
 
 import { getReactQueryClient } from "../../../infra/query-client";
 import { createClient } from "../../../../app/lib/opencode";

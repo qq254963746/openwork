@@ -1,4 +1,4 @@
-import type { AuthOAuthResult, Hooks } from "@opencode-ai/plugin"
+import type { AuthOAuthResult, Hooks } from "@/plugin/api"
 import { Auth } from "@/auth"
 import { InstanceState } from "@/effect/instance-state"
 import { zod } from "@/util/effect-zod"

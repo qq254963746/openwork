@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createOpencodeClient } from "@opencode-ai/sdk/v2/client";
+import { createOpencodeClient } from "@aiwork-engine/sdk/v2/client";
 
 import { desktopFetch } from "../../app/lib/desktop";
 

@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import type { UIMessage, UIMessageChunk, ChatTransport, DynamicToolUIPart } from "ai";
-import type { Part } from "@opencode-ai/sdk/v2/client";
+import type { Part } from "@aiwork-engine/sdk/v2/client";
 
 import { abortSessionSafe } from "../../../../app/lib/opencode-session";
 import type { AiWorkSessionSnapshot } from "../../../../app/lib/aiwork-server";

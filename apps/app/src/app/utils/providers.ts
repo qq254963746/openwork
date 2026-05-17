@@ -1,4 +1,4 @@
-import type { Provider as ConfigProvider, ProviderListResponse } from "@opencode-ai/sdk/v2/client";
+import type { Provider as ConfigProvider, ProviderListResponse } from "@aiwork-engine/sdk/v2/client";
 
 const PINNED_PROVIDER_ORDER = ["opencode", "openai", "anthropic"] as const;
 
@@ -64,7 +64,7 @@ export const compareProviders = (
   return aName.localeCompare(bName);
 };
 
-// Starting with @opencode-ai/sdk@1.4.x, `ConfigProvider` (from `config.providers()`)
+// Starting with @aiwork-engine/sdk@1.4.x, `ConfigProvider` (from `config.providers()`)
 // and the provider items in `ProviderListResponse.all` share the same shape, so
 // this mapper is effectively an identity function. It is kept for call-site
 // stability and to normalize optional fields (`name`, `env`).

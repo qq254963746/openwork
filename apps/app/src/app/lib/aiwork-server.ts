@@ -1,4 +1,4 @@
-import type { Message, Part, Session, Todo } from "@opencode-ai/sdk/v2/client";
+import type { Message, Part, Session, Todo } from "@aiwork-engine/sdk/v2/client";
 import { desktopFetch } from "./desktop";
 import type { ExecResult, OpencodeConfigFile, WorkspaceInfo, WorkspaceList } from "./desktop";
 import type { ModelProviderType } from "../utils/model-providers-catalog";

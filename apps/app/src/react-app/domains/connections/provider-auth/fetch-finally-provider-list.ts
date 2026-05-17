@@ -1,4 +1,4 @@
-import type { ConfigProvidersResponse, ProviderListResponse } from "@opencode-ai/sdk/v2/client";
+import type { ConfigProvidersResponse, ProviderListResponse } from "@aiwork-engine/sdk/v2/client";
 
 import {
   readGlobalDisabledProviderIds,

@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { isToolUIPart, type DynamicToolUIPart, type UIMessage } from "ai";
-import type { Part } from "@opencode-ai/sdk/v2/client";
+import type { Part } from "@aiwork-engine/sdk/v2/client";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Atom, Check, ChevronDown, ChevronUp, CircleAlert, Copy, File as FileIcon, Pencil } from "lucide-react";

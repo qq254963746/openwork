@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 import type {
   ProviderAuthAuthorization,
   ProviderListResponse,
-} from "@opencode-ai/sdk/v2/client";
+} from "@aiwork-engine/sdk/v2/client";
 
 import { t } from "../../../../i18n";
 import {

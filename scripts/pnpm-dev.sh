@@ -12,6 +12,10 @@ else
   echo "No process found on port $PORT."
 fi
 
+
+# 需要进入opencode目录下执行 bun install
+
+
 pnpm install
 # pnpm dev
 pnpm --filter @aiwork/desktop dev:tauri

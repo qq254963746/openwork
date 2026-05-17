@@ -39,6 +39,6 @@ export const Script = {
   },
   get release(): boolean {
     return !!env.OPENCODE_RELEASE
-  }
+  },
 }
 console.log(`opencode script`, JSON.stringify(Script, null, 2))

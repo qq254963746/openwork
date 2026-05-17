@@ -1,5 +1,5 @@
 import { Provider } from "@/provider/provider"
-import { NamedError } from "@opencode-ai/core/util/error"
+import { NamedError } from "@opencode-ai/core/util/name-error"
 import { NotFoundError } from "@/storage/storage"
 import { Session } from "@/session/session"
 import type { ContentfulStatusCode } from "hono/utils/http-status"

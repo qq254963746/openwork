@@ -1,4 +1,4 @@
-import { createOpencodeClient, type Message, type Part, type Session, type Todo } from "@opencode-ai/sdk/v2/client";
+import { createOpencodeClient, type Message, type Part, type Session, type Todo } from "@aiwork-engine/sdk/v2/client";
 
 import { desktopFetch } from "./desktop";
 import { createAiWorkServerClient, AiWorkServerError } from "./aiwork-server";

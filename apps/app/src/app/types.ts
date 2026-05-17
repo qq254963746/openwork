@@ -5,7 +5,7 @@ import type {
   QuestionRequest,
   ProviderListResponse,
   Session,
-} from "@opencode-ai/sdk/v2/client";
+} from "@aiwork-engine/sdk/v2/client";
 import type { createClient } from "./lib/opencode";
 import type { OpencodeConfigFile, WorkspaceInfo } from "./lib/desktop";
 

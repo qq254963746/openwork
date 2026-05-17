@@ -10,8 +10,8 @@ import {
 } from "react";
 import type { UIMessage } from "ai";
 import { useQuery } from "@tanstack/react-query";
-import type { SessionStatus } from "@opencode-ai/sdk/v2/client";
-import type { QuestionInfo } from "@opencode-ai/sdk/v2/client";
+import type { SessionStatus } from "@aiwork-engine/sdk/v2/client";
+import type { QuestionInfo } from "@aiwork-engine/sdk/v2/client";
 
 import { createClient, unwrap } from "../../../../app/lib/opencode";
 import { abortSessionSafe, revertSession } from "../../../../app/lib/opencode-session";
@@ -109,7 +109,7 @@ export type SessionSurfaceProps = {
   onModelVariantChange: (value: string | null) => void;
   agentLabel: string;
   selectedAgent: string | null;
-  listAgents: () => Promise<import("@opencode-ai/sdk/v2/client").Agent[]>;
+  listAgents: () => Promise<import("@aiwork-engine/sdk/v2/client").Agent[]>;
   onSelectAgent: (agent: string | null) => void;
   listCommands: () => Promise<import("../../../../app/types").SlashCommandOption[]>;
   recentFiles: string[];

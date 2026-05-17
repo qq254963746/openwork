@@ -1,5 +1,5 @@
 import { parse } from "jsonc-parser";
-import type { ProviderListResponse } from "@opencode-ai/sdk/v2/client";
+import type { ProviderListResponse } from "@aiwork-engine/sdk/v2/client";
 
 import type { Client, ProviderListItem } from "../types";
 import type { ModelProviderType } from "../utils/model-providers-catalog";
