@@ -5,7 +5,7 @@ import { iife } from "@/util/iife"
 
 export type Err = ReturnType<NamedError["toObject"]>
 
-// This exported message is shared with the TUI upsell detector. Matching on a
+// This exported message. Matching on a
 // literal error string kind of sucks, but it is the simplest for now.
 export const GO_UPSELL_MESSAGE = "Free usage exceeded"
 

@@ -60,12 +60,10 @@ function mergeConfigConcatArrays(target: Info, source: Info): Info {
 function normalizeLoadedConfig(data: unknown, source: string) {
   if (!isRecord(data)) return data
   const copy = { ...data }
-  const hadLegacy = "theme" in copy || "keybinds" in copy || "tui" in copy
+  const hadLegacy = "theme" in copy || "keybinds" in copy
   if (!hadLegacy) return copy
   delete copy.theme
   delete copy.keybinds
-  delete copy.tui
-  log.warn("tui keys in opencode config are deprecated; move them to tui.json", { path: source })
   return copy
 }
 

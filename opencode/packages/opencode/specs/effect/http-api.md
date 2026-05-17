@@ -182,7 +182,6 @@ Special routes need explicit designs before Hono can disappear completely.
 
 - `event`: SSE
 - `pty`: websocket
-- `tui`: UI/control bridge behavior
 - streaming `session` endpoints
 
 Use raw Effect HTTP routes where `HttpApi` does not fit. The goal is deleting Hono implementations, not forcing every transport shape through `HttpApi`.
@@ -205,7 +204,6 @@ Use raw Effect HTTP routes where `HttpApi` does not fit. The goal is deleting Ho
 | `sync`                    | `bridged`         | start/replay/history                                                       |
 | `event`                   | `bridged`         | SSE via raw Effect HTTP                                                    |
 | `pty`                     | `special`         | websocket                                                                  |
-| `tui`                     | `special`         | UI bridge                                                                  |
 
 ## Full Route Checklist
 
@@ -346,22 +344,6 @@ This checklist tracks bridge parity only. Checked routes are available through t
 - [x] `DELETE /pty/:ptyID` - remove PTY session.
 - [x] `GET /pty/:ptyID/connect` - PTY websocket; replace with raw Effect HTTP/websocket support.
 
-### TUI Routes
-
-- [x] `POST /tui/append-prompt` - append prompt.
-- [x] `POST /tui/open-help` - open help.
-- [x] `POST /tui/open-sessions` - open sessions.
-- [x] `POST /tui/open-themes` - open themes.
-- [x] `POST /tui/open-models` - open models.
-- [x] `POST /tui/submit-prompt` - submit prompt.
-- [x] `POST /tui/clear-prompt` - clear prompt.
-- [x] `POST /tui/execute-command` - execute command.
-- [x] `POST /tui/show-toast` - show toast.
-- [x] `POST /tui/publish` - publish TUI event.
-- [x] `POST /tui/select-session` - select session.
-- [x] `GET /tui/control/next` - get next TUI request.
-- [x] `POST /tui/control/response` - submit TUI control response.
-
 ## Remaining PR Plan
 
 Prefer smaller PRs from here so route behavior and SDK/OpenAPI fallout stays reviewable.
@@ -378,7 +360,6 @@ Prefer smaller PRs from here so route behavior and SDK/OpenAPI fallout stays rev
 10. [x] Bridge remaining session mutation and prompt routes.
 11. [ ] Replace event SSE with non-Hono Effect HTTP. The Effect backend has a raw Effect HTTP `httpapi/event.ts`; the Hono backend still uses `hono/streaming` `streamSSE`. Either port Hono `/event` to raw Effect HTTP for the fallback window, or skip and delete it together with Hono in step 15.
 12. [x] Replace pty websocket/control routes with non-Hono Effect HTTP for the Effect backend. Hono `pty.ts` remains in the Hono backend.
-13. [x] Replace tui bridge routes or explicitly isolate them behind a non-Hono compatibility layer for the Effect backend. Hono `tui.ts` remains in the Hono backend.
 14. [ ] Switch OpenAPI/SDK generation to Effect routes and compare SDK output. Effect path is implemented and opt-in via `--httpapi` / `OPENCODE_SDK_OPENAPI=httpapi`. Close the schema-shape gaps in `public.ts` (branded `pattern`, per-property `description`, `Event.*` / `SyncEvent.*` naming, dedup collisions), then flip `packages/sdk/js/script/build.ts` default.
 15. [ ] Flip `backend.ts` default from `hono` to `effect-httpapi`, keep `OPENCODE_EXPERIMENTAL_HTTPAPI` (or its inverse) as a short fallback flag, then delete replaced Hono route files.
 

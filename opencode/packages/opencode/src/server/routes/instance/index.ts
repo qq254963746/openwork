@@ -5,7 +5,6 @@ import { Context, Effect } from "effect"
 import { Flag } from "@/core/flag/flag"
 import z from "zod"
 import { Format } from "@/format"
-import { TuiRoutes } from "./tui"
 import { Instance } from "@/project/instance"
 import { InstanceRuntime } from "@/project/instance-runtime"
 import { Vcs } from "@/project/vcs"
@@ -26,7 +25,6 @@ import { ExperimentalRoutes } from "./experimental"
 import { ProviderRoutes } from "./provider"
 import { EventRoutes } from "./event"
 import { SyncRoutes } from "./sync"
-import { InstanceMiddleware } from "./middleware"
 import { jsonRequest, runRequest } from "./trace"
 import { ExperimentalHttpApiServer } from "./httpapi/server"
 import { EventPaths } from "./httpapi/event"
@@ -37,7 +35,6 @@ import { McpPaths } from "./httpapi/groups/mcp"
 import { PtyPaths } from "./httpapi/groups/pty"
 import { SessionPaths } from "./httpapi/groups/session"
 import { SyncPaths } from "./httpapi/groups/sync"
-import { TuiPaths } from "./httpapi/groups/tui"
 import { WorkspacePaths } from "./httpapi/groups/workspace"
 import type { CorsOptions } from "@/server/cors"
 import { errors } from "@/server/error"
@@ -141,19 +138,6 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket, opts?: CorsOptions): H
     app.delete(SessionPaths.deleteMessage, (c) => handler(c.req.raw, context))
     app.delete(SessionPaths.deletePart, (c) => handler(c.req.raw, context))
     app.patch(SessionPaths.updatePart, (c) => handler(c.req.raw, context))
-    app.post(TuiPaths.appendPrompt, (c) => handler(c.req.raw, context))
-    app.post(TuiPaths.openHelp, (c) => handler(c.req.raw, context))
-    app.post(TuiPaths.openSessions, (c) => handler(c.req.raw, context))
-    app.post(TuiPaths.openThemes, (c) => handler(c.req.raw, context))
-    app.post(TuiPaths.openModels, (c) => handler(c.req.raw, context))
-    app.post(TuiPaths.submitPrompt, (c) => handler(c.req.raw, context))
-    app.post(TuiPaths.clearPrompt, (c) => handler(c.req.raw, context))
-    app.post(TuiPaths.executeCommand, (c) => handler(c.req.raw, context))
-    app.post(TuiPaths.showToast, (c) => handler(c.req.raw, context))
-    app.post(TuiPaths.publish, (c) => handler(c.req.raw, context))
-    app.post(TuiPaths.selectSession, (c) => handler(c.req.raw, context))
-    app.get(TuiPaths.controlNext, (c) => handler(c.req.raw, context))
-    app.post(TuiPaths.controlResponse, (c) => handler(c.req.raw, context))
     app.get(WorkspacePaths.adapters, (c) => handler(c.req.raw, context))
     app.post(WorkspacePaths.list, (c) => handler(c.req.raw, context))
     app.get(WorkspacePaths.list, (c) => handler(c.req.raw, context))
@@ -175,7 +159,6 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket, opts?: CorsOptions): H
     .route("/", FileRoutes())
     .route("/", EventRoutes())
     .route("/mcp", McpRoutes())
-    .route("/tui", TuiRoutes())
     .post(
       "/instance/dispose",
       describeRoute({

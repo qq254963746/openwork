@@ -86,7 +86,7 @@ export function createOpencodeClient(config?: Config & { directory?: string; exp
   })
   // The generated client falls back to throwing a literal `{}` when the server
   // responds with an empty / unparseable error body, which surfaces as a bare
-  // `{}` in TUI / CLI error output. Wrap ONLY that case in a real Error so
+  // `{}` in CLI error output. Wrap ONLY that case in a real Error so
   // downstream formatters get a useful message — but pass through any parsed
   // JSON error body unchanged so existing consumers can still inspect fields.
   client.interceptors.error.use((error, response, request) => {
