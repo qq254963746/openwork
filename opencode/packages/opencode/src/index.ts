@@ -8,7 +8,7 @@ import { ProvidersCommand } from "./cli/cmd/providers"
 import { AgentCommand } from "./cli/cmd/agent"
 import { ModelsCommand } from "./cli/cmd/models"
 import { UI } from "./cli/ui"
-import { IS_DEV_MODE, AiWorkEngineVersion } from "@/core/env/env"
+import { IS_AIWORK_ENGINE_DEV_MODE, AiWorkEngineVersion } from "@/core/env/env"
 import { NamedError } from "@/core/util/name-error"
 import { FormatError } from "./cli/error"
 import { ServeCommand } from "./cli/cmd/serve"
@@ -20,7 +20,6 @@ import { ExportCommand } from "./cli/cmd/export"
 import { ImportCommand } from "./cli/cmd/import"
 import { AcpCommand } from "./cli/cmd/acp"
 import { EOL } from "os"
-import { WebCommand } from "./cli/cmd/web"
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
 import { DbCommand } from "./cli/cmd/db"
@@ -53,7 +52,7 @@ const args = hideBin(process.argv)
 function show(out: string) {
   const text = out.trimStart()
   if (!text.startsWith("opencode ")) {
-    process.stderr.write(UI.logo() + EOL + EOL)
+    process.stderr.write("AiWork" + EOL + EOL)
     process.stderr.write(text)
     return
   }
@@ -88,10 +87,10 @@ const cli = yargs(args)
 
     await Log.init({
       print: process.argv.includes("--print-logs"),
-      dev: IS_DEV_MODE,
+      dev: IS_AIWORK_ENGINE_DEV_MODE,
       level: (() => {
         if (opts.logLevel) return opts.logLevel as Log.Level
-        if (IS_DEV_MODE) return "DEBUG"
+        if (IS_AIWORK_ENGINE_DEV_MODE) return "DEBUG"
         return "INFO"
       })(),
     })
@@ -157,7 +156,6 @@ const cli = yargs(args)
   .command(ProvidersCommand)
   .command(AgentCommand)
   .command(ServeCommand)
-  .command(WebCommand)
   .command(ModelsCommand)
   .command(StatsCommand)
   .command(ExportCommand)
@@ -181,15 +179,7 @@ const cli = yargs(args)
   .strict()
 
 try {
-  if (args.includes("-h") || args.includes("--help")) {
-    await cli.parse(args, (err: Error | undefined, _argv: unknown, out: string) => {
-      if (err) throw err
-      if (!out) return
-      show(out)
-    })
-  } else {
-    await cli.parse()
-  }
+  await cli.parse()
 } catch (e) {
   let data: Record<string, any> = {}
   if (e instanceof NamedError) {
