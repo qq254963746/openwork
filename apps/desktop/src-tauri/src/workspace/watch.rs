@@ -155,10 +155,10 @@ pub fn update_workspace_watch(
         .watch(&root, RecursiveMode::NonRecursive)
         .map_err(|e| format!("Failed to watch workspace root: {e}"))?;
 
-    let opencode_dir = root.join(".opencode");
-    if opencode_dir.exists() {
+    let aiwork_dir = root.join(".opencode");
+    if aiwork_dir.exists() {
         watcher
-            .watch(&opencode_dir, RecursiveMode::Recursive)
+            .watch(&aiwork_dir, RecursiveMode::Recursive)
             .map_err(|e| format!("Failed to watch .opencode: {e}"))?;
     }
 

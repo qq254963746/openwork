@@ -37,9 +37,9 @@ fn collect_project_skill_roots(project_dir: &Path) -> Vec<PathBuf> {
     let mut current = Some(project_dir);
 
     while let Some(dir) = current {
-        let opencode_root = dir.join(".opencode").join("skills");
-        if opencode_root.is_dir() {
-            roots.push(opencode_root);
+        let aiwork_root = dir.join(".opencode").join("skills");
+        if aiwork_root.is_dir() {
+            roots.push(aiwork_root);
         } else {
             let legacy_root = dir.join(".opencode").join("skill");
             if legacy_root.is_dir() {
@@ -59,9 +59,9 @@ fn collect_project_skill_roots(project_dir: &Path) -> Vec<PathBuf> {
 fn collect_global_skill_roots() -> Vec<PathBuf> {
     let mut roots = Vec::new();
     for dir in candidate_xdg_config_dirs() {
-        let opencode_root = dir.join("opencode").join("skills");
-        if opencode_root.is_dir() {
-            roots.push(opencode_root);
+        let aiwork_root = dir.join("opencode").join("skills");
+        if aiwork_root.is_dir() {
+            roots.push(aiwork_root);
         }
     }
     roots

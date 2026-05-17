@@ -18,10 +18,10 @@ pub struct EngineState {
     pub hostname: Option<String>,
     pub port: Option<u16>,
     pub base_url: Option<String>,
-    pub opencode_username: Option<String>,
-    pub opencode_password: Option<String>,
-    pub opencode_bin_path: Option<String>,
-    pub opencode_bin_source: Option<String>,
+    pub aiwork_username: Option<String>,
+    pub aiwork_password: Option<String>,
+    pub aiwork_bin_path: Option<String>,
+    pub aiwork_bin_source: Option<String>,
     pub last_stdout: Option<String>,
     pub last_stderr: Option<String>,
 }
@@ -45,10 +45,10 @@ impl EngineManager {
             project_dir: state.project_dir.clone(),
             hostname: state.hostname.clone(),
             port: state.port,
-            opencode_username: state.opencode_username.clone(),
-            opencode_password: state.opencode_password.clone(),
-            opencode_bin_path: state.opencode_bin_path.clone(),
-            opencode_bin_source: state.opencode_bin_source.clone(),
+            aiwork_username: state.aiwork_username.clone(),
+            aiwork_password: state.aiwork_password.clone(),
+            aiwork_bin_path: state.aiwork_bin_path.clone(),
+            aiwork_bin_source: state.aiwork_bin_source.clone(),
             pid,
             last_stdout: state.last_stdout.clone(),
             last_stderr: state.last_stderr.clone(),
@@ -65,10 +65,10 @@ impl EngineManager {
         state.project_dir = None;
         state.hostname = None;
         state.port = None;
-        state.opencode_username = None;
-        state.opencode_password = None;
-        state.opencode_bin_path = None;
-        state.opencode_bin_source = None;
+        state.aiwork_username = None;
+        state.aiwork_password = None;
+        state.aiwork_bin_path = None;
+        state.aiwork_bin_source = None;
         state.last_stdout = None;
         state.last_stderr = None;
     }

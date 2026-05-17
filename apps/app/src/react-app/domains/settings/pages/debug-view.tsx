@@ -305,7 +305,7 @@ export function DebugView(props: DebugViewProps) {
           <div>{t("settings.debug_desktop_app", { version: props.runtimeSummary.appVersionLabel })}</div>
           <div>{t("settings.debug_commit", { commit: props.runtimeSummary.appCommitLabel })}</div>
           <div>
-            {t("settings.debug_opencode_version", { version: props.runtimeSummary.opencodeVersionLabel })}
+            {t("settings.debug_aiwork_version", { version: props.runtimeSummary.opencodeVersionLabel })}
           </div>
           <div>
             {t("settings.debug_aiwork_server_version", {
@@ -349,15 +349,15 @@ export function DebugView(props: DebugViewProps) {
           />
 
           <ServiceCard
-            title={t("settings.opencode_engine_sidecar")}
-            description={t("settings.opencode_engine_sidecar_desc")}
+            title={t("settings.aiwork_engine_sidecar")}
+            description={t("settings.aiwork_engine_sidecar_desc")}
             pill={props.engineCard}
             lines={props.engineCard.lines}
             stdout={props.engineCard.stdout ?? null}
             stderr={props.engineCard.stderr ?? null}
             error={props.engineCard.error ?? null}
             restarting={props.opencodeRestarting}
-            restartLabel={t("settings.restart_opencode")}
+            restartLabel={t("settings.restart_aiwork")}
             onRestart={props.onRestartAiWorkEngine}
             serviceStatus={props.opencodeServiceStatus}
             logStatus={props.opencodeLogStatus}
@@ -371,9 +371,9 @@ export function DebugView(props: DebugViewProps) {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-sm font-semibold tracking-[-0.1px] text-dls-text">
-                {t("settings.opencode_sdk_title")}
+                {t("settings.aiwork_sdk_title")}
               </div>
-              <div className="text-[12px] text-dls-secondary">{t("settings.opencode_sdk_desc")}</div>
+              <div className="text-[12px] text-dls-secondary">{t("settings.aiwork_sdk_desc")}</div>
             </div>
             <div className={`rounded-full border px-2 py-1 text-[11px] font-medium ${props.opencodeConnectCard.className}`}>
               {props.opencodeConnectCard.label}

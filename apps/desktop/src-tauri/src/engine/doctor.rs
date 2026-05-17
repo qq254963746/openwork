@@ -2,13 +2,13 @@ use std::ffi::OsStr;
 use std::path::Path;
 
 use crate::engine::paths::{
-    resolve_opencode_env_override, resolve_opencode_executable,
-    resolve_opencode_executable_without_override,
+    resolve_aiwork_env_override, resolve_aiwork_executable,
+    resolve_aiwork_executable_without_override,
 };
 use crate::platform::command_for_program;
 use crate::utils::truncate_output;
 
-pub fn opencode_version(program: &OsStr) -> Option<String> {
+pub fn aiwork_version(program: &OsStr) -> Option<String> {
     let mut command = command_for_program(Path::new(program));
     for (key, value) in crate::bun_env::bun_env_overrides() {
         command.env(key, value);
@@ -27,7 +27,7 @@ pub fn opencode_version(program: &OsStr) -> Option<String> {
     None
 }
 
-pub fn opencode_serve_help(program: &OsStr) -> (bool, Option<i32>, Option<String>, Option<String>) {
+pub fn aiwork_serve_help(program: &OsStr) -> (bool, Option<i32>, Option<String>, Option<String>) {
     let mut command = command_for_program(Path::new(program));
     for (key, value) in crate::bun_env::bun_env_overrides() {
         command.env(key, value);
@@ -71,21 +71,21 @@ pub fn resolve_sidecar_candidate(
     let mut candidates = Vec::new();
 
     if let Some(current_bin_dir) = current_bin_dir {
-        candidates.push(current_bin_dir.join(crate::engine::paths::opencode_executable_name()));
+        candidates.push(current_bin_dir.join(crate::engine::paths::aiwork_executable_name()));
     }
 
     if let Some(resource_dir) = resource_dir {
         candidates.push(
             resource_dir
                 .join("sidecars")
-                .join(crate::engine::paths::opencode_executable_name()),
+                .join(crate::engine::paths::aiwork_executable_name()),
         );
-        candidates.push(resource_dir.join(crate::engine::paths::opencode_executable_name()));
+        candidates.push(resource_dir.join(crate::engine::paths::aiwork_executable_name()));
     }
 
     candidates.push(
         std::path::PathBuf::from("src-tauri/sidecars")
-            .join(crate::engine::paths::opencode_executable_name()),
+            .join(crate::engine::paths::aiwork_executable_name()),
     );
 
     for candidate in candidates {
@@ -106,10 +106,10 @@ pub fn resolve_engine_path(
     current_bin_dir: Option<&Path>,
 ) -> (Option<std::path::PathBuf>, bool, Vec<String>) {
     if !prefer_sidecar {
-        return resolve_opencode_executable();
+        return resolve_aiwork_executable();
     }
 
-    let (override_path, mut notes) = resolve_opencode_env_override();
+    let (override_path, mut notes) = resolve_aiwork_env_override();
     if let Some(path) = override_path {
         return (Some(path), false, notes);
     }
@@ -120,7 +120,7 @@ pub fn resolve_engine_path(
 
     let (resolved, in_path, more_notes) = match sidecar {
         Some(path) => (Some(path), false, Vec::new()),
-        None => resolve_opencode_executable_without_override(),
+        None => resolve_aiwork_executable_without_override(),
     };
 
     notes.extend(more_notes);

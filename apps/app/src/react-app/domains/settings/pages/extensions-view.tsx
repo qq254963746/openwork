@@ -162,7 +162,7 @@ export function ExtensionsView(props: ExtensionsViewProps) {
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-sm font-medium text-gray-12">
             <Cpu size={16} className="text-gray-11" />
-            <span>{t("extensions.plugins_opencode_header")}</span>
+            <span>{t("extensions.plugins_aiwork_header")}</span>
           </div>
           <PluginsView
             extensions={props.extensions}

@@ -8,7 +8,7 @@ use std::os::unix::fs::PermissionsExt;
 
 fn main() {
     emit_build_info();
-    ensure_opencode_sidecar();
+    ensure_aiwork_sidecar();
     ensure_aiwork_server_sidecar();
     ensure_chrome_devtools_mcp_sidecar();
     ensure_versions_manifest();
@@ -143,7 +143,7 @@ fn emit_build_info() {
     }
 }
 
-fn ensure_opencode_sidecar() {
+fn ensure_aiwork_sidecar() {
     let target = env::var("CARGO_CFG_TARGET_TRIPLE")
         .or_else(|_| env::var("TARGET"))
         .or_else(|_| env::var("TAURI_ENV_TARGET_TRIPLE"))

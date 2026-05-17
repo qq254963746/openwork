@@ -241,7 +241,7 @@ fn seed_commands(commands_dir: &PathBuf, preset: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn resolve_workspace_opencode_config_path(root: &Path) -> PathBuf {
+fn resolve_workspace_aiwork_config_path(root: &Path) -> PathBuf {
     let config_path_jsonc = root.join("opencode.jsonc");
     let config_path_json = root.join("opencode.json");
     let hidden_config_path_jsonc = root.join(".opencode").join("opencode.jsonc");
@@ -281,7 +281,7 @@ pub fn ensure_workspace_files(workspace_path: &str, preset: &str) -> Result<(), 
         .map_err(|e| format!("Failed to create .opencode/commands: {e}"))?;
     seed_commands(&commands_dir, preset)?;
 
-    let config_path = resolve_workspace_opencode_config_path(&root);
+    let config_path = resolve_workspace_aiwork_config_path(&root);
 
     let config_exists = config_path.exists();
     let mut config_changed = !config_exists;

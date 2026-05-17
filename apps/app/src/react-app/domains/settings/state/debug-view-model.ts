@@ -137,7 +137,7 @@ function describeEngine(info: EngineInfo | null) {
     lines: [
       t("settings.debug_base_url", { url: info?.baseUrl ?? "—" }),
       t("settings.debug_runtime", { runtime: info?.runtime ?? "—" }),
-      t("settings.diag_opencode_binary", { binary: formatAiWorkEngineBinary(info) }),
+      t("settings.diag_aiwork_binary", { binary: formatAiWorkEngineBinary(info) }),
       t("settings.debug_pid", { pid: info?.pid ? String(info.pid) : "—" }),
       t("settings.debug_hostname", { hostname: info?.hostname ?? "—" }),
       t("settings.debug_port", { port: info?.port ? String(info.port) : "—" }),
@@ -172,7 +172,7 @@ function describeAiWorkServer(info: AiWorkServerInfo | null) {
     ...statusPill(running),
     lines: [
       t("settings.debug_base_url", { url: info?.baseUrl ?? "—" }),
-      t("settings.diag_opencode_binary", { binary: formatManagedAiWorkEngineBinary(info) }),
+      t("settings.diag_aiwork_binary", { binary: formatManagedAiWorkEngineBinary(info) }),
       t("settings.debug_connect_url", { url: info?.connectUrl ?? "—" }),
       t("settings.debug_lan_url", { url: info?.lanUrl ?? "—" }),
       t("settings.debug_mdns_url", { url: info?.mdnsUrl ?? "—" }),

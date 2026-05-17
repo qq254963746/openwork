@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use crate::types::{ExecResult, AiWorkEngineConfigFile};
 
-fn opencode_config_candidates(
+fn aiwork_config_candidates(
     scope: &str,
     project_dir: &str,
 ) -> Result<Vec<PathBuf>, String> {
@@ -46,8 +46,8 @@ fn opencode_config_candidates(
     }
 }
 
-pub fn resolve_opencode_config_path(scope: &str, project_dir: &str) -> Result<PathBuf, String> {
-    let candidates = opencode_config_candidates(scope, project_dir)?;
+pub fn resolve_aiwork_config_path(scope: &str, project_dir: &str) -> Result<PathBuf, String> {
+    let candidates = aiwork_config_candidates(scope, project_dir)?;
 
     for path in &candidates {
         if path.exists() {
@@ -61,8 +61,8 @@ pub fn resolve_opencode_config_path(scope: &str, project_dir: &str) -> Result<Pa
         .ok_or_else(|| "No config path candidates available".to_string())
 }
 
-pub fn read_opencode_config(scope: &str, project_dir: &str) -> Result<AiWorkEngineConfigFile, String> {
-    let path = resolve_opencode_config_path(scope.trim(), project_dir)?;
+pub fn read_aiwork_config(scope: &str, project_dir: &str) -> Result<AiWorkEngineConfigFile, String> {
+    let path = resolve_aiwork_config_path(scope.trim(), project_dir)?;
     let exists = path.exists();
 
     let content = if exists {
@@ -81,12 +81,12 @@ pub fn read_opencode_config(scope: &str, project_dir: &str) -> Result<AiWorkEngi
     })
 }
 
-pub fn write_opencode_config(
+pub fn write_aiwork_config(
     scope: &str,
     project_dir: &str,
     content: &str,
 ) -> Result<ExecResult, String> {
-    let path = resolve_opencode_config_path(scope.trim(), project_dir)?;
+    let path = resolve_aiwork_config_path(scope.trim(), project_dir)?;
 
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)

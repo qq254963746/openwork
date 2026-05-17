@@ -371,7 +371,7 @@ export function AppLogWindowRoute() {
             className={`${tabButtonBase} ${tab === "opencode" ? tabButtonActive : tabButtonIdle}`}
             onClick={() => setTab("opencode")}
           >
-            {t("settings.opencode_engine_sidecar")}
+            {t("settings.aiwork_engine_sidecar")}
           </button>
         </div>
       </header>

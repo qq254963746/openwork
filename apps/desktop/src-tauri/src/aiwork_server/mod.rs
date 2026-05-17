@@ -393,12 +393,12 @@ pub fn start_aiwork_server(
     app: &AppHandle,
     manager: &AiWorkServerManager,
     workspace_paths: &[String],
-    opencode_base_url: Option<&str>,
-    opencode_username: Option<&str>,
-    opencode_password: Option<&str>,
-    manage_opencode: bool,
-    opencode_bin_path: Option<&str>,
-    opencode_bin_source: Option<&str>,
+    aiwork_base_url: Option<&str>,
+    aiwork_username: Option<&str>,
+    aiwork_password: Option<&str>,
+    manage_aiwork: bool,
+    aiwork_bin_path: Option<&str>,
+    aiwork_bin_source: Option<&str>,
 ) -> Result<AiWorkServerInfo, String> {
     let mut state = manager
         .inner
@@ -426,16 +426,16 @@ pub fn start_aiwork_server(
         workspace_paths,
         &client_token,
         &host_token,
-        opencode_base_url,
+        aiwork_base_url,
         if active_workspace.is_empty() {
             None
         } else {
             Some(active_workspace)
         },
-        opencode_username,
-        opencode_password,
-        manage_opencode,
-        opencode_bin_path,
+        aiwork_username,
+        aiwork_password,
+        manage_aiwork,
+        aiwork_bin_path,
     )?;
 
     state.child = Some(child);
@@ -454,13 +454,13 @@ pub fn start_aiwork_server(
     state.mdns_url = mdns_url;
     state.lan_url = lan_url;
     state.client_token = Some(client_token);
-    state.managed_opencode_bin_path = if manage_opencode {
-        opencode_bin_path.map(|value| value.to_string())
+    state.managed_aiwork_bin_path = if manage_aiwork {
+        aiwork_bin_path.map(|value| value.to_string())
     } else {
         None
     };
-    state.managed_opencode_bin_source = if manage_opencode {
-        opencode_bin_source.map(|value| value.to_string())
+    state.managed_aiwork_bin_source = if manage_aiwork {
+        aiwork_bin_source.map(|value| value.to_string())
     } else {
         None
     };

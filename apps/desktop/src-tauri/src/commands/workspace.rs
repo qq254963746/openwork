@@ -512,9 +512,9 @@ fn collect_workspace_entries(
         }
     }
 
-    let opencode_dir = workspace_root.join(".opencode");
-    if opencode_dir.exists() {
-        for entry in WalkDir::new(&opencode_dir) {
+    let aiwork_dir = workspace_root.join(".opencode");
+    if aiwork_dir.exists() {
+        for entry in WalkDir::new(&aiwork_dir) {
             let entry = entry.map_err(|e| e.to_string())?;
             if !entry.file_type().is_file() {
                 continue;
@@ -701,8 +701,8 @@ pub fn workspace_import_config(
             .map_err(|e| format!("Failed to write {}: {e}", out_path.display()))?;
     }
 
-    let opencode_dir = target_path.join(".opencode");
-    if !opencode_dir.exists() {
+    let aiwork_dir = target_path.join(".opencode");
+    if !aiwork_dir.exists() {
         return Err("Archive is missing .opencode config".to_string());
     }
 

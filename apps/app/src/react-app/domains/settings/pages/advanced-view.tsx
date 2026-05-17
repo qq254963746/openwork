@@ -194,13 +194,13 @@ export function AdvancedView(props: AdvancedViewProps) {
         <div className="grid gap-3 sm:grid-cols-2">
           <RuntimeStatusCard
             icon={<Cpu size={18} />}
-            title={t("settings.opencode_engine_label")}
-            description={t("settings.opencode_engine_desc")}
+            title={t("settings.aiwork_engine_label")}
+            description={t("settings.aiwork_engine_desc")}
             statusLabel={clientStatusLabel}
             statusStyle={clientStatusStyle}
             statusDot={clientStatusDot}
             detailLines={[
-              t("settings.diag_opencode_binary", undefined, {
+              t("settings.diag_aiwork_binary", undefined, {
                 binary: formatAiWorkEngineBinary(props.engineInfo),
               }),
             ]}

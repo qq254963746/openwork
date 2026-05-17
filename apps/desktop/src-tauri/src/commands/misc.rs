@@ -50,19 +50,19 @@ fn env_truthy(key: &str) -> bool {
 }
 
 // #[cfg(target_os = "macos")]
-// fn macos_dev_application_support_opencode_log_dir() -> Option<PathBuf> {
+// fn macos_dev_application_support_aiwork_log_dir() -> Option<PathBuf> {
 //     let home = home_dir()?;
 //     Some(
 //         home.join("Library/Application Support/com.aiworkgroup3.aiwork.dev/aiwork-engine/xdg/data/opencode/log"),
 //     )
 // }
 
-fn isolated_opencode_log_dir(app: &AppHandle) -> Option<PathBuf> {
+fn isolated_aiwork_log_dir(app: &AppHandle) -> Option<PathBuf> {
     let root = app.path().app_local_data_dir().ok()?;
     Some(root.join("aiwork-engine/xdg/data/opencode/log"))
 }
 
-fn standard_opencode_log_dir() -> PathBuf {
+fn standard_aiwork_log_dir() -> PathBuf {
     if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
         let trimmed = xdg.trim();
         if !trimmed.is_empty() {
@@ -83,19 +83,19 @@ fn standard_opencode_log_dir() -> PathBuf {
         .join(".local/share/opencode/log")
 }
 
-fn collect_opencode_disk_log_dir_candidates(app: &AppHandle) -> Vec<(String, PathBuf)> {
+fn collect_aiwork_disk_log_dir_candidates(app: &AppHandle) -> Vec<(String, PathBuf)> {
     let mut ordered = Vec::new();
 
     // #[cfg(target_os = "macos")]
-    // if let Some(path) = macos_dev_application_support_opencode_log_dir() {
+    // if let Some(path) = macos_dev_application_support_aiwork_log_dir() {
     //     ordered.push(("macos_dev".into(), path));
     // }
 
-    if let Some(path) = isolated_opencode_log_dir(app) {
+    if let Some(path) = isolated_aiwork_log_dir(app) {
         ordered.push(("aiwork_isolated".into(), path));
     }
 
-    ordered.push(("standard_data_home".into(), standard_opencode_log_dir()));
+    ordered.push(("standard_data_home".into(), standard_aiwork_log_dir()));
 
     let mut seen = HashSet::new();
     let mut deduped = Vec::new();
@@ -119,10 +119,10 @@ fn read_utf8_file_tail(path: &Path, max_bytes: u64) -> std::io::Result<String> {
 }
 
 #[tauri::command]
-pub fn read_opencode_engine_disk_logs(app: AppHandle) -> AiWorkEngineEngineDiskLogsSnapshot {
+pub fn read_aiwork_engine_disk_logs(app: AppHandle) -> AiWorkEngineEngineDiskLogsSnapshot {
     const MAX_BYTES: u64 = 256 * 1024;
 
-    let candidates = collect_opencode_disk_log_dir_candidates(&app);
+    let candidates = collect_aiwork_disk_log_dir_candidates(&app);
 
     for (variant, dir) in &candidates {
         let dir_display = dir.to_string_lossy().to_string();
@@ -208,7 +208,7 @@ pub fn read_opencode_engine_disk_logs(app: AppHandle) -> AiWorkEngineEngineDiskL
     }
 }
 
-fn opencode_cache_candidates() -> Vec<PathBuf> {
+fn aiwork_cache_candidates() -> Vec<PathBuf> {
     let mut candidates: Vec<PathBuf> = Vec::new();
 
     if let Ok(value) = std::env::var("XDG_CACHE_HOME") {
@@ -250,7 +250,7 @@ fn opencode_cache_candidates() -> Vec<PathBuf> {
         .collect()
 }
 
-fn push_opencode_env_path(candidates: &mut Vec<PathBuf>, key: &str) {
+fn push_aiwork_env_path(candidates: &mut Vec<PathBuf>, key: &str) {
     let Ok(value) = std::env::var(key) else {
         return;
     };
@@ -261,13 +261,13 @@ fn push_opencode_env_path(candidates: &mut Vec<PathBuf>, key: &str) {
     candidates.push(PathBuf::from(trimmed).join("opencode"));
 }
 
-fn opencode_standard_state_paths() -> Vec<PathBuf> {
+fn aiwork_standard_state_paths() -> Vec<PathBuf> {
     let mut candidates: Vec<PathBuf> = Vec::new();
 
-    push_opencode_env_path(&mut candidates, "XDG_CONFIG_HOME");
-    push_opencode_env_path(&mut candidates, "XDG_DATA_HOME");
-    push_opencode_env_path(&mut candidates, "XDG_STATE_HOME");
-    candidates.extend(opencode_cache_candidates());
+    push_aiwork_env_path(&mut candidates, "XDG_CONFIG_HOME");
+    push_aiwork_env_path(&mut candidates, "XDG_DATA_HOME");
+    push_aiwork_env_path(&mut candidates, "XDG_STATE_HOME");
+    candidates.extend(aiwork_cache_candidates());
 
     for dir in candidate_xdg_config_dirs() {
         candidates.push(dir.join("opencode"));
@@ -454,12 +454,12 @@ fn validate_project_dir(app: &AppHandle, project_dir: &str) -> Result<PathBuf, S
     Ok(canonical)
 }
 
-fn resolve_opencode_program(
+fn resolve_aiwork_program(
     app: &AppHandle,
     prefer_sidecar: bool,
-    opencode_bin_path: Option<String>,
+    aiwork_bin_path: Option<String>,
 ) -> Result<PathBuf, String> {
-    if let Some(custom) = opencode_bin_path {
+    if let Some(custom) = aiwork_bin_path {
         let trimmed = custom.trim();
         if !trimmed.is_empty() {
             return Ok(PathBuf::from(trimmed));
@@ -486,8 +486,8 @@ fn resolve_opencode_program(
 }
 
 #[tauri::command]
-pub fn reset_opencode_cache() -> Result<CacheResetResult, String> {
-    let candidates = opencode_cache_candidates();
+pub fn reset_aiwork_cache() -> Result<CacheResetResult, String> {
+    let candidates = aiwork_cache_candidates();
     let mut removed = Vec::new();
     let mut missing = Vec::new();
     let mut errors = Vec::new();
@@ -588,7 +588,7 @@ pub fn app_build_info(app: AppHandle) -> AppBuildInfo {
 }
 
 #[tauri::command]
-pub fn nuke_aiwork_and_opencode_config_and_exit(
+pub fn nuke_aiwork_and_aiwork_config_and_exit(
     app: AppHandle,
     engine_manager: State<EngineManager>,
     aiwork_manager: State<AiWorkServerManager>,
@@ -603,7 +603,7 @@ pub fn nuke_aiwork_and_opencode_config_and_exit(
     } else {
         // In production, clear the normal app paths plus the standard
         // user AiWorkEngine config/data/cache/state locations.
-        paths.extend(opencode_standard_state_paths());
+        paths.extend(aiwork_standard_state_paths());
     }
 
     let mut seen = HashSet::new();
@@ -621,7 +621,7 @@ pub fn nuke_aiwork_and_opencode_config_and_exit(
 /// Run `opencode mcp auth <server_name>` in the given project directory.
 /// This spawns the process detached so the OAuth flow can open a browser.
 #[tauri::command]
-pub fn opencode_mcp_auth(
+pub fn aiwork_mcp_auth(
     app: AppHandle,
     project_dir: String,
     server_name: String,
@@ -629,7 +629,7 @@ pub fn opencode_mcp_auth(
     let project_dir = validate_project_dir(&app, &project_dir)?;
     let server_name = validate_server_name(&server_name)?;
 
-    let program = resolve_opencode_program(&app, true, None)?;
+    let program = resolve_aiwork_program(&app, true, None)?;
 
     let mut command = command_for_program(&program);
     for (key, value) in crate::bun_env::bun_env_overrides() {

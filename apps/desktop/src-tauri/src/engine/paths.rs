@@ -11,11 +11,11 @@ const AIWORK_ENGINE_CMD: &str = "opencode.cmd";
 #[cfg(not(windows))]
 const AIWORK_ENGINE_EXECUTABLE: &str = "opencode";
 
-pub fn opencode_executable_name() -> &'static str {
+pub fn aiwork_executable_name() -> &'static str {
     AIWORK_ENGINE_EXECUTABLE
 }
 
-pub fn candidate_opencode_paths() -> Vec<PathBuf> {
+pub fn candidate_aiwork_paths() -> Vec<PathBuf> {
     let mut candidates = Vec::new();
 
     if let Some(home) = home_dir() {
@@ -60,7 +60,7 @@ pub fn candidate_opencode_paths() -> Vec<PathBuf> {
     candidates
 }
 
-pub(crate) fn resolve_opencode_env_override() -> (Option<PathBuf>, Vec<String>) {
+pub(crate) fn resolve_aiwork_env_override() -> (Option<PathBuf>, Vec<String>) {
     let mut notes = Vec::new();
 
     if let Ok(custom) = std::env::var("AIWORK_ENGINE_BIN_PATH") {
@@ -81,7 +81,7 @@ pub(crate) fn resolve_opencode_env_override() -> (Option<PathBuf>, Vec<String>) 
     (None, notes)
 }
 
-fn resolve_opencode_executable_impl(
+fn resolve_aiwork_executable_impl(
     mut notes: Vec<String>,
 ) -> (Option<PathBuf>, bool, Vec<String>) {
     if let Some(path) = resolve_in_path(AIWORK_ENGINE_EXECUTABLE) {
@@ -99,7 +99,7 @@ fn resolve_opencode_executable_impl(
 
     notes.push("Not found on PATH".to_string());
 
-    for candidate in candidate_opencode_paths() {
+    for candidate in candidate_aiwork_paths() {
         if candidate.is_file() {
             notes.push(format!("Found at {}", candidate.display()));
             return (Some(candidate), false, notes);
@@ -111,16 +111,16 @@ fn resolve_opencode_executable_impl(
     (None, false, notes)
 }
 
-pub fn resolve_opencode_executable() -> (Option<PathBuf>, bool, Vec<String>) {
-    let (override_path, notes) = resolve_opencode_env_override();
+pub fn resolve_aiwork_executable() -> (Option<PathBuf>, bool, Vec<String>) {
+    let (override_path, notes) = resolve_aiwork_env_override();
     if let Some(path) = override_path {
         return (Some(path), false, notes);
     }
 
-    resolve_opencode_executable_impl(notes)
+    resolve_aiwork_executable_impl(notes)
 }
 
-pub(crate) fn resolve_opencode_executable_without_override() -> (Option<PathBuf>, bool, Vec<String>)
+pub(crate) fn resolve_aiwork_executable_without_override() -> (Option<PathBuf>, bool, Vec<String>)
 {
-    resolve_opencode_executable_impl(Vec::new())
+    resolve_aiwork_executable_impl(Vec::new())
 }

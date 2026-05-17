@@ -1,7 +1,7 @@
 use tauri::{AppHandle, Manager, State};
 
-use crate::config::{read_opencode_config, write_opencode_config};
-use crate::engine::doctor::{opencode_serve_help, opencode_version, resolve_engine_path};
+use crate::config::{read_aiwork_config, write_aiwork_config};
+use crate::engine::doctor::{aiwork_serve_help, aiwork_version, resolve_engine_path};
 use crate::engine::manager::EngineManager;
 use crate::aiwork_server::{manager::AiWorkServerManager, start_aiwork_server};
 use crate::types::{EngineDoctorResult, EngineInfo, EngineRuntime};
@@ -86,7 +86,7 @@ fn parse_base_url_port(base_url: &str) -> Option<u16> {
         .and_then(|(_, port)| port.parse::<u16>().ok())
 }
 
-fn opencode_bin_source(notes: &[String], in_path: bool) -> Option<String> {
+fn aiwork_bin_source(notes: &[String], in_path: bool) -> Option<String> {
     if notes
         .iter()
         .any(|note| note.contains("Using AIWORK_ENGINE_BIN_PATH"))
@@ -109,7 +109,7 @@ fn opencode_bin_source(notes: &[String], in_path: bool) -> Option<String> {
     None
 }
 
-fn probe_aiwork_managed_opencode(
+fn probe_aiwork_managed_aiwork(
     server_base_url: &str,
     owner_token: &str,
 ) -> Result<Option<AiWorkWorkspaceAiWorkEngine>, String> {
@@ -155,7 +155,7 @@ pub fn engine_restart(
     app: AppHandle,
     manager: State<EngineManager>,
     aiwork_manager: State<AiWorkServerManager>,
-    opencode_enable_exa: Option<bool>,
+    aiwork_enable_exa: Option<bool>,
 ) -> Result<EngineInfo, String> {
     let project_dir = {
         let state = manager.inner.lock().expect("engine mutex poisoned");
@@ -173,7 +173,7 @@ pub fn engine_restart(
         project_dir,
         None,
         None,
-        opencode_enable_exa,
+        aiwork_enable_exa,
         None,
         Some(workspace_paths),
     )
@@ -183,7 +183,7 @@ pub fn engine_restart(
 pub fn engine_doctor(
     app: AppHandle,
     prefer_sidecar: Option<bool>,
-    opencode_bin_path: Option<String>,
+    aiwork_bin_path: Option<String>,
 ) -> EngineDoctorResult {
     let prefer_sidecar = prefer_sidecar.unwrap_or(true);
     let resource_dir = app.path().resource_dir().ok();
@@ -192,21 +192,21 @@ pub fn engine_doctor(
         .ok()
         .and_then(|path| path.parent().map(|parent| parent.to_path_buf()));
 
-    let _guard = EnvVarGuard::apply("AIWORK_ENGINE_BIN_PATH", opencode_bin_path.as_deref());
+    let _guard = EnvVarGuard::apply("AIWORK_ENGINE_BIN_PATH", aiwork_bin_path.as_deref());
 
     let (resolved, in_path, notes) = resolve_engine_path(
         prefer_sidecar,
         resource_dir.as_deref(),
         current_bin_dir.as_deref(),
     );
-    let resolved_source = opencode_bin_source(&notes, in_path);
+    let resolved_source = aiwork_bin_source(&notes, in_path);
 
     let (version, supports_serve, serve_help_status, serve_help_stdout, serve_help_stderr) =
         match resolved.as_ref() {
             Some(path) => {
-                let (ok, status, stdout, stderr) = opencode_serve_help(path.as_os_str());
+                let (ok, status, stdout, stderr) = aiwork_serve_help(path.as_os_str());
                 (
-                    opencode_version(path.as_os_str()),
+                    aiwork_version(path.as_os_str()),
                     ok,
                     status,
                     stdout,
@@ -237,8 +237,8 @@ pub fn engine_start(
     aiwork_manager: State<AiWorkServerManager>,
     project_dir: String,
     prefer_sidecar: Option<bool>,
-    opencode_bin_path: Option<String>,
-    _opencode_enable_exa: Option<bool>,
+    aiwork_bin_path: Option<String>,
+    _aiwork_enable_exa: Option<bool>,
     _runtime: Option<EngineRuntime>,
     workspace_paths: Option<Vec<String>>,
 ) -> Result<EngineInfo, String> {
@@ -253,13 +253,13 @@ pub fn engine_start(
     std::fs::create_dir_all(&project_dir)
         .map_err(|e| format!("Failed to create projectDir directory: {e}"))?;
 
-    let config = read_opencode_config("project", &project_dir)?;
+    let config = read_aiwork_config("project", &project_dir)?;
     if !config.exists {
         let content = serde_json::to_string_pretty(&json!({
             "$schema": "https://www.aiwork.love/config.json",
         }))
         .map_err(|e| format!("Failed to serialize opencode config: {e}"))?;
-        let write_result = write_opencode_config("project", &project_dir, &format!("{content}\n"))?;
+        let write_result = write_aiwork_config("project", &project_dir, &format!("{content}\n"))?;
         if !write_result.ok {
             return Err(write_result.stderr);
         }
@@ -279,13 +279,13 @@ pub fn engine_start(
         .ok()
         .and_then(|path| path.parent().map(|parent| parent.to_path_buf()));
     let prefer_sidecar = prefer_sidecar.unwrap_or(true);
-    let _guard = EnvVarGuard::apply("AIWORK_ENGINE_BIN_PATH", opencode_bin_path.as_deref());
+    let _guard = EnvVarGuard::apply("AIWORK_ENGINE_BIN_PATH", aiwork_bin_path.as_deref());
     let (program, in_path, notes) = resolve_engine_path(
         prefer_sidecar,
         resource_dir.as_deref(),
         current_bin_dir.as_deref(),
     );
-    let opencode_bin_source = opencode_bin_source(&notes, in_path);
+    let aiwork_bin_source = aiwork_bin_source(&notes, in_path);
     let Some(program) = program else {
         let notes_text = notes.join("\n");
         return Err(format!(
@@ -293,8 +293,8 @@ pub fn engine_start(
         ));
     };
 
-    let opencode_bin = program.to_string_lossy().to_string();
-    let opencode_bin_path = Some(opencode_bin.clone());
+    let aiwork_bin = program.to_string_lossy().to_string();
+    let aiwork_bin_path = Some(aiwork_bin.clone());
     drop(state);
 
     if let Ok(mut aiwork_state) = aiwork_manager.inner.lock() {
@@ -309,21 +309,21 @@ pub fn engine_start(
         None,
         None,
         true,
-        Some(&opencode_bin),
-        opencode_bin_source.as_deref(),
+        Some(&aiwork_bin),
+        aiwork_bin_source.as_deref(),
     )?;
 
-    let managed_opencode = match (
+    let managed_aiwork = match (
         aiwork_info.base_url.as_deref(),
         aiwork_info.owner_token.as_deref(),
     ) {
         (Some(server_base_url), Some(owner_token)) => {
-            probe_aiwork_managed_opencode(server_base_url, owner_token)
+            probe_aiwork_managed_aiwork(server_base_url, owner_token)
         }
         _ => Err("AiWork server did not report a base URL and owner token".to_string()),
     };
 
-    match managed_opencode {
+    match managed_aiwork {
         Ok(Some(opencode)) => {
             if let Ok(mut state) = manager.inner.lock() {
                 state.runtime = EngineRuntime::Direct;
@@ -333,10 +333,10 @@ pub fn engine_start(
                 state.hostname = parse_base_url_host(&opencode.base_url);
                 state.port = parse_base_url_port(&opencode.base_url);
                 state.base_url = Some(opencode.base_url.clone());
-                state.opencode_username = opencode.username.clone();
-                state.opencode_password = opencode.password.clone();
-                state.opencode_bin_path = opencode_bin_path.clone();
-                state.opencode_bin_source = opencode_bin_source.clone();
+                state.aiwork_username = opencode.username.clone();
+                state.aiwork_password = opencode.password.clone();
+                state.aiwork_bin_path = aiwork_bin_path.clone();
+                state.aiwork_bin_source = aiwork_bin_source.clone();
                 state.last_stdout = None;
                 state.last_stderr = None;
             }
@@ -345,8 +345,8 @@ pub fn engine_start(
             if let Ok(mut state) = manager.inner.lock() {
                 state.runtime = EngineRuntime::Direct;
                 state.project_dir = Some(project_dir.clone());
-                state.opencode_bin_path = opencode_bin_path.clone();
-                state.opencode_bin_source = opencode_bin_source.clone();
+                state.aiwork_bin_path = aiwork_bin_path.clone();
+                state.aiwork_bin_source = aiwork_bin_source.clone();
                 state.last_stderr = Some(truncate_output(
                     "AiWork server did not report a managed AiWorkEngine workspace",
                     8000,
@@ -357,8 +357,8 @@ pub fn engine_start(
             if let Ok(mut state) = manager.inner.lock() {
                 state.runtime = EngineRuntime::Direct;
                 state.project_dir = Some(project_dir.clone());
-                state.opencode_bin_path = opencode_bin_path.clone();
-                state.opencode_bin_source = opencode_bin_source.clone();
+                state.aiwork_bin_path = aiwork_bin_path.clone();
+                state.aiwork_bin_source = aiwork_bin_source.clone();
                 state.last_stderr = Some(truncate_output(
                     &format!("AiWork server workspace probe: {error}"),
                     8000,

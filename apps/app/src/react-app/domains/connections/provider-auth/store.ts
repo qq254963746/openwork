@@ -746,8 +746,8 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
         ConsoleLog.log(PROVIDER_AUTH_LOG_SCOPE, "submitProviderApiKey:globalUpsert:failed", { reason: upsert.reason });
         const message =
           upsert.reason === "parse_failed"
-            ? t("providers.global_opencode_json_invalid")
-            : t("providers.global_opencode_json_failed");
+            ? t("providers.global_aiwork_json_invalid")
+            : t("providers.global_aiwork_json_failed");
         throw new Error(message);
       }
 

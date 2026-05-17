@@ -43,8 +43,8 @@ fn aiwork_engine_isolated_env(app: &AppHandle) -> Result<Option<Vec<(String, Str
     let xdg_data_home = layout_root.join("xdg").join("data");
     let xdg_cache_home = layout_root.join("xdg").join("cache");
     let xdg_state_home = layout_root.join("xdg").join("state");
-    let opencode_config_dir = layout_root.join("config").join("opencode");
-    let opencode_data_dir = xdg_data_home.join("opencode");
+    let aiwork_config_dir = layout_root.join("config").join("opencode");
+    let aiwork_data_dir = xdg_data_home.join("opencode");
 
     for dir in [
         &home_dir,
@@ -52,8 +52,8 @@ fn aiwork_engine_isolated_env(app: &AppHandle) -> Result<Option<Vec<(String, Str
         &xdg_data_home,
         &xdg_cache_home,
         &xdg_state_home,
-        &opencode_config_dir,
-        &opencode_data_dir,
+        &aiwork_config_dir,
+        &aiwork_data_dir,
     ] {
         fs::create_dir_all(dir).map_err(|e| format!("Failed to create {}: {e}", dir.display()))?;
     }
@@ -81,7 +81,7 @@ fn aiwork_engine_isolated_env(app: &AppHandle) -> Result<Option<Vec<(String, Str
         ),
         (
             "AIWORK_ENGINE_CONFIG_DIR".into(),
-            opencode_config_dir.to_string_lossy().into_owned(),
+            aiwork_config_dir.to_string_lossy().into_owned(),
         ),
         ("AIWORK_ENGINE_TEST_HOME".into(), home),
     ]))
@@ -157,8 +157,8 @@ pub fn build_aiwork_args(
     host: &str,
     port: u16,
     workspace_paths: &[String],
-    opencode_base_url: Option<&str>,
-    opencode_directory: Option<&str>,
+    aiwork_base_url: Option<&str>,
+    aiwork_directory: Option<&str>,
 ) -> Vec<String> {
     let mut args = vec![
         "--host".to_string(),
@@ -183,14 +183,14 @@ pub fn build_aiwork_args(
         }
     }
 
-    if let Some(base_url) = opencode_base_url {
+    if let Some(base_url) = aiwork_base_url {
         if !base_url.trim().is_empty() {
             args.push("--opencode-base-url".to_string());
             args.push(base_url.to_string());
         }
     }
 
-    if let Some(directory) = opencode_directory {
+    if let Some(directory) = aiwork_directory {
         if !directory.trim().is_empty() {
             args.push("--opencode-directory".to_string());
             args.push(directory.to_string());
@@ -207,12 +207,12 @@ pub fn spawn_aiwork_server(
     workspace_paths: &[String],
     token: &str,
     host_token: &str,
-    opencode_base_url: Option<&str>,
-    opencode_directory: Option<&str>,
-    opencode_username: Option<&str>,
-    opencode_password: Option<&str>,
-    manage_opencode: bool,
-    opencode_bin_path: Option<&str>,
+    aiwork_base_url: Option<&str>,
+    aiwork_directory: Option<&str>,
+    aiwork_username: Option<&str>,
+    aiwork_password: Option<&str>,
+    manage_aiwork: bool,
+    aiwork_bin_path: Option<&str>,
 ) -> Result<(Receiver<CommandEvent>, CommandChild), String> {
     let command = match app.shell().sidecar("aiwork-server") {
         Ok(command) => command,
@@ -235,8 +235,8 @@ pub fn spawn_aiwork_server(
         host,
         port,
         workspace_paths,
-        opencode_base_url,
-        opencode_directory,
+        aiwork_base_url,
+        aiwork_directory,
     );
     let cwd = workspace_paths
         .first()
@@ -262,22 +262,22 @@ pub fn spawn_aiwork_server(
         command = command.env("AIWORK_APP_LOCAL_DATA_DIR", app_local);
     }
 
-    if manage_opencode {
+    if manage_aiwork {
         command = command.env("AIWORK_MANAGE_AIWORK_ENGINE", "1");
-        if let Some(path) = opencode_bin_path {
+        if let Some(path) = aiwork_bin_path {
             if !path.trim().is_empty() {
                 command = command.env("AIWORK_AIWORK_ENGINE_BIN", path);
             }
         }
     }
 
-    if let Some(username) = opencode_username {
+    if let Some(username) = aiwork_username {
         if !username.trim().is_empty() {
             command = command.env("AIWORK_AIWORK_ENGINE_USERNAME", username);
         }
     }
 
-    if let Some(password) = opencode_password {
+    if let Some(password) = aiwork_password {
         if !password.trim().is_empty() {
             command = command.env("AIWORK_AIWORK_ENGINE_PASSWORD", password);
         }

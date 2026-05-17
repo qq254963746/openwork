@@ -21,7 +21,7 @@ pub fn aiwork_server_restart(
     manager: State<AiWorkServerManager>,
     engine_manager: State<EngineManager>,
 ) -> Result<AiWorkServerInfo, String> {
-    let (workspace_paths, opencode_url, opencode_username, opencode_password) = {
+    let (workspace_paths, aiwork_url, aiwork_username, aiwork_password) = {
         let engine = engine_manager
             .inner
             .lock()
@@ -36,8 +36,8 @@ pub fn aiwork_server_restart(
         (
             workspace_paths,
             engine.base_url.clone(),
-            engine.opencode_username.clone(),
-            engine.opencode_password.clone(),
+            engine.aiwork_username.clone(),
+            engine.aiwork_password.clone(),
         )
     };
 
@@ -57,9 +57,9 @@ pub fn aiwork_server_restart(
         &app,
         &manager,
         &workspace_paths,
-        opencode_url.as_deref(),
-        opencode_username.as_deref(),
-        opencode_password.as_deref(),
+        aiwork_url.as_deref(),
+        aiwork_username.as_deref(),
+        aiwork_password.as_deref(),
         false,
         None,
         None,

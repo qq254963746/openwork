@@ -1,4 +1,4 @@
-use crate::config::{read_opencode_config as read_inner, write_opencode_config as write_inner};
+use crate::config::{read_aiwork_config as read_inner, write_aiwork_config as write_inner};
 use crate::types::{ExecResult, AiWorkEngineAuthJsonFile, AiWorkEngineConfigFile};
 use dirs::home_dir;
 use std::env;
@@ -6,7 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 
 #[tauri::command]
-pub fn read_opencode_config(
+pub fn read_aiwork_config(
     scope: String,
     project_dir: String,
 ) -> Result<AiWorkEngineConfigFile, String> {
@@ -14,7 +14,7 @@ pub fn read_opencode_config(
 }
 
 #[tauri::command]
-pub fn write_opencode_config(
+pub fn write_aiwork_config(
     scope: String,
     project_dir: String,
     content: String,
@@ -22,7 +22,7 @@ pub fn write_opencode_config(
     write_inner(scope.trim(), &project_dir, &content)
 }
 
-fn opencode_auth_json_path_candidates() -> Vec<PathBuf> {
+fn aiwork_auth_json_path_candidates() -> Vec<PathBuf> {
     let mut dirs: Vec<PathBuf> = Vec::new();
     if let Ok(xdg_data) = env::var("XDG_DATA_HOME") {
         let trimmed = xdg_data.trim();
@@ -52,8 +52,8 @@ fn opencode_auth_json_path_candidates() -> Vec<PathBuf> {
 
 /// Reads AiWorkEngine `auth.json` from known global data dirs
 #[tauri::command]
-pub fn read_opencode_auth_json() -> Result<AiWorkEngineAuthJsonFile, String> {
-    for path in opencode_auth_json_path_candidates() {
+pub fn read_aiwork_auth_json() -> Result<AiWorkEngineAuthJsonFile, String> {
+    for path in aiwork_auth_json_path_candidates() {
         if path.is_file() {
             let content = fs::read_to_string(&path)
                 .map_err(|e| format!("Failed to read {}: {e}", path.display()))?;

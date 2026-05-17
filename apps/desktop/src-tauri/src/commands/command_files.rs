@@ -50,13 +50,13 @@ fn list_command_names(dir: &PathBuf) -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-pub fn opencode_command_list(scope: String, project_dir: String) -> Result<Vec<String>, String> {
+pub fn aiwork_command_list(scope: String, project_dir: String) -> Result<Vec<String>, String> {
     let dir = resolve_commands_dir(scope.trim(), project_dir.trim())?;
     list_command_names(&dir)
 }
 
 #[tauri::command]
-pub fn opencode_command_write(
+pub fn aiwork_command_write(
     scope: String,
     project_dir: String,
     command: AiWorkEngineCommand,
@@ -90,7 +90,7 @@ pub fn opencode_command_write(
 }
 
 #[tauri::command]
-pub fn opencode_command_delete(
+pub fn aiwork_command_delete(
     scope: String,
     project_dir: String,
     name: String,

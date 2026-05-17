@@ -262,7 +262,7 @@ export async function opencodeCommandList(input: {
   scope: "workspace" | "global";
   projectDir: string;
 }): Promise<string[]> {
-  return invoke<string[]>("opencode_command_list", {
+  return invoke<string[]>("aiwork_command_list", {
     scope: input.scope,
     projectDir: input.projectDir,
   });
@@ -273,7 +273,7 @@ export async function opencodeCommandWrite(input: {
   projectDir: string;
   command: AiWorkEngineCommandDraft;
 }): Promise<ExecResult> {
-  return invoke<ExecResult>("opencode_command_write", {
+  return invoke<ExecResult>("aiwork_command_write", {
     scope: input.scope,
     projectDir: input.projectDir,
     command: input.command,
@@ -285,7 +285,7 @@ export async function opencodeCommandDelete(input: {
   projectDir: string;
   name: string;
 }): Promise<ExecResult> {
-  return invoke<ExecResult>("opencode_command_delete", {
+  return invoke<ExecResult>("aiwork_command_delete", {
     scope: input.scope,
     projectDir: input.projectDir,
     name: input.name,
@@ -315,7 +315,7 @@ export async function appBuildInfo(): Promise<AppBuildInfo> {
 }
 
 export async function nukeAiWorkAndAiWorkEngineConfigAndExit(): Promise<void> {
-  return invoke<void>("nuke_aiwork_and_opencode_config_and_exit");
+  return invoke<void>("nuke_aiwork_and_aiwork_config_and_exit");
 }
 
 export async function aiworkServerInfo(): Promise<AiWorkServerInfo> {
@@ -331,7 +331,7 @@ export async function engineInfo(): Promise<EngineInfo> {
 }
 
 export async function readAiWorkEngineEngineDiskLogs(): Promise<AiWorkEngineEngineDiskLogsSnapshot> {
-  return invoke<AiWorkEngineEngineDiskLogsSnapshot>("read_opencode_engine_disk_logs");
+  return invoke<AiWorkEngineEngineDiskLogsSnapshot>("read_aiwork_engine_disk_logs");
 }
 
 export async function runtimeBootstrap(): Promise<unknown> {
@@ -481,7 +481,7 @@ export async function readAiWorkEngineConfig(
   scope: "project" | "global",
   projectDir: string,
 ): Promise<AiWorkEngineConfigFile> {
-  return invoke<AiWorkEngineConfigFile>("read_opencode_config", { scope, projectDir });
+  return invoke<AiWorkEngineConfigFile>("read_aiwork_config", { scope, projectDir });
 }
 
 export async function writeAiWorkEngineConfig(
@@ -489,11 +489,11 @@ export async function writeAiWorkEngineConfig(
   projectDir: string,
   content: string,
 ): Promise<ExecResult> {
-  return invoke<ExecResult>("write_opencode_config", { scope, projectDir, content });
+  return invoke<ExecResult>("write_aiwork_config", { scope, projectDir, content });
 }
 
 export async function readAiWorkEngineAuthJson(): Promise<AiWorkEngineAuthJsonFile> {
-  return invoke<AiWorkEngineAuthJsonFile>("read_opencode_auth_json");
+  return invoke<AiWorkEngineAuthJsonFile>("read_aiwork_auth_json");
 }
 
 export async function resetAiWorkState(mode: "onboarding" | "all"): Promise<void> {
@@ -507,7 +507,7 @@ export type CacheResetResult = {
 };
 
 export async function resetAiWorkEngineCache(): Promise<CacheResetResult> {
-  return invoke<CacheResetResult>("reset_opencode_cache");
+  return invoke<CacheResetResult>("reset_aiwork_cache");
 }
 
 export async function opencodeMcpAuth(
@@ -521,7 +521,7 @@ export async function opencodeMcpAuth(
 
   const safeServerName = validateMcpServerName(serverName);
 
-  return invoke<ExecResult>("opencode_mcp_auth", {
+  return invoke<ExecResult>("aiwork_mcp_auth", {
     projectDir: safeProjectDir,
     serverName: safeServerName,
   });

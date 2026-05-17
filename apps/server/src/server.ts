@@ -403,7 +403,7 @@ async function fetchAiWorkEngineJson(
   const connection = resolveWorkspaceAiWorkEngineConnection(config, workspace);
   const baseUrl = connection.baseUrl?.trim() ?? "";
   if (!baseUrl) {
-    throw new ApiError(400, "opencode_unconfigured", "AiWorkEngine base URL is missing for this workspace");
+    throw new ApiError(400, "aiwork_unconfigured", "AiWorkEngine base URL is missing for this workspace");
   }
 
   const url = new URL(baseUrl);
@@ -452,7 +452,7 @@ async function fetchAiWorkEngineJson(
   const text = await response.text();
   const json = parseJsonResponse(text);
   if (!response.ok) {
-    throw new ApiError(502, "opencode_request_failed", "AiWorkEngine request failed", {
+    throw new ApiError(502, "aiwork_request_failed", "AiWorkEngine request failed", {
       status: response.status,
       body: json ?? text,
       path,
@@ -471,7 +471,7 @@ async function proxyAiWorkEngineRequest(input: {
   const workspace = input.workspace;
   const baseUrl = workspace ? resolveWorkspaceAiWorkEngineConnection(input.config, workspace).baseUrl?.trim() ?? "" : "";
   if (!baseUrl) {
-    throw new ApiError(400, "opencode_unconfigured", "AiWorkEngine base URL is missing for this workspace");
+    throw new ApiError(400, "aiwork_unconfigured", "AiWorkEngine base URL is missing for this workspace");
   }
 
   const proxyPath = input.proxyPath ?? input.url.pathname;
@@ -2983,7 +2983,7 @@ function createRoutes(
       // Treat missing credentials as a successful logout (idempotent).
       if (
         error instanceof ApiError &&
-        error.code === "opencode_request_failed" &&
+        error.code === "aiwork_request_failed" &&
         error.details &&
         typeof error.details === "object" &&
         "status" in (error.details as Record<string, unknown>) &&
@@ -3205,7 +3205,7 @@ function createRoutes(
 }
 
 function remapSessionReadError(error: unknown): never {
-  if (error instanceof ApiError && error.code === "opencode_request_failed") {
+  if (error instanceof ApiError && error.code === "aiwork_request_failed") {
     const details = error.details;
     const upstreamStatus =
       details && typeof details === "object" && "status" in details ? Number((details as { status?: unknown }).status) : NaN;
@@ -3523,7 +3523,7 @@ function buildAiWorkEngineReloadUrl(baseUrl: string, directory?: string | null):
     }
     return url.toString();
   } catch {
-    throw new ApiError(400, "opencode_url_invalid", "AiWorkEngine base URL is invalid");
+    throw new ApiError(400, "aiwork_url_invalid", "AiWorkEngine base URL is invalid");
   }
 }
 
@@ -3541,7 +3541,7 @@ async function reloadAiWorkEngineEngine(config: ServerConfig, workspace: Workspa
   const connection = resolveWorkspaceAiWorkEngineConnection(config, workspace);
   const baseUrl = connection.baseUrl?.trim() ?? "";
   if (!baseUrl) {
-    throw new ApiError(400, "opencode_unconfigured", "AiWorkEngine base URL is missing for this workspace");
+    throw new ApiError(400, "aiwork_unconfigured", "AiWorkEngine base URL is missing for this workspace");
   }
 
   const directory = resolveAiWorkEngineDirectory(workspace);
@@ -3553,7 +3553,7 @@ async function reloadAiWorkEngineEngine(config: ServerConfig, workspace: Workspa
   const response = await fetch(targetUrl, { method: "POST", headers });
   if (response.ok) return;
   const body = parseAiWorkEngineErrorBody(await response.text());
-  throw new ApiError(502, "opencode_reload_failed", "AiWorkEngine reload failed", {
+  throw new ApiError(502, "aiwork_reload_failed", "AiWorkEngine reload failed", {
     status: response.status,
     body,
   });

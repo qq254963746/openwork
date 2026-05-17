@@ -15,15 +15,15 @@ mod workspace;
 pub use types::*;
 
 use commands::command_files::{
-    opencode_command_delete, opencode_command_list, opencode_command_write,
+    aiwork_command_delete, aiwork_command_list, aiwork_command_write,
 };
-use commands::config::{read_opencode_auth_json, read_opencode_config, write_opencode_config};
+use commands::config::{read_aiwork_auth_json, read_aiwork_config, write_aiwork_config};
 use commands::engine::{
     engine_doctor, engine_info, engine_restart, engine_start, engine_stop,
 };
 use commands::misc::{
-    app_build_info, desktop_app_paths, nuke_aiwork_and_opencode_config_and_exit, opencode_mcp_auth,
-    read_opencode_engine_disk_logs, reset_opencode_cache, reset_aiwork_state,
+    app_build_info, desktop_app_paths, nuke_aiwork_and_aiwork_config_and_exit, aiwork_mcp_auth,
+    read_aiwork_engine_disk_logs, reset_aiwork_cache, reset_aiwork_state,
 };
 use commands::aiwork_server::{aiwork_server_info, aiwork_server_restart};
 use commands::skills::{
@@ -158,9 +158,9 @@ pub fn run() {
             workspace_add_authorized_root,
             workspace_export_config,
             workspace_import_config,
-            opencode_command_list,
-            opencode_command_write,
-            opencode_command_delete,
+            aiwork_command_list,
+            aiwork_command_write,
+            aiwork_command_delete,
             workspace_aiwork_read,
             workspace_aiwork_write,
             import_skill,
@@ -169,16 +169,16 @@ pub fn run() {
             read_local_skill,
             uninstall_skill,
             write_local_skill,
-            read_opencode_config,
-            read_opencode_auth_json,
-            write_opencode_config,
+            read_aiwork_config,
+            read_aiwork_auth_json,
+            write_aiwork_config,
             desktop_app_paths,
             app_build_info,
-            nuke_aiwork_and_opencode_config_and_exit,
+            nuke_aiwork_and_aiwork_config_and_exit,
             reset_aiwork_state,
-            reset_opencode_cache,
-            read_opencode_engine_disk_logs,
-            opencode_mcp_auth,
+            reset_aiwork_cache,
+            read_aiwork_engine_disk_logs,
+            aiwork_mcp_auth,
             set_window_decorations,
             open_app_log_window,
             ensure_dir_exist,

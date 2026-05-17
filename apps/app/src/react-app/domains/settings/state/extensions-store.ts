@@ -799,9 +799,9 @@ export function createExtensionsStore(options: {
         mutateState((current) => ({
           ...current,
           pluginList: [],
-          pluginStatus: t("skills.no_opencode_found"),
+          pluginStatus: t("skills.no_aiwork_found"),
           sidebarPluginList: [],
-          sidebarPluginStatus: t("skills.no_opencode_workspace"),
+          sidebarPluginStatus: t("skills.no_aiwork_workspace"),
         }));
         return;
       }
@@ -812,7 +812,7 @@ export function createExtensionsStore(options: {
         nextSidebarPluginList = parsePluginListFromContent(config.content ?? "");
       } catch {
         nextSidebarPluginList = [];
-        nextSidebarPluginStatus = t("skills.failed_parse_opencode");
+        nextSidebarPluginStatus = t("skills.failed_parse_aiwork");
       }
 
       const nextPluginNames: string[] = [];
@@ -842,7 +842,7 @@ export function createExtensionsStore(options: {
         pluginConfig: null,
         pluginConfigPath: null,
         pluginList: [],
-        pluginStatus: error instanceof Error ? error.message : t("skills.failed_load_opencode"),
+        pluginStatus: error instanceof Error ? error.message : t("skills.failed_load_aiwork"),
         sidebarPluginStatus: t("skills.failed_load_active"),
         sidebarPluginList: [],
       }));
@@ -920,7 +920,7 @@ export function createExtensionsStore(options: {
       if (isManualInput) setStateField("pluginInput", "");
       await refreshPlugins(scope);
     } catch (error) {
-      setStateField("pluginStatus", error instanceof Error ? error.message : t("skills.failed_update_opencode"));
+      setStateField("pluginStatus", error instanceof Error ? error.message : t("skills.failed_update_aiwork"));
     }
   }
 
@@ -985,7 +985,7 @@ export function createExtensionsStore(options: {
       options.markReloadRequired?.("plugins", { type: "plugin", name: triggerName, action: "removed" });
       await refreshPlugins(scope);
     } catch (error) {
-      setStateField("pluginStatus", error instanceof Error ? error.message : t("skills.failed_update_opencode"));
+      setStateField("pluginStatus", error instanceof Error ? error.message : t("skills.failed_update_aiwork"));
     }
   }
 
