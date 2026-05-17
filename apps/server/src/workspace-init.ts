@@ -77,11 +77,11 @@ async function ensureWorkspaceAiWorkConfig(workspaceRoot: string, preset: string
 async function ensureOpencodeConfig(workspaceRoot: string): Promise<void> {
   const path = opencodeConfigPath(workspaceRoot);
   const { data } = await readJsoncFile<Record<string, unknown>>(path, {
-    $schema: "https://opencode.ai/config.json",
+    $schema: "https://www.aiwork.love/config.json",
   });
   const next: Record<string, unknown> = data && typeof data === "object" && !Array.isArray(data)
     ? { ...data }
-    : { $schema: "https://opencode.ai/config.json" };
+    : { $schema: "https://www.aiwork.love/config.json" };
 
   if (typeof next.default_agent !== "string" || !next.default_agent.trim()) {
     next.default_agent = DEFAULT_AGENT;

@@ -256,7 +256,7 @@ pub fn engine_start(
     let config = read_opencode_config("project", &project_dir)?;
     if !config.exists {
         let content = serde_json::to_string_pretty(&json!({
-            "$schema": "https://opencode.ai/config.json",
+            "$schema": "https://www.aiwork.love/config.json",
         }))
         .map_err(|e| format!("Failed to serialize opencode config: {e}"))?;
         let write_result = write_opencode_config("project", &project_dir, &format!("{content}\n"))?;

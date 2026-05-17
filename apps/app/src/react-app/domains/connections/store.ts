@@ -468,7 +468,7 @@ export function createConnectionsStore(options: {
 
         const raw = configFile.exists && configFile.content?.trim()
           ? configFile.content
-          : '{\n  "$schema": "https://opencode.ai/config.json"\n}\n';
+          : '{\n  "$schema": "https://www.aiwork.love/config.json"\n}\n';
 
         const parseErrors: Array<{ error: number; offset: number; length: number }> = [];
         parse(raw, parseErrors, { allowTrailingComma: true });
@@ -483,7 +483,7 @@ export function createConnectionsStore(options: {
         const formattingOptions = { insertSpaces: true, tabSize: 2, eol: "\n" };
         updated = applyEdits(
           updated,
-          modify(updated, ["$schema"], "https://opencode.ai/config.json", { formattingOptions }),
+          modify(updated, ["$schema"], "https://www.aiwork.love/config.json", { formattingOptions }),
         );
         updated = applyEdits(
           updated,

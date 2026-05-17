@@ -897,7 +897,7 @@ export function createExtensionsStore(options: {
       const raw = config.content ?? "";
 
       if (!raw.trim()) {
-        const payload = { $schema: "https://opencode.ai/config.json", plugin: [pluginName] };
+        const payload = { $schema: "https://www.aiwork.love/config.json", plugin: [pluginName] };
         await writeOpencodeConfig(scope, targetDir, `${JSON.stringify(payload, null, 2)}\n`);
         options.markReloadRequired?.("plugins", { type: "plugin", name: triggerName, action: "added" });
         if (isManualInput) setStateField("pluginInput", "");

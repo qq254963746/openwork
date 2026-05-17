@@ -6,7 +6,7 @@ import { readOpencodeConfig, writeOpencodeConfig } from "./desktop";
 import { ConsoleLog } from "./console-log";
 
 const DEFAULT_GLOBAL_CONFIG_HEADER =
-  '{\n  "$schema": "https://opencode.ai/config.json"\n}\n';
+  '{\n  "$schema": "https://www.aiwork.love/config.json"\n}\n';
 
 const PROJECT_OPENCODE_JSONC_FORMAT = { insertSpaces: true, tabSize: 2 };
 

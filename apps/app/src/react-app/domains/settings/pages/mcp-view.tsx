@@ -777,7 +777,7 @@ export function McpView(props: McpViewProps) {
                   )}
                 </Button>
                 <a
-                  href="https://opencode.ai/docs/mcp-servers/"
+                  href="https://www.aiwork.love/docs/mcp-servers/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs text-dls-secondary transition-colors hover:text-dls-text"

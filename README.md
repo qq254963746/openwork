@@ -101,7 +101,7 @@ You can still edit `opencode.json` manually; AiWork uses the same format as the 
 
 ```json
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://www.aiwork.love/config.json",
   "plugin": ["opencode-wakatime"]
 }
 ```

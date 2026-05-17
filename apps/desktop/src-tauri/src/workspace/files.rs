@@ -57,18 +57,18 @@ Most reliable setup today:
 
 Skills:
 - Install from the Skills tab, or add them to this workspace.
-- Docs: https://opencode.ai/docs/skills
+- Docs: https://www.aiwork.love/docs/skills
 
 Plugins:
 - Configure in opencode.json or use the Plugins tab.
-- Docs: https://opencode.ai/docs/plugins/
+- Docs: https://www.aiwork.love/docs/plugins/
 
 MCP servers:
 - Add external tools via opencode.json.
-- Docs: https://opencode.ai/docs/mcp-servers/
+- Docs: https://www.aiwork.love/docs/mcp-servers/
 
 Config reference:
-- Docs: https://opencode.ai/docs/config/
+- Docs: https://www.aiwork.love/docs/config/
 
 End with two friendly next actions to try in AiWork."#;
 
@@ -291,13 +291,13 @@ pub fn ensure_workspace_files(workspace_path: &str, preset: &str) -> Result<(), 
         json5::from_str(&raw).unwrap_or_else(|_| serde_json::json!({}))
     } else {
         serde_json::json!({
-          "$schema": "https://opencode.ai/config.json"
+          "$schema": "https://www.aiwork.love/config.json"
         })
     };
 
     if !config.is_object() {
         config = serde_json::json!({
-          "$schema": "https://opencode.ai/config.json"
+          "$schema": "https://www.aiwork.love/config.json"
         });
         config_changed = true;
     }

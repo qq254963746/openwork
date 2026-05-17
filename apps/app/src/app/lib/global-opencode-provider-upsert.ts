@@ -12,7 +12,7 @@ import {
 } from "../utils/model-providers-catalog";
 import { ConsoleLog } from "./console-log";
 
-const SCHEMA_URL = "https://opencode.ai/config.json";
+const SCHEMA_URL = "https://www.aiwork.love/config.json";
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
