@@ -822,9 +822,6 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
     health: () =>
       logCall("health", undefined,
         requestJson<{ ok: boolean; version: string; uptimeMs: number }>(baseUrl, "/health", { token, hostToken, timeoutMs: timeouts.health })),
-    runtimeVersions: () =>
-      logCall("runtimeVersions", undefined,
-        requestJson<AiWorkRuntimeSnapshot>(baseUrl, "/runtime/versions", { token, hostToken, timeoutMs: timeouts.status })),
     status: () =>
       logCall("status", undefined,
         requestJson<AiWorkServerDiagnostics>(baseUrl, "/status", { token, hostToken, timeoutMs: timeouts.status })),
