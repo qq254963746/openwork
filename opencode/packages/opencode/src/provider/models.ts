@@ -94,7 +94,7 @@ export interface Interface {
   readonly refresh: (force?: boolean) => Effect.Effect<void>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/ModelsDev") {}
+export class Service extends Context.Service<Service, Interface>()("@aiwork-engine/ModelsDev") {}
 
 const USER_AGENT = `opencode/${OpenCodeVersion}/${Flag.OPENCODE_CLIENT}`
 

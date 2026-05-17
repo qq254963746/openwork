@@ -97,7 +97,7 @@ const kind = (code: string): Kind => {
   return "modified"
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/Git") {}
+export class Service extends Context.Service<Service, Interface>()("@aiwork-engine/Git") {}
 
 export const layer = Layer.effect(
   Service,

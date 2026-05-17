@@ -67,7 +67,7 @@ export interface Interface {
   readonly remove: (aggregateID: string) => Effect.Effect<void>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/SyncEvent") {}
+export class Service extends Context.Service<Service, Interface>()("@aiwork-engine/SyncEvent") {}
 
 export const layer = Layer.effect(Service)(
   Effect.gen(function* () {

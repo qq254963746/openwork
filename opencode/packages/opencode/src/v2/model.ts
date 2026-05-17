@@ -138,7 +138,7 @@ export interface Interface {
   readonly small: (provider: ProviderID) => Effect.Effect<Option.Option<Info>>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/v2/Model") {}
+export class Service extends Context.Service<Service, Interface>()("@aiwork-engine/v2/Model") {}
 
 export const layer = Layer.effect(
   Service,
