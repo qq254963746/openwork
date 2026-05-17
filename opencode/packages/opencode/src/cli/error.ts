@@ -1,4 +1,4 @@
-import { NamedError } from "@opencode-ai/core/util/name-error"
+import { NamedError } from "@/core/util/name-error"
 import { errorFormat } from "@/util/error"
 
 interface ErrorLike {

@@ -15,7 +15,7 @@ fi
 
 # 需要进入opencode目录下执行 bun install
 
-
+# 在根目录执行 pnpm install 和  dev
 pnpm install
 # pnpm dev
 pnpm --filter @aiwork/desktop dev:tauri

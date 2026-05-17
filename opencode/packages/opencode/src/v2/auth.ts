@@ -1,9 +1,9 @@
 import path from "path"
 import { Effect, Layer, Option, Schema, Context, SynchronizedRef } from "effect"
-import { Identifier } from "@opencode-ai/core/util/identifier"
+import { Identifier } from "@/core/util/identifier"
 import { NonNegativeInt, withStatics } from "@/util/schema"
-import { Global } from "@opencode-ai/core/global"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { Global } from "@/core/global"
+import { AppFileSystem } from "@/core/filesystem"
 
 export const OAUTH_DUMMY_KEY = "opencode-oauth-dummy-key"
 

@@ -1,8 +1,8 @@
 import { BusEvent } from "@/bus/bus-event"
 import z from "zod"
 import { Schema } from "effect"
-import { NamedError } from "@opencode-ai/core/util/name-error"
-import * as Log from "@opencode-ai/core/util/log"
+import { NamedError } from "@/core/util/name-error"
+import * as Log from "@/core/util/log"
 import { Process } from "@/util/process"
 
 const SUPPORTED_IDES = [

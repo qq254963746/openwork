@@ -1,6 +1,6 @@
 import { RequestError, type McpServer } from "@agentclientprotocol/sdk"
 import type { ACPSessionState } from "./types"
-import * as Log from "@opencode-ai/core/util/log"
+import * as Log from "@/core/util/log"
 import type { OpencodeClient } from "@aiwork-engine/sdk/v2"
 
 const log = Log.create({ service: "acp-session-manager" })

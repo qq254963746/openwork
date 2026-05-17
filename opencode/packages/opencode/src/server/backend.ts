@@ -1,5 +1,5 @@
-import { Flag } from "@opencode-ai/core/flag/flag"
-import { InstallationChannel, InstallationVersion } from "@opencode-ai/core/installation/version"
+import { Flag } from "@/core/flag/flag"
+import { InstallationChannel, InstallationVersion } from "@/core/installation/version"
 
 export type Backend = "effect-httpapi" | "hono"
 

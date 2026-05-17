@@ -1,7 +1,7 @@
 import { Schema } from "effect"
 import DESCRIPTION from "./shell.txt"
 import { PositiveInt } from "@/util/schema"
-import { Global } from "@opencode-ai/core/global"
+import { Global } from "@/core/global"
 import { ShellID } from "./id"
 
 const PS = new Set(["powershell", "pwsh"])

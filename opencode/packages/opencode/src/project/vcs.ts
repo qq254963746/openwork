@@ -5,7 +5,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { InstanceState } from "@/effect/instance-state"
 import { FileWatcher } from "@/file/watcher"
 import { Git } from "@/git"
-import * as Log from "@opencode-ai/core/util/log"
+import * as Log from "@/core/util/log"
 import { zod, zodObject } from "@/util/effect-zod"
 import { NonNegativeInt, withStatics } from "@/util/schema"
 

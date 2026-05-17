@@ -1,7 +1,7 @@
 export * as ConfigError from "./error"
 
 import z from "zod"
-import { NamedError } from "@opencode-ai/core/util/name-error"
+import { NamedError } from "@/core/util/name-error"
 
 export const JsonError = NamedError.create(
   "ConfigJsonError",
