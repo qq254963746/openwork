@@ -494,6 +494,7 @@ function applyEvent(entry: SyncEntry, workspaceId: string, event: OpencodeEvent)
   const queryClient = getReactQueryClient();
 
   if (event.type === "session.error") {
+    console.log("session.error ------- ", event  )
     const props = (event.properties ?? {}) as { sessionID?: string; error?: unknown };
     const sessionId = typeof props.sessionID === "string" ? props.sessionID : "";
     if (!sessionId) return;

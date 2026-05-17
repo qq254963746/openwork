@@ -1232,6 +1232,16 @@ export function fromError(
         { cause: e },
       ).toObject()
     case e instanceof Error:
+      // Log unexpected ReferenceError to stderr for easier debugging (e.g., minified code issues)
+      if (e.name === "ReferenceError") {
+        console.error("[fromError] wrapping ReferenceError:", {
+          name: e.name,
+          message: e.message,
+          stack: e.stack,
+          cause: e.cause,
+          constructorName: e.constructor?.name,
+        })
+      }
       return new NamedError.Unknown({ message: errorMessage(e) }, { cause: e }).toObject()
     default:
       try {

@@ -593,6 +593,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     setSending(true);
     setAwaitingAssistantBaseline(renderedMessages.length);
     try {
+      console.log("handleSend ----- draft ------", draft);
       const nextDraft = buildDraft(text, attachments);
       await props.onSendDraft(nextDraft);
       setDraft("");
@@ -601,6 +602,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
       props.onDraftChange(buildDraft("", []));
       setSending(false);
     } catch (nextError) {
+      console.log("handleSend ----- error ------", nextError);
       const parsed = parseSessionError(nextError);
       setError(parsed);
       getReactQueryClient().setQueryData<UIMessage[]>(

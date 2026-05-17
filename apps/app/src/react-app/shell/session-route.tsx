@@ -1461,7 +1461,7 @@ export function SessionRoute() {
       onSendDraft: async (draft: ComposerDraft) => {
         const text = (draft.resolvedText ?? draft.text).trim();
         if (!text && draft.attachments.length === 0) return;
-
+        
         if (draft.mode === "shell") {
           await shellInSession(opencodeClient, selectedSessionId, text);
           promoteSessionToFirstInWorkspace(selectedWorkspaceId, selectedSessionId);

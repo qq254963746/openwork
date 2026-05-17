@@ -336,6 +336,9 @@ const live: Layer.Layer<
         onError(error) {
           l.error("stream error", {
             error,
+            errorName: error instanceof Error ? error.name : typeof error,
+            errorStack: error instanceof Error ? error.stack : undefined,
+            errorCause: error instanceof Error ? error.cause : undefined,
           })
         },
         async experimental_repairToolCall(failed) {

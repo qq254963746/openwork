@@ -1156,7 +1156,7 @@ export function maxOutputTokens(model: Provider.Model): number {
   return Math.min(model.limit.output, OUTPUT_TOKEN_MAX) || OUTPUT_TOKEN_MAX
 }
 
-export function schema(model: Provider.Model, schema: JSONSchema.BaseSchema | JSONSchema7): JSONSchema7 {s
+export function schema(model: Provider.Model, schema: JSONSchema.BaseSchema | JSONSchema7): JSONSchema7 {
 
   if (model.providerID === "moonshotai" || model.api.id.toLowerCase().includes("kimi")) {
     const sanitizeMoonshot = (obj: unknown): unknown => {

@@ -423,6 +423,13 @@ export const layer: Layer.Layer<
           }
 
           case "error":
+            // Log full error details before re-throwing to trace "s is not defined" source
+            slog.error("handleEvent stream error", {
+              errorMessage: errorMessage(value.error),
+              errorName: value.error instanceof Error ? value.error.name : typeof value.error,
+              errorStack: value.error instanceof Error ? value.error.stack : undefined,
+              sessionID: ctx.sessionID,
+            })
             throw value.error
 
           case "start-step":
@@ -644,7 +651,17 @@ export const layer: Layer.Layer<
       })
 
       const halt = Effect.fn("SessionProcessor.halt")(function* (e: unknown) {
-        slog.error("process", { error: errorMessage(e), stack: e instanceof Error ? e.stack : undefined })
+        // Enhanced error logging to capture full stack trace and error source for "s is not defined" debugging
+        const errName = e instanceof Error ? e.name : typeof e
+        const errStack = e instanceof Error ? e.stack : undefined
+        const errCause = e instanceof Error && e.cause ? String(e.cause) : undefined
+        slog.error("process", {
+          error: errorMessage(e),
+          errorName: errName,
+          errorConstructor: (e as any)?.constructor?.name,
+          stack: errStack,
+          cause: errCause,
+        })
         const error = parse(e)
         if (MessageV2.ContextOverflowError.isInstance(error)) {
           ctx.needsCompaction = true
