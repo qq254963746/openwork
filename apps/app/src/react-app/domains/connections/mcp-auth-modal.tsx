@@ -4,7 +4,7 @@ import { CheckCircle2, Loader2, RefreshCcw, X } from "lucide-react";
 
 import type { McpDirectoryInfo } from "../../../app/constants";
 import { opencodeMcpAuth } from "../../../app/lib/desktop";
-import { unwrap } from "../../../app/lib/opencode";
+import { unwrap } from "../../../app/lib/engine";
 import { validateMcpServerName } from "../../../app/mcp";
 import type { Client } from "../../../app/types";
 import { normalizeDirectoryPath } from "../../../app/utils";

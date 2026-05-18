@@ -4,7 +4,7 @@ import {
   readGlobalAiWorkEngineConfigFile,
   writeGlobalAiWorkEngineConfigContent,
   type ReadGlobalAiWorkEngineConfigInput,
-} from "./global-opencode-disabled-providers";
+} from "./global-engine-disabled-providers";
 import {
   AIWORK_CUSTOM_PROVIDER_ENTRY_KEY,
   type ModelProviderType,
@@ -88,7 +88,7 @@ export async function upsertGlobalProviderAiWorkEngineEntry(
   }
 
   const nextContent = `${JSON.stringify(tree, null, 2)}\n`;
-  ConsoleLog.log("global-opencode-provider-upsert", "upsertGlobalProviderAiWorkEngineEntry:done", {
+  ConsoleLog.log("global-engine-provider-upsert", "upsertGlobalProviderAiWorkEngineEntry:done", {
     ok: true,
     content: nextContent,
   });

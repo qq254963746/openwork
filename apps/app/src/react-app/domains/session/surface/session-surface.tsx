@@ -13,8 +13,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { SessionStatus } from "@aiwork-engine/sdk/v2/client";
 import type { QuestionInfo } from "@aiwork-engine/sdk/v2/client";
 
-import { createClient, unwrap } from "../../../../app/lib/opencode";
-import { abortSessionSafe, revertSession } from "../../../../app/lib/opencode-session";
+import { createClient, unwrap } from "../../../../app/lib/engine";
+import { abortSessionSafe, revertSession } from "../../../../app/lib/engine-session";
 import { readWorkspaceCloudImports, type CloudImportedPlugin } from "../../../../app/cloud/import-state";
 import type {
   AiWorkServerClient,

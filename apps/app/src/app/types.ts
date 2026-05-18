@@ -6,7 +6,7 @@ import type {
   ProviderListResponse,
   Session,
 } from "@aiwork-engine/sdk/v2/client";
-import type { createClient } from "./lib/opencode";
+import type { createClient } from "./lib/engine";
 import type { AiWorkEngineConfigFile, WorkspaceInfo } from "./lib/desktop";
 
 export type Client = ReturnType<typeof createClient>;

@@ -31,7 +31,7 @@ import { errorMessage } from "./util/error"
 import { PluginCommand } from "./cli/cmd/plug"
 import { Heap } from "./cli/heap"
 import { drizzle } from "drizzle-orm/bun-sqlite"
-import { ensureProcessMetadata } from "@/core/util/opencode-process"
+import { ensureProcessMetadata } from "@/core/util/process"
 
 const processMetadata = ensureProcessMetadata("main")
 

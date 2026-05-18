@@ -24,7 +24,7 @@ import { TokenService } from "./tokens.js";
 import { EnvService, EnvStoreReadError, InvalidEnvKeyError, isValidEnvKey } from "./env-file.js";
 
 import { FileSessionStore } from "./file-sessions.js";
-import { inheritWorkspaceAiWorkEngineConnection, resolveWorkspaceAiWorkEngineConnection } from "./opencode-connection.js";
+import { inheritWorkspaceAiWorkEngineConnection, resolveWorkspaceAiWorkEngineConnection } from "./engine-connection.js";
 import { listModelsByProviderType, parseModelProviderType } from "./ai-model-service/list-models.js";
 import { buildSession, buildSessionList, buildSessionMessages, buildSessionSnapshot } from "./session-read-model.js";
 import { logger as fileLogger } from "./log-util.js";

@@ -3,8 +3,8 @@ import type { ConfigProvidersResponse, ProviderListResponse } from "@aiwork-engi
 import {
   readGlobalDisabledProviderIds,
   type ReadGlobalAiWorkEngineConfigInput,
-} from "../../../../app/lib/global-opencode-disabled-providers";
-import { unwrap } from "../../../../app/lib/opencode";
+} from "../../../../app/lib/global-engine-disabled-providers";
+import { unwrap } from "../../../../app/lib/engine";
 import { mergeAuthMetadataBaseUrlIntoProviderList } from "../../../../app/lib/provider-list-merge";
 import type { Client } from "../../../../app/types";
 import { filterProviderList, mapConfigProvidersToList } from "../../../../app/utils/providers";

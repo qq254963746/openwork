@@ -9,7 +9,7 @@ import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner
 import { CrossSpawnSpawner } from "@/core/cross-spawn-spawner"
 import { Global } from "@/core/global"
 import * as Log from "@/core/util/log"
-import { sanitizedProcessEnv } from "@/core/util/opencode-process"
+import { sanitizedProcessEnv } from "@/core/util/process"
 import { which } from "@/util/which"
 import { zod } from "@/util/effect-zod"
 import { NonNegativeInt, withStatics } from "@/util/schema"

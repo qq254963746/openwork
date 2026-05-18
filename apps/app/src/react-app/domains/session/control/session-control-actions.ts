@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import { useMemo } from "react";
 
-import type { createClient } from "../../../../app/lib/opencode";
+import type { createClient } from "../../../../app/lib/engine";
 import type { AiWorkServerClient, AiWorkWorkspaceInfo } from "../../../../app/lib/aiwork-server";
 import { getDisplaySessionTitle } from "../../../../app/lib/session-title";
 import { useControlAction, type AiWorkControlAction } from "../../../shell/control/control-provider";

@@ -8,8 +8,8 @@ import {
   persistThemeMode,
   applyThemeMode,
 } from "../../app/theme";
-import type { ReadGlobalAiWorkEngineConfigInput } from "../../app/lib/global-opencode-disabled-providers";
-import { createClient, unwrap } from "../../app/lib/opencode";
+import type { ReadGlobalAiWorkEngineConfigInput } from "../../app/lib/global-engine-disabled-providers";
+import { createClient, unwrap } from "../../app/lib/engine";
 import {
   buildAiWorkWorkspaceBaseUrl,
   createAiWorkServerClient,
@@ -82,7 +82,7 @@ import { recordInspectorEvent } from "./app-inspector";
 import { ensureDesktopLocalAiWorkConnection } from "./desktop-local-aiwork";
 import { resolveAiWorkConnection } from "./aiwork-connection";
 import { ConsoleLog } from "../../app/lib/console-log";
-import { abortSessionSafe } from "../../app/lib/opencode-session";
+import { abortSessionSafe } from "../../app/lib/engine-session";
 import { useReloadCoordinator } from "./reload-coordinator";
 import { readActiveWorkspaceId, writeActiveWorkspaceId } from "./session-memory";
 import { workspaceSessionRoute, workspaceSettingsRoute } from "./workspace-routes";

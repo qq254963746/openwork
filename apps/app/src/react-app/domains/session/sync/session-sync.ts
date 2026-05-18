@@ -2,7 +2,7 @@ import type { UIMessage } from "ai";
 import type { Part, PermissionRequest, QuestionRequest, SessionStatus, Todo } from "@aiwork-engine/sdk/v2/client";
 
 import { getReactQueryClient } from "../../../infra/query-client";
-import { createClient } from "../../../../app/lib/opencode";
+import { createClient } from "../../../../app/lib/engine";
 import { normalizeEvent, safeStringify } from "../../../../app/utils";
 import type { AiWorkEngineEvent, PendingPermission, PendingQuestion } from "../../../../app/types";
 import { SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX } from "../../../../app/types";

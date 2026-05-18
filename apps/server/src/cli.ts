@@ -3,7 +3,7 @@
 import { mkdir } from "node:fs/promises";
 
 import { parseCliArgs, printHelp, resolveServerConfig } from "./config.js";
-import { createManagedAiWorkEngineServer, type ManagedAiWorkEngineServer } from "./managed-opencode.js";
+import { createManagedAiWorkEngineServer, type ManagedAiWorkEngineServer } from "./engine-managed.js";
 import { createServerLogger, startServer } from "./server.js";
 import pkg from "../package.json" with { type: "json" };
 

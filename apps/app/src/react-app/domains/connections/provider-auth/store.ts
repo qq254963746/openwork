@@ -11,8 +11,8 @@ import {
   removeGlobalDisabledProviderIds,
   writeGlobalDisabledProviderIds,
   type ReadGlobalAiWorkEngineConfigInput,
-} from "../../../../app/lib/global-opencode-disabled-providers";
-import { unwrap, waitForHealthy } from "../../../../app/lib/opencode";
+} from "../../../../app/lib/global-engine-disabled-providers";
+import { unwrap, waitForHealthy } from "../../../../app/lib/engine";
 import { fetchProviderAuthForEdit } from "../../../../app/lib/provider-list-merge";
 import type {
   Client,
@@ -23,7 +23,7 @@ import { safeStringify } from "../../../../app/utils";
 import { compareProviders, filterProviderList, resolveProviderInitialApiBaseUrl } from "../../../../app/utils/providers";
 import { fetchFinallyProviderList } from "./fetch-finally-provider-list";
 import type { AiWorkServerStore } from "../aiwork-server-store";
-import { upsertGlobalProviderAiWorkEngineEntry } from "../../../../app/lib/global-opencode-provider-upsert";
+import { upsertGlobalProviderAiWorkEngineEntry } from "../../../../app/lib/global-engine-provider-upsert";
 import {
   fetchOpenAiCompatibleModelIds,
   modelsIdsToAiWorkEngineModelsMap,

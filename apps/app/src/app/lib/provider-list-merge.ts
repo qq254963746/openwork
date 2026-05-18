@@ -9,7 +9,7 @@ import { ConsoleLog } from "./console-log";
 import {
   readGlobalAiWorkEngineConfigFile,
   type ReadGlobalAiWorkEngineConfigInput,
-} from "./global-opencode-disabled-providers";
+} from "./global-engine-disabled-providers";
 
 const PROVIDER_LIST_MERGE_LOG_SCOPE = "provider-list-merge";
 

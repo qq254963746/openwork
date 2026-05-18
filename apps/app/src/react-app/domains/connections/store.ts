@@ -8,7 +8,7 @@ import {
   MCP_QUICK_CONNECT,
   type McpDirectoryInfo,
 } from "../../../app/constants";
-import { createClient, unwrap } from "../../../app/lib/opencode";
+import { createClient, unwrap } from "../../../app/lib/engine";
 import { finishPerf, perfNow, recordPerfLog } from "../../../app/lib/perf-log";
 import {
   getDesktopHomeDir,

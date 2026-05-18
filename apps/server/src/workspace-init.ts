@@ -5,7 +5,7 @@ import { ensureDir, exists } from "./utils.js";
 import { ApiError } from "./errors.js";
 import { aiworkConfigPath, opencodeConfigPath } from "./workspace-files.js";
 import { readJsoncFile, writeJsoncFile } from "./jsonc.js";
-import { DEFAULT_AGENT } from "./opencode-db.js";
+import { DEFAULT_AGENT } from "./engine-db.js";
 
 const AIWORK_AGENT = `---
 description: AiWork default agent

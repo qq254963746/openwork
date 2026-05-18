@@ -63,7 +63,7 @@ export async function writeGlobalAiWorkEngineConfigContent(
       "global",
       content,
     );
-    ConsoleLog.log("global-opencode-disabled-providers", "writeGlobalAiWorkEngineConfigContent:done via aiwork-server", {
+    ConsoleLog.log("global-engine-disabled-providers", "writeGlobalAiWorkEngineConfigContent:done via aiwork-server", {
       ok: result.ok,
       content: content,
     });
@@ -71,7 +71,7 @@ export async function writeGlobalAiWorkEngineConfigContent(
   }
 
   const result = await writeAiWorkEngineConfig("global", input.workspaceRoot, content);
-  ConsoleLog.log("global-opencode-disabled-providers", "writeGlobalAiWorkEngineConfigContent:done via desktop", {
+  ConsoleLog.log("global-engine-disabled-providers", "writeGlobalAiWorkEngineConfigContent:done via desktop", {
     ok: result.ok,
     content: content,
   });

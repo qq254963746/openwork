@@ -2,11 +2,11 @@
 import type { UIMessage, UIMessageChunk, ChatTransport, DynamicToolUIPart } from "ai";
 import type { Part } from "@aiwork-engine/sdk/v2/client";
 
-import { abortSessionSafe } from "../../../../app/lib/opencode-session";
+import { abortSessionSafe } from "../../../../app/lib/engine-session";
 import type { AiWorkSessionSnapshot } from "../../../../app/lib/aiwork-server";
 import { normalizeEvent, safeStringify } from "../../../../app/utils";
 import type { AiWorkEngineEvent } from "../../../../app/types";
-import { createClient } from "../../../../app/lib/opencode";
+import { createClient } from "../../../../app/lib/engine";
 
 type TransportOptions = {
   baseUrl: string;

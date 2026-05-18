@@ -8,9 +8,9 @@ import type {
   TextPartInput,
 } from "@aiwork-engine/sdk/v2/client";
 
-import type { ReadGlobalAiWorkEngineConfigInput } from "../../app/lib/global-opencode-disabled-providers";
-import { createClient, unwrap } from "../../app/lib/opencode";
-import { listCommands, shellInSession } from "../../app/lib/opencode-session";
+import type { ReadGlobalAiWorkEngineConfigInput } from "../../app/lib/global-engine-disabled-providers";
+import { createClient, unwrap } from "../../app/lib/engine";
+import { listCommands, shellInSession } from "../../app/lib/engine-session";
 import {
   buildAiWorkWorkspaceBaseUrl,
   createAiWorkServerClient,
