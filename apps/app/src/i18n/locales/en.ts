@@ -775,7 +775,7 @@ export default {
   "settings.reset_onboarding_warning": "Clears AiWork local preferences and workspace onboarding markers.",
   "settings.reset_aiwork_desc_dev": "With dev mode active, it only clears the isolated AiWork dev state inside engine.",
   "settings.reset_aiwork_desc_prod": "With dev mode active, it only clears the isolated AiWork dev state inside engine.",
-  "settings.reset_aiwork_title": "Reset AiWork + AiWork state",
+  "settings.reset_aiwork_title": "Reset AiWork Server + Engine state",
   "settings.reset_requires_confirm": "Requires typing RESET and will restart the app.",
   "settings.reset_startup_pref": "Reset startup preference",
   "settings.reset_stop_active_runs": "Stop active runs before resetting.",
