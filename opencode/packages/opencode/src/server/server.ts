@@ -15,7 +15,6 @@ import { FenceMiddleware } from "./fence"
 import { initProjectors } from "./projectors"
 import { InstanceRoutes } from "./routes/instance"
 import { ControlPlaneRoutes } from "./routes/control"
-import { UIRoutes } from "./routes/ui"
 import { GlobalRoutes } from "./routes/global"
 import { WorkspaceRouterMiddleware } from "./workspace"
 import { InstanceMiddleware } from "./routes/instance/middleware"
@@ -136,8 +135,7 @@ function createHono(opts: CorsOptions, selection: ServerBackend.Selection = Serv
     app: app
       .route("/", ControlPlaneRoutes())
       .route("/", workspaceApp)
-      .route("/", InstanceRoutes(runtime.upgradeWebSocket, opts))
-      .route("/", UIRoutes()),
+      .route("/", InstanceRoutes(runtime.upgradeWebSocket, opts)),
     runtime,
   }
 }
