@@ -2,7 +2,7 @@
 import { useState, type ReactNode } from "react";
 import { CircleAlert, Cpu, RefreshCcw, Server, Zap } from "lucide-react";
 
-import type { AiWorkEngineConnectStatus } from "../../../../app/types";
+import type { EngineConnectStatus } from "../../../../app/types";
 import type { AiWorkServerStatus } from "../../../../app/lib/aiwork-server";
 import type { EngineInfo } from "../../../../app/lib/desktop";
 import { t } from "../../../../i18n";
@@ -28,7 +28,7 @@ export type AdvancedViewProps = {
   baseUrl: string;
   headerStatus: string;
   clientConnected: boolean;
-  opencodeConnectStatus: AiWorkEngineConnectStatus | null;
+  engineConnectStatus: EngineConnectStatus | null;
   aiworkServerStatus: AiWorkServerStatus;
   aiworkServerUrl: string;
   aiworkReconnectBusy: boolean;
@@ -38,7 +38,7 @@ export type AdvancedViewProps = {
   stopHost: () => void;
   developerMode: boolean;
   toggleDeveloperMode: () => void;
-  opencodeDevModeEnabled: boolean;
+  engineDevModeEnabled: boolean;
   openDebugDeepLink: (rawUrl: string) => Promise<{ ok: boolean; message: string }>;
   configView: ConfigViewProps;
 };
@@ -74,10 +74,10 @@ function RuntimeStatusCard(props: RuntimeStatusCardProps) {
   );
 }
 
-function formatAiWorkEngineBinary(info: EngineInfo | null) {
-  const binary = info?.opencodeBinPath?.trim();
+function formatEngineBinary(info: EngineInfo | null) {
+  const binary = info?.engineBinPath?.trim();
   if (!binary) return "—";
-  const source = info?.opencodeBinSource?.trim();
+  const source = info?.engineBinSource?.trim();
   return source ? `${binary} (${source})` : binary;
 }
 
@@ -89,14 +89,14 @@ export function AdvancedView(props: AdvancedViewProps) {
   const [aiworkRestartError, setAiWorkRestartError] = useState<string | null>(null);
 
   const clientStatusLabel = (() => {
-    const status = props.opencodeConnectStatus?.status;
+    const status = props.engineConnectStatus?.status;
     if (status === "connecting") return t("status.connecting");
     if (status === "error") return t("settings.connection_failed");
     return props.clientConnected ? t("status.connected") : t("config.status_not_connected");
   })();
 
   const clientStatusStyle = (() => {
-    const status = props.opencodeConnectStatus?.status;
+    const status = props.engineConnectStatus?.status;
     if (status === "connecting") return "bg-amber-7/10 text-amber-11 border-amber-7/20";
     if (status === "error") return "bg-red-7/10 text-red-11 border-red-7/20";
     return props.clientConnected
@@ -105,7 +105,7 @@ export function AdvancedView(props: AdvancedViewProps) {
   })();
 
   const clientStatusDot = (() => {
-    const status = props.opencodeConnectStatus?.status;
+    const status = props.engineConnectStatus?.status;
     if (status === "connecting") return "bg-amber-9";
     if (status === "error") return "bg-red-9";
     return props.clientConnected ? "bg-green-9" : "bg-gray-6";
@@ -194,14 +194,14 @@ export function AdvancedView(props: AdvancedViewProps) {
         <div className="grid gap-3 sm:grid-cols-2">
           <RuntimeStatusCard
             icon={<Cpu size={18} />}
-            title={t("settings.aiwork_engine_label")}
+            title={t("settings.engine_label")}
             description={t("settings.aiwork_engine_desc")}
             statusLabel={clientStatusLabel}
             statusStyle={clientStatusStyle}
             statusDot={clientStatusDot}
             detailLines={[
               t("settings.diag_aiwork_binary", undefined, {
-                binary: formatAiWorkEngineBinary(props.engineInfo),
+                binary: formatEngineBinary(props.engineInfo),
               }),
             ]}
           />

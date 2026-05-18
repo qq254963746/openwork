@@ -1,4 +1,4 @@
-import { createAiWorkEngineClient, type Message, type Part, type Session, type Todo } from "@aiwork-engine/sdk/v2/client";
+import { createEngineClient, type Message, type Part, type Session, type Todo } from "@engine/sdk/v2/client";
 
 import { desktopFetch } from "./desktop";
 import { createAiWorkServerClient, AiWorkServerError } from "./aiwork-server";
@@ -53,16 +53,16 @@ type SessionMessagesParameters = {
   limit?: number;
 };
 
-export type AiWorkEngineAuth = {
+export type EngineAuth = {
   username?: string;
   password?: string;
   token?: string;
   mode?: "basic" | "aiwork";
 };
 
-const DEFAULT_AIWORK_ENGINE_REQUEST_TIMEOUT_MS = 10_000;
-const OAUTH_AIWORK_ENGINE_REQUEST_TIMEOUT_MS = 5 * 60_000;
-const MCP_AUTH_AIWORK_ENGINE_REQUEST_TIMEOUT_MS = 90_000;
+const DEFAULT_ENGINE_REQUEST_TIMEOUT_MS = 10_000;
+const OAUTH_ENGINE_REQUEST_TIMEOUT_MS = 5 * 60_000;
+const MCP_AUTH_ENGINE_REQUEST_TIMEOUT_MS = 90_000;
 const SESSION_COMMAND_URL_RE = /\/session\/[^/?#]+\/command(?:[?#]|$)/;
 
 function getRequestUrl(input: RequestInfo | URL): string {
@@ -78,10 +78,10 @@ function resolveRequestTimeoutMs(input: RequestInfo | URL, fallbackMs: number): 
     return 0;
   }
   if (/\/provider\/oauth\//.test(url) || /\/mcp\/auth\/callback\b/.test(url)) {
-    return Math.max(fallbackMs, OAUTH_AIWORK_ENGINE_REQUEST_TIMEOUT_MS);
+    return Math.max(fallbackMs, OAUTH_ENGINE_REQUEST_TIMEOUT_MS);
   }
   if (/\/mcp\/.*auth\b/.test(url)) {
-    return Math.max(fallbackMs, MCP_AUTH_AIWORK_ENGINE_REQUEST_TIMEOUT_MS);
+    return Math.max(fallbackMs, MCP_AUTH_ENGINE_REQUEST_TIMEOUT_MS);
   }
   return fallbackMs;
 }
@@ -104,7 +104,7 @@ async function postSessionRequest<T>(
   headers.set("Content-Type", "application/json");
   const directoryHeader = buildDirectoryHeader(options?.directory);
   if (directoryHeader) {
-    headers.set("x-opencode-directory", directoryHeader);
+    headers.set("x-engine-directory", directoryHeader);
   }
 
   const response = await fetchImpl(`${baseUrl}${path}`, {
@@ -138,7 +138,7 @@ async function postSessionRequest<T>(
 function resolveAiWorkWorkspaceMount(baseUrl: string): { baseUrl: string; workspaceId: string } | null {
   try {
     const url = new URL(baseUrl);
-    const match = url.pathname.replace(/\/+$/, "").match(/^(.*\/w\/([^/]+))\/opencode$/);
+    const match = url.pathname.replace(/\/+$/, "").match(/^(.*\/w\/([^/]+))\/engine$/);
     if (!match?.[1] || !match[2]) return null;
     url.pathname = match[1];
     url.search = "";
@@ -252,7 +252,7 @@ async function fetchWithTimeout(
   }
 }
 
-const encodeBasicAuth = (auth?: AiWorkEngineAuth) => {
+const encodeBasicAuth = (auth?: EngineAuth) => {
   if (!auth?.username || !auth?.password) return null;
   const token = `${auth.username}:${auth.password}`;
   if (typeof btoa === "function") return btoa(token);
@@ -261,7 +261,7 @@ const encodeBasicAuth = (auth?: AiWorkEngineAuth) => {
   return buffer ? buffer.from(token, "utf8").toString("base64") : null;
 };
 
-const resolveAuthHeader = (auth?: AiWorkEngineAuth) => {
+const resolveAuthHeader = (auth?: EngineAuth) => {
   if (auth?.mode === "aiwork" && auth.token) {
     return `Bearer ${auth.token}`;
   }
@@ -275,7 +275,7 @@ const resolveAuthHeader = (auth?: AiWorkEngineAuth) => {
  * `fetch_read_body` IPC call blocks until the entire body is delivered, so
  * pointing it at an infinite stream freezes the webview's main thread for
  * minutes. For these endpoints we always use the webview's native fetch —
- * CORS is already wide open on the aiwork/opencode stack, so there's no
+ * CORS is already wide open on the aiwork/engine stack, so there's no
  * reason to route them through the plugin.
  */
 const STREAM_URL_RE = /\/(event|stream)(\b|\/|$|\?)/;
@@ -295,7 +295,7 @@ function nativeFetchRef(): typeof globalThis.fetch {
   return globalThis.fetch as typeof globalThis.fetch;
 }
 
-const createDesktopFetch = (auth?: AiWorkEngineAuth) => {
+const createDesktopFetch = (auth?: EngineAuth) => {
   const authHeader = resolveAuthHeader(auth);
   const addAuth = (headers: Headers) => {
     if (!authHeader || headers.has("Authorization")) return;
@@ -311,7 +311,7 @@ const createDesktopFetch = (auth?: AiWorkEngineAuth) => {
       : desktopFetch;
     // Streams should never be timed out at the transport layer; the caller
     // aborts via AbortSignal when the subscription unmounts.
-    const timeoutMs = shouldStream ? 0 : DEFAULT_AIWORK_ENGINE_REQUEST_TIMEOUT_MS;
+    const timeoutMs = shouldStream ? 0 : DEFAULT_ENGINE_REQUEST_TIMEOUT_MS;
 
     if (input instanceof Request) {
       const headers = new Headers(input.headers);
@@ -347,10 +347,10 @@ export function unwrap<T>(result: FieldsResult<T>): NonNullable<T> {
   throw new Error(message || "Unknown error");
 }
 
-export function createClient(baseUrl: string, directory?: string, auth?: AiWorkEngineAuth) {
+export function createClient(baseUrl: string, directory?: string, auth?: EngineAuth) {
   const headers: Record<string, string> = {};
   const fetchImpl = createDesktopFetch(auth);
-  const client = createAiWorkEngineClient({
+  const client = createEngineClient({
     baseUrl,
     directory,
     headers: Object.keys(headers).length ? headers : undefined,

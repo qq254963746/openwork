@@ -15,16 +15,16 @@ import { readJsoncFile, updateJsoncPath, updateJsoncTopLevel } from "./jsonc.js"
 import { recordAudit, readAuditEntries, readLastAudit } from "./audit.js";
 import { ReloadEventStore } from "./events.js";
 import { startReloadWatchers } from "./reload-watcher.js";
-import { opencodeConfigPath, aiworkConfigPath } from "./workspace-files.js";
+import { engineConfigPath, aiworkConfigPath } from "./workspace-files.js";
 import { ensureDir, exists, hashToken, shortId } from "./utils.js";
 import { workspaceIdForPath } from "./workspaces.js";
-import { ensureWorkspaceFiles, readRawAiWorkEngineConfig } from "./workspace-init.js";
+import { ensureWorkspaceFiles, readRawEngineConfig } from "./workspace-init.js";
 import { sanitizeCommandName, validateMcpName } from "./validators.js";
 import { TokenService } from "./tokens.js";
 import { EnvService, EnvStoreReadError, InvalidEnvKeyError, isValidEnvKey } from "./env-file.js";
 
 import { FileSessionStore } from "./file-sessions.js";
-import { inheritWorkspaceAiWorkEngineConnection, resolveWorkspaceAiWorkEngineConnection } from "./engine-connection.js";
+import { inheritWorkspaceEngineConnection, resolveWorkspaceEngineConnection } from "./engine-connection.js";
 import { listModelsByProviderType, parseModelProviderType } from "./ai-model-service/list-models.js";
 import { buildSession, buildSessionList, buildSessionMessages, buildSessionSnapshot } from "./session-read-model.js";
 import { logger as fileLogger } from "./log-util.js";
@@ -40,10 +40,10 @@ import {
 } from "./checkpoint-routes.js";
 import { destroySessionCheckpoints, destroyWorkspaceCheckpoints } from "./checkpoint-store.js";
 import pkg from "../package.json" with { type: "json" };
-import opencodePkg from "../../../opencode/packages/opencode/package.json" with { type: "json" };
+import enginePkg from "../../../engine/packages/engine/package.json" with { type: "json" };
 
 const SERVER_VERSION = pkg.version;
-const AIWORK_ENGINE_VERSION = opencodePkg.version;
+const ENGINE_VERSION = enginePkg.version;
 
 const FILE_SESSION_DEFAULT_TTL_MS = 15 * 60 * 1000;
 const FILE_SESSION_MIN_TTL_MS = 30 * 1000;
@@ -113,7 +113,7 @@ function logRequest(input: {
   response: Response;
   durationMs: number;
   authMode: AuthMode;
-  proxyService?: "opencode";
+  proxyService?: "engine";
   proxyBaseUrl?: string;
   error?: string;
 }) {
@@ -157,14 +157,14 @@ function parseWorkspaceMount(pathname: string): { workspaceId: string; restPath:
   return { workspaceId: decodeURIComponent(workspaceId), restPath };
 }
 
-function normalizeAiWorkEngineProxyPath(proxyPath: string): string {
+function normalizeEngineProxyPath(proxyPath: string): string {
   const raw = (proxyPath ?? "").trim() || "/";
-  const withoutPrefix = raw.startsWith("/opencode") ? raw.slice("/opencode".length) : raw;
+  const withoutPrefix = raw.startsWith("/engine") ? raw.slice("/engine".length) : raw;
   const normalized = (withoutPrefix || "/").replace(/\/+$/, "");
   return normalized || "/";
 }
 
-function assertAiWorkEngineProxyAllowed(actor: Actor, method: string, proxyPath: string) {
+function assertEngineProxyAllowed(actor: Actor, method: string, proxyPath: string) {
   const m = method.toUpperCase();
   const scope = actor.scope ?? "viewer";
 
@@ -172,10 +172,10 @@ function assertAiWorkEngineProxyAllowed(actor: Actor, method: string, proxyPath:
     throw new ApiError(403, "forbidden", "Viewer tokens are read-only");
   }
 
-  // Prevent collaborators/viewers from self-approving AiWorkEngine permission requests via the proxy.
-  // AiWorkEngine uses /permission/:requestId/reply (and historically also a session-scoped variant).
+  // Prevent collaborators/viewers from self-approving Engine permission requests via the proxy.
+  // Engine uses /permission/:requestId/reply (and historically also a session-scoped variant).
   if (scope !== "owner" && m !== "GET" && m !== "HEAD") {
-    const normalized = normalizeAiWorkEngineProxyPath(proxyPath);
+    const normalized = normalizeEngineProxyPath(proxyPath);
     if (/\/permission\/[^/]+\/reply$/.test(normalized)) {
       throw new ApiError(403, "forbidden", "Only owner tokens can reply to permission requests");
     }
@@ -183,7 +183,7 @@ function assertAiWorkEngineProxyAllowed(actor: Actor, method: string, proxyPath:
 }
 
 function isSessionCommandProxyRequest(method: string, proxyPath: string) {
-  return method === "POST" && /^\/session\/[^/]+\/command$/.test(normalizeAiWorkEngineProxyPath(proxyPath));
+  return method === "POST" && /^\/session\/[^/]+\/command$/.test(normalizeEngineProxyPath(proxyPath));
 }
 
 interface Route {
@@ -229,7 +229,7 @@ export function startServer(config: ServerConfig) {
       const url = new URL(request.url);
       const startedAt = Date.now();
       let authMode: AuthMode = "none";
-      let proxyService: "opencode" | undefined;
+      let proxyService: "engine" | undefined;
       let proxyBaseUrl: string | undefined;
       let errorMessage: string | undefined;
 
@@ -255,15 +255,15 @@ export function startServer(config: ServerConfig) {
       }
 
       const mount = parseWorkspaceMount(url.pathname);
-      if (mount && (mount.restPath === "/opencode" || mount.restPath.startsWith("/opencode/"))) {
+      if (mount && (mount.restPath === "/engine" || mount.restPath.startsWith("/engine/"))) {
         authMode = "client";
         try {
           const actor = await requireClient(request, config, tokens);
-          assertAiWorkEngineProxyAllowed(actor, request.method, mount.restPath);
+          assertEngineProxyAllowed(actor, request.method, mount.restPath);
           const workspace = await resolveWorkspace(config, mount.workspaceId);
-          proxyService = "opencode";
-          proxyBaseUrl = workspace.opencode?.baseUrl?.trim() || undefined;
-          const response = await proxyAiWorkEngineRequest({ config, request, url, workspace, proxyPath: mount.restPath });
+          proxyService = "engine";
+          proxyBaseUrl = workspace.engine?.baseUrl?.trim() || undefined;
+          const response = await proxyEngineRequest({ config, request, url, workspace, proxyPath: mount.restPath });
           return finalize(response);
         } catch (error) {
           const apiError = error instanceof ApiError
@@ -291,14 +291,14 @@ export function startServer(config: ServerConfig) {
         url.pathname = mount.restPath;
       }
 
-      if (url.pathname === "/opencode" || url.pathname.startsWith("/opencode/")) {
+      if (url.pathname === "/engine" || url.pathname.startsWith("/engine/")) {
         authMode = "client";
-        proxyBaseUrl = config.workspaces[0]?.opencode?.baseUrl?.trim() || undefined;
+        proxyBaseUrl = config.workspaces[0]?.engine?.baseUrl?.trim() || undefined;
         try {
           const actor = await requireClient(request, config, tokens);
-          assertAiWorkEngineProxyAllowed(actor, request.method, url.pathname);
-          proxyService = "opencode";
-          const response = await proxyAiWorkEngineRequest({ config, request, url, workspace: config.workspaces[0] });
+          assertEngineProxyAllowed(actor, request.method, url.pathname);
+          proxyService = "engine";
+          const response = await proxyEngineRequest({ config, request, url, workspace: config.workspaces[0] });
           return finalize(response);
         } catch (error) {
           const apiError = error instanceof ApiError
@@ -384,31 +384,31 @@ function pathToRegex(path: string, keys: string[]): RegExp {
   return new RegExp(`^${pattern}$`);
 }
 
-function buildAiWorkEngineProxyUrl(baseUrl: string, path: string, search: string) {
+function buildEngineProxyUrl(baseUrl: string, path: string, search: string) {
   const target = new URL(baseUrl);
-  const trimmedPath = path.replace(/^\/opencode/, "");
+  const trimmedPath = path.replace(/^\/engine/, "");
   target.pathname = trimmedPath.startsWith("/") ? trimmedPath : `/${trimmedPath}`;
   target.search = search;
   return target.toString();
 }
 
-type AiWorkEngineQueryValue = string | number | boolean | null | undefined;
+type EngineQueryValue = string | number | boolean | null | undefined;
 
-async function fetchAiWorkEngineJson(
+async function fetchEngineJson(
   config: ServerConfig,
   workspace: WorkspaceInfo,
   path: string,
-  init: { method: string; body?: unknown; query?: URLSearchParams | Record<string, AiWorkEngineQueryValue> },
+  init: { method: string; body?: unknown; query?: URLSearchParams | Record<string, EngineQueryValue> },
 ) {
-  const connection = resolveWorkspaceAiWorkEngineConnection(config, workspace);
+  const connection = resolveWorkspaceEngineConnection(config, workspace);
   const baseUrl = connection.baseUrl?.trim() ?? "";
   if (!baseUrl) {
-    throw new ApiError(400, "aiwork_unconfigured", "AiWorkEngine base URL is missing for this workspace");
+    throw new ApiError(400, "aiwork_unconfigured", "Engine base URL is missing for this workspace");
   }
 
   const url = new URL(baseUrl);
   url.pathname = path.startsWith("/") ? path : `/${path}`;
-  const directory = resolveAiWorkEngineDirectory(workspace);
+  const directory = resolveEngineDirectory(workspace);
   if (init.query instanceof URLSearchParams) {
     const params = new URLSearchParams(init.query);
     if (directory && !params.has("directory")) {
@@ -435,7 +435,7 @@ async function fetchAiWorkEngineJson(
   if (directory) {
     // Encode directory if it contains non-ASCII characters to match frontend behavior
     const encoded = /[^\x00-\x7F]/.test(directory) ? encodeURIComponent(directory) : directory;
-    headers.set("x-opencode-directory", encoded);
+    headers.set("x-engine-directory", encoded);
   }
 
   const auth = connection.authHeader ?? null;
@@ -452,7 +452,7 @@ async function fetchAiWorkEngineJson(
   const text = await response.text();
   const json = parseJsonResponse(text);
   if (!response.ok) {
-    throw new ApiError(502, "aiwork_request_failed", "AiWorkEngine request failed", {
+    throw new ApiError(502, "aiwork_request_failed", "Engine request failed", {
       status: response.status,
       body: json ?? text,
       path,
@@ -461,7 +461,7 @@ async function fetchAiWorkEngineJson(
   return json;
 }
 
-async function proxyAiWorkEngineRequest(input: {
+async function proxyEngineRequest(input: {
   config: ServerConfig;
   request: Request;
   url: URL;
@@ -469,13 +469,13 @@ async function proxyAiWorkEngineRequest(input: {
   proxyPath?: string;
 }) {
   const workspace = input.workspace;
-  const baseUrl = workspace ? resolveWorkspaceAiWorkEngineConnection(input.config, workspace).baseUrl?.trim() ?? "" : "";
+  const baseUrl = workspace ? resolveWorkspaceEngineConnection(input.config, workspace).baseUrl?.trim() ?? "" : "";
   if (!baseUrl) {
-    throw new ApiError(400, "aiwork_unconfigured", "AiWorkEngine base URL is missing for this workspace");
+    throw new ApiError(400, "aiwork_unconfigured", "Engine base URL is missing for this workspace");
   }
 
   const proxyPath = input.proxyPath ?? input.url.pathname;
-  const targetUrl = buildAiWorkEngineProxyUrl(baseUrl, proxyPath, input.url.search);
+  const targetUrl = buildEngineProxyUrl(baseUrl, proxyPath, input.url.search);
   const headers = new Headers(input.request.headers);
   headers.delete("authorization");
   headers.delete("x-aiwork-host-token");
@@ -483,14 +483,14 @@ async function proxyAiWorkEngineRequest(input: {
   headers.delete("host");
   headers.delete("origin");
 
-  const directory = workspace ? resolveAiWorkEngineDirectory(workspace) : null;
-  if (directory && !headers.has("x-opencode-directory")) {
+  const directory = workspace ? resolveEngineDirectory(workspace) : null;
+  if (directory && !headers.has("x-engine-directory")) {
     // Encode directory if it contains non-ASCII characters to match frontend behavior
     const encoded = /[^\x00-\x7F]/.test(directory) ? encodeURIComponent(directory) : directory;
-    headers.set("x-opencode-directory", encoded);
+    headers.set("x-engine-directory", encoded);
   }
 
-  const auth = workspace ? resolveWorkspaceAiWorkEngineConnection(input.config, workspace).authHeader ?? null : null;
+  const auth = workspace ? resolveWorkspaceEngineConnection(input.config, workspace).authHeader ?? null : null;
   if (auth) {
     headers.set("Authorization", auth);
   }
@@ -504,7 +504,7 @@ async function proxyAiWorkEngineRequest(input: {
       headers,
       body: bufferedBody,
     }).catch(() => {
-      // Command failures are surfaced through the AiWorkEngine event stream.
+      // Command failures are surfaced through the Engine event stream.
     });
     return jsonResponse({ ok: true, accepted: true });
   }
@@ -522,7 +522,7 @@ async function proxyAiWorkEngineRequest(input: {
  * in the upstream response even after it has already decoded the body for us.
  * Without this the browser sees `content-encoding: gzip` on a plain-text
  * payload and bails out with ERR_CONTENT_DECODING_FAILED, breaking any UI
- * code that reaches through /opencode/* (including session.create).
+ * code that reaches through /engine/* (including session.create).
  */
 function sanitizeProxyResponse(response: Response): Response {
   const headers = new Headers(response.headers);
@@ -558,7 +558,7 @@ function withCors(response: Response, request: Request, config: ServerConfig) {
   headers.set("Access-Control-Allow-Origin", allowOrigin);
   headers.set(
     "Access-Control-Allow-Headers",
-    "Authorization, Content-Type, X-AiWork-Host-Token, X-AiWork-Client-Id, X-AiWorkEngine-Directory, X-AiWorkEngine-Directory, x-opencode-directory",
+    "Authorization, Content-Type, X-AiWork-Host-Token, X-AiWork-Client-Id, X-Engine-Directory, X-Engine-Directory, x-engine-directory",
   );
   headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
   headers.set("Vary", "Origin");
@@ -616,11 +616,11 @@ function buildCapabilities(config: ServerConfig): Capabilities {
   const maxBytes = resolveInboxMaxBytes();
 
   const browserProvider = resolveBrowserProvider();
-  const opencodeConfigured = config.workspaces.some((workspace) => Boolean(workspace.opencode?.baseUrl?.trim()));
+  const engineConfigured = config.workspaces.some((workspace) => Boolean(workspace.engine?.baseUrl?.trim()));
   return {
     schemaVersion,
     serverVersion: SERVER_VERSION,
-    opencodeVersion: AIWORK_ENGINE_VERSION,
+    engineVersion: ENGINE_VERSION,
     skills: { read: true, write: writeEnabled, source: "aiwork" },
     hub: {
       skills: {
@@ -638,15 +638,15 @@ function buildCapabilities(config: ServerConfig): Capabilities {
 
     tokens: { scoped: true, scopes: ["owner", "collaborator", "viewer"] },
     proxy: {
-      opencode: opencodeConfigured,
+      engine: engineConfigured,
     },
     toolProviders: {
       browser: browserProvider,
       files: {
         injection: writeEnabled && inboxEnabled,
         outbox: outboxEnabled,
-        inboxPath: ".opencode/aiwork/inbox/",
-        outboxPath: ".opencode/aiwork/outbox/",
+        inboxPath: ".engine/aiwork/inbox/",
+        outboxPath: ".engine/aiwork/outbox/",
         maxBytes,
       },
     },
@@ -693,11 +693,11 @@ function resolveBrowserProvider(): Capabilities["toolProviders"]["browser"] {
 }
 
 function resolveInboxDir(workspaceRoot: string): string {
-  return join(workspaceRoot, ".opencode", "aiwork", "inbox");
+  return join(workspaceRoot, ".engine", "aiwork", "inbox");
 }
 
 function resolveOutboxDir(workspaceRoot: string): string {
-  return join(workspaceRoot, ".opencode", "aiwork", "outbox");
+  return join(workspaceRoot, ".engine", "aiwork", "outbox");
 }
 
 export function normalizeWorkspaceRelativePath(input: string, options: { allowSubdirs: boolean }): string {
@@ -1226,28 +1226,28 @@ function buildConfigTrigger(path: string): ReloadTrigger {
   const name = path.split(/[\\/]/).filter(Boolean).pop();
   return {
     type: "config",
-    name: name || "opencode.json",
+    name: name || "engine.json",
     action: "updated",
     path,
   };
 }
 
 function serializeWorkspace(workspace: ServerConfig["workspaces"][number]) {
-  const { opencodeUsername, opencodePassword, ...rest } = workspace;
-  const opencodeDirectory = resolveAiWorkEngineDirectory(workspace);
-  const opencode =
-    workspace.opencode?.baseUrl || opencodeDirectory || opencodeUsername || opencodePassword
+  const { engineUsername, enginePassword, ...rest } = workspace;
+  const engineDirectory = resolveEngineDirectory(workspace);
+  const engine =
+    workspace.engine?.baseUrl || engineDirectory || engineUsername || enginePassword
       ? {
-          ...workspace.opencode,
-          baseUrl: workspace.opencode?.baseUrl,
-          directory: opencodeDirectory ?? workspace.opencode?.directory ?? undefined,
-          username: workspace.opencode?.username ?? opencodeUsername,
-          password: workspace.opencode?.password ?? opencodePassword,
+          ...workspace.engine,
+          baseUrl: workspace.engine?.baseUrl,
+          directory: engineDirectory ?? workspace.engine?.directory ?? undefined,
+          username: workspace.engine?.username ?? engineUsername,
+          password: workspace.engine?.password ?? enginePassword,
         }
       : undefined;
   return {
     ...rest,
-    opencode,
+    engine,
   };
 }
 
@@ -1299,11 +1299,11 @@ function createRoutes(
   };
 
   addRoute(routes, "GET", "/health", "none", async () => {
-    return jsonResponse({ ok: true, version: SERVER_VERSION, opencodeVersion: AIWORK_ENGINE_VERSION, uptimeMs: Date.now() - config.startedAt });
+    return jsonResponse({ ok: true, version: SERVER_VERSION, engineVersion: ENGINE_VERSION, uptimeMs: Date.now() - config.startedAt });
   });
 
   addRoute(routes, "GET", "/w/:id/health", "none", async () => {
-    return jsonResponse({ ok: true, version: SERVER_VERSION, opencodeVersion: AIWORK_ENGINE_VERSION, uptimeMs: Date.now() - config.startedAt });
+    return jsonResponse({ ok: true, version: SERVER_VERSION, engineVersion: ENGINE_VERSION, uptimeMs: Date.now() - config.startedAt });
   });
 
 
@@ -1315,7 +1315,7 @@ function createRoutes(
     return jsonResponse({
       ok: true,
       version: SERVER_VERSION,
-      opencodeVersion: AIWORK_ENGINE_VERSION,
+      engineVersion: ENGINE_VERSION,
       uptimeMs: Date.now() - config.startedAt,
       readOnly: config.readOnly,
       approval: config.approval,
@@ -1350,7 +1350,7 @@ function createRoutes(
     return jsonResponse({
       ok: true,
       version: SERVER_VERSION,
-      opencodeVersion: AIWORK_ENGINE_VERSION,
+      engineVersion: ENGINE_VERSION,
       uptimeMs: Date.now() - config.startedAt,
       readOnly: config.readOnly,
       approval: config.approval,
@@ -1518,7 +1518,7 @@ function createRoutes(
       name,
       path: workspacePath,
       preset,
-      ...inheritWorkspaceAiWorkEngineConnection(config),
+      ...inheritWorkspaceEngineConnection(config),
     };
 
     config.workspaces = [workspace, ...config.workspaces.filter((entry) => entry.id !== workspace.id)];
@@ -1600,9 +1600,9 @@ function createRoutes(
       summary: "Switched active workspace",
       timestamp: Date.now(),
     });
-    const connection = resolveWorkspaceAiWorkEngineConnection(config, workspace);
+    const connection = resolveWorkspaceEngineConnection(config, workspace);
     if (connection.baseUrl?.trim()) {
-      await reloadAiWorkEngineEngine(config, workspace);
+      await reloadEngineEngine(config, workspace);
     }
     return jsonResponse({ activeId: workspace.id, workspace: serializeWorkspace(workspace), persisted: false });
   });
@@ -1687,36 +1687,36 @@ function createRoutes(
 
   addRoute(routes, "GET", "/workspace/:id/config", "client", async (ctx) => {
     const workspace = await resolveWorkspace(config, ctx.params.id);
-    const opencode = await readAiWorkEngineConfig(workspace.path);
+    const engine = await readEngineConfig(workspace.path);
     const aiwork = await readAiWorkConfig(workspace.path);
     const lastAudit = await readLastAudit(workspace.path, workspace.id);
-    return jsonResponse({ opencode, aiwork, updatedAt: lastAudit?.timestamp ?? null });
+    return jsonResponse({ engine, aiwork, updatedAt: lastAudit?.timestamp ?? null });
   });
 
-  addRoute(routes, "GET", "/workspace/:id/opencode-config", "client", async (ctx) => {
+  addRoute(routes, "GET", "/workspace/:id/engine-config", "client", async (ctx) => {
     const workspace = await resolveWorkspace(config, ctx.params.id);
-    const scope = normalizeAiWorkEngineScope(ctx.url.searchParams.get("scope"));
-    const configPath = resolveAiWorkEngineConfigFilePath(scope, workspace.path);
-    const result = await readRawAiWorkEngineConfig(configPath);
+    const scope = normalizeEngineScope(ctx.url.searchParams.get("scope"));
+    const configPath = resolveEngineConfigFilePath(scope, workspace.path);
+    const result = await readRawEngineConfig(configPath);
     return jsonResponse({ path: configPath, exists: result.exists, content: result.content });
   });
 
-  addRoute(routes, "POST", "/workspace/:id/opencode-config", "client", async (ctx) => {
+  addRoute(routes, "POST", "/workspace/:id/engine-config", "client", async (ctx) => {
     ensureWritable(config);
     requireClientScope(ctx, "collaborator");
     const workspace = await resolveWorkspace(config, ctx.params.id);
     const body = await readJsonBody(ctx.request);
-    const scope = normalizeAiWorkEngineScope(typeof body.scope === "string" ? body.scope : null);
+    const scope = normalizeEngineScope(typeof body.scope === "string" ? body.scope : null);
     const content = typeof body.content === "string" ? body.content : null;
     if (content === null) {
       throw new ApiError(400, "invalid_payload", "content must be a string");
     }
 
-    const configPath = resolveAiWorkEngineConfigFilePath(scope, workspace.path);
+    const configPath = resolveEngineConfigFilePath(scope, workspace.path);
     await requireApproval(ctx, {
       workspaceId: workspace.id,
       action: scope === "global" ? "config.global.write" : "config.write",
-      summary: `Write ${scope} AiWorkEngine config`,
+      summary: `Write ${scope} Engine config`,
       paths: [configPath],
     });
 
@@ -1729,7 +1729,7 @@ function createRoutes(
       actor: ctx.actor ?? { type: "remote" },
       action: scope === "global" ? "config.global.write" : "config.write",
       target: configPath,
-      summary: `Updated ${scope} AiWorkEngine config`,
+      summary: `Updated ${scope} Engine config`,
       timestamp: Date.now(),
     });
 
@@ -1838,8 +1838,8 @@ function createRoutes(
       throw new ApiError(400, "invalid_payload", "sessionId is required");
     }
 
-    // AiWorkEngine session deletion via the upstream API.
-        await fetchAiWorkEngineJson(config, workspace, `/session/${encodeURIComponent(sessionId)}`, {
+    // Engine session deletion via the upstream API.
+        await fetchEngineJson(config, workspace, `/session/${encodeURIComponent(sessionId)}`, {
       method: "DELETE",
     });
 
@@ -1854,24 +1854,24 @@ function createRoutes(
     requireClientScope(ctx, "collaborator");
     const workspace = await resolveWorkspace(config, ctx.params.id);
     const body = await readJsonBody(ctx.request);
-    const opencode = body.opencode as Record<string, unknown> | undefined;
+    const engine = body.engine as Record<string, unknown> | undefined;
     const aiwork = body.aiwork as Record<string, unknown> | undefined;
 
-    if (!opencode && !aiwork) {
-      throw new ApiError(400, "invalid_payload", "opencode or aiwork updates required");
+    if (!engine && !aiwork) {
+      throw new ApiError(400, "invalid_payload", "engine or aiwork updates required");
     }
 
     await requireApproval(ctx, {
       workspaceId: workspace.id,
       action: "config.patch",
       summary: "Patch workspace config",
-      paths: [opencode ? opencodeConfigPath(workspace.path) : null, aiwork ? aiworkConfigPath(workspace.path) : null].filter(Boolean) as string[],
+      paths: [engine ? engineConfigPath(workspace.path) : null, aiwork ? aiworkConfigPath(workspace.path) : null].filter(Boolean) as string[],
     });
 
-    if (opencode) {
-      const configPath = opencodeConfigPath(workspace.path);
-      const nextAiWorkEngine = ensurePlainObject(opencode);
-      const { permission, ...topLevelUpdates } = nextAiWorkEngine;
+    if (engine) {
+      const configPath = engineConfigPath(workspace.path);
+      const nextEngine = ensurePlainObject(engine);
+      const { permission, ...topLevelUpdates } = nextEngine;
 
       if (Object.keys(topLevelUpdates).length) {
         await updateJsoncTopLevel(configPath, topLevelUpdates);
@@ -1879,8 +1879,8 @@ function createRoutes(
 
       const permissionUpdate = ensurePlainObject(permission);
       if (Object.prototype.hasOwnProperty.call(permissionUpdate, "external_directory")) {
-        const existingAiWorkEngine = await readAiWorkEngineConfig(workspace.path);
-        const existingPermission = ensurePlainObject(existingAiWorkEngine.permission);
+        const existingEngine = await readEngineConfig(workspace.path);
+        const existingPermission = ensurePlainObject(existingEngine.permission);
         const nextExternalDirectory = permissionUpdate.external_directory;
         const existingPermissionKeys = Object.keys(existingPermission);
         const removePermissionParent =
@@ -1904,13 +1904,13 @@ function createRoutes(
       workspaceId: workspace.id,
       actor: ctx.actor ?? { type: "remote" },
       action: "config.patch",
-      target: "opencode.json",
+      target: "engine.json",
       summary: "Patched workspace config",
       timestamp: Date.now(),
     });
 
-    if (opencode) {
-      emitReloadEvent(ctx.reloadEvents, workspace, "config", buildConfigTrigger(opencodeConfigPath(workspace.path)));
+    if (engine) {
+      emitReloadEvent(ctx.reloadEvents, workspace, "config", buildConfigTrigger(engineConfigPath(workspace.path)));
     }
 
     return jsonResponse({ updatedAt: Date.now() });
@@ -1928,14 +1928,14 @@ function createRoutes(
     const workspace = await resolveWorkspace(config, ctx.params.id);
     requireClientScope(ctx, "collaborator");
 
-      await reloadAiWorkEngineEngine(config, workspace);
+      await reloadEngineEngine(config, workspace);
 
     await recordAudit(workspace.path, {
       id: shortId(),
       workspaceId: workspace.id,
       actor: ctx.actor ?? { type: "remote" },
       action: "engine.reload",
-      target: workspace.opencode?.baseUrl ?? "opencode",
+      target: workspace.engine?.baseUrl ?? "engine",
       summary: "Reloaded workspace engine",
       timestamp: Date.now(),
     });
@@ -2517,7 +2517,7 @@ function createRoutes(
     const optional = optionalRaw === "1" || optionalRaw === "true";
     const relativePath = normalizeWorkspaceRelativePath(requested, { allowSubdirs: true });
     if (!isSupportedWorkspaceTextFilePath(relativePath)) {
-      throw new ApiError(400, "invalid_path", "Only Markdown and AiWorkEngine plugin text files are supported");
+      throw new ApiError(400, "invalid_path", "Only Markdown and Engine plugin text files are supported");
     }
 
     const absPath = resolveSafeChildPath(workspace.path, relativePath);
@@ -2553,7 +2553,7 @@ function createRoutes(
     const requestedPath = String(body.path ?? "");
     const relativePath = normalizeWorkspaceRelativePath(requestedPath, { allowSubdirs: true });
     if (!isSupportedWorkspaceTextFilePath(relativePath)) {
-      throw new ApiError(400, "invalid_path", "Only Markdown and AiWorkEngine plugin text files are supported");
+      throw new ApiError(400, "invalid_path", "Only Markdown and Engine plugin text files are supported");
     }
 
     if (typeof body.content !== "string") {
@@ -2636,7 +2636,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action: "plugins.add",
       summary: `Add plugin ${spec}`,
-      paths: [opencodeConfigPath(workspace.path)],
+      paths: [engineConfigPath(workspace.path)],
     });
     const changed = await addPlugin(workspace.path, spec);
     await recordAudit(workspace.path, {
@@ -2644,7 +2644,7 @@ function createRoutes(
       workspaceId: workspace.id,
       actor: ctx.actor ?? { type: "remote" },
       action: "plugins.add",
-      target: "opencode.json",
+      target: "engine.json",
       summary: `Added ${spec}`,
       timestamp: Date.now(),
     });
@@ -2669,7 +2669,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action: "plugins.remove",
       summary: `Remove plugin ${name}`,
-      paths: [opencodeConfigPath(workspace.path)],
+      paths: [engineConfigPath(workspace.path)],
     });
     const removed = await removePlugin(workspace.path, name);
     await recordAudit(workspace.path, {
@@ -2677,7 +2677,7 @@ function createRoutes(
       workspaceId: workspace.id,
       actor: ctx.actor ?? { type: "remote" },
       action: "plugins.remove",
-      target: "opencode.json",
+      target: "engine.json",
       summary: `Removed ${name}`,
       timestamp: Date.now(),
     });
@@ -2697,7 +2697,7 @@ function createRoutes(
     const repo = ctx.url.searchParams.get("repo")?.trim();
     const ref = ctx.url.searchParams.get("ref")?.trim();
     const items = await listHubSkills({
-      owner: owner || "aiworkgroup3",
+      owner: owner || "aiworklove",
       repo: repo || "aiwork-hub",
       ref: ref || "main",
     });
@@ -2734,7 +2734,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action: "skills.install_hub",
       summary: `Install hub skill ${name}`,
-      paths: [join(workspace.path, ".opencode", "skills", name)],
+      paths: [join(workspace.path, ".engine", "skills", name)],
     });
 
     const result = await installHubSkill(workspace.path, { name, overwrite, repo });
@@ -2785,7 +2785,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action: "skills.upsert",
       summary: `Upsert skill ${name}`,
-      paths: [join(workspace.path, ".opencode", "skills", name, "SKILL.md")],
+      paths: [join(workspace.path, ".engine", "skills", name, "SKILL.md")],
     });
     const result = await upsertSkill(workspace.path, { name, content, description });
     await recordAudit(workspace.path, {
@@ -2818,7 +2818,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action: "skills.delete",
       summary: `Delete skill ${name}`,
-      paths: [join(workspace.path, ".opencode", "skills", name)],
+      paths: [join(workspace.path, ".engine", "skills", name)],
     });
     const result = await deleteSkill(workspace.path, name);
     await recordAudit(workspace.path, {
@@ -2859,7 +2859,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action: "mcp.add",
       summary: `Add MCP ${name}`,
-      paths: [opencodeConfigPath(workspace.path)],
+      paths: [engineConfigPath(workspace.path)],
     });
     const result = await addMcp(workspace.path, name, configPayload);
     await recordAudit(workspace.path, {
@@ -2867,7 +2867,7 @@ function createRoutes(
       workspaceId: workspace.id,
       actor: ctx.actor ?? { type: "remote" },
       action: "mcp.add",
-      target: "opencode.json",
+      target: "engine.json",
       summary: `Added MCP ${name}`,
       timestamp: Date.now(),
     });
@@ -2889,7 +2889,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action: "mcp.remove",
       summary: `Remove MCP ${name}`,
-      paths: [opencodeConfigPath(workspace.path)],
+      paths: [engineConfigPath(workspace.path)],
     });
     const removed = await removeMcp(workspace.path, name);
     await recordAudit(workspace.path, {
@@ -2897,7 +2897,7 @@ function createRoutes(
       workspaceId: workspace.id,
       actor: ctx.actor ?? { type: "remote" },
       action: "mcp.remove",
-      target: "opencode.json",
+      target: "engine.json",
       summary: `Removed MCP ${name}`,
       timestamp: Date.now(),
     });
@@ -2930,7 +2930,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action,
       summary,
-      paths: [opencodeConfigPath(workspace.path)],
+      paths: [engineConfigPath(workspace.path)],
     });
     const updated = await setMcpEnabled(workspace.path, name, enabled);
     if (!updated) {
@@ -2941,7 +2941,7 @@ function createRoutes(
       workspaceId: workspace.id,
       actor: ctx.actor ?? { type: "remote" },
       action,
-      target: "opencode.json",
+      target: "engine.json",
       summary: `${enabled ? "Enabled" : "Disabled"} MCP ${name}`,
       timestamp: Date.now(),
     });
@@ -2962,7 +2962,7 @@ function createRoutes(
     const name = String(ctx.params.name ?? "").trim();
     validateMcpName(name);
 
-    const authStorePath = join(homedir(), ".config", "opencode", "mcp-auth.json");
+    const authStorePath = join(homedir(), ".config", "engine", "mcp-auth.json");
     await requireApproval(ctx, {
       workspaceId: workspace.id,
       action: "mcp.auth.remove",
@@ -2972,13 +2972,13 @@ function createRoutes(
 
     // Best-effort disconnect so any active connection is torn down.
     try {
-      await fetchAiWorkEngineJson(config, workspace, `/mcp/${encodeURIComponent(name)}/disconnect`, { method: "POST" });
+      await fetchEngineJson(config, workspace, `/mcp/${encodeURIComponent(name)}/disconnect`, { method: "POST" });
     } catch {
       // ignore
     }
 
     try {
-      await fetchAiWorkEngineJson(config, workspace, `/mcp/${encodeURIComponent(name)}/auth`, { method: "DELETE" });
+      await fetchEngineJson(config, workspace, `/mcp/${encodeURIComponent(name)}/auth`, { method: "DELETE" });
     } catch (error) {
       // Treat missing credentials as a successful logout (idempotent).
       if (
@@ -3029,7 +3029,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action: "commands.upsert",
       summary: `Upsert command ${name}`,
-      paths: [join(workspace.path, ".opencode", "commands", `${sanitizeCommandName(name)}.md`)],
+      paths: [join(workspace.path, ".engine", "commands", `${sanitizeCommandName(name)}.md`)],
     });
     const path = await upsertCommand(workspace.path, {
       name,
@@ -3068,7 +3068,7 @@ function createRoutes(
       workspaceId: workspace.id,
       action: "commands.delete",
       summary: `Delete command ${name}`,
-      paths: [join(workspace.path, ".opencode", "commands", `${sanitizeCommandName(name)}.md`)],
+      paths: [join(workspace.path, ".engine", "commands", `${sanitizeCommandName(name)}.md`)],
     });
     await deleteCommand(workspace.path, name);
     await recordAudit(workspace.path, {
@@ -3076,7 +3076,7 @@ function createRoutes(
       workspaceId: workspace.id,
       actor: ctx.actor ?? { type: "remote" },
       action: "commands.delete",
-      target: join(workspace.path, ".opencode", "commands"),
+      target: join(workspace.path, ".engine", "commands"),
       summary: `Deleted command ${name}`,
       timestamp: Date.now(),
     });
@@ -3085,7 +3085,7 @@ function createRoutes(
       type: "command",
       name: sanitizeCommandName(name),
       action: "removed",
-      path: join(workspace.path, ".opencode", "commands", `${sanitizeCommandName(name)}.md`),
+      path: join(workspace.path, ".engine", "commands", `${sanitizeCommandName(name)}.md`),
     });
     return jsonResponse({ ok: true });
   });
@@ -3210,7 +3210,7 @@ function remapSessionReadError(error: unknown): never {
     const upstreamStatus =
       details && typeof details === "object" && "status" in details ? Number((details as { status?: unknown }).status) : NaN;
     if (upstreamStatus === 400) {
-      throw new ApiError(400, "invalid_query", "AiWorkEngine rejected the session read request", details);
+      throw new ApiError(400, "invalid_query", "Engine rejected the session read request", details);
     }
     if (upstreamStatus === 404) {
       throw new ApiError(404, "session_not_found", "Session not found", details);
@@ -3226,7 +3226,7 @@ async function listWorkspaceSessions(
 ) {
   try {
     return buildSessionList(
-      await fetchAiWorkEngineJson(config, workspace, "/session", {
+      await fetchEngineJson(config, workspace, "/session", {
         method: "GET",
         query: {
           roots: input.roots,
@@ -3244,7 +3244,7 @@ async function listWorkspaceSessions(
 async function readWorkspaceSession(config: ServerConfig, workspace: WorkspaceInfo, sessionId: string) {
   try {
     return buildSession(
-      await fetchAiWorkEngineJson(config, workspace, `/session/${encodeURIComponent(sessionId)}`, {
+      await fetchEngineJson(config, workspace, `/session/${encodeURIComponent(sessionId)}`, {
         method: "GET",
       }),
     );
@@ -3261,7 +3261,7 @@ async function readWorkspaceSessionMessages(
 ) {
   try {
     return buildSessionMessages(
-      await fetchAiWorkEngineJson(config, workspace, `/session/${encodeURIComponent(sessionId)}/message`, {
+      await fetchEngineJson(config, workspace, `/session/${encodeURIComponent(sessionId)}/message`, {
         method: "GET",
         query: { limit: input.limit },
       }),
@@ -3279,17 +3279,17 @@ async function readWorkspaceSessionSnapshot(
 ) {
   try {
     const [session, messages, todos, statuses] = await Promise.all([
-      fetchAiWorkEngineJson(config, workspace, `/session/${encodeURIComponent(sessionId)}`, {
+      fetchEngineJson(config, workspace, `/session/${encodeURIComponent(sessionId)}`, {
         method: "GET",
       }),
-      fetchAiWorkEngineJson(config, workspace, `/session/${encodeURIComponent(sessionId)}/message`, {
+      fetchEngineJson(config, workspace, `/session/${encodeURIComponent(sessionId)}/message`, {
         method: "GET",
         query: { limit: input.limit },
       }),
-      fetchAiWorkEngineJson(config, workspace, `/session/${encodeURIComponent(sessionId)}/todo`, {
+      fetchEngineJson(config, workspace, `/session/${encodeURIComponent(sessionId)}/todo`, {
         method: "GET",
       }),
-      fetchAiWorkEngineJson(config, workspace, "/session/status", {
+      fetchEngineJson(config, workspace, "/session/status", {
         method: "GET",
       }),
     ]);
@@ -3425,8 +3425,8 @@ function serializeWorkspaceConfigEntry(workspace: WorkspaceInfo): Record<string,
     name: workspace.name,
     preset: workspace.preset,
     ...(workspace.displayName ? { displayName: workspace.displayName } : {}),
-    ...(workspace.opencodeUsername ? { opencodeUsername: workspace.opencodeUsername } : {}),
-    ...(workspace.opencodePassword ? { opencodePassword: workspace.opencodePassword } : {}),
+    ...(workspace.engineUsername ? { engineUsername: workspace.engineUsername } : {}),
+    ...(workspace.enginePassword ? { enginePassword: workspace.enginePassword } : {}),
   };
 }
 
@@ -3457,41 +3457,41 @@ async function persistServerWorkspaceState(config: ServerConfig): Promise<boolea
   }
 }
 
-function normalizeAiWorkEngineScope(value: string | null | undefined): "project" | "global" {
+function normalizeEngineScope(value: string | null | undefined): "project" | "global" {
   return value?.trim().toLowerCase() === "global" ? "global" : "project";
 }
 
 /**
- * Directory that contains global `opencode.json` / `opencode.jsonc`, aligned with AiWorkEngine:
- * `AIWORK_ENGINE_CONFIG_DIR` (managed AiWork / dev isolation), else `XDG_CONFIG_HOME/opencode`,
- * else `~/.config/opencode`.
+ * Directory that contains global `engine.json` / `engine.jsonc`, aligned with Engine:
+ * `ENGINE_CONFIG_DIR` (managed AiWork / dev isolation), else `XDG_CONFIG_HOME/engine`,
+ * else `~/.config/engine`.
  */
-function resolveGlobalAiWorkEngineConfigBaseDir(): string {
-  const explicitDir = process.env.AIWORK_ENGINE_CONFIG_DIR?.trim();
+function resolveGlobalEngineConfigBaseDir(): string {
+  const explicitDir = process.env.ENGINE_CONFIG_DIR?.trim();
   if (explicitDir) {
     return explicitDir;
   }
   const xdgConfig = process.env.XDG_CONFIG_HOME?.trim();
   if (xdgConfig) {
-    return join(xdgConfig, "opencode");
+    return join(xdgConfig, "engine");
   }
-  return join(homedir(), ".config", "opencode");
+  return join(homedir(), ".config", "engine");
 }
 
-function resolveAiWorkEngineConfigFilePath(scope: "project" | "global", workspaceRoot: string): string {
+function resolveEngineConfigFilePath(scope: "project" | "global", workspaceRoot: string): string {
   if (scope === "global") {
-    const base = resolveGlobalAiWorkEngineConfigBaseDir();
-    const jsoncPath = join(base, "opencode.jsonc");
-    const jsonPath = join(base, "opencode.json");
+    const base = resolveGlobalEngineConfigBaseDir();
+    const jsoncPath = join(base, "engine.jsonc");
+    const jsonPath = join(base, "engine.json");
     if (existsSync(jsoncPath)) return jsoncPath;
     if (existsSync(jsonPath)) return jsonPath;
     return jsoncPath;
   }
-  return opencodeConfigPath(workspaceRoot);
+  return engineConfigPath(workspaceRoot);
 }
 
-async function readAiWorkEngineConfig(workspaceRoot: string): Promise<Record<string, unknown>> {
-  const { data } = await readJsoncFile(opencodeConfigPath(workspaceRoot), {} as Record<string, unknown>);
+async function readEngineConfig(workspaceRoot: string): Promise<Record<string, unknown>> {
+  const { data } = await readJsoncFile(engineConfigPath(workspaceRoot), {} as Record<string, unknown>);
   return data;
 }
 
@@ -3506,14 +3506,14 @@ async function readAiWorkConfig(workspaceRoot: string): Promise<Record<string, u
   }
 }
 
-function resolveAiWorkEngineDirectory(workspace: WorkspaceInfo): string | null {
-  const explicit = workspace.opencode?.directory?.trim() ?? "";
+function resolveEngineDirectory(workspace: WorkspaceInfo): string | null {
+  const explicit = workspace.engine?.directory?.trim() ?? "";
   if (explicit) return explicit;
   const root = workspace.path?.trim() ?? "";
   return root || null;
 }
 
-function buildAiWorkEngineReloadUrl(baseUrl: string, directory?: string | null): string {
+function buildEngineReloadUrl(baseUrl: string, directory?: string | null): string {
   try {
     const url = new URL(baseUrl);
     url.pathname = "/instance/dispose";
@@ -3523,11 +3523,11 @@ function buildAiWorkEngineReloadUrl(baseUrl: string, directory?: string | null):
     }
     return url.toString();
   } catch {
-    throw new ApiError(400, "aiwork_url_invalid", "AiWorkEngine base URL is invalid");
+    throw new ApiError(400, "aiwork_url_invalid", "Engine base URL is invalid");
   }
 }
 
-function parseAiWorkEngineErrorBody(input: string): unknown {
+function parseEngineErrorBody(input: string): unknown {
   const trimmed = input.trim();
   if (!trimmed) return null;
   try {
@@ -3537,23 +3537,23 @@ function parseAiWorkEngineErrorBody(input: string): unknown {
   }
 }
 
-async function reloadAiWorkEngineEngine(config: ServerConfig, workspace: WorkspaceInfo): Promise<void> {
-  const connection = resolveWorkspaceAiWorkEngineConnection(config, workspace);
+async function reloadEngineEngine(config: ServerConfig, workspace: WorkspaceInfo): Promise<void> {
+  const connection = resolveWorkspaceEngineConnection(config, workspace);
   const baseUrl = connection.baseUrl?.trim() ?? "";
   if (!baseUrl) {
-    throw new ApiError(400, "aiwork_unconfigured", "AiWorkEngine base URL is missing for this workspace");
+    throw new ApiError(400, "aiwork_unconfigured", "Engine base URL is missing for this workspace");
   }
 
-  const directory = resolveAiWorkEngineDirectory(workspace);
-  const targetUrl = buildAiWorkEngineReloadUrl(baseUrl, directory);
+  const directory = resolveEngineDirectory(workspace);
+  const targetUrl = buildEngineReloadUrl(baseUrl, directory);
   const headers: Record<string, string> = {};
   const auth = connection.authHeader ?? null;
   if (auth) headers.Authorization = auth;
 
   const response = await fetch(targetUrl, { method: "POST", headers });
   if (response.ok) return;
-  const body = parseAiWorkEngineErrorBody(await response.text());
-  throw new ApiError(502, "aiwork_reload_failed", "AiWorkEngine reload failed", {
+  const body = parseEngineErrorBody(await response.text());
+  throw new ApiError(502, "aiwork_reload_failed", "Engine reload failed", {
     status: response.status,
     body,
   });
@@ -3562,7 +3562,7 @@ async function reloadAiWorkEngineEngine(config: ServerConfig, workspace: Workspa
 async function writeAiWorkConfig(workspaceRoot: string, payload: Record<string, unknown>, merge: boolean): Promise<void> {
   const path = aiworkConfigPath(workspaceRoot);
   const next = merge ? { ...(await readAiWorkConfig(workspaceRoot)), ...payload } : payload;
-  await ensureDir(join(workspaceRoot, ".opencode"));
+  await ensureDir(join(workspaceRoot, ".engine"));
   await writeFile(path, JSON.stringify(next, null, 2) + "\n", "utf8");
 }
 

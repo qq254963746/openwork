@@ -10,8 +10,8 @@ import {
 } from "react";
 import type { UIMessage } from "ai";
 import { useQuery } from "@tanstack/react-query";
-import type { SessionStatus } from "@aiwork-engine/sdk/v2/client";
-import type { QuestionInfo } from "@aiwork-engine/sdk/v2/client";
+import type { SessionStatus } from "@engine/sdk/v2/client";
+import type { QuestionInfo } from "@engine/sdk/v2/client";
 
 import { createClient, unwrap } from "../../../../app/lib/engine";
 import { abortSessionSafe, revertSession } from "../../../../app/lib/engine-session";
@@ -92,7 +92,7 @@ export type SessionSurfaceProps = {
   workspaceId: string;
   workspaceRoot: string;
   sessionId: string;
-  opencodeBaseUrl: string;
+  engineBaseUrl: string;
   aiworkToken: string;
   developerMode: boolean;
   /** When true, assistant `reasoning` parts render in the Thinking collapsible (Settings → Show model reasoning). */
@@ -109,7 +109,7 @@ export type SessionSurfaceProps = {
   onModelVariantChange: (value: string | null) => void;
   agentLabel: string;
   selectedAgent: string | null;
-  listAgents: () => Promise<import("@aiwork-engine/sdk/v2/client").Agent[]>;
+  listAgents: () => Promise<import("@engine/sdk/v2/client").Agent[]>;
   onSelectAgent: (agent: string | null) => void;
   listCommands: () => Promise<import("../../../../app/types").SlashCommandOption[]>;
   recentFiles: string[];
@@ -242,9 +242,9 @@ export function SessionSurface(props: SessionSurfaceProps) {
   const scrollToLatestAfterSendRef = useRef<(() => void) | null>(null);
   const attachmentsRef = useRef<ComposerAttachment[]>([]);
   attachmentsRef.current = attachments;
-  const aiWorkEngineClient = useMemo(
-    () => createClient(props.opencodeBaseUrl, undefined, { token: props.aiworkToken, mode: "aiwork" }),
-    [props.opencodeBaseUrl, props.aiworkToken],
+  const engineClient = useMemo(
+    () => createClient(props.engineBaseUrl, undefined, { token: props.aiworkToken, mode: "aiwork" }),
+    [props.engineBaseUrl, props.aiworkToken],
   );
 
   const checkpointClient = useMemo(
@@ -628,7 +628,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     if (!chatStreaming) return;
     setError(null);
     try {
-      await abortSessionSafe(aiWorkEngineClient, props.sessionId);
+      await abortSessionSafe(engineClient, props.sessionId);
       await snapshotQuery.refetch();
       // If we were waiting on an AskQuestion prompt, aborting won't always
       // emit question.replied; clear UI state immediately so the prompt
@@ -640,7 +640,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     } catch (nextError) {
       setError({ message: nextError instanceof Error ? nextError.message : "Failed to stop run." });
     }
-  }, [chatStreaming, aiWorkEngineClient, props.sessionId, snapshotQuery.refetch]);
+  }, [chatStreaming, engineClient, props.sessionId, snapshotQuery.refetch]);
 
   useEffect(() => {
     if (liveStatus.type === "idle") {
@@ -829,8 +829,8 @@ export function SessionSurface(props: SessionSurfaceProps) {
     setEditSubmitting(true);
     setEditConfirmOpen(false);
     try {
-      await abortSessionSafe(aiWorkEngineClient, props.sessionId);
-      await revertSession(aiWorkEngineClient, props.sessionId, msgId);
+      await abortSessionSafe(engineClient, props.sessionId);
+      await revertSession(engineClient, props.sessionId, msgId);
 
       const queryClient = getReactQueryClient();
       const transcriptKeyForSession = reactTranscriptKey(props.workspaceId, props.sessionId);
@@ -933,7 +933,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
       setEditSubmitting(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editAttachments, aiWorkEngineClient, props, snapshotQueryKey]);
+  }, [editAttachments, engineClient, props, snapshotQueryKey]);
 
   /**
    * Called when user clicks "Run" on the inline edit composer.
@@ -1070,7 +1070,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
     let statuses: McpStatusMap = {};
     try {
       if (props.workspaceRoot.trim()) {
-        statuses = unwrap(await aiWorkEngineClient.mcp.status({ directory: props.workspaceRoot.trim() })) as McpStatusMap;
+        statuses = unwrap(await engineClient.mcp.status({ directory: props.workspaceRoot.trim() })) as McpStatusMap;
       }
     } catch {
       statuses = {};
@@ -1327,7 +1327,7 @@ export function SessionSurface(props: SessionSurfaceProps) {
                         onDraftChange={setEditDraft}
                         onSend={handleEditSend}
                         onStop={async () => {
-                          await abortSessionSafe(aiWorkEngineClient, props.sessionId);
+                          await abortSessionSafe(engineClient, props.sessionId);
                         }}
                         busy={editSubmitting || editDiffLoading}
                         disabled={editSubmitting}

@@ -97,7 +97,7 @@ function startWorkspaceReloadWatcher(input: {
             return;
           }
 
-          if (name === "opencode.json" || name === "opencode.jsonc") {
+          if (name === "engine.json" || name === "engine.jsonc") {
             record("config", {
               type: "config",
               name,
@@ -116,8 +116,8 @@ function startWorkspaceReloadWatcher(input: {
             return;
           }
 
-          // If .opencode is created/removed, rescan the relevant trees.
-          if (name === ".opencode") {
+          // If .engine is created/removed, rescan the relevant trees.
+          if (name === ".engine") {
             for (const tree of trees) tree.scheduleRescan();
           }
         },
@@ -138,11 +138,11 @@ function startWorkspaceReloadWatcher(input: {
     }
   }
 
-  const opencodeRoot = join(root, ".opencode");
+  const engineRoot = join(root, ".engine");
 
   trees.push(
     createDirectoryTreeWatcher({
-      rootDir: join(opencodeRoot, "skills"),
+      rootDir: join(engineRoot, "skills"),
       workspace,
       reloadEvents,
       reason: "skills",
@@ -153,7 +153,7 @@ function startWorkspaceReloadWatcher(input: {
   );
   trees.push(
     createDirectoryTreeWatcher({
-      rootDir: join(opencodeRoot, "commands"),
+      rootDir: join(engineRoot, "commands"),
       workspace,
       reloadEvents,
       reason: "commands",
@@ -164,7 +164,7 @@ function startWorkspaceReloadWatcher(input: {
   );
   trees.push(
     createDirectoryTreeWatcher({
-      rootDir: join(opencodeRoot, "plugins"),
+      rootDir: join(engineRoot, "plugins"),
       workspace,
       reloadEvents,
       reason: "plugins",
@@ -175,7 +175,7 @@ function startWorkspaceReloadWatcher(input: {
   );
   trees.push(
     createDirectoryTreeWatcher({
-      rootDir: join(opencodeRoot, "agents"),
+      rootDir: join(engineRoot, "agents"),
       workspace,
       reloadEvents,
       reason: "agents",
@@ -186,7 +186,7 @@ function startWorkspaceReloadWatcher(input: {
   );
   trees.push(
     createDirectoryTreeWatcher({
-      rootDir: join(opencodeRoot, "agent"),
+      rootDir: join(engineRoot, "agent"),
       workspace,
       reloadEvents,
       reason: "agents",

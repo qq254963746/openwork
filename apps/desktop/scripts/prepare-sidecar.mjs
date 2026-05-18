@@ -332,7 +332,7 @@ const buildBunSidecar = (opts) => {
 
 /**
  * Build (if needed) a native sidecar (compiled via its own build script, not
- * Bun's bundler). Used for opencode which ships its own build.ts.
+ * Bun's bundler). Used for engine which ships its own build.ts.
  *
  * @param {object} opts
  * @param {string}   opts.label
@@ -448,8 +448,8 @@ const makeFindBinary = (baseName) => (dir) => {
 // ─── Source directories ───────────────────────────────────────────────────────
 
 const aiworkServerDir = resolve(__dirname, "..", "..", "server");
-const opencodeSourceDir = resolve(__dirname, "..", "..", "..", "opencode");
-const opencodePackageDir = resolve(opencodeSourceDir, "packages", "opencode");
+const engineSourceDir = resolve(__dirname, "..", "..", "..", "engine");
+const enginePackageDir = resolve(engineSourceDir, "packages", "engine");
 
 // chrome-devtools-mcp: bundled as a node_modules dependency — no sidecar build.
 const chromeDevtoolsBaseName = "chrome-devtools-mcp";
@@ -464,27 +464,27 @@ const aiworkServerResult = buildBunSidecar({
   sourceDir: aiworkServerDir,
 });
 
-const opencodeResult = buildNativeSidecar({
-  label: "AiWorkEngine",
-  baseName: "aiworkengine",
-  packageDir: opencodePackageDir,
-  workspaceDir: opencodeSourceDir,
+const engineResult = buildNativeSidecar({
+  label: "Engine",
+  baseName: "engine",
+  packageDir: enginePackageDir,
+  workspaceDir: engineSourceDir,
   // --single: build only for the current platform
   // --skip-install: skip the extra parcel/watcher install inside build.ts
   buildArgs: ["--single", "--skip-install"],
-  findBuiltBinary: makeFindBinary("aiworkengine"),
+  findBuiltBinary: makeFindBinary("engine"),
 });
 
 // ─── macOS ad-hoc signing ─────────────────────────────────────────────────────
 
 const { canonicalPath: aiworkServerCanonicalPath, buildPath: aiworkServerBuildPath, targetPath: aiworkServerTargetPath } =
   aiworkServerResult.paths;
-const { canonicalPath: opencodeCanonicalPath, targetPath: opencodeTargetPath, candidatePath: opencodeCandidatePath } =
-  opencodeResult.paths;
+const { canonicalPath: engineCanonicalPath, targetPath: engineTargetPath, candidatePath: engineCandidatePath } =
+  engineResult.paths;
 
 adHocSignDarwinSidecars([
-  opencodeCanonicalPath,
-  opencodeTargetPath,
+  engineCanonicalPath,
+  engineTargetPath,
   aiworkServerBuildPath,
   aiworkServerCanonicalPath,
   aiworkServerTargetPath,
@@ -493,11 +493,11 @@ adHocSignDarwinSidecars([
 // ─── Write versions.json ──────────────────────────────────────────────────────
 
 const versions = {
-  opencode: {
-    version: opencodeResult.version,
+  engine: {
+    version: engineResult.version,
     sha256:
-      opencodeCandidatePath && existsSync(opencodeCandidatePath)
-        ? sha256File(opencodeCandidatePath)
+      engineCandidatePath && existsSync(engineCandidatePath)
+        ? sha256File(engineCandidatePath)
         : null,
   },
   "aiwork-server": {

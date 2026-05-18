@@ -54,8 +54,8 @@ const externalDirectoryKeyToAuthorizedFolder = (key: string, value: unknown) => 
   return normalizeAuthorizedFolderPath(trimmed.slice(0, -2));
 };
 
-const readAuthorizedFoldersFromConfig = (opencodeConfig: Record<string, unknown>) => {
-  const permission = ensureRecord(opencodeConfig.permission);
+const readAuthorizedFoldersFromConfig = (engineConfig: Record<string, unknown>) => {
+  const permission = ensureRecord(engineConfig.permission);
   const externalDirectory = ensureRecord(permission.external_directory);
   const folders: string[] = [];
   const hiddenEntries: Record<string, unknown> = {};
@@ -157,7 +157,7 @@ export function AuthorizedFoldersPanel(props: AuthorizedFoldersPanelProps) {
       try {
         const config = await aiworkClient.getConfig(aiworkWorkspaceId);
         if (cancelled) return;
-        const next = readAuthorizedFoldersFromConfig(ensureRecord(config.opencode));
+        const next = readAuthorizedFoldersFromConfig(ensureRecord(config.engine));
         setAuthorizedFolders(next.folders);
         setAuthorizedFoldersStatus(
           buildAuthorizedFoldersStatus(Object.keys(next.hiddenEntries).length),
@@ -192,7 +192,7 @@ export function AuthorizedFoldersPanel(props: AuthorizedFoldersPanelProps) {
     try {
       const currentConfig = await aiworkClient.getConfig(aiworkWorkspaceId);
       const currentAuthorizedFolders = readAuthorizedFoldersFromConfig(
-        ensureRecord(currentConfig.opencode),
+        ensureRecord(currentConfig.engine),
       );
       const nextExternalDirectory = mergeAuthorizedFoldersIntoExternalDirectory(
         nextFolders,
@@ -200,7 +200,7 @@ export function AuthorizedFoldersPanel(props: AuthorizedFoldersPanelProps) {
       );
 
       await aiworkClient.patchConfig(aiworkWorkspaceId, {
-        opencode: {
+        engine: {
           permission: {
             external_directory: nextExternalDirectory,
           },

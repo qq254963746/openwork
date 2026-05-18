@@ -119,13 +119,13 @@ const updateTauriConfig = async (nextVersion) => {
   }
 };
 
-const AIWORK_ENGINE_PACKAGE_PATHS = [
-  "opencode/packages/opencode/package.json",
-  "opencode/packages/sdk/js/package.json",
+const ENGINE_PACKAGE_PATHS = [
+  "engine/packages/engine/package.json",
+  "engine/packages/sdk/js/package.json",
 ];
 
-const updateAiWorkEnginePackageJsons = async (nextVersion) => {
-  for (const relPath of AIWORK_ENGINE_PACKAGE_PATHS) {
+const updateEnginePackageJsons = async (nextVersion) => {
+  for (const relPath of ENGINE_PACKAGE_PATHS) {
     const filePath = path.join(REPO_ROOT, relPath);
     const data = await readJson(filePath);
     data.version = nextVersion;
@@ -147,7 +147,7 @@ const main = async () => {
   await updatePackageJson(nextVersion);
   await updateCargoToml(nextVersion);
   await updateTauriConfig(nextVersion);
-  await updateAiWorkEnginePackageJsons(nextVersion);
+  await updateEnginePackageJsons(nextVersion);
 
   console.log(
     JSON.stringify(
@@ -161,7 +161,7 @@ const main = async () => {
           "apps/server/package.json",
           "apps/desktop/src-tauri/Cargo.toml",
           "apps/desktop/src-tauri/tauri.conf.json",
-          ...AIWORK_ENGINE_PACKAGE_PATHS,
+          ...ENGINE_PACKAGE_PATHS,
         ],
       },
       null,

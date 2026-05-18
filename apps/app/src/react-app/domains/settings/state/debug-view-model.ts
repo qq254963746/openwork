@@ -5,7 +5,7 @@ import {
   appBuildInfo as appBuildInfoCmd,
   engineInfo as engineInfoCmd,
   engineStart as engineStartCmd,
-  nukeAiWorkAndAiWorkEngineConfigAndExit,
+  nukeAiWorkAndEngineConfigAndExit,
   openDesktopUrl,
   aiworkServerInfo as aiworkServerInfoCmd,
   aiworkServerRestart as aiworkServerRestartCmd,
@@ -137,7 +137,7 @@ function describeEngine(info: EngineInfo | null) {
     lines: [
       t("settings.debug_base_url", { url: info?.baseUrl ?? "—" }),
       t("settings.debug_runtime", { runtime: info?.runtime ?? "—" }),
-      t("settings.diag_aiwork_binary", { binary: formatAiWorkEngineBinary(info) }),
+      t("settings.diag_aiwork_binary", { binary: formatEngineBinary(info) }),
       t("settings.debug_pid", { pid: info?.pid ? String(info.pid) : "—" }),
       t("settings.debug_hostname", { hostname: info?.hostname ?? "—" }),
       t("settings.debug_port", { port: info?.port ? String(info.port) : "—" }),
@@ -148,14 +148,14 @@ function describeEngine(info: EngineInfo | null) {
   };
 }
 
-function formatAiWorkEngineBinary(info: EngineInfo | null) {
-  return formatBinaryWithSource(info?.opencodeBinPath, info?.opencodeBinSource);
+function formatEngineBinary(info: EngineInfo | null) {
+  return formatBinaryWithSource(info?.engineBinPath, info?.engineBinSource);
 }
 
-function formatManagedAiWorkEngineBinary(info: AiWorkServerInfo | null) {
+function formatManagedEngineBinary(info: AiWorkServerInfo | null) {
   return formatBinaryWithSource(
-    info?.managedAiWorkEngineBinPath,
-    info?.managedAiWorkEngineBinSource,
+    info?.managedEngineBinPath,
+    info?.managedEngineBinSource,
   );
 }
 
@@ -172,7 +172,7 @@ function describeAiWorkServer(info: AiWorkServerInfo | null) {
     ...statusPill(running),
     lines: [
       t("settings.debug_base_url", { url: info?.baseUrl ?? "—" }),
-      t("settings.diag_aiwork_binary", { binary: formatManagedAiWorkEngineBinary(info) }),
+      t("settings.diag_aiwork_binary", { binary: formatManagedEngineBinary(info) }),
       t("settings.debug_connect_url", { url: info?.connectUrl ?? "—" }),
       t("settings.debug_lan_url", { url: info?.lanUrl ?? "—" }),
       t("settings.debug_mdns_url", { url: info?.mdnsUrl ?? "—" }),
@@ -184,7 +184,7 @@ function describeAiWorkServer(info: AiWorkServerInfo | null) {
   };
 }
 
-function describeAiWorkEngineConnect(engine: EngineInfo | null) {
+function describeEngineConnect(engine: EngineInfo | null) {
   const running = Boolean(engine?.baseUrl);
   return {
     ...statusPill(running),
@@ -214,9 +214,9 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
   const [engineInfoState, setEngineInfoState] = useState<EngineInfo | null>(null);
   const [appBuild, setAppBuild] = useState<AppBuildInfo | null>(null);
   const [runtimeDebugStatus, setRuntimeDebugStatus] = useState<string | null>(null);
-  const [opencodeRestarting, setAiWorkEngineRestarting] = useState(false);
+  const [engineRestarting, setEngineRestarting] = useState(false);
   const [aiworkServerRestarting, setAiWorkServerRestarting] = useState(false);
-  const [opencodeServiceStatus, setAiWorkEngineServiceStatus] = useState<{
+  const [engineServiceStatus, setEngineServiceStatus] = useState<{
     tone: "success" | "error";
     message: string;
   } | null>(null);
@@ -224,7 +224,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     tone: "success" | "error";
     message: string;
   } | null>(null);
-  const [opencodeLogStatus, setAiWorkEngineLogStatus] = useState<string | null>(null);
+  const [engineLogStatus, setEngineLogStatus] = useState<string | null>(null);
   const [aiworkLogStatus, setAiWorkLogStatus] = useState<string | null>(null);
   const [serviceRestartError, setServiceRestartError] = useState<string | null>(null);
   const [resetModalBusy, setResetModalBusy] = useState(false);
@@ -278,7 +278,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     () => ({
       appVersionLabel: appBuild?.version ?? "—",
       appCommitLabel: appBuild?.gitSha ?? "—",
-      opencodeVersionLabel: engineInfoState?.baseUrl ? "managed" : "—",
+      engineVersionLabel: engineInfoState?.baseUrl ? "managed" : "—",
       aiworkServerVersionLabel: aiworkServerSnapshot.aiworkServerDiagnostics?.version ?? "—",
     }),
     [
@@ -328,8 +328,8 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     () => describeAiWorkServer(aiworkServerSnapshot.aiworkServerHostInfo),
     [aiworkServerSnapshot.aiworkServerHostInfo],
   );
-  const opencodeConnectCard = useMemo(
-    () => describeAiWorkEngineConnect(engineInfoState),
+  const engineConnectCard = useMemo(
+    () => describeEngineConnect(engineInfoState),
     [engineInfoState],
   );
 
@@ -469,26 +469,26 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     return info;
   }, [aiworkServerStore, refreshEngineInfo]);
 
-  const onRestartAiWorkEngine = useCallback(async () => {
-    setAiWorkEngineRestarting(true);
-    setAiWorkEngineServiceStatus(null);
+  const onRestartEngine = useCallback(async () => {
+    setEngineRestarting(true);
+    setEngineServiceStatus(null);
     setServiceRestartError(null);
     try {
       await bootFullEngineStack();
-      setAiWorkEngineServiceStatus({
+      setEngineServiceStatus({
         tone: "success",
         message: t("settings.restart_succeeded_template", { service: "AiWork" }),
       });
       pushDeveloperLog("Restarted AiWork via engine_start");
     } catch (error) {
       const message = error instanceof Error ? error.message : safeStringify(error);
-      setAiWorkEngineServiceStatus({
+      setEngineServiceStatus({
         tone: "error",
         message: `${t("settings.restart_failed_template", { service: "AiWork" })} ${message}`,
       });
       setServiceRestartError(message);
     } finally {
-      setAiWorkEngineRestarting(false);
+      setEngineRestarting(false);
     }
   }, [bootFullEngineStack, pushDeveloperLog]);
 
@@ -528,24 +528,24 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     [],
   );
 
-  const onCopyAiWorkEngineLogs = useCallback(async () => {
+  const onCopyEngineLogs = useCallback(async () => {
     const text = formatServiceLogs(engineInfoState?.lastStdout, engineInfoState?.lastStderr);
     if (!text) {
-      setAiWorkEngineLogStatus(t("settings.no_logs_captured"));
+      setEngineLogStatus(t("settings.no_logs_captured"));
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      setAiWorkEngineLogStatus(t("settings.copied_service_logs", { service: "AiWork" }));
+      setEngineLogStatus(t("settings.copied_service_logs", { service: "AiWork" }));
     } catch (error) {
-      setAiWorkEngineLogStatus(error instanceof Error ? error.message : safeStringify(error));
+      setEngineLogStatus(error instanceof Error ? error.message : safeStringify(error));
     }
   }, [engineInfoState?.lastStderr, engineInfoState?.lastStdout, formatServiceLogs]);
 
-  const onExportAiWorkEngineLogs = useCallback(async () => {
+  const onExportEngineLogs = useCallback(async () => {
     const text = formatServiceLogs(engineInfoState?.lastStdout, engineInfoState?.lastStderr);
     if (!text) {
-      setAiWorkEngineLogStatus(t("settings.no_logs_captured"));
+      setEngineLogStatus(t("settings.no_logs_captured"));
       return;
     }
     try {
@@ -554,9 +554,9 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
         text,
         "text/plain",
       );
-      setAiWorkEngineLogStatus(t("settings.exported_developer_log"));
+      setEngineLogStatus(t("settings.exported_developer_log"));
     } catch (error) {
-      setAiWorkEngineLogStatus(error instanceof Error ? error.message : safeStringify(error));
+      setEngineLogStatus(error instanceof Error ? error.message : safeStringify(error));
     }
   }, [engineInfoState?.lastStderr, engineInfoState?.lastStdout, formatServiceLogs]);
 
@@ -626,7 +626,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     [pushDeveloperLog, setRouteError],
   );
 
-  const onNukeAiWorkAndAiWorkEngineConfig = useCallback(async () => {
+  const onNukeAiWorkAndEngineConfig = useCallback(async () => {
     const confirmed =
       typeof window === "undefined"
         ? true
@@ -637,7 +637,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     setNukeConfigBusy(true);
     setNukeConfigStatus(null);
     try {
-      await nukeAiWorkAndAiWorkEngineConfigAndExit();
+      await nukeAiWorkAndEngineConfigAndExit();
     } catch (error) {
       setNukeConfigStatus(error instanceof Error ? error.message : safeStringify(error));
     } finally {
@@ -684,21 +684,21 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       resetStatus,
       startupStatus,
       workspaceDebugEventsStatus,
-      opencodeRestarting,
+      engineRestarting,
       aiworkServerRestarting,
-      opencodeServiceStatus,
+      engineServiceStatus,
       aiworkServiceStatus,
-      opencodeLogStatus,
+      engineLogStatus,
       aiworkLogStatus,
-      onCopyAiWorkEngineLogs,
-      onExportAiWorkEngineLogs,
+      onCopyEngineLogs,
+      onExportEngineLogs,
       onCopyAiWorkLogs,
       onExportAiWorkLogs,
       serviceRestartError,
-      onRestartAiWorkEngine,
+      onRestartEngine,
       onRestartAiWorkServer,
       engineCard,
-      opencodeConnectCard,
+      engineConnectCard,
       aiworkCard,
       aiworkServerDiagnostics: aiworkServerSnapshot.aiworkServerDiagnostics,
       runtimeWorkspaceId,
@@ -711,11 +711,11 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       aiworkAuditEntries: aiworkServerSnapshot.aiworkAuditEntries,
       aiworkAuditStatus: auditStatusPill(aiworkServerSnapshot.aiworkAuditStatus),
       aiworkAuditError: aiworkServerSnapshot.aiworkAuditError,
-      opencodeConnectStatus: null,
-      opencodeDevModeEnabled: appBuild?.aiworkDevMode === true,
+      engineConnectStatus: null,
+      engineDevModeEnabled: appBuild?.aiworkDevMode === true,
       nukeConfigBusy,
       nukeConfigStatus,
-      onNukeAiWorkAndAiWorkEngineConfig,
+      onNukeAiWorkAndEngineConfig,
     }),
     [
       appBuild?.aiworkDevMode,
@@ -734,22 +734,22 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       onCopyRuntimeDebugReport,
       onExportDeveloperLog,
       onExportRuntimeDebugReport,
-      onNukeAiWorkAndAiWorkEngineConfig,
+      onNukeAiWorkAndEngineConfig,
       onOpenResetModal,
       onPickEngineBinary,
       onResetStartupPreference,
-      onRestartAiWorkEngine,
+      onRestartEngine,
       onRestartAiWorkServer,
       onSetEngineSource,
       onStopHost,
-      onCopyAiWorkEngineLogs,
+      onCopyEngineLogs,
       onCopyAiWorkLogs,
-      onExportAiWorkEngineLogs,
+      onExportEngineLogs,
       onExportAiWorkLogs,
-      opencodeConnectCard,
-      opencodeLogStatus,
-      opencodeRestarting,
-      opencodeServiceStatus,
+      engineConnectCard,
+      engineLogStatus,
+      engineRestarting,
+      engineServiceStatus,
       aiworkCard,
       aiworkLogStatus,
       aiworkServiceStatus,

@@ -1,11 +1,11 @@
 /** @jsxImportSource react */
 import type { UIMessage, UIMessageChunk, ChatTransport, DynamicToolUIPart } from "ai";
-import type { Part } from "@aiwork-engine/sdk/v2/client";
+import type { Part } from "@engine/sdk/v2/client";
 
 import { abortSessionSafe } from "../../../../app/lib/engine-session";
 import type { AiWorkSessionSnapshot } from "../../../../app/lib/aiwork-server";
 import { normalizeEvent, safeStringify } from "../../../../app/utils";
-import type { AiWorkEngineEvent } from "../../../../app/types";
+import type { EngineEvent } from "../../../../app/types";
 import { createClient } from "../../../../app/lib/engine";
 
 type TransportOptions = {
@@ -91,7 +91,7 @@ export function snapshotToUIMessages(snapshot: AiWorkSessionSnapshot): UIMessage
           type: "text",
           text: getTextPartValue(part),
           state: "done" as const,
-          providerMetadata: { opencode: { partId: part.id } },
+          providerMetadata: { engine: { partId: part.id } },
         }];
       }
       if (part.type === "reasoning") {
@@ -99,7 +99,7 @@ export function snapshotToUIMessages(snapshot: AiWorkSessionSnapshot): UIMessage
           type: "reasoning",
           text: getTextPartValue(part),
           state: "done" as const,
-          providerMetadata: { opencode: { partId: part.id } },
+          providerMetadata: { engine: { partId: part.id } },
         }];
       }
       if (part.type === "file") {
@@ -110,15 +110,15 @@ export function snapshotToUIMessages(snapshot: AiWorkSessionSnapshot): UIMessage
               url: record.url,
               filename: record.filename,
               mediaType: record.mime ?? "application/octet-stream",
-              providerMetadata: { opencode: { partId: part.id } },
+              providerMetadata: { engine: { partId: part.id } },
             }]
           : [];
       }
       if (part.type === "tool") {
-        return [{ ...mapToolPart(part), providerMetadata: { opencode: { partId: part.id } } }];
+        return [{ ...mapToolPart(part), providerMetadata: { engine: { partId: part.id } } }];
       }
       if (part.type === "step-start") {
-        return [{ type: "step-start", providerMetadata: { opencode: { partId: part.id } } }];
+        return [{ type: "step-start", providerMetadata: { engine: { partId: part.id } } }];
       }
       return [];
     }),
@@ -234,7 +234,7 @@ function handleToolPart(
 function handleEventChunk(
   controller: ReadableStreamDefaultController<UIMessageChunk>,
   state: InternalPartState,
-  event: AiWorkEngineEvent,
+  event: EngineEvent,
   sessionId: string,
 ) {
   if (state.streamFinished) return;

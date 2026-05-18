@@ -8,7 +8,7 @@ import {
   persistThemeMode,
   applyThemeMode,
 } from "../../app/theme";
-import type { ReadGlobalAiWorkEngineConfigInput } from "../../app/lib/global-engine-disabled-providers";
+import type { ReadGlobalEngineConfigInput } from "../../app/lib/global-engine-disabled-providers";
 import { createClient, unwrap } from "../../app/lib/engine";
 import {
   buildAiWorkWorkspaceBaseUrl,
@@ -583,11 +583,11 @@ export function SettingsRoute() {
         setProviderDefaults,
         setProviderConnectedIds,
         setDisabledProviders,
-        markAiWorkEngineConfigReloadRequired: () => {
+        markEngineConfigReloadRequired: () => {
           setConfigActionStatus(t("settings.config_updated"));
           reloadCoordinator.markReloadRequired("config", {
             type: "config",
-            name: "opencode.json",
+            name: "engine.json",
             action: "updated",
           });
         },
@@ -635,21 +635,21 @@ export function SettingsRoute() {
     [errorsByWorkspaceId, sessionsByWorkspaceId, workspaces],
   );
 
-  const opencodeBaseUrl = useMemo(() => {
+  const engineBaseUrl = useMemo(() => {
     if (!selectedWorkspace || !selectedWorkspaceId || !baseUrl) return "";
     const mounted = buildAiWorkWorkspaceBaseUrl(baseUrl, selectedWorkspaceId) ?? baseUrl;
-    return `${mounted.replace(/\/+$/, "")}/opencode`;
+    return `${mounted.replace(/\/+$/, "")}/engine`;
   }, [baseUrl, selectedWorkspace, selectedWorkspaceId]);
 
-  const aiWorkEngineClient = useMemo(
+  const engineClient = useMemo(
     () =>
-      opencodeBaseUrl && token
-        ? createClient(opencodeBaseUrl, selectedWorkspaceRoot || undefined, {
+      engineBaseUrl && token
+        ? createClient(engineBaseUrl, selectedWorkspaceRoot || undefined, {
             token,
             mode: "aiwork",
           })
         : null,
-    [opencodeBaseUrl, selectedWorkspaceRoot, token],
+    [engineBaseUrl, selectedWorkspaceRoot, token],
   );
 
   const handleCreateTaskInWorkspace = useCallback(
@@ -660,14 +660,14 @@ export function SettingsRoute() {
       void (async () => {
         // When rendered inside settings, the sidebar's “New Task” should create a session
         // (not just navigate to an empty session route).
-        if (!aiWorkEngineClient || id !== selectedWorkspaceId) {
+        if (!engineClient || id !== selectedWorkspaceId) {
           navigate(workspaceSessionRoute(id));
           return;
         }
 
         try {
           const directory = toSessionTransportDirectory(selectedWorkspaceRoot) || undefined;
-          const session = unwrap(await aiWorkEngineClient.session.create({ directory }));
+          const session = unwrap(await engineClient.session.create({ directory }));
           navigate(workspaceSessionRoute(id, session.id));
         } catch (error) {
           setRouteError(describeRouteError(error));
@@ -675,15 +675,15 @@ export function SettingsRoute() {
         }
       })();
     },
-    [navigate, aiWorkEngineClient, selectedWorkspaceId, selectedWorkspaceRoot],
+    [navigate, engineClient, selectedWorkspaceId, selectedWorkspaceRoot],
   );
 
   useEffect(() => {
-    setActiveClient(aiWorkEngineClient);
-  }, [aiWorkEngineClient]);
+    setActiveClient(engineClient);
+  }, [engineClient]);
 
   useEffect(() => {
-    if (!modelPickerOpen || !aiWorkEngineClient) return;
+    if (!modelPickerOpen || !engineClient) return;
     let cancelled = false;
     void providerAuthStore.refreshProviders();
     void (async () => {
@@ -695,7 +695,7 @@ export function SettingsRoute() {
           caps = null;
         }
       }
-      const globalInput: ReadGlobalAiWorkEngineConfigInput = {
+      const globalInput: ReadGlobalEngineConfigInput = {
         workspaceRoot: selectedWorkspaceRoot,
         selectedWorkspaceId: selectedWorkspaceId.trim(),
         runtimeWorkspaceId: selectedWorkspaceId.trim() || null,
@@ -738,7 +738,7 @@ export function SettingsRoute() {
       };
 
       const filtered = await fetchFinallyProviderList({
-        listClient: aiWorkEngineClient as Client,
+        listClient: engineClient as Client,
         globalInput,
         workspaceConfigDirectory: selectedWorkspaceRoot || undefined,
         providerConnectedIds: [],
@@ -757,7 +757,7 @@ export function SettingsRoute() {
     return () => {
       cancelled = true;
     };
-  }, [modelPickerOpen, aiWorkEngineClient, selectedWorkspaceRoot, selectedWorkspaceId, aiworkClient]);
+  }, [modelPickerOpen, engineClient, selectedWorkspaceRoot, selectedWorkspaceId, aiworkClient]);
 
   useEffect(() => {
     local.setUi((previous) => ({ ...previous, view: "settings", tab: route.tab }));
@@ -1167,13 +1167,13 @@ export function SettingsRoute() {
       try {
         const config = await aiworkClient.getConfig(autoCompactWorkspaceId);
         if (cancelled) return;
-        const opencodeConfig =
-          config.opencode && typeof config.opencode === "object"
-            ? (config.opencode as Record<string, unknown>)
+        const engineConfig =
+          config.engine && typeof config.engine === "object"
+            ? (config.engine as Record<string, unknown>)
             : {};
         const compaction =
-          opencodeConfig.compaction && typeof opencodeConfig.compaction === "object"
-            ? (opencodeConfig.compaction as Record<string, unknown>)
+          engineConfig.compaction && typeof engineConfig.compaction === "object"
+            ? (engineConfig.compaction as Record<string, unknown>)
             : null;
         // AiWork treats compaction.auto as true when unset.
         const auto = compaction && typeof compaction.auto === "boolean" ? compaction.auto : true;
@@ -1198,13 +1198,13 @@ export function SettingsRoute() {
     setRouteError(null);
     try {
       const config = await aiworkClient.getConfig(autoCompactWorkspaceId);
-      const opencodeConfig =
-        config.opencode && typeof config.opencode === "object"
-          ? (config.opencode as Record<string, unknown>)
+      const engineConfig =
+        config.engine && typeof config.engine === "object"
+          ? (config.engine as Record<string, unknown>)
           : {};
       const currentCompaction =
-        opencodeConfig.compaction && typeof opencodeConfig.compaction === "object"
-          ? (opencodeConfig.compaction as Record<string, unknown>)
+        engineConfig.compaction && typeof engineConfig.compaction === "object"
+          ? (engineConfig.compaction as Record<string, unknown>)
           : {};
       const currentAuto =
         typeof currentCompaction.auto === "boolean" ? currentCompaction.auto : true;
@@ -1212,13 +1212,13 @@ export function SettingsRoute() {
       const nextCompaction = { ...currentCompaction, auto: nextAuto };
 
       await aiworkClient.patchConfig(autoCompactWorkspaceId, {
-        opencode: { compaction: nextCompaction },
+        engine: { compaction: nextCompaction },
       });
       setAutoCompactContext(nextAuto);
       setConfigActionStatus(t("settings.config_updated"));
       reloadCoordinator.markReloadRequired("config", {
         type: "config",
-        name: "opencode.json",
+        name: "engine.json",
         action: "updated",
       });
     } catch (error) {
@@ -1366,10 +1366,10 @@ export function SettingsRoute() {
         return (
           <AdvancedView
             busy={busy}
-            baseUrl={opencodeBaseUrl}
+            baseUrl={engineBaseUrl}
             headerStatus={aiworkServerSnapshot.aiworkServerStatus}
-            clientConnected={Boolean(aiWorkEngineClient)}
-            opencodeConnectStatus={null}
+            clientConnected={Boolean(engineClient)}
+            engineConnectStatus={null}
             aiworkServerStatus={aiworkServerSnapshot.aiworkServerStatus}
             aiworkServerUrl={aiworkServerSnapshot.aiworkServerUrl}
             aiworkReconnectBusy={aiworkServerSnapshot.aiworkReconnectBusy}
@@ -1379,11 +1379,11 @@ export function SettingsRoute() {
             stopHost={() => {}}
             developerMode={developerMode}
             toggleDeveloperMode={() => setDeveloperMode((current) => !current)}
-            opencodeDevModeEnabled={false}
+            engineDevModeEnabled={false}
             openDebugDeepLink={async () => ({ ok: false, message: "Debug deep links are not wired into the React settings route yet." })}
             configView={{
               busy,
-              clientConnected: Boolean(aiWorkEngineClient),
+              clientConnected: Boolean(engineClient),
               anyActiveRuns: false,
               aiworkServerStatus: aiworkServerSnapshot.aiworkServerStatus,
               aiworkServerUrl: aiworkServerSnapshot.aiworkServerUrl,
@@ -1415,7 +1415,7 @@ export function SettingsRoute() {
         return (
           <RecoveryView
             anyActiveRuns={false}
-            workspaceConfigPath={selectedWorkspaceRoot ? `${selectedWorkspaceRoot}/opencode.json` : ""}
+            workspaceConfigPath={selectedWorkspaceRoot ? `${selectedWorkspaceRoot}/engine.json` : ""}
             revealConfigBusy={revealConfigBusy}
             onRevealWorkspaceConfig={async () => {
               setRevealConfigBusy(true);
@@ -1431,7 +1431,7 @@ export function SettingsRoute() {
             configActionStatus={configActionStatus}
             cacheRepairBusy={false}
             cacheRepairResult={null}
-            onRepairAiWorkEngineCache={() => {
+            onRepairEngineCache={() => {
               setRouteError("Cache repair is not wired into the React settings route yet.");
             }}
           />
@@ -1486,7 +1486,7 @@ export function SettingsRoute() {
         selectedSessionId: null,
         connectingWorkspaceId: null,
         workspaceConnectionStateById,
-        newTaskDisabled: !aiWorkEngineClient,
+        newTaskDisabled: !engineClient,
         onReorderWorkspaces: handleReorderWorkspaces,
         onOpenSession: (workspaceId, sessionId) => navigate(workspaceSessionRoute(workspaceId, sessionId)),
         onCreateTaskInWorkspace: handleCreateTaskInWorkspace,

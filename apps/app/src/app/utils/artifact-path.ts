@@ -1,6 +1,6 @@
 // Patterns that indicate a path is a truncated system/absolute path rather than a workspace-relative path
 const TRUNCATED_SYSTEM_PATH_PATTERNS = [
-  /com\.[^/]+\.(aiwork|opencode)/i, // macOS app bundle identifiers
+  /com\.[^/]+\.(aiwork|engine)/i, // macOS app bundle identifiers
   /\.aiwork\.dev\//i, // AiWork dev paths
   /Application Support\//i, // macOS Application Support
   /AppData[/\\]/i, // Windows AppData

@@ -20,7 +20,7 @@ const rowDangerIconButtonClass =
   "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-red-7/75 bg-red-3/40 text-red-10 shadow-sm transition-colors hover:border-red-8 hover:bg-red-4/80 hover:text-red-11 focus:outline-none focus:ring-2 focus:ring-red-7/30 disabled:cursor-not-allowed disabled:opacity-50";
 
 const KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const RESERVED_PREFIXES = ["AIWORK_", "AIWORK_ENGINE_"] as const;
+const RESERVED_PREFIXES = ["AIWORK_", "ENGINE_"] as const;
 
 type EnvItem = { key: string; value: string; updatedAt: number };
 type ApplyEnvironmentChangesResult = { statusMessage?: string } | void;

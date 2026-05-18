@@ -25,38 +25,38 @@ fn reason_for_path(path: &Path) -> Option<&'static str> {
     let normalized = normalize_path(path);
     let lower = normalized.to_lowercase();
 
-    // Ignore AiWork metadata files — they don't affect the AiWorkEngine engine.
-    if lower.ends_with("/opencode.json") {
+    // Ignore AiWork metadata files — they don't affect the Engine engine.
+    if lower.ends_with("/engine.json") {
         return None;
     }
 
-    // Specific .opencode subdirectories map to distinct reasons.
-    if lower.contains("/.opencode/skills/") || lower.ends_with("/.opencode/skills") {
+    // Specific .engine subdirectories map to distinct reasons.
+    if lower.contains("/.engine/skills/") || lower.ends_with("/.engine/skills") {
         return Some("skills");
     }
-    if lower.contains("/.opencode/agents/") || lower.contains("/.opencode/agent/") {
+    if lower.contains("/.engine/agents/") || lower.contains("/.engine/agent/") {
         return Some("agents");
     }
-    if lower.contains("/.opencode/commands/") || lower.contains("/.opencode/command/") {
+    if lower.contains("/.engine/commands/") || lower.contains("/.engine/command/") {
         return Some("commands");
     }
-    if lower.contains("/.opencode/plugins/") {
+    if lower.contains("/.engine/plugins/") {
         return Some("plugins");
     }
 
-    // opencode.json / opencode.jsonc at the workspace root or inside .opencode/
-    if lower.ends_with("/opencode.json") || lower.ends_with("/opencode.jsonc") {
+    // engine.json / engine.jsonc at the workspace root or inside .engine/
+    if lower.ends_with("/engine.json") || lower.ends_with("/engine.jsonc") {
         return Some("config");
     }
 
     // AGENTS.md at the workspace root triggers agent reload.
-    if lower.ends_with("/agents.md") && !lower.contains("/.opencode/") {
+    if lower.ends_with("/agents.md") && !lower.contains("/.engine/") {
         return Some("agents");
     }
 
-    // Any other file inside .opencode/ that isn't already matched above
-    // (e.g. .opencode/opencode.db, .opencode/opencode.json handled above).
-    // We intentionally do NOT emit for unknown .opencode files to be conservative.
+    // Any other file inside .engine/ that isn't already matched above
+    // (e.g. .engine/engine.db, .engine/engine.json handled above).
+    // We intentionally do NOT emit for unknown .engine files to be conservative.
     None
 }
 
@@ -155,11 +155,11 @@ pub fn update_workspace_watch(
         .watch(&root, RecursiveMode::NonRecursive)
         .map_err(|e| format!("Failed to watch workspace root: {e}"))?;
 
-    let aiwork_dir = root.join(".opencode");
+    let aiwork_dir = root.join(".engine");
     if aiwork_dir.exists() {
         watcher
             .watch(&aiwork_dir, RecursiveMode::Recursive)
-            .map_err(|e| format!("Failed to watch .opencode: {e}"))?;
+            .map_err(|e| format!("Failed to watch .engine: {e}"))?;
     }
 
     *state

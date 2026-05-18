@@ -21,7 +21,7 @@ pub struct CacheResetResult {
 
 #[derive(Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AiWorkEngineEngineDiskLogsSnapshot {
+pub struct EngineEngineDiskLogsSnapshot {
     pub dir: String,
     pub resolved_variant: String,
     pub file_label: Option<String>,
@@ -53,20 +53,20 @@ fn env_truthy(key: &str) -> bool {
 // fn macos_dev_application_support_aiwork_log_dir() -> Option<PathBuf> {
 //     let home = home_dir()?;
 //     Some(
-//         home.join("Library/Application Support/com.aiworkgroup3.aiwork.dev/aiwork-engine/xdg/data/opencode/log"),
+//         home.join("Library/Application Support/com.aiworklove.aiwork.dev/engine/xdg/data/engine/log"),
 //     )
 // }
 
 fn isolated_aiwork_log_dir(app: &AppHandle) -> Option<PathBuf> {
     let root = app.path().app_local_data_dir().ok()?;
-    Some(root.join("aiwork-engine/xdg/data/opencode/log"))
+    Some(root.join("engine/xdg/data/engine/log"))
 }
 
 fn standard_aiwork_log_dir() -> PathBuf {
     if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
         let trimmed = xdg.trim();
         if !trimmed.is_empty() {
-            return PathBuf::from(trimmed).join("opencode/log");
+            return PathBuf::from(trimmed).join("engine/log");
         }
     }
 
@@ -74,13 +74,13 @@ fn standard_aiwork_log_dir() -> PathBuf {
     if let Ok(local) = std::env::var("LOCALAPPDATA") {
         let trimmed = local.trim();
         if !trimmed.is_empty() {
-            return PathBuf::from(trimmed).join("opencode/log");
+            return PathBuf::from(trimmed).join("engine/log");
         }
     }
 
     home_dir()
         .unwrap_or_default()
-        .join(".local/share/opencode/log")
+        .join(".local/share/engine/log")
 }
 
 fn collect_aiwork_disk_log_dir_candidates(app: &AppHandle) -> Vec<(String, PathBuf)> {
@@ -119,7 +119,7 @@ fn read_utf8_file_tail(path: &Path, max_bytes: u64) -> std::io::Result<String> {
 }
 
 #[tauri::command]
-pub fn read_aiwork_engine_disk_logs(app: AppHandle) -> AiWorkEngineEngineDiskLogsSnapshot {
+pub fn read_engine_disk_logs(app: AppHandle) -> EngineEngineDiskLogsSnapshot {
     const MAX_BYTES: u64 = 256 * 1024;
 
     let candidates = collect_aiwork_disk_log_dir_candidates(&app);
@@ -174,7 +174,7 @@ pub fn read_aiwork_engine_disk_logs(app: AppHandle) -> AiWorkEngineEngineDiskLog
 
         match read_utf8_file_tail(&path, MAX_BYTES) {
             Ok(content) => {
-                return AiWorkEngineEngineDiskLogsSnapshot {
+                return EngineEngineDiskLogsSnapshot {
                     dir: dir_display,
                     resolved_variant: variant.clone(),
                     file_label,
@@ -183,7 +183,7 @@ pub fn read_aiwork_engine_disk_logs(app: AppHandle) -> AiWorkEngineEngineDiskLog
                 };
             }
             Err(err) => {
-                return AiWorkEngineEngineDiskLogsSnapshot {
+                return EngineEngineDiskLogsSnapshot {
                     dir: dir_display,
                     resolved_variant: variant.clone(),
                     file_label,
@@ -199,7 +199,7 @@ pub fn read_aiwork_engine_disk_logs(app: AppHandle) -> AiWorkEngineEngineDiskLog
         .map(|(_, path)| path.to_string_lossy().into_owned())
         .unwrap_or_default();
 
-    AiWorkEngineEngineDiskLogsSnapshot {
+    EngineEngineDiskLogsSnapshot {
         dir: fallback_dir,
         resolved_variant: "none".into(),
         file_label: None,
@@ -214,16 +214,16 @@ fn aiwork_cache_candidates() -> Vec<PathBuf> {
     if let Ok(value) = std::env::var("XDG_CACHE_HOME") {
         let trimmed = value.trim();
         if !trimmed.is_empty() {
-            candidates.push(PathBuf::from(trimmed).join("opencode"));
+            candidates.push(PathBuf::from(trimmed).join("engine"));
         }
     }
 
     if let Some(home) = home_dir() {
-        candidates.push(home.join(".cache").join("opencode"));
+        candidates.push(home.join(".cache").join("engine"));
 
         #[cfg(target_os = "macos")]
         {
-            candidates.push(home.join("Library").join("Caches").join("opencode"));
+            candidates.push(home.join("Library").join("Caches").join("engine"));
         }
     }
 
@@ -232,13 +232,13 @@ fn aiwork_cache_candidates() -> Vec<PathBuf> {
         if let Ok(value) = std::env::var("LOCALAPPDATA") {
             let trimmed = value.trim();
             if !trimmed.is_empty() {
-                candidates.push(PathBuf::from(trimmed).join("opencode"));
+                candidates.push(PathBuf::from(trimmed).join("engine"));
             }
         }
         if let Ok(value) = std::env::var("APPDATA") {
             let trimmed = value.trim();
             if !trimmed.is_empty() {
-                candidates.push(PathBuf::from(trimmed).join("opencode"));
+                candidates.push(PathBuf::from(trimmed).join("engine"));
             }
         }
     }
@@ -258,7 +258,7 @@ fn push_aiwork_env_path(candidates: &mut Vec<PathBuf>, key: &str) {
     if trimmed.is_empty() {
         return;
     }
-    candidates.push(PathBuf::from(trimmed).join("opencode"));
+    candidates.push(PathBuf::from(trimmed).join("engine"));
 }
 
 fn aiwork_standard_state_paths() -> Vec<PathBuf> {
@@ -270,22 +270,22 @@ fn aiwork_standard_state_paths() -> Vec<PathBuf> {
     candidates.extend(aiwork_cache_candidates());
 
     for dir in candidate_xdg_config_dirs() {
-        candidates.push(dir.join("opencode"));
+        candidates.push(dir.join("engine"));
     }
 
     for dir in candidate_xdg_data_dirs() {
-        candidates.push(dir.join("opencode"));
+        candidates.push(dir.join("engine"));
     }
 
     if let Some(home) = home_dir() {
-        candidates.push(home.join(".local").join("state").join("opencode"));
+        candidates.push(home.join(".local").join("state").join("engine"));
 
         #[cfg(target_os = "macos")]
         {
             candidates.push(
                 home.join("Library")
                     .join("Application Support")
-                    .join("opencode"),
+                    .join("engine"),
             );
         }
     }
@@ -317,7 +317,7 @@ fn current_aiwork_state_paths(app: &AppHandle) -> Result<Vec<PathBuf>, String> {
         paths.push(
             home.join("AiWork")
                 .join("Welcome")
-                .join(".opencode")
+                .join(".engine")
                 .join("aiwork.json"),
         );
     }
@@ -373,7 +373,7 @@ fn validate_server_name(name: &str) -> Result<String, String> {
 fn read_workspace_aiwork_config(
     workspace_path: &Path,
 ) -> Result<WorkspaceAiWorkConfig, String> {
-    let aiwork_path = workspace_path.join(".opencode").join("aiwork.json");
+    let aiwork_path = workspace_path.join(".engine").join("aiwork.json");
     if !aiwork_path.exists() {
         let mut cfg = WorkspaceAiWorkConfig::default();
         let workspace_value = workspace_path.to_string_lossy().to_string();
@@ -480,7 +480,7 @@ fn resolve_aiwork_program(
     program.ok_or_else(|| {
         let notes_text = notes.join("\n");
         format!(
-            "AiWorkEngine CLI not found.\nNotes:\n{notes_text}"
+            "Engine CLI not found.\nNotes:\n{notes_text}"
         )
     })
 }
@@ -602,7 +602,7 @@ pub fn nuke_aiwork_and_aiwork_config_and_exit(
         // by the dev app identity and AIWORK_DATA_DIR, so only clear those dev paths.
     } else {
         // In production, clear the normal app paths plus the standard
-        // user AiWorkEngine config/data/cache/state locations.
+        // user Engine config/data/cache/state locations.
         paths.extend(aiwork_standard_state_paths());
     }
 
@@ -618,7 +618,7 @@ pub fn nuke_aiwork_and_aiwork_config_and_exit(
     Ok(())
 }
 
-/// Run `opencode mcp auth <server_name>` in the given project directory.
+/// Run `engine mcp auth <server_name>` in the given project directory.
 /// This spawns the process detached so the OAuth flow can open a browser.
 #[tauri::command]
 pub fn aiwork_mcp_auth(
@@ -642,7 +642,7 @@ pub fn aiwork_mcp_auth(
         .arg(server_name)
         .current_dir(&project_dir)
         .output()
-        .map_err(|e| format!("Failed to run opencode mcp auth: {e}"))?;
+        .map_err(|e| format!("Failed to run engine mcp auth: {e}"))?;
 
     let status = output.status.code().unwrap_or(-1);
     Ok(ExecResult {

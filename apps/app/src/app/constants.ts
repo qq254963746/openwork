@@ -8,7 +8,7 @@ export const VARIANT_PREF_KEY = "aiwork.modelVariant";
 export const LANGUAGE_PREF_KEY = "aiwork.language";
 
 export const DEFAULT_MODEL: ModelRef = {
-  providerID: "opencode",
+  providerID: "engine",
   modelID: "big-pickle",
 };
 

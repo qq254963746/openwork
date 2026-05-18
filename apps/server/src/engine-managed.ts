@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import net from "node:net";
 import { randomUUID } from "node:crypto";
 
-export type ManagedAiWorkEngineServer = {
+export type ManagedEngineServer = {
   url: string;
   username: string;
   password: string;
@@ -28,32 +28,32 @@ async function findFreePort(hostname: string): Promise<number> {
   });
 }
 
-export async function createManagedAiWorkEngineServer(options: {
+export async function createManagedEngineServer(options: {
   bin?: string;
   cwd: string;
   hostname?: string;
   port?: number;
   timeoutMs?: number;
   env?: Record<string, string | undefined>;
-}): Promise<ManagedAiWorkEngineServer> {
+}): Promise<ManagedEngineServer> {
   const hostname = options.hostname ?? "127.0.0.1";
   const port = options.port ?? await findFreePort(hostname);
   const username = randomSecret();
   const password = randomSecret();
   const args = ["serve", "--hostname", hostname, "--port", String(port), "--cors", "*"];
-  const child: ChildProcess = spawn(options.bin?.trim() || "opencode", args, {
+  const child: ChildProcess = spawn(options.bin?.trim() || "engine", args, {
     cwd: options.cwd,
     env: {
       ...process.env,
       ...options.env,
-      AIWORK_ENGINE_SERVER_USERNAME: username,
-      AIWORK_ENGINE_SERVER_PASSWORD: password,
+      ENGINE_SERVER_USERNAME: username,
+      ENGINE_SERVER_PASSWORD: password,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
 
   const url = await new Promise<string>((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error(`Timeout waiting for AiWorkEngine server after ${options.timeoutMs ?? 15000}ms`)), options.timeoutMs ?? 15000);
+    const timeout = setTimeout(() => reject(new Error(`Timeout waiting for Engine server after ${options.timeoutMs ?? 15000}ms`)), options.timeoutMs ?? 15000);
     let output = "";
     const done = (value: string) => {
       clearTimeout(timeout);
@@ -66,9 +66,9 @@ export async function createManagedAiWorkEngineServer(options: {
     child.stdout?.on("data", (chunk) => {
       output += chunk.toString();
       for (const line of output.split("\n")) {
-        if (!line.startsWith("opencode server listening")) continue;
+        if (!line.startsWith("engine server listening")) continue;
         const match = line.match(/on\s+(https?:\/\/[^\s]+)/);
-        if (!match?.[1]) return fail(new Error(`Failed to parse AiWorkEngine server URL from: ${line}`));
+        if (!match?.[1]) return fail(new Error(`Failed to parse Engine server URL from: ${line}`));
         done(match[1]);
       }
     });
@@ -76,7 +76,7 @@ export async function createManagedAiWorkEngineServer(options: {
       output += chunk.toString();
     });
     child.once("error", fail);
-    child.once("exit", (code) => fail(new Error(`AiWorkEngine server exited with code ${code}${output.trim() ? `\n${output}` : ""}`)));
+    child.once("exit", (code) => fail(new Error(`Engine server exited with code ${code}${output.trim() ? `\n${output}` : ""}`)));
   });
 
   return {

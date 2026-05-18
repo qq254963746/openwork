@@ -12,10 +12,10 @@ interface CliArgs {
   hostToken?: string;
   approvalMode?: ApprovalMode;
   approvalTimeoutMs?: number;
-  opencodeBaseUrl?: string;
-  opencodeDirectory?: string;
-  opencodeUsername?: string;
-  opencodePassword?: string;
+  engineBaseUrl?: string;
+  engineDirectory?: string;
+  engineUsername?: string;
+  enginePassword?: string;
   workspaces: string[];
   corsOrigins?: string[];
   readOnly?: boolean;
@@ -36,10 +36,10 @@ interface FileConfig {
   corsOrigins?: string[];
   authorizedRoots?: string[];
   readOnly?: boolean;
-  opencodeBaseUrl?: string;
-  opencodeDirectory?: string;
-  opencodeUsername?: string;
-  opencodePassword?: string;
+  engineBaseUrl?: string;
+  engineDirectory?: string;
+  engineUsername?: string;
+  enginePassword?: string;
   logFormat?: LogFormat;
   logRequests?: boolean;
 }
@@ -134,23 +134,23 @@ export function parseCliArgs(argv: string[]): CliArgs {
       index += 1;
       continue;
     }
-    if (value === "--opencode-base-url") {
-      args.opencodeBaseUrl = argv[index + 1];
+    if (value === "--engine-base-url") {
+      args.engineBaseUrl = argv[index + 1];
       index += 1;
       continue;
     }
-    if (value === "--opencode-directory") {
-      args.opencodeDirectory = argv[index + 1];
+    if (value === "--engine-directory") {
+      args.engineDirectory = argv[index + 1];
       index += 1;
       continue;
     }
-    if (value === "--opencode-username") {
-      args.opencodeUsername = argv[index + 1];
+    if (value === "--engine-username") {
+      args.engineUsername = argv[index + 1];
       index += 1;
       continue;
     }
-    if (value === "--opencode-password") {
-      args.opencodePassword = argv[index + 1];
+    if (value === "--engine-password") {
+      args.enginePassword = argv[index + 1];
       index += 1;
       continue;
     }
@@ -185,10 +185,10 @@ export function printHelp(): void {
     "  --host-token <token>     Host approval token",
     "  --approval <mode>        manual | auto",
     "  --approval-timeout <ms>  Approval timeout",
-    "  --opencode-base-url <url> AiWorkEngine base URL to share",
-    "  --opencode-directory <path> AiWorkEngine workspace directory to share",
-    "  --opencode-username <user> AiWorkEngine server username",
-    "  --opencode-password <pass> AiWorkEngine server password",
+    "  --engine-base-url <url> Engine base URL to share",
+    "  --engine-directory <path> Engine workspace directory to share",
+    "  --engine-username <user> Engine server username",
+    "  --engine-password <pass> Engine server password",
     "  --workspace <path>       Workspace root (repeatable)",
     "  --cors <origins>          Comma-separated origins or *",
     "  --read-only              Disable writes",
@@ -220,29 +220,29 @@ export async function resolveServerConfig(cli: CliArgs): Promise<ServerConfig> {
         ? envWorkspaces.map((path) => ({ path }))
         : fileConfig.workspaces ?? [];
 
-  const envAiWorkEngineBaseUrl = process.env.AIWORK_AIWORK_ENGINE_BASE_URL;
-  const envAiWorkEngineDirectory = process.env.AIWORK_AIWORK_ENGINE_DIRECTORY;
-  const envAiWorkEngineUsername = process.env.AIWORK_AIWORK_ENGINE_USERNAME;
-  const envAiWorkEnginePassword = process.env.AIWORK_AIWORK_ENGINE_PASSWORD;
-  const opencodeBaseUrl = cli.opencodeBaseUrl ?? envAiWorkEngineBaseUrl ?? fileConfig.opencodeBaseUrl;
-  const opencodeDirectory = cli.opencodeDirectory ?? envAiWorkEngineDirectory ?? fileConfig.opencodeDirectory;
-  const opencodeUsername = cli.opencodeUsername ?? envAiWorkEngineUsername ?? fileConfig.opencodeUsername;
-  const opencodePassword = cli.opencodePassword ?? envAiWorkEnginePassword ?? fileConfig.opencodePassword;
+  const envEngineBaseUrl = process.env.engine_BASE_URL;
+  const envEngineDirectory = process.env.engine_DIRECTORY;
+  const envEngineUsername = process.env.engine_USERNAME;
+  const envEnginePassword = process.env.engine_PASSWORD;
+  const engineBaseUrl = cli.engineBaseUrl ?? envEngineBaseUrl ?? fileConfig.engineBaseUrl;
+  const engineDirectory = cli.engineDirectory ?? envEngineDirectory ?? fileConfig.engineDirectory;
+  const engineUsername = cli.engineUsername ?? envEngineUsername ?? fileConfig.engineUsername;
+  const enginePassword = cli.enginePassword ?? envEnginePassword ?? fileConfig.enginePassword;
 
-  if (workspaceConfigs.length > 0 && (opencodeBaseUrl || opencodeDirectory || opencodeUsername || opencodePassword)) {
-    const allowDirectoryOverride = workspaceConfigs.length === 1 && opencodeDirectory;
+  if (workspaceConfigs.length > 0 && (engineBaseUrl || engineDirectory || engineUsername || enginePassword)) {
+    const allowDirectoryOverride = workspaceConfigs.length === 1 && engineDirectory;
     workspaceConfigs = workspaceConfigs.map((workspace, index) => {
       const nextDirectory =
-        workspace.opencode?.directory ?? (allowDirectoryOverride && index === 0 ? opencodeDirectory : undefined);
+        workspace.engine?.directory ?? (allowDirectoryOverride && index === 0 ? engineDirectory : undefined);
       return {
         ...workspace,
-        opencode: {
-          ...workspace.opencode,
-          baseUrl: workspace.opencode?.baseUrl ?? opencodeBaseUrl,
+        engine: {
+          ...workspace.engine,
+          baseUrl: workspace.engine?.baseUrl ?? engineBaseUrl,
           ...(nextDirectory ? { directory: nextDirectory } : {}),
         },
-        opencodeUsername: workspace.opencodeUsername ?? opencodeUsername,
-        opencodePassword: workspace.opencodePassword ?? opencodePassword,
+        engineUsername: workspace.engineUsername ?? engineUsername,
+        enginePassword: workspace.enginePassword ?? enginePassword,
       };
     });
   }
@@ -322,10 +322,10 @@ export async function resolveServerConfig(cli: CliArgs): Promise<ServerConfig> {
     token,
     hostToken,
     configPath,
-    opencodeBaseUrl,
-    opencodeDirectory,
-    opencodeUsername,
-    opencodePassword,
+    engineBaseUrl,
+    engineDirectory,
+    engineUsername,
+    enginePassword,
     approval,
     corsOrigins,
     workspaces,

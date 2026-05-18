@@ -137,7 +137,7 @@ pub struct ExecResult {
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct AiWorkEngineConfigFile {
+pub struct EngineConfigFile {
     pub path: String,
     pub exists: bool,
     pub content: Option<String>,
@@ -145,7 +145,7 @@ pub struct AiWorkEngineConfigFile {
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct AiWorkEngineAuthJsonFile {
+pub struct EngineAuthJsonFile {
     pub path: Option<String>,
     pub content: Option<String>,
 }
@@ -181,7 +181,7 @@ pub struct WorkspaceList {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct AiWorkEngineCommand {
+pub struct EngineCommand {
     pub name: String,
     #[serde(default)]
     pub description: Option<String>,

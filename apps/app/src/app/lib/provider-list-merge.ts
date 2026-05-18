@@ -1,5 +1,5 @@
 import { parse } from "jsonc-parser";
-import type { ProviderListResponse } from "@aiwork-engine/sdk/v2/client";
+import type { ProviderListResponse } from "@engine/sdk/v2/client";
 
 import type { Client, ProviderListItem } from "../types";
 import type { ModelProviderType } from "../utils/model-providers-catalog";
@@ -7,13 +7,13 @@ import { isModelProviderType } from "../utils/model-providers-catalog";
 import { resolveProviderInitialApiBaseUrl } from "../utils/providers";
 import { ConsoleLog } from "./console-log";
 import {
-  readGlobalAiWorkEngineConfigFile,
-  type ReadGlobalAiWorkEngineConfigInput,
+  readGlobalEngineConfigFile,
+  type ReadGlobalEngineConfigInput,
 } from "./global-engine-disabled-providers";
 
 const PROVIDER_LIST_MERGE_LOG_SCOPE = "provider-list-merge";
 
-type AiWorkEngineSdkFieldsResult<T> =
+type EngineSdkFieldsResult<T> =
   | { data: T; error?: undefined; request: Request; response: Response }
   | { data?: undefined; error: unknown; request: Request; response: Response };
 
@@ -31,7 +31,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * For each provider entry in global opencode.json that defines a `models` object,
+ * For each provider entry in global engine.json that defines a `models` object,
  * collect allowed model ids (keys). Missing `models` means "do not restrict list models".
  */
 function collectGlobalModelAllowlistsFromJsonRoot(root: Record<string, unknown>): Map<string, Set<string>> {
@@ -52,9 +52,9 @@ function collectGlobalModelAllowlistsFromJsonRoot(root: Record<string, unknown>)
 }
 
 async function loadGlobalModelAllowlists(
-  input: ReadGlobalAiWorkEngineConfigInput,
+  input: ReadGlobalEngineConfigInput,
 ): Promise<Map<string, Set<string>> | null> {
-  const file = await readGlobalAiWorkEngineConfigFile(input);
+  const file = await readGlobalEngineConfigFile(input);
   const raw = file?.content?.trim();
   if (!raw) return null;
   const tree = parse(raw, undefined, { allowTrailingComma: true }) as Record<string, unknown>;
@@ -67,7 +67,7 @@ async function fetchAuthMetadataBaseUrl(client: Client, providerId: string): Pro
   if (!id) return "";
   const inner = client as unknown as {
     client: {
-      get: (opts: Record<string, unknown>) => Promise<AiWorkEngineSdkFieldsResult<unknown>>;
+      get: (opts: Record<string, unknown>) => Promise<EngineSdkFieldsResult<unknown>>;
     };
   };
   try {
@@ -87,14 +87,14 @@ async function fetchAuthMetadataBaseUrl(client: Client, providerId: string): Pro
  * For each connected provider, read `GET /auth/{id}` and merge `metadata.baseURL` into
  * `Provider.options.baseURL` so the UI and routing use the same URL the user stored in auth metadata.
  *
- * When `globalInput` is set, reads global opencode config (same resolution as
- * `readGlobalAiWorkEngineConfigFile`) and, for **connected** providers whose global entry defines
+ * When `globalInput` is set, reads global engine config (same resolution as
+ * `readGlobalEngineConfigFile`) and, for **connected** providers whose global entry defines
  * `provider.<id>.models`, drops list models whose ids are not keys of that object.
  */
 export async function mergeAuthMetadataBaseUrlIntoProviderList(
   client: Client,
   list: ProviderListResponse,
-  globalInput?: ReadGlobalAiWorkEngineConfigInput | null,
+  globalInput?: ReadGlobalEngineConfigInput | null,
 ): Promise<ProviderListResponse> {
   const connected = new Set(
     (list.connected ?? []).map((id: string) => id.trim().toLowerCase()).filter(Boolean),
@@ -269,7 +269,7 @@ function parseAuthPayloadForEdit(
 
 /**
  * Build edit-form defaults from `provider.list()` when `GET /auth/{id}` is unavailable
- * (older AiWorkEngine servers return HTML/404 for that route).
+ * (older Engine servers return HTML/404 for that route).
  */
 export function providerAuthDetailsFromListItem(
   provider: ProviderListItem,
@@ -318,11 +318,11 @@ export async function fetchProviderAuthForEdit(
   }
   const inner = client as unknown as {
     client: {
-      get: (opts: Record<string, unknown>) => Promise<AiWorkEngineSdkFieldsResult<unknown>>;
+      get: (opts: Record<string, unknown>) => Promise<EngineSdkFieldsResult<unknown>>;
     };
   };
 
-  let result: AiWorkEngineSdkFieldsResult<unknown>;
+  let result: EngineSdkFieldsResult<unknown>;
   try {
     result = await inner.client.get({
       url: "/auth/{providerID}",

@@ -16,7 +16,7 @@ export type RecoveryViewProps = {
   configActionStatus: string | null;
   cacheRepairBusy: boolean;
   cacheRepairResult: string | null;
-  onRepairAiWorkEngineCache: () => void | Promise<void>;
+  onRepairEngineCache: () => void | Promise<void>;
 };
 
 export function RecoveryView(props: RecoveryViewProps) {
@@ -65,7 +65,7 @@ export function RecoveryView(props: RecoveryViewProps) {
         <Button
           variant="secondary"
           className="h-8 shrink-0 px-3 py-0 text-xs"
-          onClick={() => void props.onRepairAiWorkEngineCache()}
+          onClick={() => void props.onRepairEngineCache()}
           disabled={props.cacheRepairBusy}
           title=""
         >

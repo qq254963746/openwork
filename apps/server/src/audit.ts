@@ -14,7 +14,7 @@ function expandHome(value: string): string {
 function resolveAiWorkDataDir(): string {
   const override = process.env.AIWORK_DATA_DIR?.trim();
   if (override) return expandHome(override);
-  return join(homedir(), ".opencode", "aiwork-server");
+  return join(homedir(), ".engine", "aiwork-server");
 }
 
 export function auditLogPath(workspaceId: string): string {
@@ -22,7 +22,7 @@ export function auditLogPath(workspaceId: string): string {
 }
 
 export function legacyAuditLogPath(workspaceRoot: string): string {
-  return join(workspaceRoot, ".opencode", "aiwork", "audit.jsonl");
+  return join(workspaceRoot, ".engine", "aiwork", "audit.jsonl");
 }
 
 async function resolveReadableAuditPath(workspaceRoot: string, workspaceId: string): Promise<string | null> {

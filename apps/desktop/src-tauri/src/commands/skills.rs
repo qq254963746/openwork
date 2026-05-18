@@ -13,7 +13,7 @@ fn ensure_project_skill_root(project_dir: &str) -> Result<PathBuf, String> {
         return Err("projectDir is required".to_string());
     }
 
-    let base = PathBuf::from(project_dir).join(".opencode");
+    let base = PathBuf::from(project_dir).join(".engine");
     let legacy = base.join("skill");
     let modern = base.join("skills");
 
@@ -37,11 +37,11 @@ fn collect_project_skill_roots(project_dir: &Path) -> Vec<PathBuf> {
     let mut current = Some(project_dir);
 
     while let Some(dir) = current {
-        let aiwork_root = dir.join(".opencode").join("skills");
+        let aiwork_root = dir.join(".engine").join("skills");
         if aiwork_root.is_dir() {
             roots.push(aiwork_root);
         } else {
-            let legacy_root = dir.join(".opencode").join("skill");
+            let legacy_root = dir.join(".engine").join("skill");
             if legacy_root.is_dir() {
                 roots.push(legacy_root);
             }
@@ -59,7 +59,7 @@ fn collect_project_skill_roots(project_dir: &Path) -> Vec<PathBuf> {
 fn collect_global_skill_roots() -> Vec<PathBuf> {
     let mut roots = Vec::new();
     for dir in candidate_xdg_config_dirs() {
-        let aiwork_root = dir.join("opencode").join("skills");
+        let aiwork_root = dir.join("engine").join("skills");
         if aiwork_root.is_dir() {
             roots.push(aiwork_root);
         }
@@ -531,7 +531,7 @@ pub fn uninstall_skill(project_dir: String, name: String) -> Result<ExecResult, 
             ok: false,
             status: 1,
             stdout: String::new(),
-            stderr: "Skill not found in .opencode/skills".to_string(),
+            stderr: "Skill not found in .engine/skills".to_string(),
         });
     }
 
@@ -566,7 +566,7 @@ pub fn import_skill(
         .ok_or_else(|| "Failed to infer skill name from directory".to_string())?;
 
     let dest = std::path::PathBuf::from(&project_dir)
-        .join(".opencode")
+        .join(".engine")
         .join("skills")
         .join(name);
 

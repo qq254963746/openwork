@@ -16,7 +16,7 @@ AiWork releases should be deterministic, easy to reproduce, and fully verifiable
 2. Re-run `pnpm release:review`.
 3. Build sidecars for the desktop bundle:
 
-   - `pnpm --filter @aiworkgroup3/aiwork prepare:sidecar`
+   - `pnpm --filter @aiworklove/aiwork prepare:sidecar`
 4. Commit the version bump.
 5. Tag and push:
 

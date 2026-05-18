@@ -1,13 +1,13 @@
 /**
- * Typed helpers for AiWorkEngine session operations.
+ * Typed helpers for Engine session operations.
  *
- * The AiWorkEngine SDK (v2) exposes `session.abort`, `session.revert`,
+ * The Engine SDK (v2) exposes `session.abort`, `session.revert`,
  * `session.unrevert`, `session.shell`, and `command.list` as typed methods.
  * This module provides thin wrappers that avoid `as any` casts by using the
  * SDK types directly, and adds feature-detection for newer API surface
  * (e.g. `shellAsync`) that may not be present in older SDK versions.
  */
-import type { Session } from "@aiwork-engine/sdk/v2/client";
+import type { Session } from "@engine/sdk/v2/client";
 import type { Client, ModelRef } from "../types";
 import { unwrap } from "./engine";
 

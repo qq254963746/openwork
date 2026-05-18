@@ -19,7 +19,7 @@ const readCargoVersion = (path) => {
 const appPkg = readJson(resolve(root, "apps", "app", "package.json"));
 const desktopPkg = readJson(resolve(root, "apps", "desktop", "package.json"));
 const serverPkg = readJson(resolve(root, "apps", "server", "package.json"));
-const opencodePkg = readJson(resolve(root, "opencode", "packages", "opencode", "package.json"));
+const enginePkg = readJson(resolve(root, "engine", "packages", "engine", "package.json"));
 const tauriConfig = readJson(
   resolve(root, "apps", "desktop", "src-tauri", "tauri.conf.json"),
 );
@@ -33,7 +33,7 @@ const versions = {
   tauri: tauriConfig.version ?? null,
   cargo: cargoVersion ?? null,
   server: serverPkg.version ?? null,
-  opencode: opencodePkg.version || null
+  engine: enginePkg.version || null
 };
 
 const checks = [];
@@ -69,8 +69,8 @@ addCheck(
 );
 addCheck(
   "AiWork version pin exists",
-  Boolean(versions.opencode),
-  String(versions.opencode),
+  Boolean(versions.engine),
+  String(versions.engine),
 );
 
 if (!process.env.SOURCE_DATE_EPOCH) {

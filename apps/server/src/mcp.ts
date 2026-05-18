@@ -4,13 +4,13 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 import type { McpItem } from "./types.js";
 import { readJsoncFile, updateJsoncPath, updateJsoncTopLevel } from "./jsonc.js";
-import { opencodeConfigPath } from "./workspace-files.js";
+import { engineConfigPath } from "./workspace-files.js";
 import { validateMcpConfig, validateMcpName } from "./validators.js";
 
-function globalAiWorkEngineConfigPath(): string {
-  const base = join(homedir(), ".config", "opencode");
-  const jsonc = join(base, "opencode.jsonc");
-  const json = join(base, "opencode.json");
+function globalEngineConfigPath(): string {
+  const base = join(homedir(), ".config", "engine");
+  const jsonc = join(base, "engine.jsonc");
+  const json = join(base, "engine.json");
   if (existsSync(jsonc)) return jsonc;
   if (existsSync(json)) return json;
   return jsonc; // fall back to jsonc (readJsoncFile handles missing files gracefully)
@@ -38,8 +38,8 @@ function isMcpDisabledByTools(config: Record<string, unknown>, name: string): bo
 }
 
 export async function listMcp(workspaceRoot: string): Promise<McpItem[]> {
-  const { data: config } = await readJsoncFile(opencodeConfigPath(workspaceRoot), {} as Record<string, unknown>);
-  const { data: globalConfig } = await readJsoncFile(globalAiWorkEngineConfigPath(), {} as Record<string, unknown>);
+  const { data: config } = await readJsoncFile(engineConfigPath(workspaceRoot), {} as Record<string, unknown>);
+  const { data: globalConfig } = await readJsoncFile(globalEngineConfigPath(), {} as Record<string, unknown>);
 
   const projectMcpMap = getMcpConfig(config);
   const globalMcpMap = getMcpConfig(globalConfig);
@@ -78,25 +78,25 @@ export async function addMcp(
 ): Promise<{ action: "added" | "updated" }> {
   validateMcpName(name);
   validateMcpConfig(config);
-  const { data } = await readJsoncFile(opencodeConfigPath(workspaceRoot), {} as Record<string, unknown>);
+  const { data } = await readJsoncFile(engineConfigPath(workspaceRoot), {} as Record<string, unknown>);
   const mcpMap = getMcpConfig(data);
   const existed = Object.prototype.hasOwnProperty.call(mcpMap, name);
   mcpMap[name] = config;
-  await updateJsoncTopLevel(opencodeConfigPath(workspaceRoot), { mcp: mcpMap });
+  await updateJsoncTopLevel(engineConfigPath(workspaceRoot), { mcp: mcpMap });
   return { action: existed ? "updated" : "added" };
 }
 
 export async function removeMcp(workspaceRoot: string, name: string): Promise<boolean> {
-  const { data } = await readJsoncFile(opencodeConfigPath(workspaceRoot), {} as Record<string, unknown>);
+  const { data } = await readJsoncFile(engineConfigPath(workspaceRoot), {} as Record<string, unknown>);
   const mcpMap = getMcpConfig(data);
   if (!Object.prototype.hasOwnProperty.call(mcpMap, name)) return false;
   delete mcpMap[name];
-  await updateJsoncTopLevel(opencodeConfigPath(workspaceRoot), { mcp: mcpMap });
+  await updateJsoncTopLevel(engineConfigPath(workspaceRoot), { mcp: mcpMap });
   return true;
 }
 
 // Flips `enabled` on a workspace MCP entry. Returns false for "toggle does
-// not apply": missing, non-object, or malformed enough that AiWorkEngine would
+// not apply": missing, non-object, or malformed enough that Engine would
 // fail to load it. The HTTP layer maps false to 404. Globals are out of
 // scope by design — only workspace-level entries.
 //
@@ -108,7 +108,7 @@ export async function setMcpEnabled(
   enabled: boolean,
 ): Promise<boolean> {
   validateMcpName(name);
-  const { data } = await readJsoncFile(opencodeConfigPath(workspaceRoot), {} as Record<string, unknown>);
+  const { data } = await readJsoncFile(engineConfigPath(workspaceRoot), {} as Record<string, unknown>);
   const mcpMap = getMcpConfig(data);
   if (!Object.prototype.hasOwnProperty.call(mcpMap, name)) return false;
   const current = mcpMap[name];
@@ -118,6 +118,6 @@ export async function setMcpEnabled(
   } catch {
     return false;
   }
-  await updateJsoncPath(opencodeConfigPath(workspaceRoot), ["mcp", name, "enabled"], enabled);
+  await updateJsoncPath(engineConfigPath(workspaceRoot), ["mcp", name, "enabled"], enabled);
   return true;
 }

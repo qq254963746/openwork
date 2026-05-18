@@ -1,6 +1,6 @@
-import type { Provider as ConfigProvider, ProviderListResponse } from "@aiwork-engine/sdk/v2/client";
+import type { Provider as ConfigProvider, ProviderListResponse } from "@engine/sdk/v2/client";
 
-const PINNED_PROVIDER_ORDER = ["opencode", "openai", "anthropic"] as const;
+const PINNED_PROVIDER_ORDER = ["engine", "openai", "anthropic"] as const;
 
 export const providerPriorityRank = (id: string) => {
   const normalized = id.trim().toLowerCase();
@@ -11,7 +11,7 @@ export const providerPriorityRank = (id: string) => {
 };
 
 /**
- * When AiWorkEngine does not surface `options.baseURL`, we still prefill the Connect
+ * When Engine does not surface `options.baseURL`, we still prefill the Connect
  * Providers field with the usual public endpoint for well-known providers.
  * Keep in sync with provider packages / docs where possible.
  */
@@ -63,7 +63,7 @@ export const compareProviders = (
   return aName.localeCompare(bName);
 };
 
-// Starting with @aiwork-engine/sdk@1.4.x, `ConfigProvider` (from `config.providers()`)
+// Starting with @engine/sdk@1.4.x, `ConfigProvider` (from `config.providers()`)
 // and the provider items in `ProviderListResponse.all` share the same shape, so
 // this mapper is effectively an identity function. It is kept for call-site
 // stability and to normalize optional fields (`name`, `env`).

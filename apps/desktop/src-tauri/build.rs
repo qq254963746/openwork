@@ -158,12 +158,12 @@ fn ensure_aiwork_sidecar() {
     let sidecar_dir = manifest_dir.join("sidecars");
 
     let canonical_name = if target.contains("windows") {
-        "opencode.exe"
+        "engine.exe"
     } else {
-        "opencode"
+        "engine"
     };
 
-    let mut target_name = format!("opencode-{target}");
+    let mut target_name = format!("engine-{target}");
     if target.contains("windows") {
         target_name.push_str(".exe");
     }
@@ -189,21 +189,21 @@ fn ensure_aiwork_sidecar() {
         }
     }
 
-    let source_path = env::var("AIWORK_ENGINE_BIN_PATH")
+    let source_path = env::var("ENGINE_BIN_PATH")
         .ok()
         .map(PathBuf::from)
         .filter(|path| path.is_file())
         .or_else(|| {
             find_in_path(if target.contains("windows") {
-                "opencode.exe"
+                "engine.exe"
             } else {
-                "opencode"
+                "engine"
             })
         });
 
     let Some(source_path) = source_path else {
         println!(
-      "cargo:warning=AiWorkEngine sidecar missing at {} (set AIWORK_ENGINE_BIN_PATH or install AiWorkEngine)",
+      "cargo:warning=Engine sidecar missing at {} (set ENGINE_BIN_PATH or install Engine)",
       dest_path.display()
     );
 
@@ -225,7 +225,7 @@ fn ensure_aiwork_sidecar() {
         let _ = copy_sidecar(&dest_path, &target_dest_path, &target);
     } else {
         println!(
-            "cargo:warning=Failed to copy AiWorkEngine sidecar from {} to {}",
+            "cargo:warning=Failed to copy Engine sidecar from {} to {}",
             source_path.display(),
             dest_path.display()
         );

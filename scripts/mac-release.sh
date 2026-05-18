@@ -34,7 +34,7 @@ pnpm release:review
 pnpm -C apps/desktop prepare:sidecar
 
 apps/desktop/src-tauri/sidecars/aiwork-server --version
-apps/desktop/src-tauri/sidecars/opencode --version
+apps/desktop/src-tauri/sidecars/engine --version
 
 # ─── Build the app bundle ────────────────────────────────────────────────────
 APPLE_SIGNING_IDENTITY="$APPLE_SIGNING_IDENTITY" \

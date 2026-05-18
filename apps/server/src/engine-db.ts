@@ -20,37 +20,37 @@ function truthy(value: string | undefined): boolean {
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
 
-function opencodeDataDirs(): string[] {
+function engineDataDirs(): string[] {
   const dirs: string[] = [];
   const xdg = process.env.XDG_DATA_HOME?.trim();
-  if (xdg) dirs.push(join(xdg, "opencode"));
-  dirs.push(join(homedir(), ".local", "share", "opencode"));
-  if (process.platform === "darwin") dirs.push(join(homedir(), "Library", "Application Support", "opencode"));
+  if (xdg) dirs.push(join(xdg, "engine"));
+  dirs.push(join(homedir(), ".local", "share", "engine"));
+  if (process.platform === "darwin") dirs.push(join(homedir(), "Library", "Application Support", "engine"));
   if (process.platform === "win32") {
     const appData = process.env.APPDATA?.trim();
-    if (appData) dirs.push(join(appData, "opencode"));
+    if (appData) dirs.push(join(appData, "engine"));
   }
   return Array.from(new Set(dirs));
 }
 
 function preferredDbNames(): string[] {
-  return ["opencode.db"]
+  return ["engine.db"]
 }
 
-function candidateAiWorkEngineDbPaths(): string[] {
-  const override = process.env.AIWORK_ENGINE_DB?.trim();
+function candidateEngineDbPaths(): string[] {
+  const override = process.env.ENGINE_DB?.trim();
   if (override) {
     if (isAbsolute(override)) return [override];
     const candidates: string[] = [];
-    for (const dir of opencodeDataDirs()) {
+    for (const dir of engineDataDirs()) {
       candidates.push(join(dir, override));
     }
-    candidates.push(join(opencodeDataDirs()[0] ?? join(homedir(), ".local", "share", "opencode"), override));
+    candidates.push(join(engineDataDirs()[0] ?? join(homedir(), ".local", "share", "engine"), override));
     return Array.from(new Set(candidates));
   }
 
   const candidates: string[] = [];
-  for (const dir of opencodeDataDirs()) {
+  for (const dir of engineDataDirs()) {
     for (const name of preferredDbNames()) {
       candidates.push(join(dir, name));
     }
@@ -59,15 +59,15 @@ function candidateAiWorkEngineDbPaths(): string[] {
   return Array.from(new Set(candidates));
 }
 
-export function resolveAiWorkEngineDbPath(): string {
-  const candidates = candidateAiWorkEngineDbPaths();
+export function resolveEngineDbPath(): string {
+  const candidates = candidateEngineDbPaths();
   const existing = candidates.find((candidate) => existsSync(candidate));
   if (existing) return existing;
-  return candidates[0] ?? join(homedir(), ".local", "share", "opencode", preferredDbNames()[0] ?? "opencode.db");
+  return candidates[0] ?? join(homedir(), ".local", "share", "engine", preferredDbNames()[0] ?? "engine.db");
 }
 
-function findAiWorkEngineSessionDbPath(sessionId: string, inputPath?: string): string | null {
-  const candidates = (inputPath ? [inputPath] : candidateAiWorkEngineDbPaths()).filter((candidate) => existsSync(candidate));
+function findEngineSessionDbPath(sessionId: string, inputPath?: string): string | null {
+  const candidates = (inputPath ? [inputPath] : candidateEngineDbPaths()).filter((candidate) => existsSync(candidate));
   for (const dbPath of candidates) {
     const db = new Database(dbPath, { readonly: true });
     try {
@@ -101,7 +101,7 @@ function ascendingId(prefix: "msg" | "prt", timestamp: number, counter: number):
   return `${prefix}_${bytes.toString("hex")}${randomBase62(14)}`;
 }
 
-export function seedAiWorkEngineSessionMessages(input: {
+export function seedEngineSessionMessages(input: {
   sessionId: string;
   workspaceRoot: string;
   messages: SeedMessage[];
@@ -119,9 +119,9 @@ export function seedAiWorkEngineSessionMessages(input: {
   }
 
   const explicitDbPath = input.dbPath?.trim() || undefined;
-  const dbPath = findAiWorkEngineSessionDbPath(sessionId, explicitDbPath) || explicitDbPath || resolveAiWorkEngineDbPath();
+  const dbPath = findEngineSessionDbPath(sessionId, explicitDbPath) || explicitDbPath || resolveEngineDbPath();
   if (!existsSync(dbPath)) {
-    throw new Error(`AiWorkEngine database not found at ${dbPath}`);
+    throw new Error(`Engine database not found at ${dbPath}`);
   }
 
   const db = new Database(dbPath);
@@ -131,7 +131,7 @@ export function seedAiWorkEngineSessionMessages(input: {
     const run = db.transaction(() => {
       const session = db.query("select id from session where id = ?1").get(sessionId);
       if (!session) {
-        throw new Error(`AiWorkEngine session not found: ${sessionId}`);
+        throw new Error(`Engine session not found: ${sessionId}`);
       }
 
       const existing = db.query("select count(1) as count from message where session_id = ?1").get(sessionId) as { count?: number } | null;

@@ -1,9 +1,9 @@
 import { parse } from "jsonc-parser";
 
 import {
-  readGlobalAiWorkEngineConfigFile,
-  writeGlobalAiWorkEngineConfigContent,
-  type ReadGlobalAiWorkEngineConfigInput,
+  readGlobalEngineConfigFile,
+  writeGlobalEngineConfigContent,
+  type ReadGlobalEngineConfigInput,
 } from "./global-engine-disabled-providers";
 import {
   AIWORK_CUSTOM_PROVIDER_ENTRY_KEY,
@@ -19,11 +19,11 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Merge `provider.<id>` into global `~/.config/opencode/opencode.json` (or AiWork server global scope).
+ * Merge `provider.<id>` into global `~/.config/engine/engine.json` (or AiWork server global scope).
  * Includes `options.baseURL`, `options.apiKey`, and `models` from the `/v1/models` step when available.
  */
-export async function upsertGlobalProviderAiWorkEngineEntry(
-  input: ReadGlobalAiWorkEngineConfigInput & {
+export async function upsertGlobalProviderEngineEntry(
+  input: ReadGlobalEngineConfigInput & {
     providerId: string;
     displayName: string;
     baseURL: string;
@@ -43,7 +43,7 @@ export async function upsertGlobalProviderAiWorkEngineEntry(
     return { ok: false, reason: "write_failed" };
   }
 
-  const existing = await readGlobalAiWorkEngineConfigFile(input);
+  const existing = await readGlobalEngineConfigFile(input);
   const raw = existing?.content?.trim() ? existing.content : `{\n  "$schema": "${SCHEMA_URL}"\n}\n`;
 
   const parseErrors: Array<{ error: number; offset: number; length: number }> = [];
@@ -88,10 +88,10 @@ export async function upsertGlobalProviderAiWorkEngineEntry(
   }
 
   const nextContent = `${JSON.stringify(tree, null, 2)}\n`;
-  ConsoleLog.log("global-engine-provider-upsert", "upsertGlobalProviderAiWorkEngineEntry:done", {
+  ConsoleLog.log("global-engine-provider-upsert", "upsertGlobalProviderEngineEntry:done", {
     ok: true,
     content: nextContent,
   });
-  const wrote = await writeGlobalAiWorkEngineConfigContent(input, nextContent);
+  const wrote = await writeGlobalEngineConfigContent(input, nextContent);
   return wrote ? { ok: true } : { ok: false, reason: "write_failed" };
 }

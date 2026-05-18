@@ -6,7 +6,7 @@ import { t } from "../../i18n";
 import { Button } from "../design-system/button";
 import {
   fetchEngineInfoForLogViewer,
-  fetchAiWorkEngineEngineDiskLogsForLogViewer,
+  fetchEngineEngineDiskLogsForLogViewer,
   fetchAiWorkServerInfoForLogViewer,
 } from "./desktop-log-viewer-host-bridge";
 import {
@@ -49,7 +49,7 @@ function truncateFormattedShellEntries(formattedEntries: string[], maxLines: num
   return out.reverse();
 }
 
-type LogTabId = "shell" | "aiwork_server" | "opencode";
+type LogTabId = "shell" | "aiwork_server" | "engine";
 
 function formatServiceLogs(stdout: string | null | undefined, stderr: string | null | undefined): string {
   const out = (stdout ?? "").toString().trim();
@@ -60,7 +60,7 @@ function formatServiceLogs(stdout: string | null | undefined, stderr: string | n
   return sections.join("\n\n");
 }
 
-function formatAiWorkEngineDiskLogsSection(
+function formatEngineDiskLogsSection(
   snapshot: {
     dir: string;
     resolvedVariant: string;
@@ -128,8 +128,8 @@ export function AppLogWindowRoute() {
   const [shellLines, setShellLines] = useState<string[]>([]);
   const [aiworkText, setAiWorkText] = useState("");
   const [aiworkError, setAiWorkError] = useState<string | null>(null);
-  const [opencodeText, setAiWorkEngineText] = useState("");
-  const [opencodeError, setAiWorkEngineError] = useState<string | null>(null);
+  const [engineText, setEngineText] = useState("");
+  const [engineError, setEngineError] = useState<string | null>(null);
 
   const preRef = useRef<HTMLPreElement>(null);
   const stickBottomRef = useRef(true);
@@ -203,32 +203,32 @@ export function AppLogWindowRoute() {
     }
   }, []);
 
-  const refreshAiWorkEngine = useCallback(async () => {
-    setAiWorkEngineError(null);
+  const refreshEngine = useCallback(async () => {
+    setEngineError(null);
     try {
       const [disk, info] = await Promise.all([
-        fetchAiWorkEngineEngineDiskLogsForLogViewer(),
+        fetchEngineEngineDiskLogsForLogViewer(),
         fetchEngineInfoForLogViewer(),
       ]);
       const sections: string[] = [
-        formatAiWorkEngineDiskLogsSection(disk, t("settings.no_logs_captured")),
+        formatEngineDiskLogsSection(disk, t("settings.no_logs_captured")),
       ];
       const capture = formatServiceLogs(info.lastStdout, info.lastStderr);
       if (capture.trim()) {
         sections.push(`# process capture\n${capture}`);
       }
-      setAiWorkEngineText(truncateLogLines(sections.join("\n\n"), LOG_VIEWER_MAX_LINES));
+      setEngineText(truncateLogLines(sections.join("\n\n"), LOG_VIEWER_MAX_LINES));
     } catch (error) {
-      setAiWorkEngineError(error instanceof Error ? error.message : String(error));
-      setAiWorkEngineText("");
+      setEngineError(error instanceof Error ? error.message : String(error));
+      setEngineText("");
     }
   }, []);
 
   const refreshActive = useCallback(async () => {
     if (tab === "shell") await refreshShell();
     else if (tab === "aiwork_server") await refreshAiWork();
-    else await refreshAiWorkEngine();
-  }, [refreshAiWorkEngine, refreshAiWork, refreshShell, tab]);
+    else await refreshEngine();
+  }, [refreshEngine, refreshAiWork, refreshShell, tab]);
 
   useEffect(() => {
     stickBottomRef.current = true;
@@ -245,16 +245,16 @@ export function AppLogWindowRoute() {
   }, [live, refreshActive, tab]);
 
   const displayBody = useMemo(() => {
-    if (tab === "aiwork_server" || tab === "opencode") {
+    if (tab === "aiwork_server" || tab === "engine") {
       if (tab === "aiwork_server") {
         if (aiworkError) return `${t("session.app_log_fetch_error")}\n${aiworkError}`;
         return aiworkText || t("settings.no_logs_captured");
       }
-      if (opencodeError) return `${t("session.app_log_fetch_error")}\n${opencodeError}`;
-      return opencodeText || t("settings.no_logs_captured");
+      if (engineError) return `${t("session.app_log_fetch_error")}\n${engineError}`;
+      return engineText || t("settings.no_logs_captured");
     }
     return shellLines.length === 0 ? t("session.app_log_empty") : shellLines.join("\n\n");
-  }, [aiworkError, aiworkText, opencodeError, opencodeText, shellLines, tab]);
+  }, [aiworkError, aiworkText, engineError, engineText, shellLines, tab]);
 
   useEffect(() => {
     const el = preRef.current;
@@ -367,11 +367,11 @@ export function AppLogWindowRoute() {
           <button
             type="button"
             role="tab"
-            aria-selected={tab === "opencode"}
-            className={`${tabButtonBase} ${tab === "opencode" ? tabButtonActive : tabButtonIdle}`}
-            onClick={() => setTab("opencode")}
+            aria-selected={tab === "engine"}
+            className={`${tabButtonBase} ${tab === "engine" ? tabButtonActive : tabButtonIdle}`}
+            onClick={() => setTab("engine")}
           >
-            {t("settings.aiwork_engine_sidecar")}
+            {t("settings.engine_sidecar")}
           </button>
         </div>
       </header>

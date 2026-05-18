@@ -12,9 +12,9 @@ import { createClient, unwrap } from "../../../app/lib/engine";
 import { finishPerf, perfNow, recordPerfLog } from "../../../app/lib/perf-log";
 import {
   getDesktopHomeDir,
-  readAiWorkEngineConfig,
-  writeAiWorkEngineConfig,
-  type AiWorkEngineConfigFile,
+  readEngineConfig,
+  writeEngineConfig,
+  type EngineConfigFile,
 } from "../../../app/lib/desktop";
 import { toSessionTransportDirectory } from "../../../app/lib/session-scope";
 import {
@@ -134,7 +134,7 @@ export function createConnectionsStore(options: {
     ) as McpStatusMap;
   };
 
-  const readMcpConfigFile = async (scope: "project" | "global"): Promise<AiWorkEngineConfigFile | null> => {
+  const readMcpConfigFile = async (scope: "project" | "global"): Promise<EngineConfigFile | null> => {
     const projectDir = options.projectDir().trim();
     const aiworkSnapshot = getAiWorkSnapshot();
     const aiworkClient = aiworkSnapshot.aiworkServerClient;
@@ -146,10 +146,10 @@ export function createConnectionsStore(options: {
       aiworkSnapshot.aiworkServerCapabilities?.config?.read;
 
     if (canUseAiWorkServer && aiworkClient && aiworkWorkspaceId) {
-      return aiworkClient.readAiWorkEngineConfigFile(aiworkWorkspaceId, scope);
+      return aiworkClient.readEngineConfigFile(aiworkWorkspaceId, scope);
     }
 
-    return readAiWorkEngineConfig(scope, projectDir);
+    return readEngineConfig(scope, projectDir);
   };
 
   const ensureActiveClient = async () => {
@@ -167,7 +167,7 @@ export function createConnectionsStore(options: {
 
     const mountedBaseUrl =
       buildAiWorkWorkspaceBaseUrl(aiworkBaseUrl, options.runtimeWorkspaceId()) ?? aiworkBaseUrl;
-    activeClient = createClient(`${mountedBaseUrl.replace(/\/+$/, "")}/opencode`, undefined, {
+    activeClient = createClient(`${mountedBaseUrl.replace(/\/+$/, "")}/engine`, undefined, {
       token,
       mode: "aiwork",
     });
@@ -307,8 +307,8 @@ export function createConnectionsStore(options: {
         projectDir,
       });
       const [globalConfig, projectConfig] = await Promise.all([
-        readAiWorkEngineConfig("global", projectDir),
-        readAiWorkEngineConfig("project", projectDir),
+        readEngineConfig("global", projectDir),
+        readEngineConfig("project", projectDir),
       ]);
       const globalServers = globalConfig.exists && globalConfig.content
         ? parseMcpServersFromContent(globalConfig.content).map((entry) => ({
@@ -338,7 +338,7 @@ export function createConnectionsStore(options: {
           ...current,
           mcpServers: [],
           mcpStatuses: {},
-          mcpStatus: "No opencode.json found yet. Create one by connecting an MCP.",
+          mcpStatus: "No engine.json found yet. Create one by connecting an MCP.",
         }));
         return;
       }
@@ -464,7 +464,7 @@ export function createConnectionsStore(options: {
           config: mcpEntryConfig,
         });
       } else {
-        const configFile = await readAiWorkEngineConfig("project", resolvedProjectDir);
+        const configFile = await readEngineConfig("project", resolvedProjectDir);
 
         const raw = configFile.exists && configFile.content?.trim()
           ? configFile.content
@@ -476,7 +476,7 @@ export function createConnectionsStore(options: {
           const details = parseErrors
             .map((entry) => printParseErrorCode(entry.error))
             .join(", ");
-          throw new Error(`Failed to parse opencode config: ${details}`);
+          throw new Error(`Failed to parse engine config: ${details}`);
         }
 
         let updated = raw;
@@ -490,13 +490,13 @@ export function createConnectionsStore(options: {
           modify(updated, ["mcp", slug], mcpEntryConfig, { formattingOptions }),
         );
 
-        const writeResult = await writeAiWorkEngineConfig(
+        const writeResult = await writeEngineConfig(
           "project",
           resolvedProjectDir,
           updated.endsWith("\n") ? updated : `${updated}\n`,
         );
         if (!writeResult.ok) {
-          throw new Error(writeResult.stderr || writeResult.stdout || "Failed to write opencode.json");
+          throw new Error(writeResult.stderr || writeResult.stdout || "Failed to write engine.json");
         }
       }
 
@@ -504,7 +504,7 @@ export function createConnectionsStore(options: {
         // The AiWork server is the source of truth for workspace-scoped MCP
         // config in the React port. Avoid also calling the AiWork SDK's MCP
         // hot-add endpoint here: when the SDK client is rooted at the aggregate
-        // `/opencode` route it can resolve to an internal `local_*` workspace
+        // `/engine` route it can resolve to an internal `local_*` workspace
         // id that the AiWork server does not expose, producing a confusing
         // `workspace_not_found` after the config write already succeeded.
         setStateField("mcpStatuses", filterConfiguredStatuses(snapshot.mcpStatuses, snapshot.mcpServers));
@@ -721,7 +721,7 @@ export function createConnectionsStore(options: {
     }
   }
 
-  // Server-only path. Local fallback would rewrite opencode.jsonc whole and
+  // Server-only path. Local fallback would rewrite engine.jsonc whole and
   // clobber inline comments — settings-route.tsx already gates the prop so
   // this never gets called when the server is unavailable. Reload UX comes
   // from the existing reload-required popup; no extra banner here.

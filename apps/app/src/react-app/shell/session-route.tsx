@@ -6,9 +6,9 @@ import type {
   FilePartInput,
   ProviderListResponse,
   TextPartInput,
-} from "@aiwork-engine/sdk/v2/client";
+} from "@engine/sdk/v2/client";
 
-import type { ReadGlobalAiWorkEngineConfigInput } from "../../app/lib/global-engine-disabled-providers";
+import type { ReadGlobalEngineConfigInput } from "../../app/lib/global-engine-disabled-providers";
 import { createClient, unwrap } from "../../app/lib/engine";
 import { listCommands, shellInSession } from "../../app/lib/engine-session";
 import {
@@ -961,10 +961,10 @@ export function SessionRoute() {
   }, [client, loading, selectedWorkspace, workspaces]);
 
   const selectedWorkspaceRoot = selectedWorkspace?.path?.trim() || "";
-  const opencodeBaseUrl = useMemo(() => {
+  const engineBaseUrl = useMemo(() => {
     if (!selectedWorkspaceId || !baseUrl) return "";
     const mounted = buildAiWorkWorkspaceBaseUrl(baseUrl, selectedWorkspaceId) ?? baseUrl;
-    return `${mounted.replace(/\/+$|\/+$/g, "")}/opencode`;
+    return `${mounted.replace(/\/+$|\/+$/g, "")}/engine`;
   }, [baseUrl, selectedWorkspaceId]);
   const selectedWorkspaceIsLoading = retryingWorkspaceIds.includes(selectedWorkspaceId);
   const selectedWorkspaceError = errorsByWorkspaceId[selectedWorkspaceId] ?? null;
@@ -986,18 +986,18 @@ export function SessionRoute() {
   // sidebar; they must not gate the composer/New task.
   const effectiveLoading = loading;
 
-  const aiWorkEngineClient = useMemo(
+  const engineClient = useMemo(
     () =>
-      opencodeBaseUrl && token && !selectedWorkspaceError
-        ? createClient(opencodeBaseUrl, selectedWorkspaceRoot || undefined, {
+      engineBaseUrl && token && !selectedWorkspaceError
+        ? createClient(engineBaseUrl, selectedWorkspaceRoot || undefined, {
             token,
             mode: "aiwork",
           })
         : null,
-    [opencodeBaseUrl, selectedWorkspaceError, selectedWorkspaceRoot, token],
+    [engineBaseUrl, selectedWorkspaceError, selectedWorkspaceRoot, token],
   );
   const canCreateTask = Boolean(
-    aiWorkEngineClient && selectedWorkspaceId && !loading && !selectedWorkspaceError,
+    engineClient && selectedWorkspaceId && !loading && !selectedWorkspaceError,
   );
   const permissionQueryKey = useMemo(
     () =>
@@ -1022,13 +1022,13 @@ export function SessionRoute() {
     emptyPendingQuestions,
   );
   useEffect(() => {
-    if (!aiWorkEngineClient || !selectedWorkspaceId || !selectedSessionId) return;
+    if (!engineClient || !selectedWorkspaceId || !selectedSessionId) return;
     let cancelled = false;
     const directory = selectedWorkspaceRoot || undefined;
     void (async () => {
       const snapshotStartedAt = Date.now();
       try {
-        const list = unwrap(await aiWorkEngineClient.permission.list({ directory })) as unknown;
+        const list = unwrap(await engineClient.permission.list({ directory })) as unknown;
         if (!cancelled) {
           seedPermissionState(
             selectedWorkspaceId,
@@ -1045,10 +1045,10 @@ export function SessionRoute() {
     return () => {
       cancelled = true;
     };
-  }, [aiWorkEngineClient, selectedSessionId, selectedWorkspaceId, selectedWorkspaceRoot]);
+  }, [engineClient, selectedSessionId, selectedWorkspaceId, selectedWorkspaceRoot]);
 
   useEffect(() => {
-    if (!aiWorkEngineClient || !selectedWorkspaceId || !selectedSessionId) return;
+    if (!engineClient || !selectedWorkspaceId || !selectedSessionId) return;
     let cancelled = false;
     const directory = selectedWorkspaceRoot || undefined;
     void (async () => {
@@ -1057,7 +1057,7 @@ export function SessionRoute() {
         // SDK surface for questions is not available in some builds yet.
         // Use an any-cast to avoid blocking compilation; if missing, we
         // simply won't show question prompts.
-        const questionApi = (aiWorkEngineClient as any).question;
+        const questionApi = (engineClient as any).question;
         const result = await questionApi?.list?.({ directory });
         const data = result ? unwrap(result as any) : [];
         if (!cancelled) {
@@ -1075,19 +1075,19 @@ export function SessionRoute() {
     return () => {
       cancelled = true;
     };
-  }, [aiWorkEngineClient, selectedSessionId, selectedWorkspaceId, selectedWorkspaceRoot]);
+  }, [engineClient, selectedSessionId, selectedWorkspaceId, selectedWorkspaceRoot]);
 
   const activePermission = pendingPermissions[0] ?? null;
   const activeQuestion = pendingQuestions[0] ?? null;
   const respondPermission = useCallback(
     async (requestID: string, reply: "once" | "always" | "reject") => {
-      if (!aiWorkEngineClient || !selectedWorkspaceId || !selectedSessionId) return;
+      if (!engineClient || !selectedWorkspaceId || !selectedSessionId) return;
       if (permissionReplyBusyRef.current) return;
       permissionReplyBusyRef.current = true;
       setPermissionReplyBusy(true);
       try {
         unwrap(
-          await aiWorkEngineClient.permission.reply({
+          await engineClient.permission.reply({
             requestID,
             reply,
             directory: selectedWorkspaceRoot || undefined,
@@ -1108,19 +1108,19 @@ export function SessionRoute() {
         setPermissionReplyBusy(false);
       }
     },
-    [aiWorkEngineClient, selectedSessionId, selectedWorkspaceId, selectedWorkspaceRoot, showToast],
+    [engineClient, selectedSessionId, selectedWorkspaceId, selectedWorkspaceRoot, showToast],
   );
 
   const [questionReplyBusy, setQuestionReplyBusy] = useState(false);
   const questionReplyBusyRef = useRef(false);
   const respondQuestion = useCallback(
     async (requestID: string, answers: string[][]) => {
-      if (!aiWorkEngineClient || !selectedWorkspaceId || !selectedSessionId) return;
+      if (!engineClient || !selectedWorkspaceId || !selectedSessionId) return;
       if (questionReplyBusyRef.current) return;
       questionReplyBusyRef.current = true;
       setQuestionReplyBusy(true);
       try {
-        const questionApi = (aiWorkEngineClient as any).question;
+        const questionApi = (engineClient as any).question;
         if (!questionApi?.reply) {
           throw new Error("Question reply API is unavailable in this build.");
         }
@@ -1146,14 +1146,14 @@ export function SessionRoute() {
         setQuestionReplyBusy(false);
       }
     },
-    [aiWorkEngineClient, selectedSessionId, selectedWorkspaceId, selectedWorkspaceRoot, showToast],
+    [engineClient, selectedSessionId, selectedWorkspaceId, selectedWorkspaceRoot, showToast],
   );
   const showPreparingStatus =
     effectiveLoading ||
     (!canCreateTask && !routeError && !selectedWorkspaceError);
 
   useEffect(() => {
-    if (!aiWorkEngineClient) {
+    if (!engineClient) {
       setProviders([]);
       setProviderConnectedIds([]);
       return;
@@ -1176,7 +1176,7 @@ export function SessionRoute() {
           caps = null;
         }
       }
-      const globalInput: ReadGlobalAiWorkEngineConfigInput = {
+      const globalInput: ReadGlobalEngineConfigInput = {
         workspaceRoot: selectedWorkspaceRoot,
         selectedWorkspaceId: selectedWorkspaceId.trim(),
         runtimeWorkspaceId: selectedWorkspaceId.trim() || null,
@@ -1186,7 +1186,7 @@ export function SessionRoute() {
       };
 
       const filtered = await fetchFinallyProviderList({
-        listClient: aiWorkEngineClient as Client,
+        listClient: engineClient as Client,
         globalInput,
         workspaceConfigDirectory: selectedWorkspaceRoot || undefined,
         providerConnectedIds: [],
@@ -1205,7 +1205,7 @@ export function SessionRoute() {
     };
   }, [
     client,
-    aiWorkEngineClient,
+    engineClient,
     selectedWorkspaceId,
     selectedWorkspaceRoot,
   ]);
@@ -1239,7 +1239,7 @@ export function SessionRoute() {
   // model supports — without waiting for the model picker to open. Cached
   // as providerID → modelID → ProviderModel.
   useEffect(() => {
-    if (!aiWorkEngineClient) return;
+    if (!engineClient) return;
     let cancelled = false;
     void (async () => {
       let caps: AiWorkServerCapabilities | null = null;
@@ -1250,7 +1250,7 @@ export function SessionRoute() {
           caps = null;
         }
       }
-      const globalInput: ReadGlobalAiWorkEngineConfigInput = {
+      const globalInput: ReadGlobalEngineConfigInput = {
         workspaceRoot: selectedWorkspaceRoot,
         selectedWorkspaceId: selectedWorkspaceId.trim(),
         runtimeWorkspaceId: selectedWorkspaceId.trim() || null,
@@ -1260,7 +1260,7 @@ export function SessionRoute() {
       };
 
       const filtered = await fetchFinallyProviderList({
-        listClient: aiWorkEngineClient as Client,
+        listClient: engineClient as Client,
         globalInput,
         workspaceConfigDirectory: selectedWorkspaceRoot || undefined,
         providerConnectedIds: [],
@@ -1278,7 +1278,7 @@ export function SessionRoute() {
     return () => {
       cancelled = true;
     };
-  }, [client, aiWorkEngineClient, selectedWorkspaceId, selectedWorkspaceRoot]);
+  }, [client, engineClient, selectedWorkspaceId, selectedWorkspaceRoot]);
 
   // Compute behavior (reasoning/thinking variant) options for the current
   // default model. This is what the composer renders as its variant pill.
@@ -1300,7 +1300,7 @@ export function SessionRoute() {
   // dropdown opens. Uses the cached catalog when available, otherwise re-fetches.
   const [modelsLoadId, setModelsLoadId] = useState(0);
   useEffect(() => {
-    if ((!modelPickerOpen && modelsLoadId === 0) || !aiWorkEngineClient) return;
+    if ((!modelPickerOpen && modelsLoadId === 0) || !engineClient) return;
     let cancelled = false;
     void (async () => {
       let caps: AiWorkServerCapabilities | null = null;
@@ -1311,7 +1311,7 @@ export function SessionRoute() {
           caps = null;
         }
       }
-      const globalInput: ReadGlobalAiWorkEngineConfigInput = {
+      const globalInput: ReadGlobalEngineConfigInput = {
         workspaceRoot: selectedWorkspaceRoot,
         selectedWorkspaceId: selectedWorkspaceId.trim(),
         runtimeWorkspaceId: selectedWorkspaceId.trim() || null,
@@ -1354,7 +1354,7 @@ export function SessionRoute() {
       };
 
       const filtered = await fetchFinallyProviderList({
-        listClient: aiWorkEngineClient as Client,
+        listClient: engineClient as Client,
         globalInput,
         workspaceConfigDirectory: selectedWorkspaceRoot || undefined,
         providerConnectedIds: [],
@@ -1369,7 +1369,7 @@ export function SessionRoute() {
     client,
     modelPickerOpen,
     modelsLoadId,
-    aiWorkEngineClient,
+    engineClient,
     selectedWorkspaceId,
     selectedWorkspaceRoot,
   ]);
@@ -1379,9 +1379,9 @@ export function SessionRoute() {
     // an engine reload, which invalidates the composer's command list cache
     // and causes it to re-fetch (picking up newly created skills).
     void engineReloadVersion;
-    if (!aiWorkEngineClient) return [];
-    return listCommands(aiWorkEngineClient, selectedWorkspaceRoot || undefined);
-  }, [engineReloadVersion, aiWorkEngineClient, selectedWorkspaceRoot]);
+    if (!engineClient) return [];
+    return listCommands(engineClient, selectedWorkspaceRoot || undefined);
+  }, [engineReloadVersion, engineClient, selectedWorkspaceRoot]);
 
   const listModels = useCallback(async (): Promise<ModelOption[]> => {
     if (modelOptions.length > 0) return modelOptions;
@@ -1416,7 +1416,7 @@ export function SessionRoute() {
   }, []);
 
   const surfaceProps = useMemo(() => {
-    if (!client || !selectedWorkspaceId || !selectedSessionId || !opencodeBaseUrl || !token || !aiWorkEngineClient) {
+    if (!client || !selectedWorkspaceId || !selectedSessionId || !engineBaseUrl || !token || !engineClient) {
       return null;
     }
 
@@ -1443,7 +1443,7 @@ export function SessionRoute() {
       workspaceId: selectedWorkspaceId,
       workspaceRoot: selectedWorkspaceRoot,
       sessionId: selectedSessionId,
-      opencodeBaseUrl,
+      engineBaseUrl,
       aiworkToken: token,
       developerMode: false,
       showThinking: local.prefs.showThinking,
@@ -1463,13 +1463,13 @@ export function SessionRoute() {
         if (!text && draft.attachments.length === 0) return;
         
         if (draft.mode === "shell") {
-          await shellInSession(aiWorkEngineClient, selectedSessionId, text);
+          await shellInSession(engineClient, selectedSessionId, text);
           promoteSessionToFirstInWorkspace(selectedWorkspaceId, selectedSessionId);
           return;
         }
 
         if (draft.command) {
-          const result = await aiWorkEngineClient.session.command({
+          const result = await engineClient.session.command({
             sessionID: selectedSessionId,
             command: draft.command.name,
             arguments: draft.command.arguments,
@@ -1520,7 +1520,7 @@ export function SessionRoute() {
           cacheKey: selectedSessionId,
           runtimeKey: envRuntimeKey,
         });
-        const result = await aiWorkEngineClient.session.promptAsync({
+        const result = await engineClient.session.promptAsync({
           sessionID: selectedSessionId,
           parts,
           model: effectiveModel ?? undefined,
@@ -1581,7 +1581,7 @@ export function SessionRoute() {
         if (!isDefault) return;
         sessionAutoRenamedRef.current.add(sessionId);
         try {
-          await aiWorkEngineClient.session.update({
+          await engineClient.session.update({
             sessionID: sessionId,
             title: derived,
             directory: selectedWorkspaceRoot || undefined,
@@ -1610,8 +1610,8 @@ export function SessionRoute() {
         : t("composer.agent_label"),
       selectedAgent: sessionAgentOverrideState,
       listAgents: async () => {
-        const list = unwrap(await aiWorkEngineClient.app.agents()) as import("@aiwork-engine/sdk/v2/client").Agent[];
-        return list.filter((agent: import("@aiwork-engine/sdk/v2/client").Agent) => !agent.hidden && agent.mode !== "subagent" && agent.name !== "aiwork");
+        const list = unwrap(await engineClient.app.agents()) as import("@engine/sdk/v2/client").Agent[];
+        return list.filter((agent: import("@engine/sdk/v2/client").Agent) => !agent.hidden && agent.mode !== "subagent" && agent.name !== "aiwork");
       },
       onSelectAgent: (agent: string | null) => {
         if (selectedWorkspaceId && selectedSessionId) {
@@ -1625,7 +1625,7 @@ export function SessionRoute() {
         const trimmed = query.trim();
         if (!trimmed) return [];
         const result = unwrap(
-          await aiWorkEngineClient.find.files({
+          await engineClient.find.files({
             query: trimmed,
             dirs: "true",
             limit: 50,
@@ -1658,8 +1658,8 @@ export function SessionRoute() {
     modelOptions,
     modelVariantLabel,
     navigate,
-    opencodeBaseUrl,
-    aiWorkEngineClient,
+    engineBaseUrl,
+    engineClient,
     effectiveModel,
     promoteSessionToFirstInWorkspace,
     sessionAgentOverrideState,
@@ -1784,9 +1784,9 @@ export function SessionRoute() {
     ) {
       return;
     }
-    const workspaceAiWorkEngineBaseUrl = `${(buildAiWorkWorkspaceBaseUrl(baseUrl, workspace.id) ?? baseUrl).replace(/\/+$|\/+$/g, "")}/opencode`;
+    const workspaceEngineBaseUrl = `${(buildAiWorkWorkspaceBaseUrl(baseUrl, workspace.id) ?? baseUrl).replace(/\/+$|\/+$/g, "")}/engine`;
     const workspaceClient = createClient(
-      workspaceAiWorkEngineBaseUrl,
+      workspaceEngineBaseUrl,
       workspace.path?.trim() || undefined,
       { token, mode: "aiwork" },
     );
@@ -1876,7 +1876,7 @@ export function SessionRoute() {
     selectedSessionId,
     canCreateTask,
     aiworkClient: client,
-    aiWorkEngineClient,
+    engineClient,
     navigateToSession: navigateToSessionForControl,
     navigateToSessionRoot: navigateToSessionRootForControl,
     createTaskInWorkspace: handleCreateTaskInWorkspace,
@@ -1974,11 +1974,11 @@ export function SessionRoute() {
 
   return (
     <>
-    {aiWorkEngineClient && selectedWorkspaceId && opencodeBaseUrl && token ? (
+    {engineClient && selectedWorkspaceId && engineBaseUrl && token ? (
       <ReactSessionRuntime
         workspaceId={selectedWorkspaceId}
         sessionId={selectedSessionId}
-        opencodeBaseUrl={opencodeBaseUrl}
+        engineBaseUrl={engineBaseUrl}
         aiworkToken={token}
       />
     ) : null}
@@ -2041,11 +2041,11 @@ export function SessionRoute() {
       respondPermission={respondPermission}
       safeStringify={safeStringify}
       onRenameSession={
-        aiWorkEngineClient
+        engineClient
           ? async (sessionId, nextTitle) => {
               const trimmed = nextTitle.trim();
               if (!trimmed) return;
-              await aiWorkEngineClient.session.update({
+              await engineClient.session.update({
                 sessionID: sessionId,
                 title: trimmed,
                 directory: selectedWorkspaceRoot || undefined,

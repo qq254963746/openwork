@@ -3,7 +3,7 @@
 import { mkdir } from "node:fs/promises";
 
 import { parseCliArgs, printHelp, resolveServerConfig } from "./config.js";
-import { createManagedAiWorkEngineServer, type ManagedAiWorkEngineServer } from "./engine-managed.js";
+import { createManagedEngineServer, type ManagedEngineServer } from "./engine-managed.js";
 import { createServerLogger, startServer } from "./server.js";
 import pkg from "../package.json" with { type: "json" };
 
@@ -21,33 +21,33 @@ if (args.version) {
 
 const config = await resolveServerConfig(args);
 const logger = createServerLogger(config);
-let managedAiWorkEngine: ManagedAiWorkEngineServer | null = null;
+let managedEngine: ManagedEngineServer | null = null;
 
-if (!config.opencodeBaseUrl && process.env.AIWORK_MANAGE_AIWORK_ENGINE === "1") {
+if (!config.engineBaseUrl && process.env.AIWORK_MANAGE_ENGINE === "1") {
   const workspace = config.workspaces[0];
   if (workspace?.path) {
-    const managedAiWorkEngineCwd = process.env.AIWORK_MANAGED_AIWORK_ENGINE_CWD?.trim() || workspace.path;
-    await mkdir(managedAiWorkEngineCwd, { recursive: true });
-    managedAiWorkEngine = await createManagedAiWorkEngineServer({
-      bin: process.env.AIWORK_AIWORK_ENGINE_BIN,
-      cwd: managedAiWorkEngineCwd,
+    const managedEngineCwd = process.env.AIWORK_MANAGED_ENGINE_CWD?.trim() || workspace.path;
+    await mkdir(managedEngineCwd, { recursive: true });
+    managedEngine = await createManagedEngineServer({
+      bin: process.env.engine_BIN,
+      cwd: managedEngineCwd,
       env: {
         ...(process.env.AIWORK_DEV_MODE ? { AIWORK_DEV_MODE: process.env.AIWORK_DEV_MODE } : {}),
       },
     });
-    config.opencodeBaseUrl = managedAiWorkEngine.url;
-    config.opencodeUsername = managedAiWorkEngine.username;
-    config.opencodePassword = managedAiWorkEngine.password;
+    config.engineBaseUrl = managedEngine.url;
+    config.engineUsername = managedEngine.username;
+    config.enginePassword = managedEngine.password;
     for (const entry of config.workspaces) {
-      entry.opencode = {
-        ...entry.opencode,
-        baseUrl: entry.opencode?.baseUrl ?? managedAiWorkEngine.url,
-        directory: entry.opencode?.directory ?? entry.path,
+      entry.engine = {
+        ...entry.engine,
+        baseUrl: entry.engine?.baseUrl ?? managedEngine.url,
+        directory: entry.engine?.directory ?? entry.path,
       };
-      entry.opencodeUsername ??= managedAiWorkEngine.username;
-      entry.opencodePassword ??= managedAiWorkEngine.password;
+      entry.engineUsername ??= managedEngine.username;
+      entry.enginePassword ??= managedEngine.password;
     }
-    logger.log("info", `Managed AiWorkEngine listening on ${managedAiWorkEngine.url}`);
+    logger.log("info", `Managed Engine listening on ${managedEngine.url}`);
   }
 }
 
@@ -81,7 +81,7 @@ if (args.verbose) {
 }
 
 const shutdown = () => {
-  managedAiWorkEngine?.close();
+  managedEngine?.close();
   (server as { stop?: (closeActiveConnections?: boolean) => void }).stop?.(true);
 };
 

@@ -3,7 +3,7 @@ import { readFile, writeFile } from "node:fs/promises";
 
 import { ensureDir, exists } from "./utils.js";
 import { ApiError } from "./errors.js";
-import { aiworkConfigPath, opencodeConfigPath } from "./workspace-files.js";
+import { aiworkConfigPath, engineConfigPath } from "./workspace-files.js";
 import { readJsoncFile, writeJsoncFile } from "./jsonc.js";
 import { DEFAULT_AGENT } from "./engine-db.js";
 
@@ -70,12 +70,12 @@ async function ensureWorkspaceAiWorkConfig(workspaceRoot: string, preset: string
     authorizedRoots: [workspaceRoot],
     reload: null,
   };
-  await ensureDir(join(workspaceRoot, ".opencode"));
+  await ensureDir(join(workspaceRoot, ".engine"));
   await writeFile(path, JSON.stringify(config, null, 2) + "\n", "utf8");
 }
 
-async function ensureAiWorkEngineConfig(workspaceRoot: string): Promise<void> {
-  const path = opencodeConfigPath(workspaceRoot);
+async function ensureEngineConfig(workspaceRoot: string): Promise<void> {
+  const path = engineConfigPath(workspaceRoot);
   const { data } = await readJsoncFile<Record<string, unknown>>(path, {
     $schema: "https://www.aiwork.love/config.json",
   });
@@ -91,7 +91,7 @@ async function ensureAiWorkEngineConfig(workspaceRoot: string): Promise<void> {
 }
 
 async function ensureAiWorkAgent(workspaceRoot: string): Promise<void> {
-  const agentsDir = join(workspaceRoot, ".opencode", "agents");
+  const agentsDir = join(workspaceRoot, ".engine", "agents");
   const agentPath = join(agentsDir, "aiwork.md");
   if (await exists(agentPath)) return;
   await ensureDir(agentsDir);
@@ -99,7 +99,7 @@ async function ensureAiWorkAgent(workspaceRoot: string): Promise<void> {
 }
 
 async function ensureAskAgent(workspaceRoot: string): Promise<void> {
-  const agentsDir = join(workspaceRoot, ".opencode", "agents");
+  const agentsDir = join(workspaceRoot, ".engine", "agents");
   const agentPath = join(agentsDir, "ask.md");
   if (await exists(agentPath)) return;
   await ensureDir(agentsDir);
@@ -112,7 +112,7 @@ export async function ensureWorkspaceFiles(workspaceRoot: string, presetInput: s
     throw new ApiError(400, "invalid_workspace_path", "workspace path is required");
   }
   await ensureDir(workspaceRoot);
-  await ensureAiWorkEngineConfig(workspaceRoot);
+  await ensureEngineConfig(workspaceRoot);
 
   await ensureAiWorkAgent(workspaceRoot);
 
@@ -120,7 +120,7 @@ export async function ensureWorkspaceFiles(workspaceRoot: string, presetInput: s
   await ensureWorkspaceAiWorkConfig(workspaceRoot, preset);
 }
 
-export async function readRawAiWorkEngineConfig(path: string): Promise<{ exists: boolean; content: string | null }> {
+export async function readRawEngineConfig(path: string): Promise<{ exists: boolean; content: string | null }> {
   const hasFile = await exists(path);
   if (!hasFile) {
     return { exists: false, content: null };

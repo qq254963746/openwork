@@ -1,8 +1,8 @@
-import type { ConfigProvidersResponse, ProviderListResponse } from "@aiwork-engine/sdk/v2/client";
+import type { ConfigProvidersResponse, ProviderListResponse } from "@engine/sdk/v2/client";
 
 import {
   readGlobalDisabledProviderIds,
-  type ReadGlobalAiWorkEngineConfigInput,
+  type ReadGlobalEngineConfigInput,
 } from "../../../../app/lib/global-engine-disabled-providers";
 import { unwrap } from "../../../../app/lib/engine";
 import { mergeAuthMetadataBaseUrlIntoProviderList } from "../../../../app/lib/provider-list-merge";
@@ -14,7 +14,7 @@ const LOG_SCOPE = "provider-auth";
 
 export type FetchFinallyProviderListParams = {
   listClient: Client;
-  globalInput: ReadGlobalAiWorkEngineConfigInput;
+  globalInput: ReadGlobalEngineConfigInput;
   /**
    * When omitted, loads via `readGlobalDisabledProviderIds(globalInput)` (same as
    * `refreshProviders` in the provider-auth store).
@@ -40,7 +40,7 @@ export async function fetchFinallyProviderList(
     disabledProviders = params.disabledProviders;
   } else {
     disabledProviders = await readGlobalDisabledProviderIds(globalInput);
-    ConsoleLog.log(LOG_SCOPE, "fetchFinallyProviderList:disabledProviders from global opencode.json", {
+    ConsoleLog.log(LOG_SCOPE, "fetchFinallyProviderList:disabledProviders from global engine.json", {
       disabled_providers: disabledProviders,
     });
   }

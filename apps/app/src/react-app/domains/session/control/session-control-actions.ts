@@ -27,7 +27,7 @@ type UseSessionControlActionsInput = {
   selectedSessionId: string | null;
   canCreateTask: boolean;
   aiworkClient: AiWorkServerClient | null;
-  aiWorkEngineClient: ReturnType<typeof createClient> | null;
+  engineClient: ReturnType<typeof createClient> | null;
   navigateToSession: (sessionId: string) => void;
   navigateToSessionRoot: () => void;
   createTaskInWorkspace: (workspaceId: string) => Promise<unknown> | unknown;
@@ -70,7 +70,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
     navigateToSessionRoot,
     openModelPicker,
     aiworkClient,
-    aiWorkEngineClient,
+    engineClient,
     refreshRouteState,
     selectedSessionId,
     selectedWorkspaceId,
@@ -142,16 +142,16 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
       { name: "sessionId", type: "string", required: true, description: "Session ID from session.list_sessions." },
       { name: "title", type: "string", required: true, description: "New session title." },
     ],
-    disabled: !aiWorkEngineClient,
+    disabled: !engineClient,
     execute: async (args) => {
       const sessionId = stringArg(args, "sessionId");
       const title = stringArg(args, "title");
       if (!sessionId) return { ok: false, error: "sessionId is required" };
       if (!title) return { ok: false, error: "title is required" };
-      if (!aiWorkEngineClient) return { ok: false, error: "AiWork client is not connected" };
+      if (!engineClient) return { ok: false, error: "AiWork client is not connected" };
 
       const targetWorkspace = findSessionWorkspace(workspaces, sessionsByWorkspaceId, sessionId);
-      await aiWorkEngineClient.session.update({
+      await engineClient.session.update({
         sessionID: sessionId,
         title,
         directory: targetWorkspace?.path || selectedWorkspaceRoot || undefined,
@@ -159,7 +159,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
       await refreshRouteState();
       return { ok: true, sessionId, title };
     },
-  }), [aiWorkEngineClient, refreshRouteState, selectedWorkspaceRoot, sessionsByWorkspaceId, workspaces]);
+  }), [engineClient, refreshRouteState, selectedWorkspaceRoot, sessionsByWorkspaceId, workspaces]);
   useControlAction(renameSessionControlAction);
 
   const deleteSessionControlAction = useMemo<AiWorkControlAction>(() => ({

@@ -5,9 +5,9 @@ import type {
   QuestionRequest,
   ProviderListResponse,
   Session,
-} from "@aiwork-engine/sdk/v2/client";
+} from "@engine/sdk/v2/client";
 import type { createClient } from "./lib/engine";
-import type { AiWorkEngineConfigFile, WorkspaceInfo } from "./lib/desktop";
+import type { EngineConfigFile, WorkspaceInfo } from "./lib/desktop";
 
 export type Client = ReturnType<typeof createClient>;
 
@@ -154,7 +154,7 @@ export type WorkspaceWriteTouch = {
   diffText?: string;
 };
 
-export type AiWorkEngineEvent = {
+export type EngineEvent = {
   type: string;
   properties?: unknown;
 };
@@ -271,7 +271,7 @@ export type McpStatusMap = Record<string, McpStatus>;
 
 export type ReloadReason = "plugins" | "skills" | "mcp" | "config" | "agents" | "commands";
 
-export type AiWorkEngineConnectStatus = {
+export type EngineConnectStatus = {
   at: number;
   baseUrl: string;
   directory?: string | null;
@@ -351,7 +351,7 @@ export type WorkspaceState = {
 
 export type PluginState = {
   scope: PluginScope;
-  config: AiWorkEngineConfigFile | null;
+  config: EngineConfigFile | null;
   list: string[];
 };
 

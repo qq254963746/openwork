@@ -14,7 +14,7 @@ import type {
   AiWorkServerCapabilities,
   AiWorkServerDiagnostics,
 } from "../../../../app/lib/aiwork-server";
-import type { AiWorkEngineConnectStatus, StartupPreference } from "../../../../app/types";
+import type { EngineConnectStatus, StartupPreference } from "../../../../app/types";
 import { formatRelativeTime } from "../../../../app/utils";
 import { t } from "../../../../i18n";
 import { Button } from "../../../design-system/button";
@@ -35,7 +35,7 @@ const compactDangerActionClass =
 type RuntimeSummary = {
   appVersionLabel: string;
   appCommitLabel: string;
-  opencodeVersionLabel: string;
+  engineVersionLabel: string;
   aiworkServerVersionLabel: string;
 };
 
@@ -51,7 +51,7 @@ type RuntimeServiceCard = StatusPill & {
   error?: string | null;
 };
 
-type AiWorkEngineConnectDebugCard = StatusPill & {
+type EngineConnectDebugCard = StatusPill & {
   lines: string[];
   metricsLines: string[];
   error?: string | null;
@@ -88,21 +88,21 @@ export type DebugViewProps = {
   onOpenResetModal: (mode: "onboarding" | "all") => void;
   resetModalBusy: boolean;
   resetStatus: string | null;
-  opencodeRestarting: boolean;
+  engineRestarting: boolean;
   aiworkServerRestarting: boolean;
-  opencodeServiceStatus: ServiceStatus;
+  engineServiceStatus: ServiceStatus;
   aiworkServiceStatus: ServiceStatus;
-  opencodeLogStatus: string | null;
+  engineLogStatus: string | null;
   aiworkLogStatus: string | null;
-  onCopyAiWorkEngineLogs: () => void | Promise<void>;
-  onExportAiWorkEngineLogs: () => void | Promise<void>;
+  onCopyEngineLogs: () => void | Promise<void>;
+  onExportEngineLogs: () => void | Promise<void>;
   onCopyAiWorkLogs: () => void | Promise<void>;
   onExportAiWorkLogs: () => void | Promise<void>;
   serviceRestartError: string | null;
-  onRestartAiWorkEngine: () => void | Promise<void>;
+  onRestartEngine: () => void | Promise<void>;
   onRestartAiWorkServer: () => void | Promise<void>;
   engineCard: RuntimeServiceCard;
-  opencodeConnectCard: AiWorkEngineConnectDebugCard;
+  engineConnectCard: EngineConnectDebugCard;
   aiworkCard: RuntimeServiceCard;
   aiworkServerDiagnostics: AiWorkServerDiagnostics | null;
   runtimeWorkspaceId: string | null;
@@ -116,11 +116,11 @@ export type DebugViewProps = {
   aiworkAuditEntries: AiWorkAuditEntry[];
   aiworkAuditStatus: StatusPill;
   aiworkAuditError: string | null;
-  opencodeConnectStatus: AiWorkEngineConnectStatus | null;
-  opencodeDevModeEnabled: boolean;
+  engineConnectStatus: EngineConnectStatus | null;
+  engineDevModeEnabled: boolean;
   nukeConfigBusy: boolean;
   nukeConfigStatus: string | null;
-  onNukeAiWorkAndAiWorkEngineConfig: () => void | Promise<void>;
+  onNukeAiWorkAndEngineConfig: () => void | Promise<void>;
 };
 
 function formatActor(entry: AiWorkAuditEntry) {
@@ -305,7 +305,7 @@ export function DebugView(props: DebugViewProps) {
           <div>{t("settings.debug_desktop_app", { version: props.runtimeSummary.appVersionLabel })}</div>
           <div>{t("settings.debug_commit", { commit: props.runtimeSummary.appCommitLabel })}</div>
           <div>
-            {t("settings.debug_aiwork_version", { version: props.runtimeSummary.opencodeVersionLabel })}
+            {t("settings.debug_aiwork_version", { version: props.runtimeSummary.engineVersionLabel })}
           </div>
           <div>
             {t("settings.debug_aiwork_server_version", {
@@ -349,20 +349,20 @@ export function DebugView(props: DebugViewProps) {
           />
 
           <ServiceCard
-            title={t("settings.aiwork_engine_sidecar")}
-            description={t("settings.aiwork_engine_sidecar_desc")}
+            title={t("settings.engine_sidecar")}
+            description={t("settings.engine_sidecar_desc")}
             pill={props.engineCard}
             lines={props.engineCard.lines}
             stdout={props.engineCard.stdout ?? null}
             stderr={props.engineCard.stderr ?? null}
             error={props.engineCard.error ?? null}
-            restarting={props.opencodeRestarting}
+            restarting={props.engineRestarting}
             restartLabel={t("settings.restart_aiwork")}
-            onRestart={props.onRestartAiWorkEngine}
-            serviceStatus={props.opencodeServiceStatus}
-            logStatus={props.opencodeLogStatus}
-            onCopyLogs={props.onCopyAiWorkEngineLogs}
-            onExportLogs={props.onExportAiWorkEngineLogs}
+            onRestart={props.onRestartEngine}
+            serviceStatus={props.engineServiceStatus}
+            logStatus={props.engineLogStatus}
+            onCopyLogs={props.onCopyEngineLogs}
+            onExportLogs={props.onExportEngineLogs}
             isDesktop={isDesktop}
           />
         </div>
@@ -375,22 +375,22 @@ export function DebugView(props: DebugViewProps) {
               </div>
               <div className="text-[12px] text-dls-secondary">{t("settings.aiwork_sdk_desc")}</div>
             </div>
-            <div className={`rounded-full border px-2 py-1 text-[11px] font-medium ${props.opencodeConnectCard.className}`}>
-              {props.opencodeConnectCard.label}
+            <div className={`rounded-full border px-2 py-1 text-[11px] font-medium ${props.engineConnectCard.className}`}>
+              {props.engineConnectCard.label}
             </div>
           </div>
-          <div className="space-y-1">{renderLines(props.opencodeConnectCard.lines)}</div>
-          {props.opencodeConnectCard.metricsLines.length > 0 ? (
+          <div className="space-y-1">{renderLines(props.engineConnectCard.lines)}</div>
+          {props.engineConnectCard.metricsLines.length > 0 ? (
             <div className="space-y-1 border-t border-dls-border/60 pt-1">
-              {renderLines(props.opencodeConnectCard.metricsLines)}
+              {renderLines(props.engineConnectCard.metricsLines)}
             </div>
           ) : null}
-          {props.opencodeConnectCard.error ? (
+          {props.engineConnectCard.error ? (
             <div>
               <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-dls-secondary">
                 {t("settings.last_error")}
               </div>
-              <pre className={miniPreClass}>{props.opencodeConnectCard.error}</pre>
+              <pre className={miniPreClass}>{props.engineConnectCard.error}</pre>
             </div>
           ) : null}
         </div>
@@ -791,19 +791,19 @@ export function DebugView(props: DebugViewProps) {
                 {t("settings.reset_aiwork_title")}
               </div>
               <div className="text-[12px] text-dls-secondary">
-                {props.opencodeDevModeEnabled
+                {props.engineDevModeEnabled
                   ? t("settings.reset_aiwork_desc_dev")
                   : t("settings.reset_aiwork_desc_prod")}
               </div>
             </div>
             <div
               className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-medium ${
-                props.opencodeDevModeEnabled
+                props.engineDevModeEnabled
                   ? "border-blue-7/35 bg-blue-3/25 text-blue-11"
                   : "border-dls-border bg-dls-sidebar/50 text-dls-secondary"
               }`}
             >
-              {props.opencodeDevModeEnabled
+              {props.engineDevModeEnabled
                 ? t("settings.dev_mode_badge")
                 : t("settings.production_mode_badge")}
             </div>
@@ -815,7 +815,7 @@ export function DebugView(props: DebugViewProps) {
             <button
               type="button"
               className={compactDangerActionClass}
-              onClick={() => void props.onNukeAiWorkAndAiWorkEngineConfig()}
+              onClick={() => void props.onNukeAiWorkAndEngineConfig()}
               disabled={props.busy || props.nukeConfigBusy}
             >
               <CircleAlert size={14} />

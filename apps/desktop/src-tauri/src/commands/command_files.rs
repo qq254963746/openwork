@@ -2,7 +2,7 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::types::{ExecResult, AiWorkEngineCommand};
+use crate::types::{ExecResult, EngineCommand};
 use crate::workspace::commands::{sanitize_command_name, serialize_command_frontmatter};
 
 fn resolve_commands_dir(scope: &str, project_dir: &str) -> Result<PathBuf, String> {
@@ -12,7 +12,7 @@ fn resolve_commands_dir(scope: &str, project_dir: &str) -> Result<PathBuf, Strin
                 return Err("projectDir is required".to_string());
             }
             Ok(PathBuf::from(project_dir)
-                .join(".opencode")
+                .join(".engine")
                 .join("commands"))
         }
         "global" => {
@@ -23,7 +23,7 @@ fn resolve_commands_dir(scope: &str, project_dir: &str) -> Result<PathBuf, Strin
             } else {
                 return Err("Unable to resolve config directory".to_string());
             };
-            Ok(base.join("opencode").join("commands"))
+            Ok(base.join("engine").join("commands"))
         }
         _ => Err("scope must be 'workspace' or 'global'".to_string()),
     }
@@ -59,7 +59,7 @@ pub fn aiwork_command_list(scope: String, project_dir: String) -> Result<Vec<Str
 pub fn aiwork_command_write(
     scope: String,
     project_dir: String,
-    command: AiWorkEngineCommand,
+    command: EngineCommand,
 ) -> Result<ExecResult, String> {
     let scope = scope.trim();
     let safe_name = sanitize_command_name(&command.name)
@@ -72,7 +72,7 @@ pub fn aiwork_command_write(
     }
     fs::create_dir_all(&dir).map_err(|e| format!("Failed to create {}: {e}", dir.display()))?;
 
-    let payload = AiWorkEngineCommand {
+    let payload = EngineCommand {
         name: safe_name.clone(),
         ..command
     };

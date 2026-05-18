@@ -2,7 +2,7 @@ import { normalizeDirectoryPath } from "../utils";
 import { normalizeDirectoryQueryPath } from "../utils";
 
 /**
- * Branded string for directory values sent over the wire to the AiWorkEngine server.
+ * Branded string for directory values sent over the wire to the Engine server.
  *
  * The server compares `session.directory === query.directory` with strict
  * equality, so every call site that creates, lists, or deletes sessions must
@@ -28,7 +28,7 @@ export function resolveScopedClientDirectory(input: {
 }
 
 /**
- * Canonical formatter for directory values sent to the AiWorkEngine server.
+ * Canonical formatter for directory values sent to the Engine server.
  *
  * Returns a {@link TransportDirectory} — the only format the server accepts for
  * exact directory matching.  All session create / list / delete calls must use

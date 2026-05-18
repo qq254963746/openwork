@@ -52,7 +52,7 @@ function isValidCustomProviderId(value: string): boolean {
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
-  opencode: "AiWork",
+  engine: "AiWork",
   openai: "OpenAI",
   anthropic: "Anthropic",
   google: "Google",

@@ -1,5 +1,5 @@
 {
-  "name": "@aiworkgroup3/aiwork-workspace",
+  "name": "@aiworklove/aiwork-workspace",
   "private": true,
   "version": "0.0.0",
   "scripts": {
@@ -30,7 +30,7 @@
   "workspaces": {
     "packages": [
       "apps/*",
-      "opencode/packages/sdk/js"
+      "engine/packages/sdk/js"
     ],
     "catalog": {
       "@tsconfig/node22": "22.0.2",

@@ -58,7 +58,7 @@ function makeStore(
   if (!workspace) {
     throw new ApiError(404, "workspace_not_found", "Workspace not found");
   }
-  const workspaceRoot = workspace.opencode?.directory?.trim() || workspace.path?.trim() || "";
+  const workspaceRoot = workspace.engine?.directory?.trim() || workspace.path?.trim() || "";
   if (!workspaceRoot) {
     throw new ApiError(400, "workspace_root_missing", "Workspace root path is not configured");
   }

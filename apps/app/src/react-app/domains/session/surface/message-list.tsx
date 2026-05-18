@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { isToolUIPart, type DynamicToolUIPart, type UIMessage } from "ai";
-import type { Part } from "@aiwork-engine/sdk/v2/client";
+import type { Part } from "@engine/sdk/v2/client";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Atom, Check, ChevronDown, ChevronUp, CircleAlert, Copy, File as FileIcon, Pencil } from "lucide-react";
@@ -323,8 +323,8 @@ const VIRTUALIZATION_THRESHOLD = 20;
 const VIRTUAL_OVERSCAN = 4;
 
 function partIdFromUiPart(part: UIMessage["parts"][number], fallbackId: string) {
-  const metadata = (part as { providerMetadata?: { opencode?: { partId?: unknown } } })
-    .providerMetadata?.opencode;
+  const metadata = (part as { providerMetadata?: { engine?: { partId?: unknown } } })
+    .providerMetadata?.engine;
   if (typeof metadata?.partId === "string" && metadata.partId.trim()) {
     return metadata.partId;
   }

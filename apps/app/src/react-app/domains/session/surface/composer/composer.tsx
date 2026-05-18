@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Agent } from "@aiwork-engine/sdk/v2/client";
+import type { Agent } from "@engine/sdk/v2/client";
 import { Bot, Check, ChevronDown, ChevronRight, ClipboardList, FileText, Loader2, MessageCircle, Paperclip, Plug, Search, Settings, Square, Terminal, Wrench, X, Zap } from "lucide-react";
 import fuzzysort from "fuzzysort";
 import type { CloudImportedPlugin, CloudImportedPluginFile } from "../../../../../app/cloud/import-state";

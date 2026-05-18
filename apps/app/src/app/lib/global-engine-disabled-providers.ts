@@ -1,16 +1,16 @@
 import { applyEdits, modify, parse } from "jsonc-parser";
 
 import type { AiWorkServerClient } from "./aiwork-server";
-import type { AiWorkEngineConfigFile } from "./desktop-tauri";
-import { readAiWorkEngineConfig, writeAiWorkEngineConfig } from "./desktop";
+import type { EngineConfigFile } from "./desktop-tauri";
+import { readEngineConfig, writeEngineConfig } from "./desktop";
 import { ConsoleLog } from "./console-log";
 
 const DEFAULT_GLOBAL_CONFIG_HEADER =
   '{\n  "$schema": "https://www.aiwork.love/config.json"\n}\n';
 
-const PROJECT_AIWORK_ENGINE_JSONC_FORMAT = { insertSpaces: true, tabSize: 2 };
+const PROJECT_ENGINE_JSONC_FORMAT = { insertSpaces: true, tabSize: 2 };
 
-export type ReadGlobalAiWorkEngineConfigInput = {
+export type ReadGlobalEngineConfigInput = {
   workspaceRoot: string;
   selectedWorkspaceId: string;
   runtimeWorkspaceId: string | null;
@@ -19,34 +19,34 @@ export type ReadGlobalAiWorkEngineConfigInput = {
   aiworkServerCapabilities: { config?: { read?: boolean; write?: boolean } } | null;
 };
 
-function resolveAiWorkWorkspaceId(input: ReadGlobalAiWorkEngineConfigInput): string | null {
+function resolveAiWorkWorkspaceId(input: ReadGlobalEngineConfigInput): string | null {
   const fromRuntime = input.runtimeWorkspaceId?.trim();
   if (fromRuntime) return fromRuntime;
   const fromSelected = input.selectedWorkspaceId.trim();
   return fromSelected.length > 0 ? fromSelected : null;
 }
 
-/** Resolve global AiWorkEngine config file (~/.config/opencode/… or AiWork server workspace global scope). */
-export async function readGlobalAiWorkEngineConfigFile(
-  input: ReadGlobalAiWorkEngineConfigInput,
-): Promise<AiWorkEngineConfigFile | null> {
+/** Resolve global Engine config file (~/.config/engine/… or AiWork server workspace global scope). */
+export async function readGlobalEngineConfigFile(
+  input: ReadGlobalEngineConfigInput,
+): Promise<EngineConfigFile | null> {
   const aiworkWorkspaceId = resolveAiWorkWorkspaceId(input);
   const canUseAiWorkServer =
     input.aiworkServerStatus === "connected" &&
     input.aiworkServerClient &&
     aiworkWorkspaceId &&
     input.aiworkServerCapabilities?.config?.read &&
-    typeof input.aiworkServerClient.readAiWorkEngineConfigFile === "function";
+    typeof input.aiworkServerClient.readEngineConfigFile === "function";
 
   if (canUseAiWorkServer && input.aiworkServerClient && aiworkWorkspaceId) {
-    return await input.aiworkServerClient.readAiWorkEngineConfigFile(aiworkWorkspaceId, "global");
+    return await input.aiworkServerClient.readEngineConfigFile(aiworkWorkspaceId, "global");
   }
 
-  return await readAiWorkEngineConfig("global", input.workspaceRoot);
+  return await readEngineConfig("global", input.workspaceRoot);
 }
 
-export async function writeGlobalAiWorkEngineConfigContent(
-  input: ReadGlobalAiWorkEngineConfigInput,
+export async function writeGlobalEngineConfigContent(
+  input: ReadGlobalEngineConfigInput,
   content: string,
 ): Promise<boolean> {
   const aiworkWorkspaceId = resolveAiWorkWorkspaceId(input);
@@ -55,30 +55,30 @@ export async function writeGlobalAiWorkEngineConfigContent(
     input.aiworkServerClient &&
     aiworkWorkspaceId &&
     input.aiworkServerCapabilities?.config?.write &&
-    typeof input.aiworkServerClient.writeAiWorkEngineConfigFile === "function";
+    typeof input.aiworkServerClient.writeEngineConfigFile === "function";
 
   if (canUseAiWorkServer && input.aiworkServerClient && aiworkWorkspaceId) {
-    const result = await input.aiworkServerClient.writeAiWorkEngineConfigFile(
+    const result = await input.aiworkServerClient.writeEngineConfigFile(
       aiworkWorkspaceId,
       "global",
       content,
     );
-    ConsoleLog.log("global-engine-disabled-providers", "writeGlobalAiWorkEngineConfigContent:done via aiwork-server", {
+    ConsoleLog.log("global-engine-disabled-providers", "writeGlobalEngineConfigContent:done via aiwork-server", {
       ok: result.ok,
       content: content,
     });
     return result.ok;
   }
 
-  const result = await writeAiWorkEngineConfig("global", input.workspaceRoot, content);
-  ConsoleLog.log("global-engine-disabled-providers", "writeGlobalAiWorkEngineConfigContent:done via desktop", {
+  const result = await writeEngineConfig("global", input.workspaceRoot, content);
+  ConsoleLog.log("global-engine-disabled-providers", "writeGlobalEngineConfigContent:done via desktop", {
     ok: result.ok,
     content: content,
   });
   return result.ok;
 }
 
-export function parseDisabledProvidersFromAiWorkEngineJson(raw: string | null | undefined): string[] {
+export function parseDisabledProvidersFromEngineJson(raw: string | null | undefined): string[] {
   if (!raw?.trim()) return [];
   const parsed = parse(raw, undefined, { allowTrailingComma: true }) as
     | Record<string, unknown>
@@ -89,28 +89,28 @@ export function parseDisabledProvidersFromAiWorkEngineJson(raw: string | null | 
 }
 
 export async function readGlobalDisabledProviderIds(
-  input: ReadGlobalAiWorkEngineConfigInput,
+  input: ReadGlobalEngineConfigInput,
 ): Promise<string[]> {
-  const file = await readGlobalAiWorkEngineConfigFile(input);
-  return parseDisabledProvidersFromAiWorkEngineJson(file?.content ?? null);
+  const file = await readGlobalEngineConfigFile(input);
+  return parseDisabledProvidersFromEngineJson(file?.content ?? null);
 }
 
 export async function writeGlobalDisabledProviderIds(
-  input: ReadGlobalAiWorkEngineConfigInput,
+  input: ReadGlobalEngineConfigInput,
   ids: string[],
 ): Promise<boolean> {
-  const existing = await readGlobalAiWorkEngineConfigFile(input);
+  const existing = await readGlobalEngineConfigFile(input);
   const raw = existing?.content?.trim() ? existing.content : DEFAULT_GLOBAL_CONFIG_HEADER;
   const uniqueIds = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
   const edits = modify(raw, ["disabled_providers"], uniqueIds, {
-    formattingOptions: PROJECT_AIWORK_ENGINE_JSONC_FORMAT,
+    formattingOptions: PROJECT_ENGINE_JSONC_FORMAT,
   });
   const nextContent = applyEdits(raw, edits);
-  return await writeGlobalAiWorkEngineConfigContent(input, nextContent);
+  return await writeGlobalEngineConfigContent(input, nextContent);
 }
 
 export async function removeGlobalDisabledProviderIds(
-  input: ReadGlobalAiWorkEngineConfigInput,
+  input: ReadGlobalEngineConfigInput,
   removeIds: string[],
 ): Promise<boolean> {
   const remove = new Set(removeIds.map((id) => id.trim()).filter(Boolean));

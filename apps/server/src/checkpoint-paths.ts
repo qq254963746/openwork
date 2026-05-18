@@ -10,10 +10,10 @@
  *      Tauri desktop app (`app.path().app_local_data_dir()`); guarantees we share
  *      the same root the rest of the app uses.
  *   3. Platform default + bundle-id-style suffix + "/checkpoints":
- *      macOS:  ~/Library/Application Support/com.aiworkgroup3.aiwork/checkpoints/
- *      Linux:  $XDG_DATA_HOME/com.aiworkgroup3.aiwork/checkpoints/
- *               (defaults to ~/.local/share/com.aiworkgroup3.aiwork/checkpoints/)
- *      Win:    %APPDATA%/com.aiworkgroup3.aiwork/checkpoints/
+ *      macOS:  ~/Library/Application Support/com.aiworklove.aiwork/checkpoints/
+ *      Linux:  $XDG_DATA_HOME/com.aiworklove.aiwork/checkpoints/
+ *               (defaults to ~/.local/share/com.aiworklove.aiwork/checkpoints/)
+ *      Win:    %APPDATA%/com.aiworklove.aiwork/checkpoints/
  *
  * Per-session layout:
  *   <root>/<workspaceId>/sessions/<sessionId>/
@@ -29,7 +29,7 @@ const CHECKPOINTS_DIRNAME = "checkpoints";
 /** Matches Tauri identifier in tauri.conf.json. Used only as a fallback when the
  *  desktop app didn't pass AIWORK_APP_LOCAL_DATA_DIR (e.g. running the server
  *  standalone for testing). */
-const FALLBACK_BUNDLE_ID = "com.aiworkgroup3.aiwork";
+const FALLBACK_BUNDLE_ID = "com.aiworklove.aiwork";
 
 export function checkpointsRoot(): string {
   // 1. Hard override (tests, advanced users).
@@ -86,7 +86,7 @@ export function checkpointsManifestFile(workspaceId: string, sessionId: string):
 
 /**
  * Defensive: workspace and session IDs come from trusted sources (workspace.id is a hash,
- * sessionId from AiWorkEngine), but we still strip path separators / parent-traversal sequences.
+ * sessionId from Engine), but we still strip path separators / parent-traversal sequences.
  */
 function sanitizeId(id: string): string {
   const cleaned = id.replace(/[\\/\u0000]/g, "_").replace(/^\.+/, "_");

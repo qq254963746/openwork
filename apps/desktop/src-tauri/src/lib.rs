@@ -23,7 +23,7 @@ use commands::engine::{
 };
 use commands::misc::{
     app_build_info, desktop_app_paths, nuke_aiwork_and_aiwork_config_and_exit, aiwork_mcp_auth,
-    read_aiwork_engine_disk_logs, reset_aiwork_cache, reset_aiwork_state,
+    read_engine_disk_logs, reset_aiwork_cache, reset_aiwork_state,
 };
 use commands::aiwork_server::{aiwork_server_info, aiwork_server_restart};
 use commands::skills::{
@@ -177,7 +177,7 @@ pub fn run() {
             nuke_aiwork_and_aiwork_config_and_exit,
             reset_aiwork_state,
             reset_aiwork_cache,
-            read_aiwork_engine_disk_logs,
+            read_engine_disk_logs,
             aiwork_mcp_auth,
             set_window_decorations,
             open_app_log_window,

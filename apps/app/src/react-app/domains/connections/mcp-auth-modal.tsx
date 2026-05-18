@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Loader2, RefreshCcw, X } from "lucide-react";
 
 import type { McpDirectoryInfo } from "../../../app/constants";
-import { opencodeMcpAuth } from "../../../app/lib/desktop";
+import { engineMcpAuth } from "../../../app/lib/desktop";
 import { unwrap } from "../../../app/lib/engine";
 import { validateMcpServerName } from "../../../app/mcp";
 import type { Client } from "../../../app/types";
@@ -226,7 +226,7 @@ export function McpAuthModal(props: McpAuthModalProps) {
     setCliAuthResult(null);
 
     try {
-      const result = await opencodeMcpAuth(props.projectDir, props.entry.name);
+      const result = await engineMcpAuth(props.projectDir, props.entry.name);
       if (result.ok) {
         setError(null);
         setNeedsReload(true);

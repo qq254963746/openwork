@@ -27,24 +27,24 @@ fn env_truthy_aiwork_dev() -> bool {
     )
 }
 
-/// GUI-launched Tauri often inherits no `XDG_*` / `AIWORK_ENGINE_CONFIG_DIR`; without this,
-/// `aiwork-server` resolves global config + managed AiWorkEngine state to `~/.config` while
-/// the UI writes credentials under `Application Support/.../aiwork-engine/...`.
-fn aiwork_engine_isolated_env(app: &AppHandle) -> Result<Option<Vec<(String, String)>>, String> {
+/// GUI-launched Tauri often inherits no `XDG_*` / `ENGINE_CONFIG_DIR`; without this,
+/// `aiwork-server` resolves global config + managed Engine state to `~/.config` while
+/// the UI writes credentials under `Application Support/.../engine/...`.
+fn engine_isolated_env(app: &AppHandle) -> Result<Option<Vec<(String, String)>>, String> {
 
     let app_local = app
         .path()
         .app_local_data_dir()
         .map_err(|e| format!("Failed to resolve app local data dir: {e}"))?;
 
-    let layout_root = app_local.join("aiwork-engine");
+    let layout_root = app_local.join("engine");
     let home_dir = layout_root.join("home");
     let xdg_config_home = layout_root.join("xdg").join("config");
     let xdg_data_home = layout_root.join("xdg").join("data");
     let xdg_cache_home = layout_root.join("xdg").join("cache");
     let xdg_state_home = layout_root.join("xdg").join("state");
-    let aiwork_config_dir = layout_root.join("config").join("opencode");
-    let aiwork_data_dir = xdg_data_home.join("opencode");
+    let aiwork_config_dir = layout_root.join("config").join("engine");
+    let aiwork_data_dir = xdg_data_home.join("engine");
 
     for dir in [
         &home_dir,
@@ -80,10 +80,10 @@ fn aiwork_engine_isolated_env(app: &AppHandle) -> Result<Option<Vec<(String, Str
             xdg_state_home.to_string_lossy().into_owned(),
         ),
         (
-            "AIWORK_ENGINE_CONFIG_DIR".into(),
+            "ENGINE_CONFIG_DIR".into(),
             aiwork_config_dir.to_string_lossy().into_owned(),
         ),
-        ("AIWORK_ENGINE_TEST_HOME".into(), home),
+        ("ENGINE_TEST_HOME".into(), home),
     ]))
 }
 
@@ -185,14 +185,14 @@ pub fn build_aiwork_args(
 
     if let Some(base_url) = aiwork_base_url {
         if !base_url.trim().is_empty() {
-            args.push("--opencode-base-url".to_string());
+            args.push("--engine-base-url".to_string());
             args.push(base_url.to_string());
         }
     }
 
     if let Some(directory) = aiwork_directory {
         if !directory.trim().is_empty() {
-            args.push("--opencode-directory".to_string());
+            args.push("--engine-directory".to_string());
             args.push(directory.to_string());
         }
     }
@@ -263,23 +263,23 @@ pub fn spawn_aiwork_server(
     }
 
     if manage_aiwork {
-        command = command.env("AIWORK_MANAGE_AIWORK_ENGINE", "1");
+        command = command.env("AIWORK_MANAGE_ENGINE", "1");
         if let Some(path) = aiwork_bin_path {
             if !path.trim().is_empty() {
-                command = command.env("AIWORK_AIWORK_ENGINE_BIN", path);
+                command = command.env("engine_BIN", path);
             }
         }
     }
 
     if let Some(username) = aiwork_username {
         if !username.trim().is_empty() {
-            command = command.env("AIWORK_AIWORK_ENGINE_USERNAME", username);
+            command = command.env("engine_USERNAME", username);
         }
     }
 
     if let Some(password) = aiwork_password {
         if !password.trim().is_empty() {
-            command = command.env("AIWORK_AIWORK_ENGINE_PASSWORD", password);
+            command = command.env("engine_PASSWORD", password);
         }
     }
 
@@ -287,7 +287,7 @@ pub fn spawn_aiwork_server(
         command = command.env(key, value);
     }
 
-    if let Some(pairs) = aiwork_engine_isolated_env(app)? {
+    if let Some(pairs) = engine_isolated_env(app)? {
         for (key, value) in pairs {
             command = command.env(key, value);
         }

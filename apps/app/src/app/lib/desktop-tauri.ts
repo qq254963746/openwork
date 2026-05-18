@@ -69,16 +69,16 @@ export type EngineInfo = {
   projectDir: string | null;
   hostname: string | null;
   port: number | null;
-  opencodeUsername: string | null;
-  opencodePassword: string | null;
-  opencodeBinPath: string | null;
-  opencodeBinSource: string | null;
+  engineUsername: string | null;
+  enginePassword: string | null;
+  engineBinPath: string | null;
+  engineBinSource: string | null;
   pid: number | null;
   lastStdout: string | null;
   lastStderr: string | null;
 };
 
-export type AiWorkEngineEngineDiskLogsSnapshot = {
+export type EngineEngineDiskLogsSnapshot = {
   dir: string;
   resolvedVariant: string;
   fileLabel?: string | null;
@@ -97,8 +97,8 @@ export type AiWorkServerInfo = {
   clientToken: string | null;
   ownerToken: string | null;
   hostToken: string | null;
-  managedAiWorkEngineBinPath: string | null;
-  managedAiWorkEngineBinSource: string | null;
+  managedEngineBinPath: string | null;
+  managedEngineBinSource: string | null;
   pid: number | null;
   lastStdout: string | null;
   lastStderr: string | null;
@@ -153,13 +153,13 @@ export async function engineStart(
     preferSidecar?: boolean;
     runtime?: "direct";
     workspacePaths?: string[];
-    opencodeBinPath?: string | null;
+    engineBinPath?: string | null;
   },
 ): Promise<EngineInfo> {
   return invoke<EngineInfo>("engine_start", {
     projectDir,
     preferSidecar: options?.preferSidecar ?? true,
-    opencodeBinPath: options?.opencodeBinPath ?? null,
+    engineBinPath: options?.engineBinPath ?? null,
     runtime: options?.runtime ?? null,
     workspacePaths: options?.workspacePaths ?? null,
   });
@@ -217,7 +217,7 @@ export async function workspaceAddAuthorizedRoot(input: {
   });
 }
 
-export type AiWorkEngineCommandDraft = {
+export type EngineCommandDraft = {
   name: string;
   description?: string;
   template: string;
@@ -258,7 +258,7 @@ export async function workspaceAiWorkWrite(input: {
   });
 }
 
-export async function opencodeCommandList(input: {
+export async function engineCommandList(input: {
   scope: "workspace" | "global";
   projectDir: string;
 }): Promise<string[]> {
@@ -268,10 +268,10 @@ export async function opencodeCommandList(input: {
   });
 }
 
-export async function opencodeCommandWrite(input: {
+export async function engineCommandWrite(input: {
   scope: "workspace" | "global";
   projectDir: string;
-  command: AiWorkEngineCommandDraft;
+  command: EngineCommandDraft;
 }): Promise<ExecResult> {
   return invoke<ExecResult>("aiwork_command_write", {
     scope: input.scope,
@@ -280,7 +280,7 @@ export async function opencodeCommandWrite(input: {
   });
 }
 
-export async function opencodeCommandDelete(input: {
+export async function engineCommandDelete(input: {
   scope: "workspace" | "global";
   projectDir: string;
   name: string;
@@ -314,7 +314,7 @@ export async function appBuildInfo(): Promise<AppBuildInfo> {
   return invoke<AppBuildInfo>("app_build_info");
 }
 
-export async function nukeAiWorkAndAiWorkEngineConfigAndExit(): Promise<void> {
+export async function nukeAiWorkAndEngineConfigAndExit(): Promise<void> {
   return invoke<void>("nuke_aiwork_and_aiwork_config_and_exit");
 }
 
@@ -330,8 +330,8 @@ export async function engineInfo(): Promise<EngineInfo> {
   return invoke<EngineInfo>("engine_info");
 }
 
-export async function readAiWorkEngineEngineDiskLogs(): Promise<AiWorkEngineEngineDiskLogsSnapshot> {
-  return invoke<AiWorkEngineEngineDiskLogsSnapshot>("read_aiwork_engine_disk_logs");
+export async function readEngineEngineDiskLogs(): Promise<EngineEngineDiskLogsSnapshot> {
+  return invoke<EngineEngineDiskLogsSnapshot>("read_engine_disk_logs");
 }
 
 export async function runtimeBootstrap(): Promise<unknown> {
@@ -344,11 +344,11 @@ export async function runtimeBootstrap(): Promise<unknown> {
 
 export async function engineDoctor(options?: {
   preferSidecar?: boolean;
-  opencodeBinPath?: string | null;
+  engineBinPath?: string | null;
 }): Promise<EngineDoctorResult> {
   return invoke<EngineDoctorResult>("engine_doctor", {
     preferSidecar: options?.preferSidecar ?? true,
-    opencodeBinPath: options?.opencodeBinPath ?? null,
+    engineBinPath: options?.engineBinPath ?? null,
   });
 }
 
@@ -457,13 +457,13 @@ export async function uninstallSkill(projectDir: string, name: string): Promise<
   return invoke<ExecResult>("uninstall_skill", { projectDir, name });
 }
 
-export type AiWorkEngineConfigFile = {
+export type EngineConfigFile = {
   path: string;
   exists: boolean;
   content: string | null;
 };
 
-export type AiWorkEngineAuthJsonFile = {
+export type EngineAuthJsonFile = {
   path: string | null;
   content: string | null;
 };
@@ -477,14 +477,14 @@ export async function desktopAppPaths(): Promise<DesktopAppPaths> {
   return invoke<DesktopAppPaths>("desktop_app_paths");
 }
 
-export async function readAiWorkEngineConfig(
+export async function readEngineConfig(
   scope: "project" | "global",
   projectDir: string,
-): Promise<AiWorkEngineConfigFile> {
-  return invoke<AiWorkEngineConfigFile>("read_aiwork_config", { scope, projectDir });
+): Promise<EngineConfigFile> {
+  return invoke<EngineConfigFile>("read_aiwork_config", { scope, projectDir });
 }
 
-export async function writeAiWorkEngineConfig(
+export async function writeEngineConfig(
   scope: "project" | "global",
   projectDir: string,
   content: string,
@@ -492,8 +492,8 @@ export async function writeAiWorkEngineConfig(
   return invoke<ExecResult>("write_aiwork_config", { scope, projectDir, content });
 }
 
-export async function readAiWorkEngineAuthJson(): Promise<AiWorkEngineAuthJsonFile> {
-  return invoke<AiWorkEngineAuthJsonFile>("read_aiwork_auth_json");
+export async function readEngineAuthJson(): Promise<EngineAuthJsonFile> {
+  return invoke<EngineAuthJsonFile>("read_aiwork_auth_json");
 }
 
 export async function resetAiWorkState(mode: "onboarding" | "all"): Promise<void> {
@@ -506,11 +506,11 @@ export type CacheResetResult = {
   errors: string[];
 };
 
-export async function resetAiWorkEngineCache(): Promise<CacheResetResult> {
+export async function resetEngineCache(): Promise<CacheResetResult> {
   return invoke<CacheResetResult>("reset_aiwork_cache");
 }
 
-export async function opencodeMcpAuth(
+export async function engineMcpAuth(
   projectDir: string,
   serverName: string,
 ): Promise<ExecResult> {

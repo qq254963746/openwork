@@ -10,18 +10,18 @@ AiWork is designed around the idea that you can easily ship your agentic workflo
 
 ## Why
 
-Current CLI and GUIs for opencode are anchored around developers. That means a focus on file diffs, tool names, and hard to extend capabilities without relying on exposing some form of cli.
+Current CLI and GUIs for engine are anchored around developers. That means a focus on file diffs, tool names, and hard to extend capabilities without relying on exposing some form of cli.
 
 AiWork is designed to be:
 
-- **Extensible**: skill and opencode plugins are installable modules.
+- **Extensible**: skill and engine plugins are installable modules.
 - **Auditable**: show what happened, when, and why.
 - **Permissioned**: access to privileged flows.
 - **Local**: AiWork works locally
 
 ## What’s Included
 
-- **Host mode**: runs opencode locally on your computer
+- **Host mode**: runs engine locally on your computer
 - **Client mode**: connect to an existing AiWork server by URL.
 - **Sessions**: create/select sessions and send prompts.
 - **Live streaming**: SSE `/event` subscription for realtime updates.
@@ -30,8 +30,8 @@ AiWork is designed to be:
 - **Templates**: save and re-run common workflows (stored locally).
 - **Debug exports**: copy or export the runtime debug report and developer log stream from Settings -> Debug when you need to file a bug.
 - **Skills manager**:
-  - list installed `.opencode/skills` folders
-  - import a local skill folder into `.opencode/skills/<skill-name>`
+  - list installed `.engine/skills` folders
+  - import a local skill folder into `.engine/skills/<skill-name>`
 
 ## Quick Start
 
@@ -40,7 +40,7 @@ AiWork is designed to be:
 - Node.js + `pnpm`
 - Rust toolchain (for Tauri): install via `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 - Tauri CLI: `cargo install tauri-cli`
-- AiWork CLI installed and available on PATH: `opencode`
+- AiWork CLI installed and available on PATH: `engine`
 
 ### Local Dev Prerequisites (Desktop)
 
@@ -92,17 +92,17 @@ Capability permissions are defined in:
 ## AiWork Plugins
 
 Plugins are the **native** way to extend AiWork. AiWork now manages them from the Skills tab by
-reading and writing `opencode.json`.
+reading and writing `engine.json`.
 
-- **Project scope**: `<workspace>/opencode.json`
-- **Global scope**: `~/.config/opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode/opencode.json`)
+- **Project scope**: `<workspace>/engine.json`
+- **Global scope**: `~/.config/engine/engine.json` (or `$XDG_CONFIG_HOME/engine/engine.json`)
 
-You can still edit `opencode.json` manually; AiWork uses the same format as the AiWork CLI:
+You can still edit `engine.json` manually; AiWork uses the same format as the AiWork CLI:
 
 ```json
 {
   "$schema": "https://www.aiwork.love/config.json",
-  "plugin": ["opencode-wakatime"]
+  "plugin": ["engine-wakatime"]
 }
 ```
 

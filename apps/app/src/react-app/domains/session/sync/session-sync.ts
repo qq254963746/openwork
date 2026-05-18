@@ -1,10 +1,10 @@
 import type { UIMessage } from "ai";
-import type { Part, PermissionRequest, QuestionRequest, SessionStatus, Todo } from "@aiwork-engine/sdk/v2/client";
+import type { Part, PermissionRequest, QuestionRequest, SessionStatus, Todo } from "@engine/sdk/v2/client";
 
 import { getReactQueryClient } from "../../../infra/query-client";
 import { createClient } from "../../../../app/lib/engine";
 import { normalizeEvent, safeStringify } from "../../../../app/utils";
-import type { AiWorkEngineEvent, PendingPermission, PendingQuestion } from "../../../../app/types";
+import type { EngineEvent, PendingPermission, PendingQuestion } from "../../../../app/types";
 import { SYNTHETIC_SESSION_ERROR_MESSAGE_PREFIX } from "../../../../app/types";
 import { snapshotToUIMessages } from "./usechat-adapter";
 import type { AiWorkSessionSnapshot } from "../../../../app/lib/aiwork-server";
@@ -28,7 +28,7 @@ type SyncEntry = {
   refs: number;
   dispose: () => void;
   pendingDeltas: Map<string, { messageId: string; reasoning: boolean; text: string }>;
-  /** Mirrors AiWorkEngine part kinds so `message.part.delta` with `field: "text"` can target reasoning parts (same as usechat-adapter). */
+  /** Mirrors Engine part kinds so `message.part.delta` with `field: "text"` can target reasoning parts (same as usechat-adapter). */
   partKinds: Map<string, Part["type"]>;
   // Coalesce rapid-fire delta events from the SSE stream into one cache
   // commit per animation frame. Without this, a long response produces a
@@ -293,7 +293,7 @@ function toUIPart(part: Part): UIMessage["parts"][number] | null {
       type: "text",
       text: typeof (part as { text?: unknown }).text === "string" ? (part as { text: string }).text : "",
       state: "done",
-      providerMetadata: { opencode: { partId: part.id } },
+      providerMetadata: { engine: { partId: part.id } },
     };
   }
   if (part.type === "reasoning") {
@@ -301,7 +301,7 @@ function toUIPart(part: Part): UIMessage["parts"][number] | null {
       type: "reasoning",
       text: typeof (part as { text?: unknown }).text === "string" ? (part as { text: string }).text : "",
       state: "done",
-      providerMetadata: { opencode: { partId: part.id } },
+      providerMetadata: { engine: { partId: part.id } },
     };
   }
   if (part.type === "file") {
@@ -312,7 +312,7 @@ function toUIPart(part: Part): UIMessage["parts"][number] | null {
       url: file.url,
       filename: file.filename,
       mediaType: file.mime ?? "application/octet-stream",
-      providerMetadata: { opencode: { partId: part.id } },
+      providerMetadata: { engine: { partId: part.id } },
     };
   }
   if (part.type === "tool") {
@@ -353,7 +353,7 @@ function toUIPart(part: Part): UIMessage["parts"][number] | null {
 
 function getPartMetadataId(part: UIMessage["parts"][number]) {
   if (part.type !== "text" && part.type !== "reasoning" && part.type !== "file") return null;
-  const metadata = part.providerMetadata?.opencode;
+  const metadata = part.providerMetadata?.engine;
   if (!metadata || typeof metadata !== "object") return null;
   return "partId" in metadata ? (metadata as { partId?: string }).partId ?? null : null;
 }
@@ -457,13 +457,13 @@ function appendDelta(messages: UIMessage[], messageId: string, partId: string, d
           type: "reasoning",
           text: delta,
           state: "streaming" as const,
-          providerMetadata: { opencode: { partId } },
+          providerMetadata: { engine: { partId } },
         }
       : {
           type: "text",
           text: delta,
           state: "streaming" as const,
-          providerMetadata: { opencode: { partId } },
+          providerMetadata: { engine: { partId } },
         };
     nextParts = target.parts.slice();
     nextParts.push(newPart);
@@ -490,7 +490,7 @@ function appendDelta(messages: UIMessage[], messageId: string, partId: string, d
   return nextMessages;
 }
 
-function applyEvent(entry: SyncEntry, workspaceId: string, event: AiWorkEngineEvent) {
+function applyEvent(entry: SyncEntry, workspaceId: string, event: EngineEvent) {
   const queryClient = getReactQueryClient();
 
   if (event.type === "session.error") {

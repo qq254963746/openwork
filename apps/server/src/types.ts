@@ -12,9 +12,9 @@ export interface WorkspaceConfig {
   name?: string;
   preset?: string;
   displayName?: string;
-  opencodeUsername?: string;
-  opencodePassword?: string;
-  opencode?: {
+  engineUsername?: string;
+  enginePassword?: string;
+  engine?: {
     baseUrl?: string;
     directory?: string;
     username?: string;
@@ -28,9 +28,9 @@ export interface WorkspaceInfo {
   path: string;
   preset: string;
   displayName?: string;
-  opencodeUsername?: string;
-  opencodePassword?: string;
-  opencode?: {
+  engineUsername?: string;
+  enginePassword?: string;
+  engine?: {
     baseUrl?: string;
     directory?: string;
     username?: string;
@@ -38,7 +38,7 @@ export interface WorkspaceInfo {
   };
 }
 
-export interface AiWorkEngineConfigFile {
+export interface EngineConfigFile {
   path: string;
   exists: boolean;
   content: string | null;
@@ -55,10 +55,10 @@ export interface ServerConfig {
   token: string;
   hostToken: string;
   configPath?: string;
-  opencodeBaseUrl?: string;
-  opencodeDirectory?: string;
-  opencodeUsername?: string;
-  opencodePassword?: string;
+  engineBaseUrl?: string;
+  engineDirectory?: string;
+  engineUsername?: string;
+  enginePassword?: string;
   approval: ApprovalConfig;
   corsOrigins: string[];
   workspaces: WorkspaceInfo[];
@@ -74,8 +74,8 @@ export interface ServerConfig {
 export interface Capabilities {
   schemaVersion: number;
   serverVersion: string;
-  opencodeVersion: string;
-  skills: { read: boolean; write: boolean; source: "aiwork" | "opencode" };
+  engineVersion: string;
+  skills: { read: boolean; write: boolean; source: "aiwork" | "engine" };
   hub: {
     skills: {
       read: boolean;
@@ -91,7 +91,7 @@ export interface Capabilities {
   approvals: { mode: ApprovalMode; timeoutMs: number };
   tokens: { scoped: boolean; scopes: TokenScope[] };
   proxy: {
-    opencode: boolean;
+    engine: boolean;
   };
   toolProviders: {
     browser: {

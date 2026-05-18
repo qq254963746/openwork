@@ -104,7 +104,7 @@ export type SessionPageSurfaceProps = Omit<
   | "client"
   | "workspaceId"
   | "sessionId"
-  | "opencodeBaseUrl"
+  | "engineBaseUrl"
   | "aiworkToken"
   | "workspaceSidePanelOpen"
   | "requestWorkspaceSidePanelOpen"
@@ -245,7 +245,7 @@ export function SessionPage(props: SessionPageProps) {
     const baseUrl = props.aiworkServerClient?.baseUrl?.trim() ?? "";
     if (!workspaceId || !baseUrl) return "";
     const mounted = buildAiWorkWorkspaceBaseUrl(baseUrl, workspaceId) ?? baseUrl;
-    return `${mounted.replace(/\/+$/, "")}/opencode`;
+    return `${mounted.replace(/\/+$/, "")}/engine`;
   }, [props.aiworkServerClient?.baseUrl, props.runtimeWorkspaceId]);
 
   const reactSessionToken = props.aiworkServerClient?.token?.trim() || props.aiworkServerToken?.trim() || "";
@@ -653,7 +653,7 @@ export function SessionPage(props: SessionPageProps) {
                   client={props.aiworkServerClient!}
                   workspaceId={props.runtimeWorkspaceId!}
                   sessionId={props.selectedSessionId!}
-                  opencodeBaseUrl={reactSessionBaseUrl}
+                  engineBaseUrl={reactSessionBaseUrl}
                   aiworkToken={reactSessionToken}
                   {...props.surface!}
                   workspaceSidePanelOpen={workspaceSidePanelOpen}

@@ -13,7 +13,7 @@ else
 fi
 
 
-# 需要进入opencode目录下执行 bun install
+# 需要进入engine目录下执行 bun install
 
 # 在根目录执行 pnpm install 和  dev
 pnpm install

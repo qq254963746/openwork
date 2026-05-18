@@ -33,7 +33,7 @@ function toDynamicToolSlice(part: UIMessage["parts"][number]): {
   return null;
 }
 
-/** Maps AiWorkEngine-style tool names to file mutation categories */
+/** Maps Engine-style tool names to file mutation categories */
 function fileMutationRole(toolName: string): "apply_patch" | "edit" | "write" | null {
   const l = toolName.toLowerCase();
   if (l === "apply_patch") return "apply_patch";

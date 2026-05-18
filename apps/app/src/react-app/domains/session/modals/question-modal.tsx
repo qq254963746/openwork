@@ -1,6 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useState } from "react";
-import type { QuestionInfo } from "@aiwork-engine/sdk/v2/client";
+import type { QuestionInfo } from "@engine/sdk/v2/client";
 import { Check, ChevronRight, HelpCircle } from "lucide-react";
 
 import { t } from "../../../../i18n";

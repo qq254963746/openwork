@@ -1,6 +1,6 @@
 packages:
   - "apps/*"
-  - "opencode/packages/sdk/js"
+  - "engine/packages/sdk/js"
 
 catalog:
   "@tsconfig/node22": "22.0.2"

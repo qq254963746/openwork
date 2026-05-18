@@ -29,9 +29,9 @@ export function buildWorkspaceInfos(
       path: resolvedPath,
       preset: workspace.preset?.trim() || "starter",
       displayName: workspace.displayName,
-      opencodeUsername: workspace.opencodeUsername,
-      opencodePassword: workspace.opencodePassword,
-      opencode: workspace.opencode,
+      engineUsername: workspace.engineUsername,
+      enginePassword: workspace.enginePassword,
+      engine: workspace.engine,
     };
   });
 }

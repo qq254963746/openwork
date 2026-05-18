@@ -2,7 +2,7 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::types::{ExecResult, AiWorkEngineConfigFile};
+use crate::types::{ExecResult, EngineConfigFile};
 
 fn aiwork_config_candidates(
     scope: &str,
@@ -15,19 +15,19 @@ fn aiwork_config_candidates(
             }
             let root = PathBuf::from(project_dir);
             Ok(vec![
-                root.join("opencode.jsonc"),
-                root.join("opencode.json"),
-                root.join(".opencode").join("opencode.jsonc"),
-                root.join(".opencode").join("opencode.json"),
+                root.join("engine.jsonc"),
+                root.join("engine.json"),
+                root.join(".engine").join("engine.jsonc"),
+                root.join(".engine").join("engine.json"),
             ])
         }
         "global" => {
-            // Match AiWorkEngine: AIWORK_ENGINE_CONFIG_DIR is the global config root (AiWork dev isolation).
-            if let Ok(dir) = env::var("AIWORK_ENGINE_CONFIG_DIR") {
+            // Match Engine: ENGINE_CONFIG_DIR is the global config root (AiWork dev isolation).
+            if let Ok(dir) = env::var("ENGINE_CONFIG_DIR") {
                 let trimmed = dir.trim();
                 if !trimmed.is_empty() {
                     let root = PathBuf::from(trimmed);
-                    return Ok(vec![root.join("opencode.jsonc"), root.join("opencode.json")]);
+                    return Ok(vec![root.join("engine.jsonc"), root.join("engine.json")]);
                 }
             }
 
@@ -39,8 +39,8 @@ fn aiwork_config_candidates(
                 return Err("Unable to resolve config directory".to_string());
             };
 
-            let root = base.join("opencode");
-            Ok(vec![root.join("opencode.jsonc"), root.join("opencode.json")])
+            let root = base.join("engine");
+            Ok(vec![root.join("engine.jsonc"), root.join("engine.json")])
         }
         _ => Err("scope must be 'project' or 'global'".to_string()),
     }
@@ -61,7 +61,7 @@ pub fn resolve_aiwork_config_path(scope: &str, project_dir: &str) -> Result<Path
         .ok_or_else(|| "No config path candidates available".to_string())
 }
 
-pub fn read_aiwork_config(scope: &str, project_dir: &str) -> Result<AiWorkEngineConfigFile, String> {
+pub fn read_aiwork_config(scope: &str, project_dir: &str) -> Result<EngineConfigFile, String> {
     let path = resolve_aiwork_config_path(scope.trim(), project_dir)?;
     let exists = path.exists();
 
@@ -74,7 +74,7 @@ pub fn read_aiwork_config(scope: &str, project_dir: &str) -> Result<AiWorkEngine
         None
     };
 
-    Ok(AiWorkEngineConfigFile {
+    Ok(EngineConfigFile {
         path: path.to_string_lossy().to_string(),
         exists,
         content,

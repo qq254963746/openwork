@@ -30,7 +30,7 @@ export function ProviderIcon(props: ProviderIconProps) {
 
   const isAnthropic = hasProviderFamily("anthropic");
   const isOpenAI = hasProviderFamily("openai");
-  const isAiWork = hasProviderFamily("opencode");
+  const isAiWork = hasProviderFamily("engine");
 
   const fallbackLetters = (() => {
     if (normalizedId === "openrouter") return "OR";

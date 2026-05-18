@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::types::{AiWorkEngineCommand, WorkspaceAiWorkConfig};
+use crate::types::{EngineCommand, WorkspaceAiWorkConfig};
 use crate::utils::now_ms;
 use crate::workspace::commands::{sanitize_command_name, serialize_command_frontmatter};
 
@@ -48,10 +48,10 @@ Try:
 Skills add new capabilities. Plugins add advanced features like scheduling or browser automation. We can add them later when you're ready.
 
 ## If the person is technical
-AiWork is a GUI for AiWorkEngine. Everything that works in AiWorkEngine works here.
+AiWork is a GUI for Engine. Everything that works in Engine works here.
 
 Most reliable setup today:
-1) Install the AiWork-pinned AiWorkEngine version
+1) Install the AiWork-pinned Engine version
 2) Configure providers there (models and API keys)
 3) Come back to AiWork and start a session
 
@@ -60,11 +60,11 @@ Skills:
 - Docs: https://www.aiwork.love/docs/skills
 
 Plugins:
-- Configure in opencode.json or use the Plugins tab.
+- Configure in engine.json or use the Plugins tab.
 - Docs: https://www.aiwork.love/docs/plugins/
 
 MCP servers:
-- Add external tools via opencode.json.
+- Add external tools via engine.json.
 - Docs: https://www.aiwork.love/docs/mcp-servers/
 
 Config reference:
@@ -139,8 +139,8 @@ Your job:
 
 Memory (two kinds)
 1) Behavior memory (shareable, in git)
-- `.opencode/skills/**`
-- `.opencode/agents/**`
+- `.engine/skills/**`
+- `.engine/agents/**`
 - repo docs
 
 2) Private memory (never commit)
@@ -185,7 +185,7 @@ fn seed_commands(commands_dir: &PathBuf, preset: &str) -> Result<(), String> {
     }
 
     let defaults = vec![
-    AiWorkEngineCommand {
+    EngineCommand {
       name: "learn-files".to_string(),
       description: Some("Safe, practical file workflows".to_string()),
       template: "Show me how to interact with files in this workspace. Include safe examples for reading, summarizing, and editing.".to_string(),
@@ -193,7 +193,7 @@ fn seed_commands(commands_dir: &PathBuf, preset: &str) -> Result<(), String> {
       model: None,
       subtask: None,
     },
-    AiWorkEngineCommand {
+    EngineCommand {
       name: "learn-skills".to_string(),
       description: Some("How skills work and how to create your own".to_string()),
       template: "Explain what skills are, how to use them, and how to create a new skill for this workspace.".to_string(),
@@ -201,7 +201,7 @@ fn seed_commands(commands_dir: &PathBuf, preset: &str) -> Result<(), String> {
       model: None,
       subtask: None,
     },
-    AiWorkEngineCommand {
+    EngineCommand {
       name: "learn-plugins".to_string(),
       description: Some("What plugins are and how to install them".to_string()),
       template: "Explain what plugins are and how to install them in this workspace.".to_string(),
@@ -213,7 +213,7 @@ fn seed_commands(commands_dir: &PathBuf, preset: &str) -> Result<(), String> {
 
     let mut defaults = defaults;
     if preset == "starter" {
-        defaults.push(AiWorkEngineCommand {
+        defaults.push(EngineCommand {
             name: "Get Started".to_string(),
             description: Some("Get started".to_string()),
             template: "get started".to_string(),
@@ -242,10 +242,10 @@ fn seed_commands(commands_dir: &PathBuf, preset: &str) -> Result<(), String> {
 }
 
 fn resolve_workspace_aiwork_config_path(root: &Path) -> PathBuf {
-    let config_path_jsonc = root.join("opencode.jsonc");
-    let config_path_json = root.join("opencode.json");
-    let hidden_config_path_jsonc = root.join(".opencode").join("opencode.jsonc");
-    let hidden_config_path_json = root.join(".opencode").join("opencode.json");
+    let config_path_jsonc = root.join("engine.jsonc");
+    let config_path_json = root.join("engine.json");
+    let hidden_config_path_jsonc = root.join(".engine").join("engine.jsonc");
+    let hidden_config_path_json = root.join(".engine").join("engine.json");
 
     if config_path_jsonc.exists() {
         config_path_jsonc
@@ -263,22 +263,22 @@ fn resolve_workspace_aiwork_config_path(root: &Path) -> PathBuf {
 pub fn ensure_workspace_files(workspace_path: &str, preset: &str) -> Result<(), String> {
     let root = PathBuf::from(workspace_path);
 
-    let skill_root = root.join(".opencode").join("skills");
+    let skill_root = root.join(".engine").join("skills");
     fs::create_dir_all(&skill_root)
-        .map_err(|e| format!("Failed to create .opencode/skills: {e}"))?;
+        .map_err(|e| format!("Failed to create .engine/skills: {e}"))?;
     seed_workspace_guide(&skill_root)?;
     if preset == "starter" {
         seed_get_started_skill(&skill_root)?;
     }
 
-    let agents_dir = root.join(".opencode").join("agents");
+    let agents_dir = root.join(".engine").join("agents");
     fs::create_dir_all(&agents_dir)
-        .map_err(|e| format!("Failed to create .opencode/agents: {e}"))?;
+        .map_err(|e| format!("Failed to create .engine/agents: {e}"))?;
     seed_aiwork_agent(&agents_dir)?;
 
-    let commands_dir = root.join(".opencode").join("commands");
+    let commands_dir = root.join(".engine").join("commands");
     fs::create_dir_all(&commands_dir)
-        .map_err(|e| format!("Failed to create .opencode/commands: {e}"))?;
+        .map_err(|e| format!("Failed to create .engine/commands: {e}"))?;
     seed_commands(&commands_dir, preset)?;
 
     let config_path = resolve_workspace_aiwork_config_path(&root);
@@ -385,7 +385,7 @@ pub fn ensure_workspace_files(workspace_path: &str, preset: &str) -> Result<(), 
         .map_err(|e| format!("Failed to write {}: {e}", config_path.display()))?;
     }
 
-    let aiwork_path = root.join(".opencode").join("aiwork.json");
+    let aiwork_path = root.join(".engine").join("aiwork.json");
     if !aiwork_path.exists() {
         let aiwork = WorkspaceAiWorkConfig::new(workspace_path, preset, now_ms());
 

@@ -1,6 +1,6 @@
-import type { Message, Part, Session, Todo } from "@aiwork-engine/sdk/v2/client";
+import type { Message, Part, Session, Todo } from "@engine/sdk/v2/client";
 import { desktopFetch } from "./desktop";
-import type { ExecResult, AiWorkEngineConfigFile, WorkspaceInfo, WorkspaceList } from "./desktop";
+import type { ExecResult, EngineConfigFile, WorkspaceInfo, WorkspaceList } from "./desktop";
 import type { ModelProviderType } from "../utils/model-providers-catalog";
 import { ConsoleLog } from "./console-log";
 
@@ -15,7 +15,7 @@ function logCall<T>(method: string, input: unknown, promise: Promise<T>): Promis
 }
 
 export type AiWorkServerCapabilities = {
-  skills: { read: boolean; write: boolean; source: "aiwork" | "opencode" };
+  skills: { read: boolean; write: boolean; source: "aiwork" | "engine" };
   hub?: {
     skills?: {
       read: boolean;
@@ -27,7 +27,7 @@ export type AiWorkServerCapabilities = {
   mcp: { read: boolean; write: boolean };
   commands: { read: boolean; write: boolean };
   config: { read: boolean; write: boolean };
-  proxy?: { opencode: boolean };
+  proxy?: { engine: boolean };
   toolProviders?: {
     browser?: {
       enabled: boolean;
@@ -62,7 +62,7 @@ export type AiWorkServerDiagnostics = {
   tokenSource: { client: string; host: string };
 };
 
-export type AiWorkRuntimeServiceName = "aiwork-server" | "opencode";
+export type AiWorkRuntimeServiceName = "aiwork-server" | "engine";
 
 export type AiWorkRuntimeServiceSnapshot = {
   name: AiWorkRuntimeServiceName;
@@ -88,7 +88,7 @@ export type AiWorkServerSettings = {
 };
 
 export type AiWorkWorkspaceInfo = WorkspaceInfo & {
-  opencode?: {
+  engine?: {
     baseUrl?: string;
     directory?: string;
     username?: string;
@@ -307,19 +307,19 @@ export function normalizeAiWorkServerUrl(input: string) {
   const withProtocol = /^https?:\/\//.test(trimmed) ? trimmed : `http://${trimmed}`;
   const normalized = withProtocol.replace(/\/+$/, "");
   // Desktop runtime may hand us a workspace-scoped AiWork mount URL
-  // (`.../w/<id>/opencode`). AiWork server APIs live at `.../w/<id>`.
+  // (`.../w/<id>/engine`). AiWork server APIs live at `.../w/<id>`.
   try {
     const url = new URL(normalized);
     const segments = url.pathname.replace(/\/+$/, "").split("/").filter(Boolean);
     const last = segments[segments.length - 1] ?? "";
-    if (last === "opencode") {
+    if (last === "engine") {
       url.pathname = `/${segments.slice(0, -1).join("/")}`;
       return url.toString().replace(/\/+$/, "");
     }
   } catch {
     // ignore — fall through to regex strip
   }
-  return normalized.replace(/\/opencode$/, "");
+  return normalized.replace(/\/engine$/, "");
 }
 
 export function isLoopbackAiWorkServerUrl(input: string) {
@@ -933,12 +933,12 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
     },
     getConfig: (workspaceId: string) =>
       logCall("getConfig", { workspaceId },
-        requestJson<{ opencode: Record<string, unknown>; aiwork: Record<string, unknown>; updatedAt?: number | null }>(
+        requestJson<{ engine: Record<string, unknown>; aiwork: Record<string, unknown>; updatedAt?: number | null }>(
           baseUrl,
           `/workspace/${workspaceId}/config`,
           { token, hostToken, timeoutMs: timeouts.config },
         )),
-    patchConfig: (workspaceId: string, payload: { opencode?: Record<string, unknown>; aiwork?: Record<string, unknown> }) =>
+    patchConfig: (workspaceId: string, payload: { engine?: Record<string, unknown>; aiwork?: Record<string, unknown> }) =>
       logCall("patchConfig", { workspaceId, payload },
         requestJson<{ updatedAt?: number | null }>(baseUrl, `/workspace/${workspaceId}/config`, {
           token,
@@ -946,20 +946,20 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
           method: "PATCH",
           body: payload,
         })),
-    readAiWorkEngineConfigFile: (workspaceId: string, scope: "project" | "global" = "project") => {
+    readEngineConfigFile: (workspaceId: string, scope: "project" | "global" = "project") => {
       const params = new URLSearchParams({ scope });
       // Avoid stale reads after rapid global config writes (disabled_providers, etc.).
       params.set("_", String(Date.now()));
       const query = `?${params.toString()}`;
-      return logCall("readAiWorkEngineConfigFile", { workspaceId, scope },
-        requestJson<AiWorkEngineConfigFile>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/opencode-config${query}`, {
+      return logCall("readEngineConfigFile", { workspaceId, scope },
+        requestJson<EngineConfigFile>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/engine-config${query}`, {
           token,
           hostToken,
         }));
     },
-    writeAiWorkEngineConfigFile: (workspaceId: string, scope: "project" | "global", content: string) =>
-      logCall("writeAiWorkEngineConfigFile", { workspaceId, scope },
-        requestJson<ExecResult>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/opencode-config`, {
+    writeEngineConfigFile: (workspaceId: string, scope: "project" | "global", content: string) =>
+      logCall("writeEngineConfigFile", { workspaceId, scope },
+        requestJson<ExecResult>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/engine-config`, {
           token,
           hostToken,
           method: "POST",

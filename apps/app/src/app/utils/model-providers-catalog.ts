@@ -1,10 +1,10 @@
 /**
  * Built-in model provider presets for the Connect provider flow.
- * Keys are used as AiWorkEngine `providerID` for preset entries.
+ * Keys are used as Engine `providerID` for preset entries.
  */
 export type ModelProviderType = "openai" | "openai-compatible" | "anthropic" | "google";
 
-/** Selectable provider kinds for custom endpoints (same labels as AiWorkEngine SDK families). */
+/** Selectable provider kinds for custom endpoints (same labels as Engine SDK families). */
 export const DEFAULT_MODEL_PROVIDER_TYPES = [
   "openai",
   "openai-compatible",
@@ -18,7 +18,7 @@ export function isModelProviderType(value: string): value is ModelProviderType {
   return (DEFAULT_MODEL_PROVIDER_TYPES as readonly string[]).includes(value);
 }
 
-/** `@ai-sdk/*` npm package name for global `opencode.json` `provider.<id>.npm` when connecting custom providers. */
+/** `@ai-sdk/*` npm package name for global `engine.json` `provider.<id>.npm` when connecting custom providers. */
 export function npmSdkPackageForProviderType(type: ModelProviderType): string {
   switch (type) {
     case "openai":

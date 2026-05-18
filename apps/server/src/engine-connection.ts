@@ -1,6 +1,6 @@
 import type { ServerConfig, WorkspaceInfo } from "./types.js";
 
-type AiWorkEngineConnection = {
+type EngineConnection = {
   baseUrl?: string;
   authHeader?: string;
 };
@@ -9,15 +9,15 @@ function trim(value: string | undefined): string {
   return value?.trim() ?? "";
 }
 
-export function resolveWorkspaceAiWorkEngineConnection(
-  config: Pick<ServerConfig, "opencodeBaseUrl" | "opencodeUsername" | "opencodePassword">,
+export function resolveWorkspaceEngineConnection(
+  config: Pick<ServerConfig, "engineBaseUrl" | "engineUsername" | "enginePassword">,
   workspace: WorkspaceInfo,
-): AiWorkEngineConnection {
-  const baseUrl = trim(workspace.opencode?.baseUrl) || trim(config.opencodeBaseUrl) || undefined;
+): EngineConnection {
+  const baseUrl = trim(workspace.engine?.baseUrl) || trim(config.engineBaseUrl) || undefined;
   const username =
-    trim(workspace.opencode?.username) || trim(workspace.opencodeUsername) || trim(config.opencodeUsername);
+    trim(workspace.engine?.username) || trim(workspace.engineUsername) || trim(config.engineUsername);
   const password =
-    trim(workspace.opencode?.password) || trim(workspace.opencodePassword) || trim(config.opencodePassword);
+    trim(workspace.engine?.password) || trim(workspace.enginePassword) || trim(config.enginePassword);
 
   return {
     ...(baseUrl ? { baseUrl } : {}),
@@ -29,24 +29,24 @@ export function resolveWorkspaceAiWorkEngineConnection(
   };
 }
 
-export function inheritWorkspaceAiWorkEngineConnection(
-  config: Pick<ServerConfig, "opencodeBaseUrl" | "opencodeUsername" | "opencodePassword">,
+export function inheritWorkspaceEngineConnection(
+  config: Pick<ServerConfig, "engineBaseUrl" | "engineUsername" | "enginePassword">,
 ): Partial<WorkspaceInfo> {
-  const baseUrl = trim(config.opencodeBaseUrl);
-  const username = trim(config.opencodeUsername);
-  const password = trim(config.opencodePassword);
+  const baseUrl = trim(config.engineBaseUrl);
+  const username = trim(config.engineUsername);
+  const password = trim(config.enginePassword);
 
   return {
     ...(baseUrl || username || password
       ? {
-          opencode: {
+          engine: {
             ...(baseUrl ? { baseUrl } : {}),
             ...(username ? { username } : {}),
             ...(password ? { password } : {}),
           },
         }
       : {}),
-    ...(username ? { opencodeUsername: username } : {}),
-    ...(password ? { opencodePassword: password } : {}),
+    ...(username ? { engineUsername: username } : {}),
+    ...(password ? { enginePassword: password } : {}),
   };
 }
