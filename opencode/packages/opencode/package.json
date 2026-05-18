@@ -16,7 +16,7 @@
     "db": "bun drizzle-kit"
   },
   "bin": {
-    "opencode": "./bin/opencode"
+    "opencode": "./bin/aiworkengine"
   },
   "exports": {
     "./*": "./src/*.ts"

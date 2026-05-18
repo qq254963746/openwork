@@ -9,7 +9,6 @@ import { NamedError } from "@/core/util/name-error"
 import z from "zod"
 import path from "path"
 import { Flag } from "@/core/flag/flag"
-import { AiWorkEngineChannel } from "@/core/env/env"
 import { InstanceState } from "@/effect/instance-state"
 import { iife } from "@/util/iife"
 import { init } from "#db"
@@ -24,19 +23,12 @@ export const NotFoundError = NamedError.create(
 
 const log = Log.create({ service: "db" })
 
-export function getChannelPath() {
-  if (["latest", "beta", "prod"].includes(AiWorkEngineChannel) || Flag.AIWORK_ENGINE_DISABLE_CHANNEL_DB)
-    return path.join(Global.Path.data, "opencode.db")
-  const safe = AiWorkEngineChannel.replace(/[^a-zA-Z0-9._-]/g, "-")
-  return path.join(Global.Path.data, `opencode-${safe}.db`)
-}
-
 export const Path = iife(() => {
   if (Flag.AIWORK_ENGINE_DB) {
     if (Flag.AIWORK_ENGINE_DB === ":memory:" || path.isAbsolute(Flag.AIWORK_ENGINE_DB)) return Flag.AIWORK_ENGINE_DB
     return path.join(Global.Path.data, Flag.AIWORK_ENGINE_DB)
   }
-  return getChannelPath()
+  return path.join(Global.Path.data, "opencode.db")
 })
 
 export type Transaction = SQLiteTransaction<"sync", void>

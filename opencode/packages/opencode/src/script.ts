@@ -18,24 +18,14 @@ if (!semver.satisfies(process.versions.bun, expectedBunVersionRange)) {
 }
 
 const env = {
-  AIWORK_ENGINE_CHANNEL: process.env["AIWORK_ENGINE_CHANNEL"],
   AIWORK_ENGINE_BUMP: process.env["AIWORK_ENGINE_BUMP"],
   AIWORK_ENGINE_VERSION: process.env["AIWORK_ENGINE_VERSION"],
   AIWORK_ENGINE_RELEASE: process.env["AIWORK_ENGINE_RELEASE"],
 }
 
-const CHANNEL = "latest"
-const IS_PREVIEW = CHANNEL !== "latest"
-
 export const Script = {
-  get channel() {
-    return CHANNEL
-  },
   get version() {
     return pkg.version
-  },
-  get preview() {
-    return IS_PREVIEW
   },
   get release(): boolean {
     return !!env.AIWORK_ENGINE_RELEASE

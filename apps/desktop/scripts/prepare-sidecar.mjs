@@ -466,13 +466,13 @@ const aiworkServerResult = buildBunSidecar({
 
 const opencodeResult = buildNativeSidecar({
   label: "AiWorkEngine",
-  baseName: "opencode",
+  baseName: "aiworkengine",
   packageDir: opencodePackageDir,
   workspaceDir: opencodeSourceDir,
   // --single: build only for the current platform
   // --skip-install: skip the extra parcel/watcher install inside build.ts
   buildArgs: ["--single", "--skip-install"],
-  findBuiltBinary: makeFindBinary("opencode"),
+  findBuiltBinary: makeFindBinary("aiworkengine"),
 });
 
 // ─── macOS ad-hoc signing ─────────────────────────────────────────────────────

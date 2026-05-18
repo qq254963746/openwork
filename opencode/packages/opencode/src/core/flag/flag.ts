@@ -1,5 +1,4 @@
 import { Config } from "effect"
-import { AiWorkEngineChannel } from "../env/env"
 
 function truthy(key: string) {
   const value = process.env[key]?.toLowerCase()
@@ -10,10 +9,6 @@ function falsy(key: string) {
   const value = process.env[key]?.toLowerCase()
   return value === "false" || value === "0"
 }
-
-// Channels that default to the new effect-httpapi server backend. The legacy
-// hono backend remains the default for stable (`prod`/`latest`) installs.
-const HTTPAPI_DEFAULT_ON_CHANNELS = new Set(["dev", "beta", "local"])
 
 function number(key: string) {
   const value = process.env[key]
@@ -81,19 +76,17 @@ export const Flag = {
   AIWORK_ENGINE_MODELS_PATH: process.env["AIWORK_ENGINE_MODELS_PATH"],
   AIWORK_ENGINE_DISABLE_EMBEDDED_WEB_UI: truthy("AIWORK_ENGINE_DISABLE_EMBEDDED_WEB_UI"),
   AIWORK_ENGINE_DB: process.env["AIWORK_ENGINE_DB"],
-  AIWORK_ENGINE_DISABLE_CHANNEL_DB: truthy("AIWORK_ENGINE_DISABLE_CHANNEL_DB"),
   AIWORK_ENGINE_SKIP_MIGRATIONS: truthy("AIWORK_ENGINE_SKIP_MIGRATIONS"),
   AIWORK_ENGINE_STRICT_CONFIG_DEPS: truthy("AIWORK_ENGINE_STRICT_CONFIG_DEPS"),
 
   AIWORK_ENGINE_WORKSPACE_ID: process.env["AIWORK_ENGINE_WORKSPACE_ID"],
-  // Defaults to true on dev/beta/local channels so internal users exercise the
+  // so internal users exercise the
   // new effect-httpapi server backend. Stable (`prod`/`latest`) installs stay
   // on the legacy hono backend until the rollout is complete. An explicit env
   // var ("true"/"1" or "false"/"0") always wins, providing an opt-in for
   // stable users and an escape hatch for dev/beta users.
   AIWORK_ENGINE_EXPERIMENTAL_HTTPAPI:
-    truthy("AIWORK_ENGINE_EXPERIMENTAL_HTTPAPI") ||
-    (!falsy("AIWORK_ENGINE_EXPERIMENTAL_HTTPAPI") && HTTPAPI_DEFAULT_ON_CHANNELS.has(AiWorkEngineChannel)),
+    truthy("AIWORK_ENGINE_EXPERIMENTAL_HTTPAPI") ,
   AIWORK_ENGINE_EXPERIMENTAL_WORKSPACES: AIWORK_ENGINE_EXPERIMENTAL || truthy("AIWORK_ENGINE_EXPERIMENTAL_WORKSPACES"),
   AIWORK_ENGINE_EXPERIMENTAL_EVENT_SYSTEM: AIWORK_ENGINE_EXPERIMENTAL || truthy("AIWORK_ENGINE_EXPERIMENTAL_EVENT_SYSTEM"),
 

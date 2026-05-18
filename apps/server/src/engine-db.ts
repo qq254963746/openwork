@@ -34,10 +34,7 @@ function opencodeDataDirs(): string[] {
 }
 
 function preferredDbNames(): string[] {
-  const channel = process.env.AIWORK_ENGINE_CHANNEL?.trim() || "local";
-  return channel === "latest" || channel === "beta" || truthy(process.env.AIWORK_ENGINE_DISABLE_CHANNEL_DB)
-    ? ["opencode.db"]
-    : [`opencode-${channel.replace(/[^a-zA-Z0-9._-]/g, "-")}.db`, "opencode.db"];
+  return ["opencode.db"]
 }
 
 function candidateAiWorkEngineDbPaths(): string[] {

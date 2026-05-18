@@ -3,7 +3,7 @@ import { FetchHttpClient } from "effect/unstable/http"
 import { OtlpLogger, OtlpSerialization } from "effect/unstable/observability"
 import * as EffectLogger from "./logger"
 import { Flag } from "../flag/flag"
-import { AiWorkEngineChannel, AiWorkEngineVersion } from "../env/env"
+import { AiWorkEngineVersion } from "../env/env"
 import { ensureProcessMetadata } from "../util/process"
 
 const base = Flag.OTEL_EXPORTER_OTLP_ENDPOINT
@@ -44,7 +44,6 @@ export function resource(): { serviceName: string; serviceVersion: string; attri
     serviceVersion: AiWorkEngineVersion,
     attributes: {
       ...attributes,
-      "deployment.environment.name": AiWorkEngineChannel,
       "opencode.client": Flag.AIWORK_ENGINE_CLIENT,
       "opencode.process_role": processMetadata.processRole,
       "opencode.run_id": processMetadata.runID,
