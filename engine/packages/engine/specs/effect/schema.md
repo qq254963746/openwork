@@ -356,7 +356,6 @@ piecewise.
 - [ ] `src/file/watcher.ts`
 - [ ] `src/format/index.ts`
 - [ ] `src/id/id.ts`
-- [ ] `src/ide/index.ts`
 - [ ] `src/lsp/client.ts`
 - [ ] `src/lsp/lsp.ts`
 - [ ] `src/mcp/auth.ts`
