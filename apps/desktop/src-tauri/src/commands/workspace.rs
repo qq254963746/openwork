@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::types::{ExecResult, WorkspaceAiWorkConfig, WorkspaceInfo, WorkspaceList};
-use crate::workspace::files::ensure_workspace_files;
+use crate::workspace::files::{ensure_workspace_files, project_config_dir, project_config_dir_for_path};
 use crate::workspace::state::{
     load_workspace_state, load_workspace_state_fast, normalize_local_workspace_path,
     save_workspace_state, stable_workspace_id,
@@ -314,7 +314,7 @@ pub fn workspace_create(
 
     let id = stable_workspace_id(&folder);
 
-    ensure_workspace_files(&folder, &preset)?;
+    ensure_workspace_files(&id, &folder, &preset)?;
 
     let mut state = load_workspace_state(&app)?;
 
@@ -336,6 +336,10 @@ pub fn workspace_create(
     Ok(build_workspace_list(state))
 }
 
+fn resolve_aiwork_json_path(workspace_path: &str) -> PathBuf {
+    project_config_dir_for_path(workspace_path).join("aiwork.json")
+}
+
 #[tauri::command]
 pub fn workspace_add_authorized_root(
     _app: tauri::AppHandle,
@@ -352,9 +356,7 @@ pub fn workspace_add_authorized_root(
         return Err("folderPath is required".to_string());
     }
 
-    let aiwork_path = PathBuf::from(&workspace_path)
-        .join(".engine")
-        .join("aiwork.json");
+    let aiwork_path = resolve_aiwork_json_path(&workspace_path);
 
     if let Some(parent) = aiwork_path.parent() {
         fs::create_dir_all(parent)
@@ -401,9 +403,7 @@ pub fn workspace_aiwork_read(
         return Err("workspacePath is required".to_string());
     }
 
-    let aiwork_path = PathBuf::from(&workspace_path)
-        .join(".engine")
-        .join("aiwork.json");
+    let aiwork_path = resolve_aiwork_json_path(&workspace_path);
 
     if !aiwork_path.exists() {
         let mut cfg = WorkspaceAiWorkConfig::default();
@@ -429,9 +429,7 @@ pub fn workspace_aiwork_write(
         return Err("workspacePath is required".to_string());
     }
 
-    let aiwork_path = PathBuf::from(&workspace_path)
-        .join(".engine")
-        .join("aiwork.json");
+    let aiwork_path = resolve_aiwork_json_path(&workspace_path);
 
     if let Some(parent) = aiwork_path.parent() {
         fs::create_dir_all(parent)
@@ -498,12 +496,13 @@ fn should_exclude(path: &Path) -> bool {
 }
 
 fn collect_workspace_entries(
-    workspace_root: &Path,
+    workspace_path: &str,
 ) -> Result<(Vec<(PathBuf, String)>, Vec<String>), String> {
+    let proj_dir = project_config_dir_for_path(workspace_path);
     let mut entries: Vec<(PathBuf, String)> = Vec::new();
     let mut excluded: Vec<String> = Vec::new();
 
-    let config_path = workspace_root.join("engine.json");
+    let config_path = proj_dir.join("engine.json");
     if config_path.exists() && config_path.is_file() {
         if should_exclude(&config_path) {
             excluded.push("engine.json".to_string());
@@ -512,16 +511,15 @@ fn collect_workspace_entries(
         }
     }
 
-    let aiwork_dir = workspace_root.join(".engine");
-    if aiwork_dir.exists() {
-        for entry in WalkDir::new(&aiwork_dir) {
+    if proj_dir.exists() {
+        for entry in WalkDir::new(&proj_dir) {
             let entry = entry.map_err(|e| e.to_string())?;
             if !entry.file_type().is_file() {
                 continue;
             }
             let absolute = entry.path().to_path_buf();
             let rel = absolute
-                .strip_prefix(workspace_root)
+                .strip_prefix(&proj_dir)
                 .map_err(|e| format!("Failed to compute relative path: {e}"))?;
             let rel_str = normalize_zip_path(rel);
             if should_exclude(&absolute) {
@@ -573,7 +571,7 @@ pub fn workspace_export_config(
             .map_err(|e| format!("Failed to create export folder {}: {e}", parent.display()))?;
     }
 
-    let (entries, excluded_paths) = collect_workspace_entries(&workspace_root)?;
+    let (entries, excluded_paths) = collect_workspace_entries(&workspace.path)?;
     if entries.is_empty() {
         return Err("No workspace config files found to export".to_string());
     }
@@ -656,9 +654,15 @@ pub fn workspace_import_config(
     fs::create_dir_all(&target_path)
         .map_err(|e| format!("Failed to create {}: {e}", target_path.display()))?;
 
+    let target_dir = normalize_local_workspace_path(&target_dir);
+    let id = stable_workspace_id(&target_dir);
+    let proj_dir = project_config_dir(&id);
+
     let file = fs::File::open(&archive_path)
         .map_err(|e| format!("Failed to open {}: {e}", archive_path))?;
     let mut archive = ZipArchive::new(file).map_err(|e| format!("Failed to read archive: {e}"))?;
+
+    let mut any_config_found = false;
 
     for i in 0..archive.len() {
         let mut entry = archive.by_index(i).map_err(|e| e.to_string())?;
@@ -683,30 +687,40 @@ pub fn workspace_import_config(
                 continue;
             }
         }
-        let out_path = target_path.join(Path::new(&name));
-        if let Some(parent) = out_path.parent() {
+
+        // Remap archive paths: .engine/skills/... → {project_config_dir}/skills/...
+        let remapped = if name == "engine.json" {
+            proj_dir.join("engine.json")
+        } else if let Some(rest) = name.strip_prefix(".engine/") {
+            proj_dir.join(rest)
+        } else {
+            continue;
+        };
+
+        any_config_found = true;
+
+        if let Some(parent) = remapped.parent() {
             fs::create_dir_all(parent)
                 .map_err(|e| format!("Failed to create {}: {e}", parent.display()))?;
         }
         if entry.name().ends_with('/') {
-            fs::create_dir_all(&out_path)
-                .map_err(|e| format!("Failed to create {}: {e}", out_path.display()))?;
+            fs::create_dir_all(&remapped)
+                .map_err(|e| format!("Failed to create {}: {e}", remapped.display()))?;
             continue;
         }
         let mut buffer = Vec::new();
         entry
             .read_to_end(&mut buffer)
             .map_err(|e| format!("Failed to read archive entry: {e}"))?;
-        fs::write(&out_path, buffer)
-            .map_err(|e| format!("Failed to write {}: {e}", out_path.display()))?;
+        fs::write(&remapped, buffer)
+            .map_err(|e| format!("Failed to write {}: {e}", remapped.display()))?;
     }
 
-    let aiwork_dir = target_path.join(".engine");
-    if !aiwork_dir.exists() {
-        return Err("Archive is missing .engine config".to_string());
+    if !any_config_found {
+        return Err("Archive contains no project config entries".to_string());
     }
 
-    let aiwork_path = target_path.join(".engine").join("aiwork.json");
+    let aiwork_path = project_config_dir(&id).join("aiwork.json");
     let mut preset = "starter".to_string();
     let mut workspace_name = name.clone().filter(|value| !value.trim().is_empty());
 
@@ -757,9 +771,6 @@ pub fn workspace_import_config(
         })
         .trim()
         .to_string();
-
-    let target_dir = normalize_local_workspace_path(&target_dir);
-    let id = stable_workspace_id(&target_dir);
 
     let mut state = load_workspace_state(&app)?;
     state.workspaces.retain(|w| w.id != id);

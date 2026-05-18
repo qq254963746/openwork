@@ -154,7 +154,7 @@ for (const item of targets) {
     const binaryPath = `dist/${name}/bin/engine`
     console.log(`Running smoke test: ${binaryPath} --version`)
     try {
-      const versionOutput = await $`${binaryPath} --version`.text()
+      const versionOutput = await $`AIWORK_APP_LOCAL_DATA_DIR=${process.env.AIWORK_APP_LOCAL_DATA_DIR ?? "/tmp/engine-smoke"} ${binaryPath} --version`.text()
       console.log(`Smoke test passed: ${versionOutput.trim()}`)
     } catch (e) {
       console.error(`Smoke test failed for ${name}:`, e)

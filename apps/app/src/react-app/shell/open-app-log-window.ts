@@ -1,7 +1,5 @@
 import { openAppLogWebviewWindow } from "../../app/lib/desktop-tauri";
 
-const APP_LOG_WINDOW_NAME = "aiworkAppLog";
-
 /** Lets the popup detect a deliberate launch even when `window.opener` is missing (some embedded WebViews). */
 export const LOG_VIEWER_POPUP_QUERY = "aiworkLogViewer";
 

@@ -10,14 +10,14 @@
       "../resources/icons/dev/icon-dev.icns"
     ],
     "macOS": {
-      "bundleName": "AiWork - Dev",
+      "bundleName": "AiWork-Dev",
       "infoPlist": "./Info.dev.plist"
     }
   },
   "app": {
     "windows": [
       {
-        "title": "AiWork - Dev",
+        "title": "AiWork Dev",
         "width": 1180,
         "height": 820,
         "minWidth": 1024,

@@ -30,6 +30,9 @@ type WelcomePageProps = {
 export function WelcomePage({ onGetStarted }: WelcomePageProps) {
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-dls-background p-6">
+      {/* Drag region – allows moving the window since native title bar is hidden */}
+      <div className="fixed inset-x-0 top-0 z-50 h-[30px]" data-tauri-drag-region/>
+
       <div className="mx-auto w-full max-w-[640px] space-y-10">
         {/* Header */}
         <div className="space-y-3 text-center">

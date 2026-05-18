@@ -6,54 +6,22 @@ use std::path::{Path, PathBuf};
 use crate::fs::copy_dir_recursive;
 use crate::paths::candidate_xdg_config_dirs;
 use crate::types::ExecResult;
+use crate::workspace::files::project_config_dir_for_path;
 
 fn ensure_project_skill_root(project_dir: &str) -> Result<PathBuf, String> {
-    let project_dir = project_dir.trim();
-    if project_dir.is_empty() {
-        return Err("projectDir is required".to_string());
-    }
-
-    let base = PathBuf::from(project_dir).join(".engine");
-    let legacy = base.join("skill");
-    let modern = base.join("skills");
-
-    if legacy.is_dir() && !modern.exists() {
-        fs::rename(&legacy, &modern).map_err(|e| {
-            format!(
-                "Failed to move {} -> {}: {e}",
-                legacy.display(),
-                modern.display()
-            )
-        })?;
-    }
-
-    fs::create_dir_all(&modern)
-        .map_err(|e| format!("Failed to create {}: {e}", modern.display()))?;
-    Ok(modern)
+    let skills_dir = project_config_dir_for_path(project_dir).join("skills");
+    fs::create_dir_all(&skills_dir)
+        .map_err(|e| format!("Failed to create {}: {e}", skills_dir.display()))?;
+    Ok(skills_dir)
 }
 
-fn collect_project_skill_roots(project_dir: &Path) -> Vec<PathBuf> {
-    let mut roots = Vec::new();
-    let mut current = Some(project_dir);
-
-    while let Some(dir) = current {
-        let aiwork_root = dir.join(".engine").join("skills");
-        if aiwork_root.is_dir() {
-            roots.push(aiwork_root);
-        } else {
-            let legacy_root = dir.join(".engine").join("skill");
-            if legacy_root.is_dir() {
-                roots.push(legacy_root);
-            }
-        }
-        if dir.join(".git").exists() {
-            break;
-        }
-
-        current = dir.parent();
+fn collect_project_skill_roots(project_dir: &str) -> Vec<PathBuf> {
+    let skills_dir = project_config_dir_for_path(project_dir).join("skills");
+    if skills_dir.is_dir() {
+        vec![skills_dir]
+    } else {
+        vec![]
     }
-
-    roots
 }
 
 fn collect_global_skill_roots() -> Vec<PathBuf> {
@@ -74,8 +42,7 @@ fn collect_skill_roots(project_dir: &str) -> Result<Vec<PathBuf>, String> {
     }
 
     let mut roots = Vec::new();
-    let project_path = PathBuf::from(project_dir);
-    roots.extend(collect_project_skill_roots(&project_path));
+    roots.extend(collect_project_skill_roots(project_dir));
     roots.extend(collect_global_skill_roots());
 
     let mut seen = HashSet::new();
@@ -531,7 +498,7 @@ pub fn uninstall_skill(project_dir: String, name: String) -> Result<ExecResult, 
             ok: false,
             status: 1,
             stdout: String::new(),
-            stderr: "Skill not found in .engine/skills".to_string(),
+            stderr: "Skill not found in project skills".to_string(),
         });
     }
 
@@ -565,8 +532,7 @@ pub fn import_skill(
         .and_then(|s| s.to_str())
         .ok_or_else(|| "Failed to infer skill name from directory".to_string())?;
 
-    let dest = std::path::PathBuf::from(&project_dir)
-        .join(".engine")
+    let dest = project_config_dir_for_path(&project_dir)
         .join("skills")
         .join(name);
 

@@ -3,12 +3,13 @@ use std::fs;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
+use crate::aiwork_server::manager::AiWorkServerManager;
+use crate::config::resolve_aiwork_app_local_data_dir;
 use crate::engine::doctor::resolve_engine_path;
 use crate::engine::manager::EngineManager;
-use crate::aiwork_server::manager::AiWorkServerManager;
-use crate::paths::{candidate_xdg_config_dirs, candidate_xdg_data_dirs, home_dir};
 use crate::platform::command_for_program;
 use crate::types::{DesktopAppPaths, ExecResult, WorkspaceAiWorkConfig};
+use crate::workspace::files::project_config_dir_for_path;
 use crate::workspace::state::load_workspace_state;
 use tauri::{AppHandle, Manager, State};
 
@@ -49,38 +50,13 @@ fn env_truthy(key: &str) -> bool {
     )
 }
 
-// #[cfg(target_os = "macos")]
-// fn macos_dev_application_support_aiwork_log_dir() -> Option<PathBuf> {
-//     let home = home_dir()?;
-//     Some(
-//         home.join("Library/Application Support/com.aiworklove.aiwork.dev/engine/xdg/data/engine/log"),
-//     )
-// }
-
 fn isolated_aiwork_log_dir(app: &AppHandle) -> Option<PathBuf> {
     let root = app.path().app_local_data_dir().ok()?;
-    Some(root.join("engine/xdg/data/engine/log"))
+    Some(root.join("engine/data/log"))
 }
 
 fn standard_aiwork_log_dir() -> PathBuf {
-    if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
-        let trimmed = xdg.trim();
-        if !trimmed.is_empty() {
-            return PathBuf::from(trimmed).join("engine/log");
-        }
-    }
-
-    #[cfg(windows)]
-    if let Ok(local) = std::env::var("LOCALAPPDATA") {
-        let trimmed = local.trim();
-        if !trimmed.is_empty() {
-            return PathBuf::from(trimmed).join("engine/log");
-        }
-    }
-
-    home_dir()
-        .unwrap_or_default()
-        .join(".local/share/engine/log")
+    resolve_aiwork_app_local_data_dir().join("engine/data/log")
 }
 
 fn collect_aiwork_disk_log_dir_candidates(app: &AppHandle) -> Vec<(String, PathBuf)> {
@@ -209,96 +185,22 @@ pub fn read_engine_disk_logs(app: AppHandle) -> EngineEngineDiskLogsSnapshot {
 }
 
 fn aiwork_cache_candidates() -> Vec<PathBuf> {
-    let mut candidates: Vec<PathBuf> = Vec::new();
-
-    if let Ok(value) = std::env::var("XDG_CACHE_HOME") {
-        let trimmed = value.trim();
-        if !trimmed.is_empty() {
-            candidates.push(PathBuf::from(trimmed).join("engine"));
-        }
-    }
-
-    if let Some(home) = home_dir() {
-        candidates.push(home.join(".cache").join("engine"));
-
-        #[cfg(target_os = "macos")]
-        {
-            candidates.push(home.join("Library").join("Caches").join("engine"));
-        }
-    }
-
-    #[cfg(windows)]
-    {
-        if let Ok(value) = std::env::var("LOCALAPPDATA") {
-            let trimmed = value.trim();
-            if !trimmed.is_empty() {
-                candidates.push(PathBuf::from(trimmed).join("engine"));
-            }
-        }
-        if let Ok(value) = std::env::var("APPDATA") {
-            let trimmed = value.trim();
-            if !trimmed.is_empty() {
-                candidates.push(PathBuf::from(trimmed).join("engine"));
-            }
-        }
-    }
-
-    let mut seen = HashSet::new();
-    candidates
-        .into_iter()
-        .filter(|path| seen.insert(path.to_string_lossy().to_string()))
-        .collect()
-}
-
-fn push_aiwork_env_path(candidates: &mut Vec<PathBuf>, key: &str) {
-    let Ok(value) = std::env::var(key) else {
-        return;
-    };
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        return;
-    }
-    candidates.push(PathBuf::from(trimmed).join("engine"));
+    let base = resolve_aiwork_app_local_data_dir();
+    vec![base.join("engine").join("cache")]
 }
 
 fn aiwork_standard_state_paths() -> Vec<PathBuf> {
-    let mut candidates: Vec<PathBuf> = Vec::new();
-
-    push_aiwork_env_path(&mut candidates, "XDG_CONFIG_HOME");
-    push_aiwork_env_path(&mut candidates, "XDG_DATA_HOME");
-    push_aiwork_env_path(&mut candidates, "XDG_STATE_HOME");
-    candidates.extend(aiwork_cache_candidates());
-
-    for dir in candidate_xdg_config_dirs() {
-        candidates.push(dir.join("engine"));
-    }
-
-    for dir in candidate_xdg_data_dirs() {
-        candidates.push(dir.join("engine"));
-    }
-
-    if let Some(home) = home_dir() {
-        candidates.push(home.join(".local").join("state").join("engine"));
-
-        #[cfg(target_os = "macos")]
-        {
-            candidates.push(
-                home.join("Library")
-                    .join("Application Support")
-                    .join("engine"),
-            );
-        }
-    }
-
-    let mut seen = HashSet::new();
-    candidates
-        .into_iter()
-        .filter(|path| seen.insert(path.to_string_lossy().to_string()))
-        .collect()
+    let base = resolve_aiwork_app_local_data_dir();
+    vec![
+        base.join("engine").join("config"),
+        base.join("engine").join("data"),
+        base.join("engine").join("state"),
+        base.join("engine").join("cache"),
+    ]
 }
 
 fn current_aiwork_state_paths(app: &AppHandle) -> Result<Vec<PathBuf>, String> {
-    let mut paths = vec![
+    let paths = vec![
         app.path()
             .app_cache_dir()
             .map_err(|e| format!("Failed to resolve app cache dir: {e}"))?,
@@ -312,15 +214,6 @@ fn current_aiwork_state_paths(app: &AppHandle) -> Result<Vec<PathBuf>, String> {
             .app_data_dir()
             .map_err(|e| format!("Failed to resolve app data dir: {e}"))?,
     ];
-
-    if let Some(home) = home_dir() {
-        paths.push(
-            home.join("AiWork")
-                .join("Welcome")
-                .join(".engine")
-                .join("aiwork.json"),
-        );
-    }
 
     Ok(paths)
 }
@@ -373,7 +266,8 @@ fn validate_server_name(name: &str) -> Result<String, String> {
 fn read_workspace_aiwork_config(
     workspace_path: &Path,
 ) -> Result<WorkspaceAiWorkConfig, String> {
-    let aiwork_path = workspace_path.join(".engine").join("aiwork.json");
+    let workspace_str = workspace_path.to_string_lossy().to_string();
+    let aiwork_path = project_config_dir_for_path(&workspace_str).join("aiwork.json");
     if !aiwork_path.exists() {
         let mut cfg = WorkspaceAiWorkConfig::default();
         let workspace_value = workspace_path.to_string_lossy().to_string();

@@ -897,6 +897,16 @@ export function SessionRoute() {
     sessionsByWorkspaceId,
   ]);
 
+  // Auto-reset onboarding flag when workspace data is gone (e.g. user deleted app data dir).
+  // Without this, a user who deletes the data directory sees "Workspace was not found"
+  // instead of the welcome page, because localStorage (in WKWebView) survives deletion.
+  useEffect(() => {
+    if (loading) return;
+    if (workspaces.length > 0) return;
+    if (!local.prefs.hasCompletedOnboarding) return;
+    local.setPrefs((prev) => ({ ...prev, hasCompletedOnboarding: false }));
+  }, [loading, local.prefs.hasCompletedOnboarding, local.setPrefs, workspaces.length]);
+
   // Redirect to /welcome when no workspaces exist and the user hasn't
   // completed onboarding. This fires after the initial route refresh so
   // `loading` is false and we know for sure there are zero workspaces.

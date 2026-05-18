@@ -63,16 +63,16 @@ struct PersistedAiWorkServerState {
 fn aiwork_server_token_store_path(app: &AppHandle) -> Result<PathBuf, String> {
     let data_dir = app
         .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to resolve app data dir: {e}"))?;
+        .app_local_data_dir()
+        .map_err(|e| format!("Failed to resolve app local data dir: {e}"))?;
     Ok(data_dir.join("aiwork-server-tokens.json"))
 }
 
 fn aiwork_server_state_path(app: &AppHandle) -> Result<PathBuf, String> {
     let data_dir = app
         .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to resolve app data dir: {e}"))?;
+        .app_local_data_dir()
+        .map_err(|e| format!("Failed to resolve app local data dir: {e}"))?;
     Ok(data_dir.join("aiwork-server-state.json"))
 }
 

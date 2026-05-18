@@ -6,10 +6,6 @@ This is a plugin to simulate a remote environment locally. Add this to `.engine/
 
 In a separate terminal, run a separate Engine server. This will act like a remote server and the local instance will proxy all requests to it:
 
-```
-./packages/engine/script/run-workspace-server
-```
-
 With the plugin install, you can now run Engine and create a `debug` workspace type. This will create a "remote" workspace which talks to the second workspace server started above.
 
 How this works:

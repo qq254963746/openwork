@@ -1,8 +1,9 @@
-use std::env;
 use std::fs;
 use std::path::PathBuf;
 
+use crate::config::resolve_aiwork_app_local_data_dir;
 use crate::types::{ExecResult, EngineCommand};
+use crate::workspace::files::project_config_dir_for_path;
 use crate::workspace::commands::{sanitize_command_name, serialize_command_frontmatter};
 
 fn resolve_commands_dir(scope: &str, project_dir: &str) -> Result<PathBuf, String> {
@@ -11,19 +12,11 @@ fn resolve_commands_dir(scope: &str, project_dir: &str) -> Result<PathBuf, Strin
             if project_dir.trim().is_empty() {
                 return Err("projectDir is required".to_string());
             }
-            Ok(PathBuf::from(project_dir)
-                .join(".engine")
-                .join("commands"))
+            Ok(project_config_dir_for_path(project_dir.trim()).join("commands"))
         }
         "global" => {
-            let base = if let Ok(dir) = env::var("XDG_CONFIG_HOME") {
-                PathBuf::from(dir)
-            } else if let Ok(home) = env::var("HOME") {
-                PathBuf::from(home).join(".config")
-            } else {
-                return Err("Unable to resolve config directory".to_string());
-            };
-            Ok(base.join("engine").join("commands"))
+            let root = resolve_aiwork_app_local_data_dir().join("engine").join("config");
+            Ok(root.join("commands"))
         }
         _ => Err("scope must be 'workspace' or 'global'".to_string()),
     }

@@ -1,6 +1,7 @@
 import { homedir, platform } from "node:os";
 import { chmod, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { resolveAppLocalDataDir } from "./platform-paths.js";
 
 import { ensureDir, exists } from "./utils.js";
 
@@ -47,12 +48,7 @@ export function resolveDefaultEnvStorePath(): string {
   const override = (process.env.AIWORK_ENV_STORE ?? "").trim();
   if (override) return resolve(override);
 
-  if (platform() === "win32") {
-    const appData = (process.env.APPDATA ?? "").trim();
-    const root = appData || join(homedir(), "AppData", "Roaming");
-    return join(root, "aiwork", "env.json");
-  }
-  return join(homedir(), ".config", "aiwork", "env.json");
+  return join(resolveAppLocalDataDir(), "server", "env.json");
 }
 
 function parseRecord(raw: unknown): EnvRecord | null {

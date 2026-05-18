@@ -61,8 +61,8 @@ pub fn normalize_local_workspace_path_fast(path: &str) -> String {
 pub fn aiwork_state_paths(app: &tauri::AppHandle) -> Result<(PathBuf, PathBuf), String> {
     let data_dir = app
         .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to resolve app data dir: {e}"))?;
+        .app_local_data_dir()
+        .map_err(|e| format!("Failed to resolve app local data dir: {e}"))?;
     let file_path = data_dir.join("aiwork-workspaces.json");
     Ok((data_dir, file_path))
 }

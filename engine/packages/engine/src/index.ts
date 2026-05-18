@@ -108,6 +108,13 @@ const cli = yargs(args)
       run_id: processMetadata.runID,
     })
 
+    // Data directory is only required for serve-like commands.
+    // Skip db migration when running standalone CLI without the env var.
+    const appDataDir = (process.env.AIWORK_APP_LOCAL_DATA_DIR ?? "").trim()
+    if (!appDataDir) return
+
+    await Global.Path.ensure()
+
     const marker = path.join(Global.Path.data, "engine.db")
     if (!(await Filesystem.exists(marker))) {
       const tty = process.stderr.isTTY

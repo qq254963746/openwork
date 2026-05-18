@@ -1,3 +1,4 @@
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -7,6 +8,7 @@ use serde_json::json;
 use tauri::{AppHandle, Emitter, State};
 
 use crate::types::WorkspaceInfo;
+use crate::workspace::files::project_config_dir;
 
 const RELOAD_EVENT: &str = "aiwork://reload-required";
 
@@ -30,33 +32,25 @@ fn reason_for_path(path: &Path) -> Option<&'static str> {
         return None;
     }
 
-    // Specific .engine subdirectories map to distinct reasons.
-    if lower.contains("/.engine/skills/") || lower.ends_with("/.engine/skills") {
+    // Project-level config subdirectories map to distinct reasons.
+    if lower.contains("/skills/") || lower.ends_with("/skills") {
         return Some("skills");
     }
-    if lower.contains("/.engine/agents/") || lower.contains("/.engine/agent/") {
+    if lower.contains("/agents/") || lower.ends_with("/agents") {
         return Some("agents");
     }
-    if lower.contains("/.engine/commands/") || lower.contains("/.engine/command/") {
+    if lower.contains("/commands/") || lower.ends_with("/commands") {
         return Some("commands");
     }
-    if lower.contains("/.engine/plugins/") {
+    if lower.contains("/plugins/") {
         return Some("plugins");
     }
 
-    // engine.json / engine.jsonc at the workspace root or inside .engine/
-    if lower.ends_with("/engine.json") || lower.ends_with("/engine.jsonc") {
+    // engine.json / engine.jsonc at the project config root
+    if lower.ends_with("/engine.jsonc") || lower.ends_with("/engine.json") {
         return Some("config");
     }
 
-    // AGENTS.md at the workspace root triggers agent reload.
-    if lower.ends_with("/agents.md") && !lower.contains("/.engine/") {
-        return Some("agents");
-    }
-
-    // Any other file inside .engine/ that isn't already matched above
-    // (e.g. .engine/engine.db, .engine/engine.json handled above).
-    // We intentionally do NOT emit for unknown .engine files to be conservative.
     None
 }
 
@@ -155,12 +149,14 @@ pub fn update_workspace_watch(
         .watch(&root, RecursiveMode::NonRecursive)
         .map_err(|e| format!("Failed to watch workspace root: {e}"))?;
 
-    let aiwork_dir = root.join(".engine");
-    if aiwork_dir.exists() {
-        watcher
-            .watch(&aiwork_dir, RecursiveMode::Recursive)
-            .map_err(|e| format!("Failed to watch .engine: {e}"))?;
+    let proj_dir = project_config_dir(&active.id);
+    if !proj_dir.exists() {
+        fs::create_dir_all(&proj_dir)
+            .map_err(|e| format!("Failed to create project config dir: {e}"))?;
     }
+    watcher
+        .watch(&proj_dir, RecursiveMode::Recursive)
+        .map_err(|e| format!("Failed to watch project config dir: {e}"))?;
 
     *state
         .root

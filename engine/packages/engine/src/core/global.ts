@@ -1,43 +1,70 @@
 import path from "path"
 import fs from "fs/promises"
-import { xdgData, xdgCache, xdgConfig, xdgState } from "xdg-basedir"
 import os from "os"
 import { Context, Effect, Layer } from "effect"
 import { Flock } from "./util/flock"
 import { Flag } from "./flag/flag"
 
 const app = "engine"
-const data = path.join(xdgData!, app)
-const cache = path.join(xdgCache!, app)
-const config = path.join(xdgConfig!, app)
-const state = path.join(xdgState!, app)
-const tmp = path.join(os.tmpdir(), app)
+
+let _baseDir: string | undefined
+let _dirsEnsured = false
+
+function resolveBaseDir(): string {
+  if (_baseDir) return _baseDir
+  const dir = (process.env.AIWORK_APP_LOCAL_DATA_DIR ?? "").trim()
+  if (!dir) {
+    throw new Error(
+      "AIWORK_APP_LOCAL_DATA_DIR is required. Engine must be started via AiWork Desktop or with this env var set.",
+    )
+  }
+  _baseDir = dir
+  return dir
+}
 
 const paths = {
   get home() {
-    return process.env.ENGINE_TEST_HOME ?? os.homedir()
+    return os.homedir()
   },
-  data,
-  bin: path.join(cache, "bin"),
-  log: path.join(data, "log"),
-  cache,
-  config,
-  state,
-  tmp,
+  get data() {
+    return path.join(resolveBaseDir(), app, "data")
+  },
+  get cache() {
+    return path.join(resolveBaseDir(), app, "cache")
+  },
+  get config() {
+    return path.join(resolveBaseDir(), app, "config")
+  },
+  get state() {
+    return path.join(resolveBaseDir(), app, "state")
+  },
+  get tmp() {
+    return path.join(resolveBaseDir(), app, "tmp")
+  },
+  get bin() {
+    return path.join(this.cache, "bin")
+  },
+  get log() {
+    return path.join(this.data, "log")
+  },
+  /** Ensure all required directories exist. Must be called before using paths. */
+  async ensure() {
+    if (_dirsEnsured) return
+    _dirsEnsured = true
+    await Promise.all([
+      fs.mkdir(paths.data, { recursive: true }),
+      fs.mkdir(paths.config, { recursive: true }),
+      fs.mkdir(paths.state, { recursive: true }),
+      fs.mkdir(paths.tmp, { recursive: true }),
+      fs.mkdir(paths.log, { recursive: true }),
+      fs.mkdir(paths.bin, { recursive: true }),
+    ])
+  },
 }
 
 export const Path = paths
 
-Flock.setGlobal({ state })
-
-await Promise.all([
-  fs.mkdir(Path.data, { recursive: true }),
-  fs.mkdir(Path.config, { recursive: true }),
-  fs.mkdir(Path.state, { recursive: true }),
-  fs.mkdir(Path.tmp, { recursive: true }),
-  fs.mkdir(Path.log, { recursive: true }),
-  fs.mkdir(Path.bin, { recursive: true }),
-])
+Flock.setGlobal({ get state() { return paths.state } })
 
 export class Service extends Context.Service<Service, Interface>()("@engine/Global") {}
 

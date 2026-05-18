@@ -27,23 +27,6 @@ pub fn home_dir() -> Option<PathBuf> {
     None
 }
 
-pub fn candidate_xdg_data_dirs() -> Vec<PathBuf> {
-    let mut candidates = Vec::new();
-    let Some(home) = home_dir() else {
-        return candidates;
-    };
-
-    candidates.push(home.join(".local").join("share"));
-    candidates.push(home.join(".config"));
-
-    #[cfg(target_os = "macos")]
-    {
-        candidates.push(home.join(MACOS_APP_SUPPORT_DIR));
-    }
-
-    candidates
-}
-
 pub fn candidate_xdg_config_dirs() -> Vec<PathBuf> {
     let mut candidates = Vec::new();
     let Some(home) = home_dir() else {

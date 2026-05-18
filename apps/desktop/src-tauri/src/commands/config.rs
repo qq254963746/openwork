@@ -1,7 +1,5 @@
-use crate::config::{read_aiwork_config as read_inner, write_aiwork_config as write_inner};
+use crate::config::{read_aiwork_config as read_inner, resolve_aiwork_app_local_data_dir, write_aiwork_config as write_inner};
 use crate::types::{ExecResult, EngineAuthJsonFile, EngineConfigFile};
-use dirs::home_dir;
-use std::env;
 use std::fs;
 use std::path::PathBuf;
 
@@ -23,31 +21,8 @@ pub fn write_aiwork_config(
 }
 
 fn aiwork_auth_json_path_candidates() -> Vec<PathBuf> {
-    let mut dirs: Vec<PathBuf> = Vec::new();
-    if let Ok(xdg_data) = env::var("XDG_DATA_HOME") {
-        let trimmed = xdg_data.trim();
-        if !trimmed.is_empty() {
-            dirs.push(PathBuf::from(trimmed).join("engine"));
-        }
-    }
-    if let Some(home) = home_dir() {
-        dirs.push(home.join(".local").join("share").join("engine"));
-        #[cfg(target_os = "macos")]
-        dirs.push(
-            home
-                .join("Library")
-                .join("Application Support")
-                .join("engine"),
-        );
-        #[cfg(target_os = "windows")]
-        if let Ok(app_data) = env::var("APPDATA") {
-            let trimmed = app_data.trim();
-            if !trimmed.is_empty() {
-                dirs.push(PathBuf::from(trimmed).join("engine"));
-            }
-        }
-    }
-    dirs.into_iter().map(|dir| dir.join("auth.json")).collect()
+    let base = resolve_aiwork_app_local_data_dir();
+    vec![base.join("engine").join("data").join("auth.json")]
 }
 
 /// Reads Engine `auth.json` from known global data dirs

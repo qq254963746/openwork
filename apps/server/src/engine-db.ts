@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { existsSync, readdirSync } from "node:fs";
-import { homedir } from "node:os";
+import { resolveAppLocalDataDir } from "./platform-paths.js";
 import { isAbsolute, join } from "node:path";
 
 import { Database } from "bun:sqlite";
@@ -21,15 +21,7 @@ function truthy(value: string | undefined): boolean {
 }
 
 function engineDataDirs(): string[] {
-  const dirs: string[] = [];
-  const xdg = process.env.XDG_DATA_HOME?.trim();
-  if (xdg) dirs.push(join(xdg, "engine"));
-  dirs.push(join(homedir(), ".local", "share", "engine"));
-  if (process.platform === "darwin") dirs.push(join(homedir(), "Library", "Application Support", "engine"));
-  if (process.platform === "win32") {
-    const appData = process.env.APPDATA?.trim();
-    if (appData) dirs.push(join(appData, "engine"));
-  }
+  const dirs: string[] = [join(resolveAppLocalDataDir(), "engine", "data")];
   return Array.from(new Set(dirs));
 }
 
@@ -45,7 +37,8 @@ function candidateEngineDbPaths(): string[] {
     for (const dir of engineDataDirs()) {
       candidates.push(join(dir, override));
     }
-    candidates.push(join(engineDataDirs()[0] ?? join(homedir(), ".local", "share", "engine"), override));
+    const fallbackDir = join(resolveAppLocalDataDir(), "engine", "data");
+    candidates.push(join(engineDataDirs()[0] ?? fallbackDir, override));
     return Array.from(new Set(candidates));
   }
 

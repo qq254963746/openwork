@@ -1,8 +1,8 @@
 import { appendFile, mkdir } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { homedir } from "node:os";
+import { join } from "node:path";
+import { resolveAppLocalDataDir } from "./platform-paths.js";
 
-const LOG_DIR = join(homedir(), ".aiwork", "logs");
+const LOG_DIR = join(resolveAppLocalDataDir(), "server", "logs");
 const LOG_FILE = join(LOG_DIR, "aiwork-server.log");
 
 type LogLevel = "INFO" | "WARN" | "ERROR" | "DEBUG";

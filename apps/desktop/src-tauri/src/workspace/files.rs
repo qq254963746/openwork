@@ -1,9 +1,25 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
+use crate::config::resolve_aiwork_app_local_data_dir;
 use crate::types::{EngineCommand, WorkspaceAiWorkConfig};
 use crate::utils::now_ms;
 use crate::workspace::commands::{sanitize_command_name, serialize_command_frontmatter};
+use crate::workspace::state::stable_workspace_id;
+
+/// Resolve the project-level config directory under app_local_data_dir by workspace ID.
+/// Returns `{app_local_data_dir}/projects/{workspace_id}/`
+pub fn project_config_dir(workspace_id: &str) -> PathBuf {
+    resolve_aiwork_app_local_data_dir()
+        .join("projects")
+        .join(workspace_id)
+}
+
+/// Convenience helper: resolve project config dir from a workspace path.
+/// Computes `stable_workspace_id` internally.
+pub fn project_config_dir_for_path(workspace_path: &str) -> PathBuf {
+    project_config_dir(&stable_workspace_id(workspace_path))
+}
 
 pub fn merge_plugins(existing: Vec<String>, required: &[&str]) -> Vec<String> {
     let mut out = existing;
@@ -241,47 +257,43 @@ fn seed_commands(commands_dir: &PathBuf, preset: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn resolve_workspace_aiwork_config_path(root: &Path) -> PathBuf {
-    let config_path_jsonc = root.join("engine.jsonc");
-    let config_path_json = root.join("engine.json");
-    let hidden_config_path_jsonc = root.join(".engine").join("engine.jsonc");
-    let hidden_config_path_json = root.join(".engine").join("engine.json");
-
-    if config_path_jsonc.exists() {
-        config_path_jsonc
-    } else if config_path_json.exists() {
-        config_path_json
-    } else if hidden_config_path_jsonc.exists() {
-        hidden_config_path_jsonc
-    } else if hidden_config_path_json.exists() {
-        hidden_config_path_json
-    } else {
-        config_path_jsonc
+fn resolve_workspace_aiwork_config_path(workspace_id: &str) -> PathBuf {
+    let project_dir = project_config_dir(workspace_id);
+    let proj_jsonc = project_dir.join("engine.jsonc");
+    let proj_json = project_dir.join("engine.json");
+    if proj_jsonc.exists() {
+        return proj_jsonc;
     }
+    if proj_json.exists() {
+        return proj_json;
+    }
+    // Default to new path for new configs
+    proj_jsonc
 }
 
-pub fn ensure_workspace_files(workspace_path: &str, preset: &str) -> Result<(), String> {
-    let root = PathBuf::from(workspace_path);
+pub fn ensure_workspace_files(workspace_id: &str, workspace_path: &str, preset: &str) -> Result<(), String> {
+    // Seed project-level skills, agents, and commands under project_config_dir.
+    let project_dir = project_config_dir(workspace_id);
 
-    let skill_root = root.join(".engine").join("skills");
+    let skill_root = project_dir.join("skills");
     fs::create_dir_all(&skill_root)
-        .map_err(|e| format!("Failed to create .engine/skills: {e}"))?;
+        .map_err(|e| format!("Failed to create project skills dir: {e}"))?;
     seed_workspace_guide(&skill_root)?;
     if preset == "starter" {
         seed_get_started_skill(&skill_root)?;
     }
 
-    let agents_dir = root.join(".engine").join("agents");
+    let agents_dir = project_dir.join("agents");
     fs::create_dir_all(&agents_dir)
-        .map_err(|e| format!("Failed to create .engine/agents: {e}"))?;
+        .map_err(|e| format!("Failed to create project agents dir: {e}"))?;
     seed_aiwork_agent(&agents_dir)?;
 
-    let commands_dir = root.join(".engine").join("commands");
+    let commands_dir = project_dir.join("commands");
     fs::create_dir_all(&commands_dir)
-        .map_err(|e| format!("Failed to create .engine/commands: {e}"))?;
+        .map_err(|e| format!("Failed to create project commands dir: {e}"))?;
     seed_commands(&commands_dir, preset)?;
 
-    let config_path = resolve_workspace_aiwork_config_path(&root);
+    let config_path = resolve_workspace_aiwork_config_path(workspace_id);
 
     let config_exists = config_path.exists();
     let mut config_changed = !config_exists;
@@ -385,7 +397,7 @@ pub fn ensure_workspace_files(workspace_path: &str, preset: &str) -> Result<(), 
         .map_err(|e| format!("Failed to write {}: {e}", config_path.display()))?;
     }
 
-    let aiwork_path = root.join(".engine").join("aiwork.json");
+    let aiwork_path = project_dir.join("aiwork.json");
     if !aiwork_path.exists() {
         let aiwork = WorkspaceAiWorkConfig::new(workspace_path, preset, now_ms());
 

@@ -27,9 +27,10 @@ fn env_truthy_aiwork_dev() -> bool {
     )
 }
 
-/// GUI-launched Tauri often inherits no `XDG_*` / `ENGINE_CONFIG_DIR`; without this,
-/// `aiwork-server` resolves global config + managed Engine state to `~/.config` while
-/// the UI writes credentials under `Application Support/.../engine/...`.
+/// Engine now resolves all paths (config, data, cache, state, log) under
+/// `AIWORK_APP_LOCAL_DATA_DIR/engine/`. This function sets that env var to
+/// the Tauri `app_local_data_dir` and provides a sandboxed HOME so spawned
+/// tools cannot read the user's real home directory.
 fn engine_isolated_env(app: &AppHandle) -> Result<Option<Vec<(String, String)>>, String> {
 
     let app_local = app
@@ -37,53 +38,19 @@ fn engine_isolated_env(app: &AppHandle) -> Result<Option<Vec<(String, String)>>,
         .app_local_data_dir()
         .map_err(|e| format!("Failed to resolve app local data dir: {e}"))?;
 
-    let layout_root = app_local.join("engine");
-    let home_dir = layout_root.join("home");
-    let xdg_config_home = layout_root.join("xdg").join("config");
-    let xdg_data_home = layout_root.join("xdg").join("data");
-    let xdg_cache_home = layout_root.join("xdg").join("cache");
-    let xdg_state_home = layout_root.join("xdg").join("state");
-    let aiwork_config_dir = layout_root.join("config").join("engine");
-    let aiwork_data_dir = xdg_data_home.join("engine");
+    let engine_home = app_local.join("engine").join("home");
 
-    for dir in [
-        &home_dir,
-        &xdg_config_home,
-        &xdg_data_home,
-        &xdg_cache_home,
-        &xdg_state_home,
-        &aiwork_config_dir,
-        &aiwork_data_dir,
-    ] {
-        fs::create_dir_all(dir).map_err(|e| format!("Failed to create {}: {e}", dir.display()))?;
-    }
+    fs::create_dir_all(&engine_home)
+        .map_err(|e| format!("Failed to create {}: {e}", engine_home.display()))?;
 
-    let home = home_dir.to_string_lossy().into_owned();
+    let home = engine_home.to_string_lossy().into_owned();
+    let app_local_str = app_local.to_string_lossy().into_owned();
+
     Ok(Some(vec![
         ("AIWORK_DEV_MODE".into(), if env_truthy_aiwork_dev() { "1".into() } else { "0".into() }),
         ("HOME".into(), home.clone()),
         ("USERPROFILE".into(), home.clone()),
-        (
-            "XDG_CONFIG_HOME".into(),
-            xdg_config_home.to_string_lossy().into_owned(),
-        ),
-        (
-            "XDG_DATA_HOME".into(),
-            xdg_data_home.to_string_lossy().into_owned(),
-        ),
-        (
-            "XDG_CACHE_HOME".into(),
-            xdg_cache_home.to_string_lossy().into_owned(),
-        ),
-        (
-            "XDG_STATE_HOME".into(),
-            xdg_state_home.to_string_lossy().into_owned(),
-        ),
-        (
-            "ENGINE_CONFIG_DIR".into(),
-            aiwork_config_dir.to_string_lossy().into_owned(),
-        ),
-        ("ENGINE_TEST_HOME".into(), home),
+        ("AIWORK_APP_LOCAL_DATA_DIR".into(), app_local_str)
     ]))
 }
 
