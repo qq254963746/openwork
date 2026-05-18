@@ -91,7 +91,6 @@ File injection / artifacts:
 - `GET /workspace/:id/commands`
 - `POST /workspace/:id/commands`
 - `DELETE /workspace/:id/commands/:name`
-- `GET /workspace/:id/audit`
 
 Token management (host/owner auth):
 

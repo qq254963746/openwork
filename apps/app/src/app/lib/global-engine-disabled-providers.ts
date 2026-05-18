@@ -63,18 +63,10 @@ export async function writeGlobalEngineConfigContent(
       "global",
       content,
     );
-    ConsoleLog.log("global-engine-disabled-providers", "writeGlobalEngineConfigContent:done via aiwork-server", {
-      ok: result.ok,
-      content: content,
-    });
     return result.ok;
   }
 
   const result = await writeEngineConfig("global", input.workspaceRoot, content);
-  ConsoleLog.log("global-engine-disabled-providers", "writeGlobalEngineConfigContent:done via desktop", {
-    ok: result.ok,
-    content: content,
-  });
   return result.ok;
 }
 

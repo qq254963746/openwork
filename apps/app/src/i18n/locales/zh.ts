@@ -8,7 +8,6 @@
 
 export default {
   "app.compact_command_desc": "压缩此会话以减少上下文大小。",
-  "app.error_audit_load": "加载审计日志失败。",
   "app.error_auth_failed": "认证失败",
   "app.error_command_not_resolved": "命令未解析。",
   "app.error_compact_empty": "暂无可压缩的内容。",
@@ -587,7 +586,6 @@ export default {
   "settings.api_keys_info": "API密钥由AiWork存储在本地。环境变量提供商需在工作区环境中修改后重新加载。",
   "settings.appearance_hint": "匹配系统或强制浅色/深色模式。",
   "settings.appearance_title": "外观",
-  "settings.audit_log_title": "审计日志",
   "settings.auto_compact": "自动上下文压缩",
   "settings.auto_compact_desc": "控制此工作区的AiWork compaction.auto。更改后请重载引擎。",
   "settings.cache_repair_requires_desktop": "缓存修复需要桌面应用",
@@ -711,7 +709,6 @@ export default {
   "settings.model_section_desc": "选择默认对话模型并查看其推理方式。",
   "settings.model_title": "模型",
   "settings.no_active_workspace": "没有活动的本地工作区。",
-  "settings.no_audit_entries": "暂无审计记录。",
   "settings.no_custom_path_set": "未设置自定义路径",
   "settings.no_logs_captured": "尚无捕获的日志。",
   "settings.nuke_hint": "仅在需要完全重置桌面应用及其AiWork运行时状态时使用。",

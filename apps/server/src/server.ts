@@ -12,13 +12,11 @@ import { installHubSkill, listHubSkills } from "./skill-hub.js";
 import { deleteCommand, listCommands, repairCommands, upsertCommand } from "./commands.js";
 import { ApiError, formatError } from "./errors.js";
 import { readJsoncFile, updateJsoncPath, updateJsoncTopLevel } from "./jsonc.js";
-import { recordAudit, readAuditEntries, readLastAudit } from "./audit.js";
 import { ReloadEventStore } from "./events.js";
 import { startReloadWatchers } from "./reload-watcher.js";
 import { engineConfigPath, aiworkConfigPath } from "./workspace-files.js";
 import { ensureDir, exists, hashToken, shortId } from "./utils.js";
 import { workspaceIdForPath } from "./workspaces.js";
-import { ensureWorkspaceFiles, readRawEngineConfig } from "./workspace-init.js";
 import { sanitizeCommandName, validateMcpName } from "./validators.js";
 import { TokenService } from "./tokens.js";
 import { EnvService, EnvStoreReadError, InvalidEnvKeyError, isValidEnvKey } from "./env-file.js";
@@ -236,16 +234,16 @@ export function startServer(config: ServerConfig) {
       const finalize = (response: Response) => {
         const wrapped = withCors(response, request, config);
         if (config.logRequests) {
-            logRequest({
-              logger,
-              request,
-              response: wrapped,
-              durationMs: Date.now() - startedAt,
-              authMode,
-              proxyService,
-              proxyBaseUrl,
-              error: errorMessage,
-            });
+          logRequest({
+            logger,
+            request,
+            response: wrapped,
+            durationMs: Date.now() - startedAt,
+            authMode,
+            proxyService,
+            proxyBaseUrl,
+            error: errorMessage,
+          });
         }
         return wrapped;
       };
@@ -1238,12 +1236,12 @@ function serializeWorkspace(workspace: ServerConfig["workspaces"][number]) {
   const engine =
     workspace.engine?.baseUrl || engineDirectory || engineUsername || enginePassword
       ? {
-          ...workspace.engine,
-          baseUrl: workspace.engine?.baseUrl,
-          directory: engineDirectory ?? workspace.engine?.directory ?? undefined,
-          username: workspace.engine?.username ?? engineUsername,
-          password: workspace.engine?.password ?? enginePassword,
-        }
+        ...workspace.engine,
+        baseUrl: workspace.engine?.baseUrl,
+        directory: engineDirectory ?? workspace.engine?.directory ?? undefined,
+        username: workspace.engine?.username ?? engineUsername,
+        password: workspace.engine?.password ?? enginePassword,
+      }
       : undefined;
   return {
     ...rest,
@@ -1427,7 +1425,6 @@ function createRoutes(
   // require the desktop host token (not owner bearer tokens) because values are
   // returned raw; the React pane masks them only for display. Reload semantics
   // are driven from the UI after a write; this surface is user-scoped, not
-  // workspace-scoped, so no audit.
   addRoute(routes, "GET", "/env", "host-token", async () => {
     const items = await env.list().catch(rethrowEnvStoreReadError);
     return jsonResponse({ items });
@@ -1511,7 +1508,6 @@ function createRoutes(
     await fileLogger.info("POST /workspaces/local: resolved workspace path", { workspacePath });
 
     await ensureDir(workspacePath);
-    await ensureWorkspaceFiles(workspacePath, preset);
 
     const workspace: WorkspaceInfo = {
       id: workspaceIdForPath(workspacePath),
@@ -1528,16 +1524,7 @@ function createRoutes(
     const persisted = await persistServerWorkspaceState(config);
     onWorkspacesChanged();
 
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "host" },
-      action: "workspace.create",
-      target: workspace.path,
-      summary: `Created workspace ${name}`,
-      timestamp: Date.now(),
-    });
-
+    fileLogger.info("workspace.create", { workspaceId: workspace.id, summary: `Created workspace ${name}` });
     await fileLogger.info("POST /workspaces/local: workspace created", { workspaceId: workspace.id, workspacePath, name, preset, persisted });
 
     return jsonResponse({
@@ -1558,26 +1545,17 @@ function createRoutes(
     config.workspaces = config.workspaces.map((entry) =>
       entry.id === workspace.id
         ? {
-            ...entry,
-            displayName: nextDisplayName,
-            name: nextDisplayName ?? entry.name,
-          }
+          ...entry,
+          displayName: nextDisplayName,
+          name: nextDisplayName ?? entry.name,
+        }
         : entry,
     );
 
     const persisted = await persistServerWorkspaceState(config);
     onWorkspacesChanged();
 
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "host" },
-      action: "workspace.rename",
-      target: workspace.path,
-      summary: `Updated workspace display name${nextDisplayName ? ` to ${nextDisplayName}` : ""}`,
-      timestamp: Date.now(),
-    });
-
+    fileLogger.info("workspace.rename", { workspaceId: workspace.id, summary: `Updated workspace display name${nextDisplayName ? ` to ${nextDisplayName}` : ""}` });
     return jsonResponse({
       activeId: config.workspaces[0]?.id ?? null,
       workspaces: config.workspaces.map(serializeWorkspace),
@@ -1591,16 +1569,7 @@ function createRoutes(
       workspace,
       ...config.workspaces.filter((entry) => entry.id !== workspace.id),
     ];
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "host" },
-      action: "workspace.activate",
-      target: "workspace",
-      summary: "Switched active workspace",
-      timestamp: Date.now(),
-    });
-    const connection = resolveWorkspaceEngineConnection(config, workspace);
+    fileLogger.info("workspace.activate", { workspaceId: workspace.id, summary: "Switched active workspace" }); const connection = resolveWorkspaceEngineConnection(config, workspace);
     if (connection.baseUrl?.trim()) {
       await reloadEngineEngine(config, workspace);
     }
@@ -1664,16 +1633,7 @@ function createRoutes(
     const persisted = await persistServerWorkspaceState(config);
     onWorkspacesChanged();
 
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "host" },
-      action: "workspace.delete",
-      target: "workspace",
-      summary: "Deleted workspace from AiWork server",
-      timestamp: Date.now(),
-    });
-
+    fileLogger.info("workspace.delete", { workspaceId: workspace.id, summary: "Deleted workspace from AiWork server" });
     const active = config.workspaces[0] ?? null;
     return jsonResponse({
       ok: true,
@@ -1689,16 +1649,18 @@ function createRoutes(
     const workspace = await resolveWorkspace(config, ctx.params.id);
     const engine = await readEngineConfig(workspace.path);
     const aiwork = await readAiWorkConfig(workspace.path);
-    const lastAudit = await readLastAudit(workspace.path, workspace.id);
-    return jsonResponse({ engine, aiwork, updatedAt: lastAudit?.timestamp ?? null });
+    return jsonResponse({ engine, aiwork, updatedAt: null });
   });
 
   addRoute(routes, "GET", "/workspace/:id/engine-config", "client", async (ctx) => {
     const workspace = await resolveWorkspace(config, ctx.params.id);
     const scope = normalizeEngineScope(ctx.url.searchParams.get("scope"));
     const configPath = resolveEngineConfigFilePath(scope, workspace.path);
-    const result = await readRawEngineConfig(configPath);
-    return jsonResponse({ path: configPath, exists: result.exists, content: result.content });
+    const hasFile = await exists(configPath);
+    const result = hasFile
+      ? { exists: true, content: await readFile(configPath, "utf8") }
+      : { exists: false, content: null };
+    return jsonResponse({ path: configPath, ...result });
   });
 
   addRoute(routes, "POST", "/workspace/:id/engine-config", "client", async (ctx) => {
@@ -1723,16 +1685,7 @@ function createRoutes(
     await ensureDir(dirname(configPath));
     await writeFile(configPath, content.endsWith("\n") ? content : `${content}\n`, "utf8");
 
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: scope === "global" ? "config.global.write" : "config.write",
-      target: configPath,
-      summary: `Updated ${scope} Engine config`,
-      timestamp: Date.now(),
-    });
-
+    fileLogger.info("config.write", { workspaceId: workspace.id, summary: `Updated ${scope} Engine config` });
     if (scope === "project") {
       emitReloadEvent(ctx.reloadEvents, workspace, "config", buildConfigTrigger(configPath));
     }
@@ -1772,15 +1725,6 @@ function createRoutes(
       });
     }
     return jsonResponse({ ok: true, ids: result.ids });
-  });
-
-  addRoute(routes, "GET", "/workspace/:id/audit", "client", async (ctx) => {
-    const workspace = await resolveWorkspace(config, ctx.params.id);
-    const limitParam = ctx.url.searchParams.get("limit");
-    const parsed = limitParam ? Number(limitParam) : NaN;
-    const limit = Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 200) : 50;
-    const items = await readAuditEntries(workspace.path, workspace.id, limit);
-    return jsonResponse({ items });
   });
 
   addRoute(routes, "GET", "/workspace/:id/sessions", "client", async (ctx) => {
@@ -1839,7 +1783,7 @@ function createRoutes(
     }
 
     // Engine session deletion via the upstream API.
-        await fetchEngineJson(config, workspace, `/session/${encodeURIComponent(sessionId)}`, {
+    await fetchEngineJson(config, workspace, `/session/${encodeURIComponent(sessionId)}`, {
       method: "DELETE",
     });
 
@@ -1899,16 +1843,7 @@ function createRoutes(
       await writeAiWorkConfig(workspace.path, aiwork, true);
     }
 
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "config.patch",
-      target: "engine.json",
-      summary: "Patched workspace config",
-      timestamp: Date.now(),
-    });
-
+    fileLogger.info("config.patch", { workspaceId: workspace.id, summary: "Patched workspace config" });
     if (engine) {
       emitReloadEvent(ctx.reloadEvents, workspace, "config", buildConfigTrigger(engineConfigPath(workspace.path)));
     }
@@ -1928,18 +1863,9 @@ function createRoutes(
     const workspace = await resolveWorkspace(config, ctx.params.id);
     requireClientScope(ctx, "collaborator");
 
-      await reloadEngineEngine(config, workspace);
+    await reloadEngineEngine(config, workspace);
 
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "engine.reload",
-      target: workspace.engine?.baseUrl ?? "engine",
-      summary: "Reloaded workspace engine",
-      timestamp: Date.now(),
-    });
-
+    fileLogger.info("engine.reload", { workspaceId: workspace.id, summary: "Reloaded workspace engine" });
     return jsonResponse({ ok: true, reloadedAt: Date.now() });
   });
 
@@ -2019,16 +1945,7 @@ function createRoutes(
     await writeFile(tmp, bytes);
     await rename(tmp, dest);
 
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "workspace.inbox.upload",
-      target: dest,
-      summary: `Uploaded ${relativePath} to inbox`,
-      timestamp: Date.now(),
-    });
-
+    fileLogger.info("workspace.inbox.upload", { workspaceId: workspace.id, summary: `Uploaded ${relativePath} to inbox` });
     return jsonResponse({ ok: true, path: relativePath, bytes: file.size });
   });
 
@@ -2297,16 +2214,7 @@ function createRoutes(
 
         recordWorkspaceFileEvent(workspace.id, { type: "write", path: entry.path, revision });
 
-        await recordAudit(workspace.path, {
-          id: shortId(),
-          workspaceId: workspace.id,
-          actor: ctx.actor ?? { type: "remote" },
-          action: "workspace.files.session.write",
-          target: entry.absPath,
-          summary: `Wrote ${entry.path} via file session`,
-          timestamp: Date.now(),
-        });
-
+        fileLogger.info("workspace.files.session.write", { workspaceId: workspace.id, summary: `Wrote ${entry.path} via file session` });
         items.push({
           ok: true,
           path: entry.path,
@@ -2605,16 +2513,7 @@ function createRoutes(
       revision,
     });
 
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "workspace.file.write",
-      target: absPath,
-      summary: `Wrote ${relativePath}`,
-      timestamp: Date.now(),
-    });
-
+    fileLogger.info("workspace.file.write", { workspaceId: workspace.id, summary: `Wrote ${relativePath}` });
     return jsonResponse({ ok: true, path: relativePath, bytes, updatedAt: after.mtimeMs, revision });
   });
 
@@ -2639,16 +2538,7 @@ function createRoutes(
       paths: [engineConfigPath(workspace.path)],
     });
     const changed = await addPlugin(workspace.path, spec);
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "plugins.add",
-      target: "engine.json",
-      summary: `Added ${spec}`,
-      timestamp: Date.now(),
-    });
-    if (changed) {
+    fileLogger.info("plugins.add", { workspaceId: workspace.id, summary: `Added ${spec}` }); if (changed) {
       emitReloadEvent(ctx.reloadEvents, workspace, "plugins", {
         type: "plugin",
         name: normalized,
@@ -2672,16 +2562,7 @@ function createRoutes(
       paths: [engineConfigPath(workspace.path)],
     });
     const removed = await removePlugin(workspace.path, name);
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "plugins.remove",
-      target: "engine.json",
-      summary: `Removed ${name}`,
-      timestamp: Date.now(),
-    });
-    if (removed) {
+    fileLogger.info("plugins.remove", { workspaceId: workspace.id, summary: `Removed ${name}` }); if (removed) {
       emitReloadEvent(ctx.reloadEvents, workspace, "plugins", {
         type: "plugin",
         name: normalized,
@@ -2724,10 +2605,10 @@ function createRoutes(
     const repoPayload = body?.repo && typeof body.repo === "object" ? (body.repo as Record<string, unknown>) : undefined;
     const repo = repoPayload
       ? {
-          owner: typeof repoPayload.owner === "string" ? repoPayload.owner : undefined,
-          repo: typeof repoPayload.repo === "string" ? repoPayload.repo : undefined,
-          ref: typeof repoPayload.ref === "string" ? repoPayload.ref : undefined,
-        }
+        owner: typeof repoPayload.owner === "string" ? repoPayload.owner : undefined,
+        repo: typeof repoPayload.repo === "string" ? repoPayload.repo : undefined,
+        ref: typeof repoPayload.ref === "string" ? repoPayload.ref : undefined,
+      }
       : undefined;
 
     await requireApproval(ctx, {
@@ -2738,16 +2619,7 @@ function createRoutes(
     });
 
     const result = await installHubSkill(workspace.path, { name, overwrite, repo });
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "skills.install_hub",
-      target: result.path,
-      summary: `Installed hub skill ${name}`,
-      timestamp: Date.now(),
-    });
-    emitReloadEvent(ctx.reloadEvents, workspace, "skills", {
+    fileLogger.info("skills.install_hub", { workspaceId: workspace.id, summary: `Installed hub skill ${name}` }); emitReloadEvent(ctx.reloadEvents, workspace, "skills", {
       type: "skill",
       name,
       action: result.action,
@@ -2788,16 +2660,7 @@ function createRoutes(
       paths: [join(workspace.path, ".engine", "skills", name, "SKILL.md")],
     });
     const result = await upsertSkill(workspace.path, { name, content, description });
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "skills.upsert",
-      target: result.path,
-      summary: `Upserted skill ${name}`,
-      timestamp: Date.now(),
-    });
-    emitReloadEvent(ctx.reloadEvents, workspace, "skills", {
+    fileLogger.info("skills.upsert", { workspaceId: workspace.id, summary: `Upserted skill ${name}` }); emitReloadEvent(ctx.reloadEvents, workspace, "skills", {
       type: "skill",
       name,
       action: result.action,
@@ -2821,16 +2684,7 @@ function createRoutes(
       paths: [join(workspace.path, ".engine", "skills", name)],
     });
     const result = await deleteSkill(workspace.path, name);
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "skills.delete",
-      target: result.path,
-      summary: `Deleted skill ${name}`,
-      timestamp: Date.now(),
-    });
-    emitReloadEvent(ctx.reloadEvents, workspace, "skills", {
+    fileLogger.info("skills.delete", { workspaceId: workspace.id, summary: `Deleted skill ${name}` }); emitReloadEvent(ctx.reloadEvents, workspace, "skills", {
       type: "skill",
       name,
       action: "removed",
@@ -2862,16 +2716,7 @@ function createRoutes(
       paths: [engineConfigPath(workspace.path)],
     });
     const result = await addMcp(workspace.path, name, configPayload);
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "mcp.add",
-      target: "engine.json",
-      summary: `Added MCP ${name}`,
-      timestamp: Date.now(),
-    });
-    emitReloadEvent(ctx.reloadEvents, workspace, "mcp", {
+    fileLogger.info("mcp.add", { workspaceId: workspace.id, summary: `Added MCP ${name}` }); emitReloadEvent(ctx.reloadEvents, workspace, "mcp", {
       type: "mcp",
       name,
       action: result.action,
@@ -2892,16 +2737,7 @@ function createRoutes(
       paths: [engineConfigPath(workspace.path)],
     });
     const removed = await removeMcp(workspace.path, name);
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "mcp.remove",
-      target: "engine.json",
-      summary: `Removed MCP ${name}`,
-      timestamp: Date.now(),
-    });
-    if (removed) {
+    fileLogger.info("mcp.remove", { workspaceId: workspace.id, summary: `Removed MCP ${name}` }); if (removed) {
       emitReloadEvent(ctx.reloadEvents, workspace, "mcp", {
         type: "mcp",
         name,
@@ -2936,15 +2772,7 @@ function createRoutes(
     if (!updated) {
       throw new ApiError(404, "mcp_not_found", `MCP ${name} not found in workspace config`);
     }
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action,
-      target: "engine.json",
-      summary: `${enabled ? "Enabled" : "Disabled"} MCP ${name}`,
-      timestamp: Date.now(),
-    });
+    fileLogger.info(action, { workspaceId: workspace.id, summary: `${enabled ? "Enabled" : "Disabled"} MCP ${name}` });
     // ReloadTrigger.action only allows added/removed/updated, so toggle => "updated".
     emitReloadEvent(ctx.reloadEvents, workspace, "mcp", {
       type: "mcp",
@@ -2995,16 +2823,7 @@ function createRoutes(
       }
     }
 
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "mcp.auth.remove",
-      target: authStorePath,
-      summary: `Logged out MCP ${name}`,
-      timestamp: Date.now(),
-    });
-
+    fileLogger.info("mcp.auth.remove", { workspaceId: workspace.id, summary: `Logged out MCP ${name}` });
     return jsonResponse({ ok: true });
   });
 
@@ -3039,16 +2858,7 @@ function createRoutes(
       model: body.model ? String(body.model) : undefined,
       subtask: typeof body.subtask === "boolean" ? body.subtask : undefined,
     });
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "commands.upsert",
-      target: path,
-      summary: `Upserted command ${name}`,
-      timestamp: Date.now(),
-    });
-
+    fileLogger.info("commands.upsert", { workspaceId: workspace.id, summary: `Upserted command ${name}` });
     emitReloadEvent(ctx.reloadEvents, workspace, "commands", {
       type: "command",
       name: sanitizeCommandName(name),
@@ -3071,16 +2881,7 @@ function createRoutes(
       paths: [join(workspace.path, ".engine", "commands", `${sanitizeCommandName(name)}.md`)],
     });
     await deleteCommand(workspace.path, name);
-    await recordAudit(workspace.path, {
-      id: shortId(),
-      workspaceId: workspace.id,
-      actor: ctx.actor ?? { type: "remote" },
-      action: "commands.delete",
-      target: join(workspace.path, ".engine", "commands"),
-      summary: `Deleted command ${name}`,
-      timestamp: Date.now(),
-    });
-
+    fileLogger.info("commands.delete", { workspaceId: workspace.id, summary: `Deleted command ${name}` });
     emitReloadEvent(ctx.reloadEvents, workspace, "commands", {
       type: "command",
       name: sanitizeCommandName(name),

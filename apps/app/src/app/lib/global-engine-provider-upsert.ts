@@ -10,7 +10,6 @@ import {
   type ModelProviderType,
   npmSdkPackageForProviderType,
 } from "../utils/model-providers-catalog";
-import { ConsoleLog } from "./console-log";
 
 const SCHEMA_URL = "https://www.aiwork.love/config.json";
 
@@ -88,10 +87,6 @@ export async function upsertGlobalProviderEngineEntry(
   }
 
   const nextContent = `${JSON.stringify(tree, null, 2)}\n`;
-  ConsoleLog.log("global-engine-provider-upsert", "upsertGlobalProviderEngineEntry:done", {
-    ok: true,
-    content: nextContent,
-  });
   const wrote = await writeGlobalEngineConfigContent(input, nextContent);
   return wrote ? { ok: true } : { ok: false, reason: "write_failed" };
 }

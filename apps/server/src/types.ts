@@ -193,13 +193,3 @@ export interface ApprovalRequest {
   createdAt: number;
   actor: Actor;
 }
-
-export interface AuditEntry {
-  id: string;
-  workspaceId: string;
-  actor: Actor;
-  action: string;
-  target: string;
-  summary: string;
-  timestamp: number;
-}

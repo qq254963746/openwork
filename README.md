@@ -15,7 +15,6 @@ Current CLI and GUIs for engine are anchored around developers. That means a foc
 AiWork is designed to be:
 
 - **Extensible**: skill and engine plugins are installable modules.
-- **Auditable**: show what happened, when, and why.
 - **Permissioned**: access to privileged flows.
 - **Local**: AiWork works locally
 

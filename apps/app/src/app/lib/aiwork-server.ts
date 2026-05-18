@@ -249,15 +249,6 @@ export type AiWorkActor = {
   tokenHash?: string;
 };
 
-export type AiWorkAuditEntry = {
-  id: string;
-  workspaceId: string;
-  actor: AiWorkActor;
-  action: string;
-  target: string;
-  summary: string;
-  timestamp: number;
-};
 
 export type AiWorkReloadTrigger = {
   type: "skill" | "plugin" | "config" | "mcp" | "agent" | "command";
@@ -1139,13 +1130,6 @@ export function createAiWorkServerClient(options: { baseUrl: string; token?: str
         requestJson<{ items: AiWorkCommandItem[] }>(
           baseUrl,
           `/workspace/${workspaceId}/commands?scope=${scope}`,
-          { token, hostToken },
-        )),
-    listAudit: (workspaceId: string, limit = 50) =>
-      logCall("listAudit", { workspaceId, limit },
-        requestJson<{ items: AiWorkAuditEntry[] }>(
-          baseUrl,
-          `/workspace/${workspaceId}/audit?limit=${limit}`,
           { token, hostToken },
         )),
     upsertCommand: (

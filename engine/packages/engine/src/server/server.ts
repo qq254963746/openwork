@@ -145,7 +145,7 @@ function createHono(opts: CorsOptions, selection: ServerBackend.Selection = Serv
  *
  * Since the Effect HttpApi backend now covers every Hono route (plus the new
  * `/api/session/*` v2 routes — see `httpapi-bridge.test.ts` for the parity
- * audit), `Server.openapi()` derives the spec from `OpenApi.fromApi(PublicApi)`.
+ * `Server.openapi()` derives the spec from `OpenApi.fromApi(PublicApi)`.
  * `PublicApi` is `AiWorkHttpApi` annotated with the `matchLegacyOpenApi`
  * transform that injects instance query parameters, strips Effect's optional
  * null arms, normalizes component names, and patches SSE response schemas so

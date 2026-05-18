@@ -14,7 +14,6 @@ import {
   normalizeAiWorkServerUrl,
   readAiWorkServerSettings,
   writeAiWorkServerSettings,
-  type AiWorkAuditEntry,
   type AiWorkServerCapabilities,
   type AiWorkServerClient,
   type AiWorkServerDiagnostics,
@@ -41,9 +40,6 @@ export type AiWorkServerStoreSnapshot = {
   aiworkServerHostInfo: AiWorkServerInfo | null;
   aiworkServerDiagnostics: AiWorkServerDiagnostics | null;
   aiworkReconnectBusy: boolean;
-  aiworkAuditEntries: AiWorkAuditEntry[];
-  aiworkAuditStatus: "idle" | "loading" | "error";
-  aiworkAuditError: string | null;
   devtoolsWorkspaceId: string | null;
 };
 
@@ -69,9 +65,6 @@ type MutableState = {
   aiworkServerHostInfoReady: boolean;
   aiworkServerDiagnostics: AiWorkServerDiagnostics | null;
   aiworkReconnectBusy: boolean;
-  aiworkAuditEntries: AiWorkAuditEntry[];
-  aiworkAuditStatus: "idle" | "loading" | "error";
-  aiworkAuditError: string | null;
   devtoolsWorkspaceId: string | null;
 };
 
@@ -102,9 +95,6 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
     aiworkServerHostInfoReady: false,
     aiworkServerDiagnostics: null,
     aiworkReconnectBusy: false,
-    aiworkAuditEntries: [],
-    aiworkAuditStatus: "idle",
-    aiworkAuditError: null,
     devtoolsWorkspaceId: null,
   };
 
@@ -217,9 +207,6 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
       aiworkServerHostInfo: state.aiworkServerHostInfo,
       aiworkServerDiagnostics: state.aiworkServerDiagnostics,
       aiworkReconnectBusy: state.aiworkReconnectBusy,
-      aiworkAuditEntries: state.aiworkAuditEntries,
-      aiworkAuditStatus: state.aiworkAuditStatus,
-      aiworkAuditError: state.aiworkAuditError,
       devtoolsWorkspaceId: state.devtoolsWorkspaceId,
     };
   };
@@ -494,62 +481,6 @@ export function createAiWorkServerStore(options: CreateAiWorkServerStoreOptions)
     };
     refreshDevtoolsWorkspace();
     startInterval("devtoolsWorkspace", refreshDevtoolsWorkspace, 20_000);
-
-    const refreshAudit = () => {
-      if (!options.documentVisible()) return;
-      if (!options.developerMode()) {
-        mutateState((current) => ({
-          ...current,
-          aiworkAuditEntries: [],
-          aiworkAuditStatus: "idle",
-          aiworkAuditError: null,
-        }));
-        return;
-      }
-
-      const client = getClient();
-      const workspaceId = state.devtoolsWorkspaceId;
-      if (!client || !workspaceId) {
-        mutateState((current) => ({
-          ...current,
-          aiworkAuditEntries: [],
-          aiworkAuditStatus: "idle",
-          aiworkAuditError: null,
-        }));
-        return;
-      }
-
-      mutateState((current) => ({
-        ...current,
-        aiworkAuditStatus: "loading",
-        aiworkAuditError: null,
-      }));
-
-      void (async () => {
-        try {
-          const result = await client.listAudit(workspaceId, 50);
-          if (disposed) return;
-          mutateState((current) => ({
-            ...current,
-            aiworkAuditEntries: Array.isArray(result.items) ? result.items : [],
-            aiworkAuditStatus: "idle",
-          }));
-        } catch (error) {
-          if (disposed) return;
-          mutateState((current) => ({
-            ...current,
-            aiworkAuditEntries: [],
-            aiworkAuditStatus: "error",
-            aiworkAuditError:
-              error instanceof Error
-                ? error.message
-                : t("app.error_audit_load"),
-          }));
-        }
-      })();
-    };
-    refreshAudit();
-    startInterval("audit", refreshAudit, 15_000);
   };
 
   const dispose = () => {

@@ -3,14 +3,12 @@ import {
   CircleAlert,
   Copy,
   Download,
-  ExternalLink,
   HardDrive,
   RefreshCcw,
   Smartphone,
 } from "lucide-react";
 
 import type {
-  AiWorkAuditEntry,
   AiWorkServerCapabilities,
   AiWorkServerDiagnostics,
 } from "../../../../app/lib/aiwork-server";
@@ -113,22 +111,12 @@ export type DebugViewProps = {
   workspaceDebugEventsStatus: string | null;
   safeStringify: (value: unknown) => string;
   onClearWorkspaceDebugEvents: () => void | Promise<void>;
-  aiworkAuditEntries: AiWorkAuditEntry[];
-  aiworkAuditStatus: StatusPill;
-  aiworkAuditError: string | null;
   engineConnectStatus: EngineConnectStatus | null;
   engineDevModeEnabled: boolean;
   nukeConfigBusy: boolean;
   nukeConfigStatus: string | null;
   onNukeAiWorkAndEngineConfig: () => void | Promise<void>;
 };
-
-function formatActor(entry: AiWorkAuditEntry) {
-  if (entry.actor.type === "host") return t("settings.audit_actor_host");
-  if (entry.actor.clientId) return entry.actor.clientId;
-  if (entry.actor.tokenHash) return entry.actor.tokenHash;
-  return t("settings.audit_actor_remote");
-}
 
 function formatCapability(value: { read: boolean; write: boolean }) {
   if (value.read && value.write) return t("settings.cap_read_write");
@@ -508,38 +496,7 @@ export function DebugView(props: DebugViewProps) {
           <div className={sectionTitleClass}>{t("settings.activity_section_title")}</div>
           <div className={sectionDescClass}>{t("settings.activity_section_desc")}</div>
         </div>
-
-        <div className={subCardClass}>
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-sm font-semibold tracking-[-0.1px] text-dls-text">
-              {t("settings.audit_log_title")}
-            </div>
-            <div className={`rounded-full border px-2 py-1 text-[11px] font-medium ${props.aiworkAuditStatus.className}`}>
-              {props.aiworkAuditStatus.label}
-            </div>
-          </div>
-          {props.aiworkAuditError ? <StatusBanner tone="error" message={props.aiworkAuditError} /> : null}
-          {props.aiworkAuditEntries.length > 0 ? (
-            <div className="divide-y divide-dls-border/60">
-              {props.aiworkAuditEntries.map((entry) => (
-                <div key={entry.id} className="flex items-start justify-between gap-4 py-2">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm text-dls-text">{entry.summary}</div>
-                    <div className="truncate text-[11px] text-dls-secondary">
-                      {entry.action} · {entry.target} · {formatActor(entry)}
-                    </div>
-                  </div>
-                  <div className="whitespace-nowrap text-[11px] text-dls-secondary">
-                    {entry.timestamp ? formatRelativeTime(entry.timestamp) : "—"}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-[12px] text-dls-secondary">{t("settings.no_audit_entries")}</div>
-          )}
-        </div>
-
+        
         <div className="grid gap-3 md:grid-cols-2">
           <div className={subCardClass}>
             <div className="text-[11px] font-medium uppercase tracking-wider text-dls-secondary">

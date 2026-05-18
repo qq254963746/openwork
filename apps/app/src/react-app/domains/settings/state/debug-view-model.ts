@@ -108,28 +108,6 @@ function statusPill(
       };
 }
 
-function auditStatusPill(status: "idle" | "loading" | "error"): {
-  label: string;
-  className: string;
-} {
-  if (status === "loading") {
-    return {
-      label: t("settings.loading"),
-      className: "border-blue-7/30 bg-blue-7/10 text-blue-11",
-    };
-  }
-  if (status === "error") {
-    return {
-      label: t("settings.error"),
-      className: "border-red-7/30 bg-red-7/10 text-red-11",
-    };
-  }
-  return {
-    label: t("settings.idle"),
-    className: "border-gray-7/30 bg-gray-4/50 text-gray-11",
-  };
-}
-
 function describeEngine(info: EngineInfo | null) {
   const running = Boolean(info?.running);
   return {
@@ -708,9 +686,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       workspaceDebugEvents: [],
       safeStringify,
       onClearWorkspaceDebugEvents,
-      aiworkAuditEntries: aiworkServerSnapshot.aiworkAuditEntries,
-      aiworkAuditStatus: auditStatusPill(aiworkServerSnapshot.aiworkAuditStatus),
-      aiworkAuditError: aiworkServerSnapshot.aiworkAuditError,
       engineConnectStatus: null,
       engineDevModeEnabled: appBuild?.aiworkDevMode === true,
       nukeConfigBusy,
@@ -757,9 +732,6 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       resetStatus,
       startupStatus,
       workspaceDebugEventsStatus,
-      aiworkServerSnapshot.aiworkAuditEntries,
-      aiworkServerSnapshot.aiworkAuditError,
-      aiworkServerSnapshot.aiworkAuditStatus,
       aiworkServerSnapshot.aiworkServerCapabilities,
       aiworkServerSnapshot.aiworkServerDiagnostics,
       aiworkServerSnapshot.aiworkServerStatus,
