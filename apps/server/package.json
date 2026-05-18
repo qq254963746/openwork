@@ -26,9 +26,9 @@
     "url": "git+https://github.com/aiworklove/aiwork.git",
     "directory": "apps/server"
   },
-  "homepage": "https://github.com/qq254963746/aiwork/tree/dev/apps/server",
+  "homepage": "https://github.com/aiworklove/aiwork/tree/dev/apps/server",
   "bugs": {
-    "url": "https://github.com/qq254963746/aiwork/issues"
+    "url": "https://github.com/aiworklove/aiwork/issues"
   },
   "keywords": [
     "aiwork",
