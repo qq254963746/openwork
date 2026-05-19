@@ -17,16 +17,6 @@ type DevRoot = typeof globalThis & {
 
 const DEV_LOG_LIMIT = 1500;
 
-const payloadText = (value: unknown) => {
-  if (value === undefined) return "";
-  if (typeof value === "string") return value;
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-};
-
 export const recordDevLog = (
   enabled: boolean,
   input: {
@@ -67,22 +57,4 @@ export const readDevLogs = (limit = 200) => {
   if (limit < 0) return [];
   if (logs.length <= limit) return logs.slice();
   return logs.slice(logs.length - limit);
-};
-
-export const clearDevLogs = () => {
-  const root = globalThis as DevRoot;
-  root.__aiworkDevLogs = [];
-  root.__aiworkDevLogSeq = 0;
-};
-
-export const formatDevLogLine = (entry: DevLogRecord) => {
-  const prefix = `[${entry.at}] ${entry.level.toUpperCase()} ${entry.source}:${entry.label}`;
-  const text = payloadText(entry.payload);
-  return text ? `${prefix} ${text}` : prefix;
-};
-
-export const formatDevLogText = (limit = 200) => {
-  const lines = readDevLogs(limit).map(formatDevLogLine);
-  if (!lines.length) return "";
-  return `${lines.join("\n")}\n`;
 };

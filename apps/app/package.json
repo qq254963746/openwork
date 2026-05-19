@@ -38,6 +38,7 @@
     "@codemirror/view": "^6.42.1",
     "@lexical/react": "^0.35.0",
     "@engine/sdk": "workspace:*",
+    "@aiwork/server-sdk": "workspace:*",
     "@radix-ui/colors": "^3.0.0",
     "@tanstack/react-query": "^5.100.9",
     "@tanstack/react-virtual": "^3.13.24",

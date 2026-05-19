@@ -1,274 +1,77 @@
-import type { Message, Part, Session, Todo } from "@engine/sdk/v2/client";
-import { desktopFetch } from "./desktop";
-import type { ExecResult, EngineConfigFile, WorkspaceInfo, WorkspaceList } from "./desktop";
 import type { ModelProviderType } from "../utils/model-providers-catalog";
+import { desktopFetch } from "./desktop";
 import { ConsoleLog } from "./console-log";
+import {
+  HttpAiWorkServerClient,
+  AiWorkServerError as SdkAiWorkServerError,
+  type AiWorkServerCapabilities,
+  type AiWorkServerStatus,
+  type AiWorkServerDiagnostics,
+  type AiWorkRuntimeServiceName,
+  type AiWorkRuntimeServiceSnapshot,
+  type AiWorkRuntimeSnapshot,
+  type AiWorkServerSettings,
+  type AiWorkWorkspaceInfo,
+  type AiWorkWorkspaceList,
+  type AiWorkPluginItem,
+  type AiWorkSkillItem,
+  type AiWorkSkillContent,
+  type AiWorkHubSkillItem,
+  type AiWorkHubRepo,
+  type AiWorkWorkspaceFileContent,
+  type AiWorkWorkspaceFileWriteResult,
+  type AiWorkWorkspaceDirEntry,
+  type AiWorkWorkspaceDirectoryList,
+  type AiWorkWorkspaceGitStatus,
+  type AiWorkCommandItem,
+  type AiWorkMcpItem,
+  type AiWorkArtifactItem,
+  type AiWorkArtifactList,
+  type AiWorkInboxItem,
+  type AiWorkInboxList,
+  type AiWorkInboxUploadResult,
+  type AiWorkActor,
+  type AiWorkReloadTrigger,
+  type AiWorkReloadEvent,
+  type AiWorkSessionMessage,
+  type AiWorkSessionSnapshot
+} from "@aiwork/server-sdk";
 
+export type {
+  AiWorkServerCapabilities,
+  AiWorkServerStatus,
+  AiWorkServerDiagnostics,
+  AiWorkRuntimeServiceName,
+  AiWorkRuntimeServiceSnapshot,
+  AiWorkRuntimeSnapshot,
+  AiWorkServerSettings,
+  AiWorkWorkspaceInfo,
+  AiWorkWorkspaceList,
+  AiWorkPluginItem,
+  AiWorkSkillItem,
+  AiWorkSkillContent,
+  AiWorkHubSkillItem,
+  AiWorkHubRepo,
+  AiWorkWorkspaceFileContent,
+  AiWorkWorkspaceFileWriteResult,
+  AiWorkWorkspaceDirEntry,
+  AiWorkWorkspaceDirectoryList,
+  AiWorkWorkspaceGitStatus,
+  AiWorkCommandItem,
+  AiWorkMcpItem,
+  AiWorkArtifactItem,
+  AiWorkArtifactList,
+  AiWorkInboxItem,
+  AiWorkInboxList,
+  AiWorkInboxUploadResult,
+  AiWorkActor,
+  AiWorkReloadTrigger,
+  AiWorkReloadEvent,
+  AiWorkSessionMessage,
+  AiWorkSessionSnapshot
+};
 const LOG_SCOPE = "aiwork-server-client";
 
-function logCall<T>(method: string, input: unknown, promise: Promise<T>): Promise<T> {
-  ConsoleLog.log(LOG_SCOPE, `${method}:call`, input);
-  return promise.then(
-    (result) => { ConsoleLog.log(LOG_SCOPE, `${method}:ok`, result); return result; },
-    (error) => { ConsoleLog.log(LOG_SCOPE, `${method}:error`, error); return Promise.reject(error); },
-  );
-}
-
-export type AiWorkServerCapabilities = {
-  skills: { read: boolean; write: boolean; source: "aiwork" | "engine" };
-  hub?: {
-    skills?: {
-      read: boolean;
-      install: boolean;
-      repo?: { owner: string; name: string; ref: string };
-    };
-  };
-  plugins: { read: boolean; write: boolean };
-  mcp: { read: boolean; write: boolean };
-  commands: { read: boolean; write: boolean };
-  config: { read: boolean; write: boolean };
-  proxy?: { engine: boolean };
-  toolProviders?: {
-    browser?: {
-      enabled: boolean;
-      placement: "in-sandbox" | "host-machine" | "client-machine" | "external";
-      mode: "none" | "headless" | "interactive";
-    };
-    files?: {
-      injection: boolean;
-      outbox: boolean;
-      inboxPath: string;
-      outboxPath: string;
-      maxBytes: number;
-    };
-  };
-};
-
-export type AiWorkServerStatus = "connected" | "disconnected" | "limited";
-
-export type AiWorkServerDiagnostics = {
-  ok: boolean;
-  version: string;
-  uptimeMs: number;
-  readOnly: boolean;
-  approval: { mode: "manual" | "auto"; timeoutMs: number };
-  corsOrigins: string[];
-  workspaceCount: number;
-  activeWorkspaceId?: string | null;
-  selectedWorkspaceId?: string | null;
-  workspace: AiWorkWorkspaceInfo | null;
-  authorizedRoots: string[];
-  server: { host: string; port: number; configPath?: string | null };
-  tokenSource: { client: string; host: string };
-};
-
-export type AiWorkRuntimeServiceName = "aiwork-server" | "engine";
-
-export type AiWorkRuntimeServiceSnapshot = {
-  name: AiWorkRuntimeServiceName;
-  enabled: boolean;
-  running: boolean;
-  targetVersion: string | null;
-  actualVersion: string | null;
-};
-
-export type AiWorkRuntimeSnapshot = {
-  ok: boolean;
-  worker?: {
-    workspace: string;
-  };
-  services: AiWorkRuntimeServiceSnapshot[];
-};
-
-export type AiWorkServerSettings = {
-  urlOverride?: string;
-  portOverride?: number;
-  token?: string;
-  hostToken?: string;
-};
-
-export type AiWorkWorkspaceInfo = WorkspaceInfo & {
-  engine?: {
-    baseUrl?: string;
-    directory?: string;
-    username?: string;
-    password?: string;
-  };
-};
-
-export type AiWorkWorkspaceList = {
-  items: AiWorkWorkspaceInfo[];
-  workspaces?: WorkspaceInfo[];
-  activeId?: string | null;
-};
-
-export type AiWorkSessionMessage = {
-  info: Message;
-  parts: Part[];
-};
-
-export type AiWorkSessionSnapshot = {
-  session: Session;
-  messages: AiWorkSessionMessage[];
-  todos: Todo[];
-  status:
-    | { type: "idle" }
-    | { type: "busy" }
-    | { type: "retry"; attempt: number; message: string; next: number };
-};
-
-export type AiWorkPluginItem = {
-  spec: string;
-  source: "config" | "dir.project" | "dir.global";
-  scope: "project" | "global";
-  path?: string;
-};
-
-export type AiWorkSkillItem = {
-  name: string;
-  path: string;
-  description: string;
-  scope: "project" | "global";
-  trigger?: string;
-};
-
-export type AiWorkSkillContent = {
-  item: AiWorkSkillItem;
-  content: string;
-};
-
-export type AiWorkHubSkillItem = {
-  name: string;
-  description: string;
-  trigger?: string;
-  source: {
-    owner: string;
-    repo: string;
-    ref: string;
-    path: string;
-  };
-};
-
-export type AiWorkHubRepo = {
-  owner?: string;
-  repo?: string;
-  ref?: string;
-};
-
-export type AiWorkWorkspaceFileContent = {
-  path: string;
-  content: string;
-  bytes: number;
-  updatedAt?: number;
-  /** Present when `optional` read was used and the path is not a readable file */
-  missing?: boolean;
-};
-
-export type AiWorkWorkspaceFileWriteResult = {
-  ok: boolean;
-  path: string;
-  bytes: number;
-  updatedAt: number;
-  revision?: string;
-};
-
-export type AiWorkWorkspaceDirEntry = {
-  name: string;
-  kind: "file" | "directory";
-  /** Milliseconds since Unix epoch (`mtimeMs`). Omitted when unavailable or from older hosts. */
-  updatedAt?: number;
-};
-
-export type AiWorkWorkspaceDirectoryList = {
-  path: string;
-  entries: AiWorkWorkspaceDirEntry[];
-  truncated?: boolean;
-};
-
-/**
- * Map of workspace-relative POSIX path → single-character git status code.
- * "M" modified · "A" added · "D" deleted · "R" renamed · "C" copied · "U" unmerged · "?" untracked
- * Empty object when the workspace is not a git repo or git is unavailable.
- */
-export type AiWorkWorkspaceGitStatus = {
-  entries: Record<string, string>;
-};
-
-export type AiWorkCommandItem = {
-  name: string;
-  description?: string;
-  template: string;
-  agent?: string;
-  model?: string | null;
-  subtask?: boolean;
-  scope: "workspace" | "global";
-};
-
-export type AiWorkMcpItem = {
-  name: string;
-  config: Record<string, unknown>;
-  source: "config.project" | "config.global" | "config.remote";
-  disabledByTools?: boolean;
-};
-
-export type AiWorkArtifactItem = {
-  id: string;
-  name?: string;
-  path?: string;
-  size?: number;
-  createdAt?: number;
-  updatedAt?: number;
-  mime?: string;
-};
-
-export type AiWorkArtifactList = {
-  items: AiWorkArtifactItem[];
-};
-
-export type AiWorkInboxItem = {
-  id: string;
-  name?: string;
-  path?: string;
-  size?: number;
-  updatedAt?: number;
-};
-
-export type AiWorkInboxList = {
-  items: AiWorkInboxItem[];
-};
-
-export type AiWorkInboxUploadResult = {
-  ok: boolean;
-  path: string;
-  bytes: number;
-};
-
-export type AiWorkActor = {
-  type: "remote" | "host";
-  clientId?: string;
-  tokenHash?: string;
-};
-
-
-export type AiWorkReloadTrigger = {
-  type: "skill" | "plugin" | "config" | "mcp" | "agent" | "command";
-  name?: string;
-  action?: "added" | "removed" | "updated";
-  path?: string;
-};
-
-export type AiWorkReloadEvent = {
-  id: string;
-  seq: number;
-  workspaceId: string;
-  reason: "plugins" | "skills" | "mcp" | "config" | "agents" | "commands";
-  trigger?: AiWorkReloadTrigger;
-  timestamp: number;
-};
-
-// Fallback for explicit server-mode URL derivation. Desktop local workers replace this
-// with the persisted runtime-discovered port once the host reports it.
-export const DEFAULT_AIWORK_SERVER_PORT = 8787;
 
 const STORAGE_URL_OVERRIDE = "aiwork.server.urlOverride";
 const STORAGE_PORT_OVERRIDE = "aiwork.server.port";
@@ -551,779 +354,142 @@ export function clearAiWorkServerSettings() {
   }
 }
 
-export class AiWorkServerError extends Error {
-  status: number;
-  code: string;
-  details?: unknown;
-
-  constructor(status: number, code: string, message: string, details?: unknown) {
-    super(message);
-    this.status = status;
-    this.code = code;
-    this.details = details;
-  }
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (!value || typeof value !== "object") return false;
-  const proto = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
-}
-
-function buildHeaders(
-  token?: string,
-  hostToken?: string,
-  extra?: Record<string, string>,
-) {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  if (hostToken) {
-    headers["X-AiWork-Host-Token"] = hostToken;
-  }
-  if (extra) {
-    Object.assign(headers, extra);
-  }
-  return headers;
-}
-
-function buildAuthHeaders(token?: string, hostToken?: string, extra?: Record<string, string>) {
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  if (hostToken) {
-    headers["X-AiWork-Host-Token"] = hostToken;
-  }
-  if (extra) {
-    Object.assign(headers, extra);
-  }
-  return headers;
-}
-
-// Use Tauri's fetch when running in the desktop app to avoid CORS issues.
-// Stream URLs (SSE) bypass the plugin because its `fetch_read_body` IPC call
-// blocks until the body closes — that freezes the webview for infinite bodies.
-const AIWORK_STREAM_URL_RE = /\/events(\b|\?)|\/event-stream\b|\/stream\b/;
-
-function isStreamUrl(url: string): boolean {
-  return AIWORK_STREAM_URL_RE.test(url);
-}
-
-const resolveFetch = (url?: string) => {
-  if (url && isStreamUrl(url)) {
-    return typeof window !== "undefined" ? window.fetch.bind(window) : globalThis.fetch;
-  }
-  return desktopFetch;
-};
-
-const DEFAULT_AIWORK_SERVER_TIMEOUT_MS = 10_000;
-
-type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-
-async function fetchWithTimeout(
-  fetchImpl: FetchLike,
-  url: string,
-  init: RequestInit,
-  timeoutMs: number,
-) {
-  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
-    return fetchImpl(url, init);
-  }
-
-  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-  const signal = controller?.signal;
-  const initWithSignal = signal && !init.signal ? { ...init, signal } : init;
-
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => {
-      try {
-        controller?.abort();
-      } catch {
-        // ignore
-      }
-      reject(new Error("Request timed out."));
-    }, timeoutMs);
-  });
-
-  try {
-    return await Promise.race([fetchImpl(url, initWithSignal), timeoutPromise]);
-  } catch (error) {
-    const name = (error && typeof error === "object" && "name" in error ? (error as any).name : "") as string;
-    if (name === "AbortError") {
-      throw new Error("Request timed out.");
-    }
-    throw error;
-  } finally {
-    if (timeoutId) clearTimeout(timeoutId);
-  }
-}
-
-async function requestJsonResponse(
-  baseUrl: string,
-  path: string,
-  options: { method?: string; token?: string; hostToken?: string; body?: unknown; timeoutMs?: number } = {},
-): Promise<{ ok: boolean; status: number; json: unknown }> {
-  const url = `${baseUrl}${path}`;
-  const fetchImpl = resolveFetch(url);
-  const response = await fetchWithTimeout(
-    fetchImpl,
-    url,
-    {
-      method: options.method ?? "GET",
-      headers: buildHeaders(options.token, options.hostToken),
-      body: options.body ? JSON.stringify(options.body) : undefined,
-    },
-    options.timeoutMs ?? DEFAULT_AIWORK_SERVER_TIMEOUT_MS,
-  );
-
-  const text = await response.text();
-  let json: unknown = null;
-  if (text) {
-    try {
-      json = JSON.parse(text);
-    } catch {
-      json = { raw: text };
-    }
-  }
-  return { ok: response.ok, status: response.status, json };
-}
-
-async function requestJson<T>(
-  baseUrl: string,
-  path: string,
-  options: { method?: string; token?: string; hostToken?: string; body?: unknown; timeoutMs?: number } = {},
-): Promise<T> {
-  const url = `${baseUrl}${path}`;
-  const fetchImpl = resolveFetch(url);
-  const response = await fetchWithTimeout(
-    fetchImpl,
-    url,
-    {
-      method: options.method ?? "GET",
-      headers: buildHeaders(options.token, options.hostToken),
-      body: options.body ? JSON.stringify(options.body) : undefined,
-    },
-    options.timeoutMs ?? DEFAULT_AIWORK_SERVER_TIMEOUT_MS,
-  );
-
-  const text = await response.text();
-  const json = text ? JSON.parse(text) : null;
-
-  if (!response.ok) {
-    const code = typeof json?.code === "string" ? json.code : "request_failed";
-    const message = typeof json?.message === "string" ? json.message : response.statusText;
-    const details = isPlainObject(json?.details)
-      ? { ...json.details, url }
-      : json?.details !== undefined
-        ? { details: json.details, url }
-        : { url };
-    throw new AiWorkServerError(response.status, code, message, details);
-  }
-
-  return json as T;
-}
-
-async function requestMultipartRaw(
-  baseUrl: string,
-  path: string,
-  options: { method?: string; token?: string; hostToken?: string; body?: FormData; timeoutMs?: number } = {},
-): Promise<{ ok: boolean; status: number; text: string }>{
-  const url = `${baseUrl}${path}`;
-  const fetchImpl = resolveFetch(url);
-  const response = await fetchWithTimeout(
-    fetchImpl,
-    url,
-    {
-      method: options.method ?? "POST",
-      headers: buildAuthHeaders(options.token, options.hostToken),
-      body: options.body,
-    },
-    options.timeoutMs ?? DEFAULT_AIWORK_SERVER_TIMEOUT_MS,
-  );
-  const text = await response.text();
-  return { ok: response.ok, status: response.status, text };
-}
-
-async function requestBinary(
-  baseUrl: string,
-  path: string,
-  options: { method?: string; token?: string; hostToken?: string; timeoutMs?: number } = {},
-): Promise<{ data: ArrayBuffer; contentType: string | null; filename: string | null }>{
-  const url = `${baseUrl}${path}`;
-  const fetchImpl = resolveFetch(url);
-  const response = await fetchWithTimeout(
-    fetchImpl,
-    url,
-    {
-      method: options.method ?? "GET",
-      headers: buildAuthHeaders(options.token, options.hostToken),
-    },
-    options.timeoutMs ?? DEFAULT_AIWORK_SERVER_TIMEOUT_MS,
-  );
-
-  if (!response.ok) {
-    const text = await response.text();
-    let json: any = null;
-    try {
-      json = text ? JSON.parse(text) : null;
-    } catch {
-      json = null;
-    }
-    const code = typeof json?.code === "string" ? json.code : "request_failed";
-    const message = typeof json?.message === "string" ? json.message : response.statusText;
-    throw new AiWorkServerError(response.status, code, message, json?.details);
-  }
-
-  const contentType = response.headers.get("content-type");
-  const disposition = response.headers.get("content-disposition") ?? "";
-  const filenameMatch = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
-  const filenameRaw = filenameMatch?.[1] ?? filenameMatch?.[2] ?? null;
-  const filename = filenameRaw ? decodeURIComponent(filenameRaw) : null;
-  const data = await response.arrayBuffer();
-  return { data, contentType, filename };
-}
+export const AiWorkServerError = SdkAiWorkServerError;
+export type AiWorkServerError = SdkAiWorkServerError;
 
 export function createAiWorkServerClient(options: { baseUrl: string; token?: string; hostToken?: string }) {
-  const baseUrl = options.baseUrl.replace(/\/+$/, "");
-  const token = options.token;
-  const hostToken = options.hostToken;
-
-  const timeouts = {
-    health: 3_000,
-    capabilities: 6_000,
-    listWorkspaces: 8_000,
-    activateWorkspace: 10_000,
-    deleteWorkspace: 10_000,
-    deleteSession: 12_000,
-    sessionRead: 12_000,
-    status: 6_000,
-    config: 10_000,
-    workspaceExport: 30_000,
-    workspaceImport: 30_000,
-    binary: 60_000,
-    openAiCompatibleModels: 65_000,
-  };
+  const client = new HttpAiWorkServerClient({
+    baseUrl: options.baseUrl,
+    token: options.token,
+    hostToken: options.hostToken,
+    fetchImpl: desktopFetch,
+    logCallback: (method, phase, data) => {
+      ConsoleLog.log(LOG_SCOPE, `${method}:${phase}`, data);
+    },
+  });
 
   return {
-    baseUrl,
-    token,
-    health: () =>
-      logCall("health", undefined,
-        requestJson<{ ok: boolean; version: string; uptimeMs: number }>(baseUrl, "/health", { token, hostToken, timeoutMs: timeouts.health })),
-    status: () =>
-      logCall("status", undefined,
-        requestJson<AiWorkServerDiagnostics>(baseUrl, "/status", { token, hostToken, timeoutMs: timeouts.status })),
-    capabilities: () =>
-      logCall("capabilities", undefined,
-        requestJson<AiWorkServerCapabilities>(baseUrl, "/capabilities", { token, hostToken, timeoutMs: timeouts.capabilities })),
-    listWorkspaces: () =>
-      logCall("listWorkspaces", undefined,
-        requestJson<AiWorkWorkspaceList>(baseUrl, "/workspaces", { token, hostToken, timeoutMs: timeouts.listWorkspaces })),
+    baseUrl: client.baseUrl,
+    health: () => client.health(),
+    status: () => client.status(),
+    capabilities: () => client.capabilities(),
+    listWorkspaces: () => client.listWorkspaces(),
     createLocalWorkspace: (payload: { folderPath: string; name: string; preset: string }) =>
-      logCall("createLocalWorkspace", payload,
-        requestJson<WorkspaceList>(baseUrl, "/workspaces/local", {
-          token,
-          hostToken,
-          method: "POST",
-          body: payload,
-          timeoutMs: timeouts.activateWorkspace,
-        })),
+      client.createLocalWorkspace(payload),
     updateWorkspaceDisplayName: (workspaceId: string, displayName: string | null) =>
-      logCall("updateWorkspaceDisplayName", { workspaceId, displayName },
-        requestJson<WorkspaceList>(baseUrl, `/workspaces/${encodeURIComponent(workspaceId)}/display-name`, {
-          token,
-          hostToken,
-          method: "PATCH",
-          body: { displayName },
-          timeoutMs: timeouts.activateWorkspace,
-        })),
+      client.updateWorkspaceDisplayName(workspaceId, displayName),
     activateWorkspace: (workspaceId: string) =>
-      logCall("activateWorkspace", { workspaceId },
-        requestJson<{ activeId: string; workspace: AiWorkWorkspaceInfo }>(
-          baseUrl,
-          `/workspaces/${encodeURIComponent(workspaceId)}/activate`,
-          { token, hostToken, method: "POST", timeoutMs: timeouts.activateWorkspace },
-        )),
+      client.activateWorkspace(workspaceId),
     reorderWorkspaces: (workspaceIds: string[]) =>
-      logCall("reorderWorkspaces", { workspaceIds },
-        requestJson<{
-          ok: boolean;
-          persisted: boolean;
-          activeId: string | null;
-          items: AiWorkWorkspaceInfo[];
-          workspaces?: AiWorkWorkspaceInfo[];
-        }>(baseUrl, "/workspaces/reorder", {
-          token,
-          hostToken,
-          method: "POST",
-          body: { workspaceIds },
-          timeoutMs: timeouts.activateWorkspace,
-        })),
+      client.reorderWorkspaces(workspaceIds),
     deleteWorkspace: (workspaceId: string) =>
-      logCall("deleteWorkspace", { workspaceId },
-        requestJson<{ ok: boolean; deleted: boolean; persisted: boolean; activeId: string | null; items: AiWorkWorkspaceInfo[]; workspaces?: WorkspaceInfo[] }>(
-          baseUrl,
-          `/workspaces/${encodeURIComponent(workspaceId)}`,
-          { token, hostToken, method: "DELETE", timeoutMs: timeouts.deleteWorkspace },
-        )),
+      client.deleteWorkspace(workspaceId),
     deleteSession: (workspaceId: string, sessionId: string) =>
-      logCall("deleteSession", { workspaceId, sessionId },
-        requestJson<{ ok: boolean }>(
-          baseUrl,
-          `/workspace/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}`,
-          { token, hostToken, method: "DELETE", timeoutMs: timeouts.deleteSession },
-        )),
+      client.deleteSession(workspaceId, sessionId),
     listSessions: (
       workspaceId: string,
       options?: { roots?: boolean; start?: number; search?: string; limit?: number },
-    ) => {
-      const query = new URLSearchParams();
-      if (typeof options?.roots === "boolean") query.set("roots", String(options.roots));
-      if (typeof options?.start === "number") query.set("start", String(options.start));
-      if (options?.search?.trim()) query.set("search", options.search.trim());
-      if (typeof options?.limit === "number") query.set("limit", String(options.limit));
-      const suffix = query.size ? `?${query.toString()}` : "";
-      return logCall("listSessions", { workspaceId, options },
-        requestJson<{ items: Session[] }>(
-          baseUrl,
-          `/workspace/${encodeURIComponent(workspaceId)}/sessions${suffix}`,
-          { token, hostToken, timeoutMs: timeouts.sessionRead },
-        ));
-    },
+    ) =>
+      client.listSessions(workspaceId, options),
     getSession: (workspaceId: string, sessionId: string) =>
-      logCall("getSession", { workspaceId, sessionId },
-        requestJson<{ item: Session }>(
-          baseUrl,
-          `/workspace/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}`,
-          { token, hostToken, timeoutMs: timeouts.sessionRead },
-        )),
-    getSessionMessages: (workspaceId: string, sessionId: string, options?: { limit?: number }) => {
-      const query = new URLSearchParams();
-      if (typeof options?.limit === "number") query.set("limit", String(options.limit));
-      const suffix = query.size ? `?${query.toString()}` : "";
-      return logCall("getSessionMessages", { workspaceId, sessionId, options },
-        requestJson<{ items: AiWorkSessionMessage[] }>(
-          baseUrl,
-          `/workspace/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}/messages${suffix}`,
-          { token, hostToken, timeoutMs: timeouts.sessionRead },
-        ));
-    },
-    getSessionSnapshot: (workspaceId: string, sessionId: string, options?: { limit?: number }) => {
-      const query = new URLSearchParams();
-      if (typeof options?.limit === "number") query.set("limit", String(options.limit));
-      const suffix = query.size ? `?${query.toString()}` : "";
-      return logCall("getSessionSnapshot", { workspaceId, sessionId, options },
-        requestJson<{ item: AiWorkSessionSnapshot }>(
-          baseUrl,
-          `/workspace/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}/snapshot${suffix}`,
-          { token, hostToken, timeoutMs: timeouts.sessionRead },
-        ));
-    },
+      client.getSession(workspaceId, sessionId),
+    getSessionMessages: (workspaceId: string, sessionId: string, options?: { limit?: number }) =>
+      client.getSessionMessages(workspaceId, sessionId, options),
+    getSessionSnapshot: (workspaceId: string, sessionId: string, options?: { limit?: number }) =>
+      client.getSessionSnapshot(workspaceId, sessionId, options),
     getConfig: (workspaceId: string) =>
-      logCall("getConfig", { workspaceId },
-        requestJson<{ engine: Record<string, unknown>; aiwork: Record<string, unknown>; updatedAt?: number | null }>(
-          baseUrl,
-          `/workspace/${workspaceId}/config`,
-          { token, hostToken, timeoutMs: timeouts.config },
-        )),
+      client.getConfig(workspaceId),
     patchConfig: (workspaceId: string, payload: { engine?: Record<string, unknown>; aiwork?: Record<string, unknown> }) =>
-      logCall("patchConfig", { workspaceId, payload },
-        requestJson<{ updatedAt?: number | null }>(baseUrl, `/workspace/${workspaceId}/config`, {
-          token,
-          hostToken,
-          method: "PATCH",
-          body: payload,
-        })),
-    readEngineConfigFile: (workspaceId: string, scope: "project" | "global" = "project") => {
-      const params = new URLSearchParams({ scope });
-      // Avoid stale reads after rapid global config writes (disabled_providers, etc.).
-      params.set("_", String(Date.now()));
-      const query = `?${params.toString()}`;
-      return logCall("readEngineConfigFile", { workspaceId, scope },
-        requestJson<EngineConfigFile>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/engine-config${query}`, {
-          token,
-          hostToken,
-        }));
-    },
+      client.patchConfig(workspaceId, payload),
+    readEngineConfigFile: (workspaceId: string, scope: "project" | "global" = "project") =>
+      client.readEngineConfigFile(workspaceId, scope),
     writeEngineConfigFile: (workspaceId: string, scope: "project" | "global", content: string) =>
-      logCall("writeEngineConfigFile", { workspaceId, scope },
-        requestJson<ExecResult>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/engine-config`, {
-          token,
-          hostToken,
-          method: "POST",
-          body: { scope, content },
-        })),
-    /**
-     * Server-side model listing proxy (avoids browser CORS). Dispatches by `providerType` on the server.
-     */
+      client.writeEngineConfigFile(workspaceId, scope, content),
     proxyModelProviderModels: (
       workspaceId: string,
       body: { baseURL: string; apiKey: string; providerType: ModelProviderType },
     ) =>
-      logCall("proxyModelProviderModels", { workspaceId, providerType: body.providerType },
-        requestJson<{
-          ok: boolean;
-          ids?: string[];
-          message?: string;
-          httpStatus?: number;
-        }>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/model-provider/models`, {
-          token,
-          hostToken,
-          method: "POST",
-          body,
-          timeoutMs: timeouts.openAiCompatibleModels,
-        })),
-    listReloadEvents: (workspaceId: string, options?: { since?: number }) => {
-      const query = typeof options?.since === "number" ? `?since=${options.since}` : "";
-      return logCall("listReloadEvents", { workspaceId, options },
-        requestJson<{ items: AiWorkReloadEvent[]; cursor?: number }>(
-          baseUrl,
-          `/workspace/${workspaceId}/events${query}`,
-          { token, hostToken },
-        ));
-    },
+      client.proxyModelProviderModels(workspaceId, body),
+    listReloadEvents: (workspaceId: string, options?: { since?: number }) =>
+      client.listReloadEvents(workspaceId, options),
     reloadEngine: (workspaceId: string) =>
-      logCall("reloadEngine", { workspaceId },
-        requestJson<{ ok: boolean; reloadedAt?: number }>(baseUrl, `/workspace/${workspaceId}/engine/reload`, {
-          token,
-          hostToken,
-          method: "POST",
-        })),
-    listPlugins: (workspaceId: string, options?: { includeGlobal?: boolean }) => {
-      const query = options?.includeGlobal ? "?includeGlobal=true" : "";
-      return logCall("listPlugins", { workspaceId, options },
-        requestJson<{ items: AiWorkPluginItem[]; loadOrder: string[] }>(
-          baseUrl,
-          `/workspace/${workspaceId}/plugins${query}`,
-          { token, hostToken },
-        ));
-    },
+      client.reloadEngine(workspaceId),
+    listPlugins: (workspaceId: string, options?: { includeGlobal?: boolean }) =>
+      client.listPlugins(workspaceId, options),
     addPlugin: (workspaceId: string, spec: string) =>
-      logCall("addPlugin", { workspaceId, spec },
-        requestJson<{ items: AiWorkPluginItem[]; loadOrder: string[] }>(
-          baseUrl,
-          `/workspace/${workspaceId}/plugins`,
-          { token, hostToken, method: "POST", body: { spec } },
-        )),
+      client.addPlugin(workspaceId, spec),
     removePlugin: (workspaceId: string, name: string) =>
-      logCall("removePlugin", { workspaceId, name },
-        requestJson<{ items: AiWorkPluginItem[]; loadOrder: string[] }>(
-          baseUrl,
-          `/workspace/${workspaceId}/plugins/${encodeURIComponent(name)}`,
-          { token, hostToken, method: "DELETE" },
-        )),
-    listSkills: (workspaceId: string, options?: { includeGlobal?: boolean }) => {
-      const query = options?.includeGlobal ? "?includeGlobal=true" : "";
-      return logCall("listSkills", { workspaceId, options },
-        requestJson<{ items: AiWorkSkillItem[] }>(
-          baseUrl,
-          `/workspace/${workspaceId}/skills${query}`,
-          { token, hostToken },
-        ));
-    },
-    listHubSkills: (options?: { repo?: AiWorkHubRepo }) => {
-      const params = new URLSearchParams();
-      const owner = options?.repo?.owner?.trim();
-      const repo = options?.repo?.repo?.trim();
-      const ref = options?.repo?.ref?.trim();
-      if (owner) params.set("owner", owner);
-      if (repo) params.set("repo", repo);
-      if (ref) params.set("ref", ref);
-      const query = params.size ? `?${params.toString()}` : "";
-      return logCall("listHubSkills", { options },
-        requestJson<{ items: AiWorkHubSkillItem[] }>(baseUrl, `/hub/skills${query}`, {
-          token,
-          hostToken,
-        }));
-    },
+      client.removePlugin(workspaceId, name),
+    listSkills: (workspaceId: string, options?: { includeGlobal?: boolean }) =>
+      client.listSkills(workspaceId, options),
+    listHubSkills: (options?: { repo?: { owner?: string; repo?: string; ref?: string } }) =>
+      client.listHubSkills(options),
     installHubSkill: (
       workspaceId: string,
       name: string,
       options?: { overwrite?: boolean; repo?: { owner?: string; repo?: string; ref?: string } },
     ) =>
-      logCall("installHubSkill", { workspaceId, name, options },
-        requestJson<{ ok: boolean; name: string; path: string; action: "added" | "updated"; written: number; skipped: number }>(
-          baseUrl,
-          `/workspace/${workspaceId}/skills/hub/${encodeURIComponent(name)}`,
-          {
-            token,
-            hostToken,
-            method: "POST",
-            body: {
-              ...(options?.overwrite ? { overwrite: true } : {}),
-              ...(options?.repo ? { repo: options.repo } : {}),
-            },
-          },
-        )),
-    getSkill: (workspaceId: string, name: string, options?: { includeGlobal?: boolean }) => {
-      const query = options?.includeGlobal ? "?includeGlobal=true" : "";
-      return logCall("getSkill", { workspaceId, name, options },
-        requestJson<AiWorkSkillContent>(
-          baseUrl,
-          `/workspace/${workspaceId}/skills/${encodeURIComponent(name)}${query}`,
-          { token, hostToken },
-        ));
-    },
+      client.installHubSkill(workspaceId, name, options),
+    getSkill: (workspaceId: string, name: string, options?: { includeGlobal?: boolean }) =>
+      client.getSkill(workspaceId, name, options),
     upsertSkill: (workspaceId: string, payload: { name: string; content: string; description?: string }) =>
-      logCall("upsertSkill", { workspaceId, name: payload.name },
-        requestJson<AiWorkSkillItem>(baseUrl, `/workspace/${workspaceId}/skills`, {
-          token,
-          hostToken,
-          method: "POST",
-          body: payload,
-        })),
+      client.upsertSkill(workspaceId, payload),
     deleteSkill: (workspaceId: string, name: string) =>
-      logCall("deleteSkill", { workspaceId, name },
-        requestJson<{ path: string }>(
-          baseUrl,
-          `/workspace/${workspaceId}/skills/${encodeURIComponent(name)}`,
-          {
-            token,
-            hostToken,
-            method: "DELETE",
-          },
-        )),
+      client.deleteSkill(workspaceId, name),
     listMcp: (workspaceId: string) =>
-      logCall("listMcp", { workspaceId },
-        requestJson<{ items: AiWorkMcpItem[] }>(baseUrl, `/workspace/${workspaceId}/mcp`, { token, hostToken })),
+      client.listMcp(workspaceId),
     addMcp: (workspaceId: string, payload: { name: string; config: Record<string, unknown> }) =>
-      logCall("addMcp", { workspaceId, name: payload.name },
-        requestJson<{ items: AiWorkMcpItem[] }>(baseUrl, `/workspace/${workspaceId}/mcp`, {
-          token,
-          hostToken,
-          method: "POST",
-          body: payload,
-        })),
+      client.addMcp(workspaceId, payload),
     removeMcp: (workspaceId: string, name: string) =>
-      logCall("removeMcp", { workspaceId, name },
-        requestJson<{ items: AiWorkMcpItem[] }>(baseUrl, `/workspace/${workspaceId}/mcp/${encodeURIComponent(name)}`, {
-          token,
-          hostToken,
-          method: "DELETE",
-        })),
+      client.removeMcp(workspaceId, name),
     setMcpEnabled: (workspaceId: string, name: string, enabled: boolean) =>
-      logCall("setMcpEnabled", { workspaceId, name, enabled },
-        requestJson<{ items: AiWorkMcpItem[] }>(
-          baseUrl,
-          `/workspace/${workspaceId}/mcp/${encodeURIComponent(name)}/enabled`,
-          {
-            token,
-            hostToken,
-            method: "POST",
-            body: { enabled },
-          },
-        )),
-
+      client.setMcpEnabled(workspaceId, name, enabled),
     logoutMcpAuth: (workspaceId: string, name: string) =>
-      logCall("logoutMcpAuth", { workspaceId, name },
-        requestJson<{ ok: true }>(baseUrl, `/workspace/${workspaceId}/mcp/${encodeURIComponent(name)}/auth`, {
-          token,
-          hostToken,
-          method: "DELETE",
-        })),
-
+      client.logoutMcpAuth(workspaceId, name),
     listCommands: (workspaceId: string, scope: "workspace" | "global" = "workspace") =>
-      logCall("listCommands", { workspaceId, scope },
-        requestJson<{ items: AiWorkCommandItem[] }>(
-          baseUrl,
-          `/workspace/${workspaceId}/commands?scope=${scope}`,
-          { token, hostToken },
-        )),
+      client.listCommands(workspaceId, scope),
     upsertCommand: (
       workspaceId: string,
       payload: { name: string; description?: string; template: string; agent?: string; model?: string | null; subtask?: boolean },
     ) =>
-      logCall("upsertCommand", { workspaceId, name: payload.name },
-        requestJson<{ items: AiWorkCommandItem[] }>(baseUrl, `/workspace/${workspaceId}/commands`, {
-          token,
-          hostToken,
-          method: "POST",
-          body: payload,
-        })),
+      client.upsertCommand(workspaceId, payload),
     deleteCommand: (workspaceId: string, name: string) =>
-      logCall("deleteCommand", { workspaceId, name },
-        requestJson<{ ok: boolean }>(baseUrl, `/workspace/${workspaceId}/commands/${encodeURIComponent(name)}`, {
-          token,
-          hostToken,
-          method: "DELETE",
-        })),
-    uploadInbox: async (workspaceId: string, file: File, options?: { path?: string }) => {
-      const id = workspaceId.trim();
-      if (!id) throw new Error("workspaceId is required");
-      if (!file) throw new Error("file is required");
-      const form = new FormData();
-      form.append("file", file);
-      if (options?.path?.trim()) {
-        form.append("path", options.path.trim());
-      }
-
-      ConsoleLog.log(LOG_SCOPE, "uploadInbox:call", { workspaceId, fileName: file?.name, path: options?.path });
-
-      const result = await requestMultipartRaw(baseUrl, `/workspace/${encodeURIComponent(id)}/inbox`, {
-        token,
-        hostToken,
-        method: "POST",
-        body: form,
-        timeoutMs: timeouts.binary,
-      });
-
-      if (!result.ok) {
-        let message = result.text.trim();
-        try {
-          const json = message ? JSON.parse(message) : null;
-          if (json && typeof json.message === "string") {
-            message = json.message;
-          }
-        } catch {
-          // ignore
-        }
-        const error = new AiWorkServerError(
-          result.status,
-          "request_failed",
-          message || "Shared folder upload failed",
-        );
-        ConsoleLog.log(LOG_SCOPE, "uploadInbox:error", error);
-        throw error;
-      }
-
-      const body = result.text.trim();
-      if (body) {
-        try {
-          const parsed = JSON.parse(body) as Partial<AiWorkInboxUploadResult>;
-          if (typeof parsed.path === "string" && parsed.path.trim()) {
-            const output = {
-              ok: parsed.ok ?? true,
-              path: parsed.path.trim(),
-              bytes: typeof parsed.bytes === "number" ? parsed.bytes : file.size,
-            } satisfies AiWorkInboxUploadResult;
-            ConsoleLog.log(LOG_SCOPE, "uploadInbox:ok", output);
-            return output;
-          }
-        } catch {
-          // ignore invalid JSON and fall back
-        }
-      }
-
-      const output = {
-        ok: true,
-        path: options?.path?.trim() || file.name,
-        bytes: file.size,
-      } satisfies AiWorkInboxUploadResult;
-      ConsoleLog.log(LOG_SCOPE, "uploadInbox:ok", output);
-      return output;
+      client.deleteCommand(workspaceId, name),
+    uploadInbox: (workspaceId: string, file: File, options?: { path?: string }) => {
+      const sdkFile = {
+        name: file.name,
+        size: file.size,
+        content: file as unknown as Blob,
+      };
+      return client.uploadInbox(workspaceId, sdkFile, options);
     },
-
     listInbox: (workspaceId: string) =>
-      logCall("listInbox", { workspaceId },
-        requestJson<AiWorkInboxList>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/inbox`, {
-          token,
-          hostToken,
-        })),
-
+      client.listInbox(workspaceId),
     downloadInboxItem: (workspaceId: string, inboxId: string) =>
-      logCall("downloadInboxItem", { workspaceId, inboxId },
-        requestBinary(
-          baseUrl,
-          `/workspace/${encodeURIComponent(workspaceId)}/inbox/${encodeURIComponent(inboxId)}`,
-          { token, hostToken, timeoutMs: timeouts.binary },
-        )),
-
+      client.downloadInboxItem(workspaceId, inboxId),
     readWorkspaceFile: (workspaceId: string, path: string, options?: { optional?: boolean }) =>
-      logCall("readWorkspaceFile", { workspaceId, path, options },
-        requestJson<AiWorkWorkspaceFileContent>(
-          baseUrl,
-          `/workspace/${encodeURIComponent(workspaceId)}/files/content?path=${encodeURIComponent(path)}${
-            options?.optional ? "&optional=1" : ""
-          }`,
-          { token, hostToken },
-        )),
-
+      client.readWorkspaceFile(workspaceId, path, options),
     listWorkspaceDirectory: (workspaceId: string, path?: string) =>
-      logCall("listWorkspaceDirectory", { workspaceId, path },
-        requestJson<AiWorkWorkspaceDirectoryList>(
-          baseUrl,
-          `/workspace/${encodeURIComponent(workspaceId)}/files/list${path?.trim() ? `?path=${encodeURIComponent(path.trim())}` : ""}`,
-          { token, hostToken },
-        )),
-
+      client.listWorkspaceDirectory(workspaceId, path),
     getWorkspaceGitStatus: (workspaceId: string) =>
-      logCall("getWorkspaceGitStatus", { workspaceId },
-        requestJson<AiWorkWorkspaceGitStatus>(
-          baseUrl,
-          `/workspace/${encodeURIComponent(workspaceId)}/git/status`,
-          { token, hostToken },
-        )),
-
+      client.getWorkspaceGitStatus(workspaceId),
     writeWorkspaceFile: (
       workspaceId: string,
       payload: { path: string; content: string; baseUpdatedAt?: number | null; force?: boolean },
     ) =>
-      logCall("writeWorkspaceFile", { workspaceId, path: payload.path },
-        requestJson<AiWorkWorkspaceFileWriteResult>(
-          baseUrl,
-          `/workspace/${encodeURIComponent(workspaceId)}/files/content`,
-          {
-            token,
-            hostToken,
-            method: "POST",
-            body: payload,
-          },
-        )),
-
+      client.writeWorkspaceFile(workspaceId, payload),
     listArtifacts: (workspaceId: string) =>
-      logCall("listArtifacts", { workspaceId },
-        requestJson<AiWorkArtifactList>(baseUrl, `/workspace/${encodeURIComponent(workspaceId)}/artifacts`, {
-          token,
-          hostToken,
-        })),
-
+      client.listArtifacts(workspaceId),
     downloadArtifact: (workspaceId: string, artifactId: string) =>
-      logCall("downloadArtifact", { workspaceId, artifactId },
-        requestBinary(
-          baseUrl,
-          `/workspace/${encodeURIComponent(workspaceId)}/artifacts/${encodeURIComponent(artifactId)}`,
-          { token, hostToken, timeoutMs: timeouts.binary },
-        )),
-    
-    // User-level env vars (host-auth only — desktop shell is the sole caller).
-    // See apps/server/src/env-file.ts and apps/app/pr/environment-variables.md.
+      client.downloadArtifact(workspaceId, artifactId),
     listUserEnvKeys: () =>
-      logCall("listUserEnvKeys", undefined,
-        requestJson<{ keys: string[] }>(
-          baseUrl,
-          "/env/keys",
-          { token, hostToken, timeoutMs: timeouts.config },
-        )),
-
+      client.listUserEnvKeys(),
     listUserEnv: () =>
-      logCall("listUserEnv", undefined,
-        requestJson<{ items: Array<{ key: string; value: string; updatedAt: number }> }>(
-          baseUrl,
-          "/env",
-          { token, hostToken, timeoutMs: timeouts.config },
-        )),
-
+      client.listUserEnv(),
     upsertUserEnv: (entries: Array<{ key: string; value: string }>) =>
-      logCall("upsertUserEnv", { count: entries.length },
-        requestJson<{ ok: true; count: number }>(baseUrl, "/env", {
-          token,
-          hostToken,
-          method: "PUT",
-          body: { entries },
-          timeoutMs: timeouts.config,
-        })),
-
+      client.upsertUserEnv(entries),
     deleteUserEnv: (key: string) =>
-      logCall("deleteUserEnv", { key },
-        requestJson<{ ok: true }>(baseUrl, `/env/${encodeURIComponent(key)}`, {
-          token,
-          hostToken,
-          method: "DELETE",
-          timeoutMs: timeouts.config,
-        })),
+      client.deleteUserEnv(key),
   };
 }
 
