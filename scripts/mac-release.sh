@@ -27,6 +27,10 @@ for arg in "$@"; do
 done
 
 pnpm install
+
+export AIWORK_APP_LOCAL_DATA_DIR=/tmp/aiwork-sdk-build
+bun ./engine/packages/sdk/js/script/build.ts
+
 pnpm release:review
 pnpm bump:patch
 pnpm release:review

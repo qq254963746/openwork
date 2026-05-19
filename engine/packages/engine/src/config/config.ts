@@ -13,12 +13,11 @@ import { Env } from "../env"
 import { applyEdits, modify } from "jsonc-parser"
 import { type InstanceContext } from "../project/instance"
 import { existsSync } from "fs"
-import { Account } from "@/account/account"
 import { isRecord } from "@/util/record"
 import type { ConsoleState } from "./console-state"
 import { AppFileSystem } from "@/core/filesystem"
 import { InstanceState } from "@/effect/instance-state"
-import { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from "effect"
+import { Context, Duration, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import { EffectFlock } from "@/core/util/effect-flock"
 import { containsPath } from "../project/instance-context"
 import { zod } from "@/util/effect-zod"
@@ -150,13 +149,6 @@ export const Info = Schema.Struct({
   }),
   // User-facing plugin config is stored as Specs; provenance gets attached later while configs are merged.
   plugin: Schema.optional(Schema.mutable(Schema.Array(ConfigPlugin.Spec))),
-  share: Schema.optional(Schema.Literals(["manual", "auto", "disabled"])).annotate({
-    description:
-      "Control sharing behavior:'manual' allows manual sharing via commands, 'auto' enables automatic sharing, 'disabled' disables all sharing",
-  }),
-  autoshare: Schema.optional(Schema.Boolean).annotate({
-    description: "@deprecated Use 'share' field instead. Share newly created sessions automatically",
-  }),
   autoupdate: Schema.optional(Schema.Union([Schema.Boolean, Schema.Literal("notify")])).annotate({
     description:
       "Automatically update to the latest version. Set to true to auto-update, false to disable, or 'notify' to show update notifications",
@@ -378,8 +370,6 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const fs = yield* AppFileSystem.Service
     const authSvc = yield* Auth.Service
-    const accountSvc = yield* Account.Service
-    const env = yield* Env.Service
     const npmSvc = yield* Npm.Service
 
     const readConfigFile = (filepath: string) => fs.readFileStringSafe(filepath).pipe(Effect.orDie)
@@ -613,44 +603,6 @@ export const layer = Layer.effect(
           log.debug("loaded custom config from ENGINE_CONFIG_CONTENT")
         }
 
-        const activeAccount = Option.getOrUndefined(
-          yield* accountSvc.active().pipe(Effect.catch(() => Effect.succeed(Option.none()))),
-        )
-        if (activeAccount?.active_org_id) {
-          const accountID = activeAccount.id
-          const orgID = activeAccount.active_org_id
-          const url = activeAccount.url
-          yield* Effect.gen(function* () {
-            const [configOpt, tokenOpt] = yield* Effect.all(
-              [accountSvc.config(accountID, orgID), accountSvc.token(accountID)],
-              { concurrency: 2 },
-            )
-            if (Option.isSome(tokenOpt)) {
-              process.env["ENGINE_CONSOLE_TOKEN"] = tokenOpt.value
-              yield* env.set("ENGINE_CONSOLE_TOKEN", tokenOpt.value)
-            }
-
-            if (Option.isSome(configOpt)) {
-              const source = `${url}/api/config`
-              const next = yield* loadConfig(JSON.stringify(configOpt.value), {
-                dir: path.dirname(source),
-                source,
-              })
-              for (const providerID of Object.keys(next.provider ?? {})) {
-                consoleManagedProviders.add(providerID)
-              }
-              yield* merge(source, next, "global")
-            }
-          }).pipe(
-            Effect.withSpan("Config.loadActiveOrgConfig"),
-            Effect.catch((err) => {
-              log.debug("failed to fetch remote account config", {
-                error: err instanceof Error ? err.message : String(err),
-              })
-              return Effect.void
-            }),
-          )
-        }
 
         const managedDir = ConfigManaged.managedConfigDir()
         if (existsSync(managedDir)) {
@@ -699,10 +651,6 @@ export const layer = Layer.effect(
         }
 
         if (!result.username) result.username = os.userInfo().username
-
-        if (result.autoshare === true && !result.share) {
-          result.share = "auto"
-        }
 
         if (Flag.ENGINE_DISABLE_AUTOCOMPACT) {
           result.compaction = { ...result.compaction, auto: false }
@@ -805,7 +753,6 @@ export const defaultLayer = layer.pipe(
   Layer.provide(AppFileSystem.defaultLayer),
   Layer.provide(Env.defaultLayer),
   Layer.provide(Auth.defaultLayer),
-  Layer.provide(Account.defaultLayer),
   Layer.provide(Npm.defaultLayer),
 )
 

@@ -67,7 +67,6 @@ export function fromRow(row: SessionRow): Info {
           diffs: row.summary_diffs ?? undefined,
         }
       : undefined
-  const share = row.share_url ? { url: row.share_url } : undefined
   const revert = row.revert ?? undefined
   return {
     id: row.id,
@@ -88,7 +87,6 @@ export function fromRow(row: SessionRow): Info {
       : undefined,
     version: row.version,
     summary,
-    share,
     revert,
     permission: row.permission ?? undefined,
     time: {
@@ -113,7 +111,6 @@ export function toRow(info: Info) {
     agent: info.agent,
     model: info.model,
     version: info.version,
-    share_url: info.share?.url,
     summary_additions: info.summary?.additions,
     summary_deletions: info.summary?.deletions,
     summary_files: info.summary?.files,
@@ -146,10 +143,6 @@ const Summary = Schema.Struct({
   deletions: NonNegativeInt,
   files: NonNegativeInt,
   diffs: optionalOmitUndefined(Schema.Array(Snapshot.FileDiff)),
-})
-
-const Share = Schema.Struct({
-  url: Schema.String,
 })
 
 // Legacy HTTP accepted negative values here. Keep archive timestamps permissive
@@ -185,7 +178,6 @@ export const Info = Schema.Struct({
   path: optionalOmitUndefined(Schema.String),
   parentID: optionalOmitUndefined(SessionID),
   summary: optionalOmitUndefined(Summary),
-  share: optionalOmitUndefined(Share),
   title: Schema.String,
   agent: optionalOmitUndefined(Schema.String),
   model: optionalOmitUndefined(Model),
@@ -270,10 +262,6 @@ const CreatedEventSchema = Schema.Struct({
   info: Info,
 })
 
-const UpdatedShare = Schema.Struct({
-  url: Schema.optional(Schema.NullOr(Schema.String)),
-})
-
 const UpdatedTime = Schema.Struct({
   created: Schema.optional(Schema.NullOr(NonNegativeInt)),
   updated: Schema.optional(Schema.NullOr(NonNegativeInt)),
@@ -290,7 +278,6 @@ const UpdatedInfo = Schema.Struct({
   path: Schema.optional(Schema.NullOr(Schema.String)),
   parentID: Schema.optional(Schema.NullOr(SessionID)),
   summary: Schema.optional(Schema.NullOr(Summary)),
-  share: Schema.optional(UpdatedShare),
   title: Schema.optional(Schema.NullOr(Schema.String)),
   agent: Schema.optional(Schema.NullOr(Schema.String)),
   model: Schema.optional(Schema.NullOr(Model)),

@@ -5,7 +5,6 @@ import * as Observability from "@/core/effect/observability"
 import { AppFileSystem } from "@/core/filesystem"
 import { Bus } from "@/bus"
 import { Auth } from "@/auth"
-import { Account } from "@/account/account"
 import { Config } from "@/config/config"
 import { Git } from "@/git"
 import { Ripgrep } from "@/file/ripgrep"
@@ -47,8 +46,6 @@ import { Workspace } from "@/control-plane/workspace"
 import { Worktree } from "@/worktree"
 import { Pty } from "@/pty"
 import { PtyTicket } from "@/pty/ticket"
-import { ShareNext } from "@/share/share-next"
-import { SessionShare } from "@/share/session"
 import { SyncEvent } from "@/sync"
 import { Npm } from "@/core/npm"
 import { memoMap } from "@/core/effect/memo-map"
@@ -58,7 +55,6 @@ export const AppLayer = Layer.mergeAll(
   AppFileSystem.defaultLayer,
   Bus.defaultLayer,
   Auth.defaultLayer,
-  Account.defaultLayer,
   Config.defaultLayer,
   Git.defaultLayer,
   Ripgrep.defaultLayer,
@@ -99,8 +95,6 @@ export const AppLayer = Layer.mergeAll(
   Worktree.appLayer,
   Pty.defaultLayer,
   PtyTicket.defaultLayer,
-  ShareNext.defaultLayer,
-  SessionShare.defaultLayer,
   SyncEvent.defaultLayer,
 ).pipe(Layer.provideMerge(InstanceLayer.layer), Layer.provideMerge(Observability.layer))
 

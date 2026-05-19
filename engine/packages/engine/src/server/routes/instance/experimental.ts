@@ -9,33 +9,11 @@ import { Instance } from "@/project/instance"
 import { Project } from "@/project/project"
 import { MCP } from "@/mcp"
 import { Session } from "@/session/session"
-import { Config } from "@/config/config"
-import { ConsoleState } from "@/config/console-state"
-import { Account } from "@/account/account"
-import { AccountID, OrgID } from "@/account/schema"
-import { errors } from "../../error"
 import { lazy } from "@/util/lazy"
-import { Effect, Option } from "effect"
+import { Effect } from "effect"
 import { Agent } from "@/agent/agent"
 import { jsonRequest, runRequest } from "./trace"
-
-const ConsoleOrgOption = z.object({
-  accountID: z.string(),
-  accountEmail: z.string(),
-  accountUrl: z.string(),
-  orgID: z.string(),
-  orgName: z.string(),
-  active: z.boolean(),
-})
-
-const ConsoleOrgList = z.object({
-  orgs: z.array(ConsoleOrgOption),
-})
-
-const ConsoleSwitchBody = z.object({
-  accountID: z.string(),
-  orgID: z.string(),
-})
+import { errors } from "../../error"
 
 const QueryBoolean = z.union([
   z.preprocess((value) => (value === "true" ? true : value === "false" ? false : value), z.boolean()),
@@ -49,99 +27,6 @@ function queryBoolean(value: z.infer<typeof QueryBoolean> | undefined) {
 
 export const ExperimentalRoutes = lazy(() =>
   new Hono()
-    .get(
-      "/console",
-      describeRoute({
-        summary: "Get active Console provider metadata",
-        description: "Get the active Console org name and the set of provider IDs managed by that Console org.",
-        operationId: "experimental.console.get",
-        responses: {
-          200: {
-            description: "Active Console provider metadata",
-            content: {
-              "application/json": {
-                schema: resolver(ConsoleState.zod),
-              },
-            },
-          },
-        },
-      }),
-      async (c) =>
-        jsonRequest("ExperimentalRoutes.console.get", c, function* () {
-          const config = yield* Config.Service
-          const account = yield* Account.Service
-          const [state, groups] = yield* Effect.all([config.getConsoleState(), account.orgsByAccount()], {
-            concurrency: "unbounded",
-          })
-          return {
-            ...state,
-            switchableOrgCount: groups.reduce((count, group) => count + group.orgs.length, 0),
-          }
-        }),
-    )
-    .get(
-      "/console/orgs",
-      describeRoute({
-        summary: "List switchable Console orgs",
-        description: "Get the available Console orgs across logged-in accounts, including the current active org.",
-        operationId: "experimental.console.listOrgs",
-        responses: {
-          200: {
-            description: "Switchable Console orgs",
-            content: {
-              "application/json": {
-                schema: resolver(ConsoleOrgList),
-              },
-            },
-          },
-        },
-      }),
-      async (c) =>
-        jsonRequest("ExperimentalRoutes.console.listOrgs", c, function* () {
-          const account = yield* Account.Service
-          const [groups, active] = yield* Effect.all([account.orgsByAccount(), account.active()], {
-            concurrency: "unbounded",
-          })
-          const info = Option.getOrUndefined(active)
-          const orgs = groups.flatMap((group) =>
-            group.orgs.map((org) => ({
-              accountID: group.account.id,
-              accountEmail: group.account.email,
-              accountUrl: group.account.url,
-              orgID: org.id,
-              orgName: org.name,
-              active: !!info && info.id === group.account.id && info.active_org_id === org.id,
-            })),
-          )
-          return { orgs }
-        }),
-    )
-    .post(
-      "/console/switch",
-      describeRoute({
-        summary: "Switch active Console org",
-        description: "Persist a new active Console account/org selection for the current local AiWork state.",
-        operationId: "experimental.console.switchOrg",
-        responses: {
-          200: {
-            description: "Switch success",
-            content: {
-              "application/json": {
-                schema: resolver(z.boolean()),
-              },
-            },
-          },
-        },
-      }),
-      validator("json", ConsoleSwitchBody),
-      async (c) =>
-        jsonRequest("ExperimentalRoutes.console.switchOrg", c, function* () {
-          const body = c.req.valid("json")
-          const account = yield* Account.Service
-          yield* account.use(AccountID.make(body.accountID), Option.some(OrgID.make(body.orgID)))
-          return true
-        }),
-    )
     .get(
       "/tool/ids",
       describeRoute({

@@ -10,7 +10,6 @@ export type ServerOptions = {
   config?: Config
 }
 
-
 export async function createEngineServer(options?: ServerOptions) {
   options = Object.assign(
     {
@@ -90,4 +89,3 @@ export async function createEngineServer(options?: ServerOptions) {
     },
   }
 }
-

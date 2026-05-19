@@ -36,7 +36,6 @@ export const SCHEMA_DDL = [
   "directory" text NOT NULL,
   "title" text NOT NULL,
   "version" text NOT NULL,
-  "share_url" text,
   "summary_additions" integer,
   "summary_deletions" integer,
   "summary_files" integer,
@@ -87,42 +86,6 @@ export const SCHEMA_DDL = [
   "time_updated" integer NOT NULL,
   CONSTRAINT "todo_pk" PRIMARY KEY("session_id", "position"),
   CONSTRAINT "fk_todo_session_id_session_id_fk" FOREIGN KEY ("session_id") REFERENCES "session"("id") ON DELETE CASCADE
-)`,
-  `CREATE TABLE IF NOT EXISTS "session_share" (
-  "session_id" text PRIMARY KEY,
-  "id" text NOT NULL,
-  "secret" text NOT NULL,
-  "url" text NOT NULL,
-  "time_created" integer NOT NULL,
-  "time_updated" integer NOT NULL,
-  CONSTRAINT "fk_session_share_session_id_session_id_fk" FOREIGN KEY ("session_id") REFERENCES "session"("id") ON DELETE CASCADE
-)`,
-  `CREATE TABLE IF NOT EXISTS "control_account" (
-  "email" text NOT NULL,
-  "url" text NOT NULL,
-  "access_token" text NOT NULL,
-  "refresh_token" text NOT NULL,
-  "token_expiry" integer,
-  "active" integer NOT NULL,
-  "time_created" integer NOT NULL,
-  "time_updated" integer NOT NULL,
-  CONSTRAINT "control_account_pk" PRIMARY KEY("email", "url")
-)`,
-  `CREATE TABLE IF NOT EXISTS "account" (
-  "id" text PRIMARY KEY,
-  "email" text NOT NULL,
-  "url" text NOT NULL,
-  "access_token" text NOT NULL,
-  "refresh_token" text NOT NULL,
-  "token_expiry" integer,
-  "time_created" integer NOT NULL,
-  "time_updated" integer NOT NULL
-)`,
-  `CREATE TABLE IF NOT EXISTS "account_state" (
-  "id" integer PRIMARY KEY NOT NULL,
-  "active_account_id" text,
-  "active_org_id" text,
-  FOREIGN KEY ("active_account_id") REFERENCES "account"("id") ON UPDATE no action ON DELETE set null
 )`,
   `CREATE TABLE IF NOT EXISTS "event_sequence" (
   "aggregate_id" text PRIMARY KEY,

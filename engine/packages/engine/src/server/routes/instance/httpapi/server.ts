@@ -3,7 +3,6 @@ import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { FetchHttpClient, HttpClient, HttpMiddleware, HttpRouter, HttpServer } from "effect/unstable/http"
 import * as Socket from "effect/unstable/socket/Socket"
 import { AppFileSystem } from "@/core/filesystem"
-import { Account } from "@/account/account"
 import { Agent } from "@/agent/agent"
 import { Auth } from "@/auth"
 import { Bus } from "@/bus"
@@ -34,8 +33,6 @@ import { SessionRunState } from "@/session/run-state"
 import { SessionStatus } from "@/session/status"
 import { SessionSummary } from "@/session/summary"
 import { Todo } from "@/session/todo"
-import { SessionShare } from "@/share/session"
-import { ShareNext } from "@/share/share-next"
 import { Skill } from "@/skill"
 import { Snapshot } from "@/snapshot"
 import { SyncEvent } from "@/sync"
@@ -145,7 +142,6 @@ export function createRoutes(corsOptions?: CorsOptions) {
       errorLayer,
       cors(corsOptions),
       runtime,
-      Account.defaultLayer,
       Agent.defaultLayer,
       Auth.defaultLayer,
       Command.defaultLayer,
@@ -169,11 +165,9 @@ export function createRoutes(corsOptions?: CorsOptions) {
       SessionCompaction.defaultLayer,
       SessionPrompt.defaultLayer,
       SessionRevert.defaultLayer,
-      SessionShare.defaultLayer,
       SessionRunState.defaultLayer,
       SessionStatus.defaultLayer,
       SessionSummary.defaultLayer,
-      ShareNext.defaultLayer,
       Snapshot.defaultLayer,
       SyncEvent.defaultLayer,
       Skill.defaultLayer,

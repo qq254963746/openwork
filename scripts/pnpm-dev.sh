@@ -17,5 +17,9 @@ fi
 
 # 在根目录执行 pnpm install 和  dev
 pnpm install
+
+export AIWORK_APP_LOCAL_DATA_DIR=/tmp/aiwork-sdk-build
+bun ./engine/packages/sdk/js/script/build.ts
+
 # pnpm dev
 pnpm --filter @aiwork/desktop dev:tauri

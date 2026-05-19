@@ -238,10 +238,6 @@ export const RunCommand = effectCmd({
         describe: "fork the session before continuing (requires --continue or --session)",
         type: "boolean",
       })
-      .option("share", {
-        type: "boolean",
-        describe: "share the session",
-      })
       .option("model", {
         type: "string",
         alias: ["m"],
@@ -393,21 +389,6 @@ export const RunCommand = effectCmd({
         const name = title()
         const result = await sdk.session.create({ title: name, permission: rules })
         return result.data?.id
-      }
-
-      async function share(sdk: EngineClient, sessionID: string) {
-        const cfg = await sdk.config.get()
-        if (!cfg.data) return
-        if (cfg.data.share !== "auto" && !Flag.ENGINE_AUTO_SHARE && !args.share) return
-        const res = await sdk.session.share({ sessionID }).catch((error) => {
-          if (error instanceof Error && error.message.includes("disabled")) {
-            UI.println(UI.Style.TEXT_DANGER_BOLD + "!  " + error.message)
-          }
-          return { error }
-        })
-        if (!res.error && "data" in res && res.data?.share?.url) {
-          UI.println(UI.Style.TEXT_INFO_BOLD + "~  " + res.data.share.url)
-        }
       }
 
       async function execute(sdk: EngineClient) {
@@ -622,7 +603,6 @@ export const RunCommand = effectCmd({
           UI.error("Session not found")
           process.exit(1)
         }
-        await share(sdk, sessionID)
 
         loop().catch((e) => {
           console.error(e)
