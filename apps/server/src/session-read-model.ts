@@ -110,13 +110,6 @@ export function buildSessionMessages(value: unknown): SessionMessageReadModel[] 
   return parseOrThrow(sessionMessagesSchema, value, "session messages");
 }
 
-export function buildSessionTodos(value: unknown): SessionTodoReadModel[] {
-  return parseOrThrow(sessionTodosSchema, value, "session todos");
-}
-
-export function buildSessionStatuses(value: unknown): Record<string, SessionStatusReadModel> {
-  return parseOrThrow(sessionStatusesSchema, value, "session statuses");
-}
 
 export function buildSessionSnapshot(input: {
   session: unknown;
@@ -126,8 +119,8 @@ export function buildSessionSnapshot(input: {
 }): SessionSnapshotReadModel {
   const session = buildSession(input.session);
   const messages = buildSessionMessages(input.messages);
-  const todos = buildSessionTodos(input.todos);
-  const statuses = buildSessionStatuses(input.statuses);
+  const todos = parseOrThrow(sessionTodosSchema, input.todos, "session todos"); 
+  const statuses = parseOrThrow(sessionStatusesSchema, input.statuses, "session statuses"); 
   return parseOrThrow(
     sessionSnapshotSchema,
     {
